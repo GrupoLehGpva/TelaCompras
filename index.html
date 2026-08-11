@@ -21,7 +21,7 @@
   Para produção: const MODO_DEMO = false;
  
   CAMPOS OBRIGATÓRIOS DEFINIDOS PELO CLIENTE:
-    1. Centro de custo          4. Data limite para entrega
+    1. Centro de custo          4. Data sugerida para entrega
     2. Tipo de compra           5. Local de entrega
     3. Definição de fornecedor  6. Motivo da compra
  
@@ -405,7 +405,7 @@
       <h2>Prazo e motivo</h2>
  
       <div class="campo" data-campo="dataLimite">
-        <label for="dataLimite">Informe a data limite para entrega</label>
+        <label for="dataLimite">Informe a data sugerida para entrega</label>
         <input type="date" id="dataLimite">
         <span class="ajuda">Data sugerida ou limite em que você precisa do item no local.</span>
       </div>
@@ -928,7 +928,7 @@ function validar(passo){
   }
  
   if(passo === 'prazo'){
-    if(!estado.dataLimite) falhar('dataLimite','Informe a data limite para entrega.');
+    if(!estado.dataLimite) falhar('dataLimite','Informe a data sugerida para entrega.');
     if(estado.motivoCompra.trim().length < 5) falhar('motivoCompra','Descreva o motivo da compra.');
   }
  
