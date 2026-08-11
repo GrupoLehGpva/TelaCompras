@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Solicitação de Compra · Grupo Leh</title>
+
+<!--
+  ============================================================================
+  SOLICITAÇÃO DE COMPRA — Grupo Leh
+  Arquivo único, sem dependências, sem build.
+  Abra direto no navegador ou use Live Server no VSCode.
+
+  >>> ESTA CÓPIA ESTÁ EM MODO DEMO <<<
+
+  Para colocar em produção, mude UMA linha no início do script:
+
+      const MODO_DEMO = false;
+
+  Com MODO_DEMO = false:
+      - a validação de campos obrigatórios volta a valer
+      - a barra amarela de demonstração some
+      - a alternância "passo a passo / página única" some
+      - o botão "preencher com exemplo" some
+
+  A lógica de validação continua inteira no código (função validar()).
+  Ela só está sendo ignorada enquanto MODO_DEMO for true.
+
+  OUTROS PONTOS A AJUSTAR ANTES DE PRODUÇÃO:
+      1) const DADOS  ...... dados de exemplo. Trocar pelos dados reais.
+      2) function enviar() . ponto de integração com a API (fetch comentado).
+
+  NÃO EXISTE CAMPO DE VALOR NESTE FORMULÁRIO — decisão de projeto.
+  O preço é apurado pelo setor de compras, depois da aprovação do gerente.
+
+  A LISTA DE ITENS É MONTADA NA PRÓPRIA TELA — não há planilha para baixar
+  nem para anexar. Cada item entra pelo mesmo catálogo do pedido único.
+  ============================================================================
+-->
+
+<style>
+  :root{
+    --verde:#1f5f3f;
+    --verde-claro:#eaf2ed;
+    --bg:#f5f6f4;
+    --card:#ffffff;
+    --texto:#16211c;
+    --muted:#6b7770;
+    --borda:#dde3df;
+    --erro:#b3261e;
+    --erro-bg:#fdf0ef;
+    --demo:#8a5a1e;
+    --demo-bg:#fdf6e9;
+    --demo-borda:#e6d3ae;
+    --raio:12px;
+  }
+
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+
+  body{
+    margin:0;background:var(--bg);color:var(--texto);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    font-size:16px;line-height:1.5;padding-bottom:120px;
+  }
+
+  .topo{background:var(--verde);color:#fff;padding:16px 20px;position:sticky;top:0;z-index:20}
+  .topo h1{margin:0;font-size:17px;font-weight:600;letter-spacing:.2px}
+  .topo span{display:block;font-size:12px;opacity:.75;margin-top:2px;text-transform:uppercase;letter-spacing:1px}
+
+  .demo-bar{background:var(--demo-bg);border-bottom:1px solid var(--demo-borda);padding:10px 16px}
+  .demo-bar[hidden]{display:none}
+  .demo-bar .interno{max-width:560px;margin:0 auto;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .demo-bar .aviso{font-size:11px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:var(--demo);flex:1 1 100%}
+  .segmento{display:flex;border:1px solid var(--demo-borda);border-radius:8px;overflow:hidden;background:#fff}
+  .segmento button{border:0;background:none;font:inherit;font-size:13px;font-weight:600;color:var(--demo);padding:7px 12px;cursor:pointer}
+  .segmento button.ativo{background:var(--demo);color:#fff}
+  .btn-exemplo{border:1px solid var(--demo-borda);background:#fff;color:var(--demo);font:inherit;font-size:13px;
+    font-weight:600;padding:7px 12px;border-radius:8px;cursor:pointer}
+  .btn-exemplo:hover{background:#fbeed6}
+
+  .wrap{max-width:560px;margin:0 auto;padding:16px}
+
+  .auto{background:var(--card);border:1px solid var(--borda);border-radius:var(--raio);
+    padding:14px 16px;display:flex;flex-wrap:wrap;gap:16px;margin-bottom:16px}
+  .auto div{flex:1 1 30%;min-width:100px}
+  .auto dt{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:2px}
+  .auto dd{margin:0;font-size:14px;font-weight:600}
+
+  .progresso{margin-bottom:16px}
+  .progresso[hidden]{display:none}
+  .progresso .rotulo{display:flex;justify-content:space-between;align-items:baseline;
+    font-size:12px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.8px}
+  .barra{height:5px;background:var(--borda);border-radius:99px;overflow:hidden}
+  .barra i{display:block;height:100%;background:var(--verde);border-radius:99px;transition:width .25s ease}
+
+  .passo{background:var(--card);border:1px solid var(--borda);border-radius:var(--raio);
+    padding:20px 18px;margin-bottom:16px}
+  .passo h2{margin:0 0 18px;font-size:19px;font-weight:650;letter-spacing:-.2px}
+  .passo[hidden]{display:none}
+
+  .campo{margin-bottom:22px}
+  .campo:last-child{margin-bottom:0}
+  .campo > label,.campo > .titulo{display:block;font-weight:600;font-size:15px;margin-bottom:8px}
+  .ajuda{display:block;font-size:13px;color:var(--muted);margin-top:6px;line-height:1.45}
+
+  input[type=text],input[type=number],input[type=date],select,textarea{
+    width:100%;padding:13px 12px;font-size:16px;font-family:inherit;color:inherit;
+    background:#fff;border:1px solid var(--borda);border-radius:10px;appearance:none}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--verde);box-shadow:0 0 0 3px var(--verde-claro)}
+  select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'><path d='M3 5l4 4 4-4' fill='none' stroke='%236b7770' stroke-width='1.6' stroke-linecap='round'/></svg>");
+    background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
+  input:disabled,select:disabled{background:#f2f4f2;color:var(--muted)}
+
+  .opcoes{display:flex;flex-direction:column;gap:8px}
+  .opcao{display:flex;gap:11px;align-items:flex-start;border:1px solid var(--borda);border-radius:10px;
+    padding:13px 14px;cursor:pointer;background:#fff;transition:border-color .15s,background .15s}
+  .opcao:hover{border-color:#b9c4bd}
+  .opcao input{margin:2px 0 0;accent-color:var(--verde);width:18px;height:18px;flex:none}
+  .opcao b{display:block;font-weight:600;font-size:15px}
+  .opcao em{display:block;font-style:normal;font-size:13px;color:var(--muted);margin-top:1px}
+  .opcao.marcada{border-color:var(--verde);background:var(--verde-claro)}
+
+  .checkbox{display:flex;gap:11px;align-items:flex-start;cursor:pointer}
+  .checkbox input{margin:2px 0 0;accent-color:var(--verde);width:18px;height:18px;flex:none}
+
+  .busca{position:relative}
+  .resultados{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:5;background:#fff;
+    border:1px solid var(--borda);border-radius:10px;max-height:260px;overflow-y:auto;
+    box-shadow:0 8px 24px rgba(0,0,0,.10)}
+  .resultados[hidden]{display:none}
+  .resultados button{display:block;width:100%;text-align:left;background:none;border:0;
+    border-bottom:1px solid var(--borda);padding:12px 14px;cursor:pointer;font:inherit}
+  .resultados button:last-child{border-bottom:0}
+  .resultados button:hover,.resultados button:focus{background:var(--verde-claro);outline:none}
+  .resultados b{display:block;font-size:14px;font-weight:600}
+  .resultados span{display:block;font-size:12px;color:var(--muted);margin-top:1px}
+  .vazio{padding:14px;font-size:13px;color:var(--muted)}
+
+  .ficha{background:var(--verde-claro);border:1px solid #cfe0d6;border-radius:10px;padding:14px 16px;margin-top:12px}
+  .ficha[hidden]{display:none}
+  .ficha dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px}
+  .ficha dt{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);padding-top:2px}
+  .ficha dd{margin:0;font-size:14px;font-weight:600}
+  .ficha .rodape{font-size:12px;color:var(--muted);margin:10px 0 0;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .ficha .rodape button{background:none;border:0;color:var(--verde);font:inherit;font-weight:600;cursor:pointer;padding:0;text-decoration:underline}
+
+  .excecao{border:1px dashed #d6b48a;background:#fdf8f1;border-radius:10px;padding:14px 16px;margin-top:18px}
+  .excecao .aviso{font-size:13px;color:#8a5a1e;margin:10px 0 0;line-height:1.45}
+
+  .qtd{display:flex;gap:10px;align-items:stretch}
+  .qtd input{flex:1 1 auto}
+  .qtd .unidade{flex:none;display:flex;align-items:center;padding:0 16px;background:#f2f4f2;
+    border:1px solid var(--borda);border-radius:10px;font-size:14px;font-weight:600;color:var(--muted);white-space:nowrap;min-width:96px;justify-content:center}
+
+  /* ---------- montador da lista de itens ---------- */
+  .montador{border:1px solid var(--borda);border-radius:10px;padding:16px;background:#fbfcfb}
+  .montador .linha{margin-bottom:12px}
+  .montador .linha:last-of-type{margin-bottom:0}
+  .montador label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--muted)}
+  .btn-add{width:100%;min-height:46px;margin-top:14px;border-radius:10px;border:1px solid var(--verde);
+    background:var(--verde);color:#fff;font:inherit;font-size:15px;font-weight:650;cursor:pointer}
+  .btn-add:hover{background:#184c32}
+  .btn-add:disabled{background:#c3cfc8;border-color:#c3cfc8;cursor:not-allowed}
+  .link-excecao{background:none;border:0;color:var(--verde);font:inherit;font-size:13px;font-weight:600;
+    cursor:pointer;padding:0;text-decoration:underline;margin-top:12px}
+
+  .itens-lista{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .itens-lista li{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--borda);
+    border-radius:10px;padding:12px 14px;background:#fff}
+  .itens-lista .info{flex:1;min-width:0}
+  .itens-lista .info b{display:block;font-size:14px;font-weight:600;line-height:1.35}
+  .itens-lista .info span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+  .itens-lista .qtd-tag{flex:none;background:var(--verde-claro);color:var(--verde);border-radius:8px;
+    padding:5px 10px;font-size:13px;font-weight:700;white-space:nowrap}
+  .itens-lista .remover{flex:none;background:none;border:0;color:var(--muted);font-size:20px;
+    line-height:1;cursor:pointer;padding:2px 4px}
+  .itens-lista .remover:hover{color:var(--erro)}
+  .itens-lista .fora{border-style:dashed;border-color:#d6b48a;background:#fdf8f1}
+
+  .resumo-lista{display:flex;justify-content:space-between;align-items:center;margin-top:14px;
+    padding-top:12px;border-top:1px solid var(--borda);font-size:14px}
+  .resumo-lista b{font-weight:700}
+  .lista-vazia{margin-top:16px;padding:20px;text-align:center;border:1px dashed var(--borda);
+    border-radius:10px;color:var(--muted);font-size:14px}
+
+  .anexo{display:flex;align-items:center;gap:10px;justify-content:center;border:1px dashed var(--borda);
+    border-radius:10px;padding:16px;cursor:pointer;color:var(--verde);font-weight:600;font-size:15px;background:#fff}
+  .anexo:hover{border-color:var(--verde);background:var(--verde-claro)}
+  .anexo input{display:none}
+  .lista-anexos{list-style:none;margin:10px 0 0;padding:0;font-size:13px;color:var(--muted)}
+  .lista-anexos li{padding:4px 0}
+
+  .erro-msg{display:block;color:var(--erro);font-size:13px;font-weight:600;margin-top:6px}
+  .campo.invalido input,.campo.invalido select,.campo.invalido textarea{border-color:var(--erro);background:var(--erro-bg)}
+  .campo.invalido .opcoes .opcao{border-color:#e8b4b0}
+  .campo.invalido .montador{border-color:var(--erro)}
+
+  .nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--borda);
+    padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom));z-index:15}
+  .nav[hidden]{display:none}
+  .nav .interno{max-width:560px;margin:0 auto;display:flex;gap:10px}
+  button.btn{flex:1;min-height:50px;border-radius:10px;font:inherit;font-size:16px;font-weight:650;
+    cursor:pointer;border:1px solid transparent}
+  .btn.primario{background:var(--verde);color:#fff}
+  .btn.primario:hover{background:#184c32}
+  .btn.secundario{background:#fff;color:var(--texto);border-color:var(--borda);flex:0 0 34%}
+  .btn.secundario:hover{background:#f2f4f2}
+  .btn[hidden]{display:none}
+
+  .ok{text-align:center;padding:34px 20px}
+  .ok .selo{width:60px;height:60px;border-radius:50%;background:var(--verde);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 16px}
+  .ok h2{margin:0 0 4px;font-size:21px}
+  .ok .num{font-size:14px;color:var(--muted);margin:0 0 22px}
+  .ok ol{text-align:left;margin:0;padding-left:20px;font-size:14px;line-height:1.9}
+  .ok .titulo-lista{text-align:left;font-weight:650;font-size:14px;margin:0 0 6px}
+  .ok .voltar-demo{margin-top:24px}
+  details.payload{margin-top:22px;text-align:left}
+  details.payload summary{cursor:pointer;font-size:13px;color:var(--muted);font-weight:600}
+  details.payload pre{background:#16211c;color:#d7e6dc;padding:14px;border-radius:10px;
+    font-size:12px;overflow-x:auto;margin-top:10px;line-height:1.5}
+
+  .rodape-nota{max-width:560px;margin:0 auto;padding:0 16px 20px;font-size:12px;color:var(--muted);line-height:1.5}
+</style>
+</head>
+
+<body>
+
+<header class="topo">
+  <span>Grupo Leh · Compras</span>
+  <h1>Solicitação de Compra</h1>
+</header>
+
+<div class="demo-bar" id="demoBar">
+  <div class="interno">
+    <span class="aviso">● Modo demonstração — validação desativada</span>
+    <div class="segmento">
+      <button type="button" id="verPassos" class="ativo">Passo a passo</button>
+      <button type="button" id="verPagina">Página única</button>
+    </div>
+    <button type="button" class="btn-exemplo" id="btnExemplo">Preencher com exemplo</button>
+  </div>
+</div>
+
+<main class="wrap">
+
+  <dl class="auto" id="auto">
+    <div><dt>Solicitante</dt><dd id="autoSolicitante">—</dd></div>
+    <div><dt>Data</dt><dd id="autoData">—</dd></div>
+    <div><dt>Nº</dt><dd id="autoNumero">—</dd></div>
+  </dl>
+
+  <div class="progresso" id="progresso">
+    <div class="rotulo"><span id="progTexto">Passo 1 de 4</span><span id="progTitulo">Item</span></div>
+    <div class="barra"><i id="progBarra" style="width:25%"></i></div>
+  </div>
+
+  <form id="form" novalidate>
+
+    <!-- ================= PASSO 1 — ITEM ================= -->
+    <section class="passo" data-passo="item">
+      <h2>Item</h2>
+
+      <div class="campo" data-campo="tipo">
+        <span class="titulo">Selecione o tipo de solicitação</span>
+        <div class="opcoes" id="tipoOpcoes"></div>
+      </div>
+
+      <!-- ---------- item único ---------- -->
+      <div id="blocoItem">
+        <div class="campo" data-campo="familia">
+          <label for="familia">Selecione a família</label>
+          <select id="familia"><option value="">— selecione —</option></select>
+        </div>
+
+        <div class="campo" data-campo="item">
+          <label for="buscaItem">Busque o item pelo nome ou pelo código</label>
+          <div class="busca">
+            <input type="text" id="buscaItem" autocomplete="off" placeholder="Digite o nome ou o código">
+            <div class="resultados" id="resultados" hidden></div>
+          </div>
+          <span class="ajuda">A busca traz apenas itens da família selecionada.</span>
+
+          <div class="ficha" id="ficha" hidden>
+            <dl>
+              <dt>Código</dt><dd id="fCodigo"></dd>
+              <dt>Descrição</dt><dd id="fDescricao"></dd>
+              <dt>Unidade</dt><dd id="fUnidade"></dd>
+              <dt>Especificação</dt><dd id="fEspec"></dd>
+            </dl>
+            <p class="rodape"><span>Somente leitura. Vem do cadastro.</span>
+              <button type="button" id="trocarItem">Trocar item</button></p>
+          </div>
+        </div>
+
+        <div class="excecao">
+          <label class="checkbox">
+            <input type="checkbox" id="foraCatalogo">
+            <span><b>O item não está no catálogo</b></span>
+          </label>
+          <div class="campo" id="campoDescLivre" data-campo="descricaoLivre" hidden style="margin-top:14px">
+            <label for="descricaoLivre">Descreva o item</label>
+            <textarea id="descricaoLivre" rows="3"></textarea>
+          </div>
+          <p class="aviso">Este pedido será encaminhado para cadastro antes de seguir e vai demorar mais.
+            Use apenas se a busca não retornar o item.</p>
+        </div>
+      </div>
+
+      <!-- ---------- lista de itens (montada aqui mesmo) ---------- -->
+      <div id="blocoLista" hidden>
+        <div class="campo" data-campo="itensLista">
+          <span class="titulo">Monte a lista de itens</span>
+
+          <div class="montador" id="montador">
+
+            <!-- modo catálogo -->
+            <div id="addCatalogo">
+              <div class="linha">
+                <label for="familiaLista">Família</label>
+                <select id="familiaLista"><option value="">— selecione —</option></select>
+              </div>
+              <div class="linha">
+                <label for="buscaLista">Item</label>
+                <div class="busca">
+                  <input type="text" id="buscaLista" autocomplete="off" placeholder="Digite o nome ou o código">
+                  <div class="resultados" id="resultadosLista" hidden></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- modo fora do catálogo -->
+            <div id="addLivre" hidden>
+              <div class="linha">
+                <label for="descLista">Descreva o item</label>
+                <input type="text" id="descLista" placeholder="Ex.: parafuso sextavado 1/2">
+              </div>
+            </div>
+
+            <div class="linha">
+              <label for="qtdLista">Quantidade</label>
+              <div class="qtd">
+                <input type="number" id="qtdLista" min="1" step="1" inputmode="numeric" placeholder="0">
+                <span class="unidade" id="unidadeLista">—</span>
+              </div>
+            </div>
+
+            <button type="button" class="btn-add" id="btnAddItem" disabled>+ Adicionar à lista</button>
+            <button type="button" class="link-excecao" id="alternarLivre">O item não está no catálogo</button>
+          </div>
+
+          <ul class="itens-lista" id="itensLista"></ul>
+          <div class="lista-vazia" id="listaVazia">Nenhum item adicionado ainda.</div>
+          <div class="resumo-lista" id="resumoLista" hidden>
+            <span>Itens na lista</span><b id="totalItens">0</b>
+          </div>
+
+          <span class="ajuda">Adicione quantos itens precisar. Cada um entra com o código do catálogo.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PASSO 2 — QUANTIDADE ================= -->
+    <section class="passo" data-passo="quantidade" hidden>
+      <h2>Quantidade</h2>
+      <div class="campo" data-campo="quantidade">
+        <label for="quantidade">Informe a quantidade</label>
+        <div class="qtd">
+          <input type="number" id="quantidade" min="1" step="1" inputmode="numeric">
+          <span class="unidade" id="unidadeMedida">—</span>
+        </div>
+        <span class="ajuda">A unidade de medida vem do cadastro do item e não é editável.</span>
+      </div>
+    </section>
+
+    <!-- ================= PASSO 3 — DESTINO ================= -->
+    <section class="passo" data-passo="destino" hidden>
+      <h2>Destino</h2>
+      <div class="campo" data-campo="unidade">
+        <label for="unidade">Selecione a unidade de destino</label>
+        <select id="unidade"><option value="">— selecione —</option></select>
+      </div>
+      <div class="campo" data-campo="centroCusto">
+        <label for="centroCusto">Selecione o centro de custo</label>
+        <select id="centroCusto"><option value="">— selecione —</option></select>
+        <span class="ajuda">Talhão, setor ou frota. A lista é filtrada pela unidade selecionada.</span>
+      </div>
+    </section>
+
+    <!-- ================= PASSO 4 — MOTIVO E PRAZO ================= -->
+    <section class="passo" data-passo="motivo" hidden>
+      <h2>Motivo e prazo</h2>
+
+      <div class="campo" data-campo="motivo">
+        <span class="titulo">Selecione o motivo da compra</span>
+        <div class="opcoes" id="motivoOpcoes"></div>
+      </div>
+
+      <div class="campo" data-campo="prioridade">
+        <span class="titulo">Selecione a prioridade</span>
+        <div class="opcoes" id="prioridadeOpcoes"></div>
+      </div>
+
+      <div class="campo" data-campo="dataNecessidade">
+        <label for="dataNecessidade">Informe a data de necessidade</label>
+        <input type="date" id="dataNecessidade">
+      </div>
+
+      <div class="campo">
+        <span class="titulo">Anexe foto ou documento <span style="font-weight:400;color:var(--muted)">— opcional</span></span>
+        <label class="anexo">📎 Anexar
+          <input type="file" id="anexos" multiple accept="image/*,.pdf">
+        </label>
+        <ul class="lista-anexos" id="listaAnexos"></ul>
+      </div>
+    </section>
+
+    <!-- ================= CONFIRMAÇÃO ================= -->
+    <section class="passo ok" data-passo="confirmacao" hidden>
+      <div class="selo">✓</div>
+      <h2>Solicitação enviada</h2>
+      <p class="num" id="okNumero"></p>
+      <p class="titulo-lista">O que acontece agora:</p>
+      <ol>
+        <li>Sua liderança imediata recebe e aprova</li>
+        <li>O gerente aprova</li>
+        <li>Só então compras faz a cotação e apura o preço</li>
+        <li>O valor total define quem dá a aprovação final</li>
+        <li>Você recebe aviso no Slack a cada etapa</li>
+      </ol>
+      <details class="payload">
+        <summary>Ver JSON enviado (protótipo)</summary>
+        <pre id="okPayload"></pre>
+      </details>
+      <div class="voltar-demo">
+        <button type="button" class="btn-exemplo" id="btnRecomecar">↺ Recomeçar demonstração</button>
+      </div>
+    </section>
+
+  </form>
+</main>
+
+<nav class="nav" id="nav">
+  <div class="interno">
+    <button type="button" class="btn secundario" id="btnVoltar" hidden>Voltar</button>
+    <button type="button" class="btn primario" id="btnAvancar">Continuar</button>
+  </div>
+</nav>
+
+<p class="rodape-nota">
+  Protótipo para validação. Os dados de família, item, unidade e centro de custo são exemplos.
+  Este formulário não pede valor — o preço é apurado pelo setor de compras após a aprovação do gerente.
+</p>
+
+<script>
+/* ============================================================================
+   >>> CHAVE ÚNICA DE DEMONSTRAÇÃO <<<
+   true  = demo: navega livre, sem validação, com alternância de visual
+   false = produção: validação obrigatória volta a valer
+   ========================================================================== */
+const MODO_DEMO = true;
+
+/* ============================================================================
+   1) DADOS — trocar pelos dados reais
+   ========================================================================== */
+const DADOS = {
+
+  solicitante: { nome: 'João da Silva', cargo: 'Líder de Granja' },
+
+  // TODO: substituir pela lista real (a reunião estimou "20 e poucas famílias")
+  familias: [
+    { id:'PNE', nome:'Pneus' },
+    { id:'PEC', nome:'Peças e rolamentos' },
+    { id:'DEF', nome:'Defensivos' },
+    { id:'SEM', nome:'Sementes' },
+    { id:'LIM', nome:'Material de limpeza' },
+    { id:'CON', nome:'Material de construção' },
+    { id:'ALI', nome:'Alimentos e despensa' }
+  ],
+
+  // TODO: substituir pelo catálogo real vindo do GR
+  itens: [
+    { codigo:'MM3-0412', familia:'PNE', descricao:'Pneu 275/80 R22,5 borrachudo',
+      unidade:'Unidade', especificacao:'Radial, índice de carga 149/146, uso em eixo de tração' },
+    { codigo:'MM3-0418', familia:'PNE', descricao:'Pneu 295/80 R22,5 liso',
+      unidade:'Unidade', especificacao:'Radial, uso em eixo direcional' },
+    { codigo:'MM2-1180', familia:'PEC', descricao:'Rolamento rígido de esferas 6204 2RS',
+      unidade:'Peça', especificacao:'Diâmetro interno 20 mm, vedado dos dois lados' },
+    { codigo:'MM2-1184', familia:'PEC', descricao:'Rolamento rígido de esferas 6205 2RS',
+      unidade:'Peça', especificacao:'Diâmetro interno 25 mm, vedado dos dois lados' },
+    { codigo:'MM1-0305', familia:'PEC', descricao:'Flange de suporte com rolamento H11 362',
+      unidade:'Peça', especificacao:'Ferro fundido, furação 4 pontos' },
+    { codigo:'DF-0091',  familia:'DEF', descricao:'Defensivo agrícola Quality',
+      unidade:'Litro', especificacao:'Biológico, aplicação foliar' },
+    { codigo:'SM-0044',  familia:'SEM', descricao:'Semente de soja · cultivar precoce',
+      unidade:'Saco', especificacao:'Saco de 40 kg, tratada' },
+    { codigo:'LP-0220',  familia:'LIM', descricao:'Sabonete em barra 90 g',
+      unidade:'Unidade', especificacao:'Neutro, caixa com 12' },
+    { codigo:'LP-0221',  familia:'LIM', descricao:'Sabonete em barra 80 g',
+      unidade:'Unidade', especificacao:'Neutro, caixa com 12' },
+    { codigo:'LP-0304',  familia:'LIM', descricao:'Vassoura de piaçava nº 4',
+      unidade:'Unidade', especificacao:'Cabo de madeira 120 cm' },
+    { codigo:'LP-0311',  familia:'LIM', descricao:'Detergente neutro 5 L',
+      unidade:'Litro', especificacao:'Concentrado, uso geral' },
+    { codigo:'CN-0710',  familia:'CON', descricao:'Cimento CP II 50 kg',
+      unidade:'Saco', especificacao:'Uso geral, estrutural' },
+    { codigo:'CN-0733',  familia:'CON', descricao:'Tijolo cerâmico 6 furos',
+      unidade:'Unidade', especificacao:'9 x 14 x 19 cm' },
+    { codigo:'AL-0155',  familia:'ALI', descricao:'Arroz tipo 1 · 5 kg',
+      unidade:'Unidade', especificacao:'Longo fino polido' },
+    { codigo:'AL-0162',  familia:'ALI', descricao:'Feijão carioca · 1 kg',
+      unidade:'Unidade', especificacao:'Tipo 1' }
+  ],
+
+  // TODO: substituir pelas unidades reais
+  unidades: [
+    { id:'G101', nome:'Granja 101' },
+    { id:'G102', nome:'Granja 102' },
+    { id:'G103', nome:'Granja 103' },
+    { id:'ESC',  nome:'Escritório Guarapuava' },
+    { id:'PI',   nome:'Unidade Piauí' }
+  ],
+
+  // TODO: substituir pelos centros de custo reais (talhão, setor, frota)
+  centrosCusto: {
+    G101:[{id:'G101-PROD',nome:'Produção'},{id:'G101-MAN',nome:'Manutenção'},{id:'G101-MOR',nome:'Casa dos moradores'}],
+    G102:[{id:'G102-PROD',nome:'Produção'},{id:'G102-MAN',nome:'Manutenção'}],
+    G103:[{id:'G103-PROD',nome:'Produção'},{id:'G103-MAN',nome:'Manutenção'},{id:'G103-MOR',nome:'Casa dos moradores'}],
+    ESC :[{id:'ESC-ADM',nome:'Administrativo'},{id:'ESC-FROTA',nome:'Frota'}],
+    PI  :[{id:'PI-TALH1',nome:'Talhão 1'},{id:'PI-TALH2',nome:'Talhão 2'},{id:'PI-COZ',nome:'Cozinha e despensa'}]
+  },
+
+  tipos: [
+    { id:'item',  titulo:'Item único' },
+    { id:'lista', titulo:'Lista de itens', ajuda:'Mercado, limpeza ou construção, com muitos itens de uma vez' }
+  ],
+
+  motivos: [
+    { id:'corretiva',  titulo:'Quebra ou manutenção corretiva' },
+    { id:'preventiva', titulo:'Manutenção preventiva programada' },
+    { id:'estoque',    titulo:'Reposição de estoque' },
+    { id:'recorrente', titulo:'Consumo recorrente' },
+    { id:'novo',       titulo:'Nova necessidade ou projeto' }
+  ],
+
+  prioridades: [
+    { id:'normal',  titulo:'Normal',  ajuda:'Nada parado' },
+    { id:'alta',    titulo:'Alta',    ajuda:'Equipamento ou atividade operando com restrição' },
+    { id:'urgente', titulo:'Urgente', ajuda:'Equipamento ou atividade parada' }
+  ]
+};
+
+/* ============================================================================
+   2) ESTADO
+   ========================================================================== */
+const estado = {
+  tipo:'', familia:'', item:null, foraCatalogo:false, descricaoLivre:'',
+  quantidade:'',
+  itensLista:[],                       // lista montada na tela
+  unidade:'', centroCusto:'',
+  motivo:'', prioridade:'', dataNecessidade:'', anexos:[]
+};
+
+// rascunho do item que está sendo adicionado à lista
+const rascunho = { familia:'', item:null, livre:false, descricao:'', quantidade:'' };
+
+const $ = id => document.getElementById(id);
+let passoAtual = 0;
+let modoVisual = 'passos';   // 'passos' | 'pagina'  (só alternável em MODO_DEMO)
+
+const sequencia = () => estado.tipo === 'lista'
+  ? ['item','destino','motivo']
+  : ['item','quantidade','destino','motivo'];
+
+const TITULOS = { item:'Item', quantidade:'Quantidade', destino:'Destino', motivo:'Motivo e prazo' };
+
+/* ============================================================================
+   3) MONTAGEM INICIAL
+   ========================================================================== */
+function iniciar(){
+  const hoje = new Date();
+  $('autoSolicitante').textContent = DADOS.solicitante.nome + ' · ' + DADOS.solicitante.cargo;
+  $('autoData').textContent = hoje.toLocaleDateString('pt-BR');
+  $('autoNumero').textContent = 'SC-' + hoje.getFullYear() + '-' +
+    String(Math.floor(Math.random()*9000)+1000);
+
+  montarOpcoes('tipoOpcoes','tipo',DADOS.tipos,aoTrocarTipo);
+  montarOpcoes('motivoOpcoes','motivo',DADOS.motivos);
+  montarOpcoes('prioridadeOpcoes','prioridade',DADOS.prioridades);
+
+  const familias = DADOS.familias.map(f=>({v:f.id,t:f.nome}));
+  preencherSelect($('familia'), familias);
+  preencherSelect($('familiaLista'), familias);
+  preencherSelect($('unidade'), DADOS.unidades.map(u=>({v:u.id,t:u.nome})));
+
+  $('dataNecessidade').min = hoje.toISOString().slice(0,10);
+
+  if(!MODO_DEMO){
+    $('buscaItem').disabled = true;
+    $('buscaLista').disabled = true;
+    $('centroCusto').disabled = true;
+  }
+
+  $('demoBar').hidden = !MODO_DEMO;
+  ligarEventos();
+  renderLista();
+  render();
+}
+
+function montarOpcoes(containerId, campo, lista, aoMudar){
+  const box = $(containerId);
+  box.innerHTML = '';
+  lista.forEach(op=>{
+    const el = document.createElement('label');
+    el.className = 'opcao';
+    el.innerHTML =
+      '<input type="radio" name="'+campo+'" value="'+op.id+'">' +
+      '<span><b>'+op.titulo+'</b>'+(op.ajuda?'<em>'+op.ajuda+'</em>':'')+'</span>';
+    el.querySelector('input').addEventListener('change',()=>{
+      estado[campo] = op.id;
+      [...box.children].forEach(c=>c.classList.remove('marcada'));
+      el.classList.add('marcada');
+      limparErro(campo);
+      if(aoMudar) aoMudar(op.id);
+    });
+    box.appendChild(el);
+  });
+}
+
+function marcarRadio(campo, valor){
+  const input = document.querySelector('input[name="'+campo+'"][value="'+valor+'"]');
+  if(input){ input.checked = true; input.dispatchEvent(new Event('change')); }
+}
+
+function preencherSelect(sel, opcoes){
+  sel.innerHTML = '<option value="">— selecione —</option>';
+  opcoes.forEach(o=>{
+    const op = document.createElement('option');
+    op.value = o.v; op.textContent = o.t;
+    sel.appendChild(op);
+  });
+}
+
+/* ============================================================================
+   4) EVENTOS
+   ========================================================================== */
+function ligarEventos(){
+
+  /* ----- item único ----- */
+  $('familia').addEventListener('change', e=>{
+    estado.familia = e.target.value;
+    estado.item = null;
+    $('ficha').hidden = true;
+    $('buscaItem').value = '';
+    if(!MODO_DEMO) $('buscaItem').disabled = !estado.familia;
+    esconder('resultados');
+    limparErro('familia');
+  });
+
+  $('buscaItem').addEventListener('focus', ()=>{
+    if(MODO_DEMO && !$('buscaItem').value) abrirResultados('resultados', itensDe(estado.familia), escolherItem);
+  });
+
+  $('buscaItem').addEventListener('input', e=>{
+    const achados = filtrar(itensDe(estado.familia), e.target.value);
+    if(achados === null){ esconder('resultados'); return; }
+    abrirResultados('resultados', achados, escolherItem);
+  });
+
+  $('buscaItem').addEventListener('blur', ()=> setTimeout(()=>esconder('resultados'),180));
+
+  $('trocarItem').addEventListener('click', ()=>{
+    estado.item = null;
+    $('ficha').hidden = true;
+    $('buscaItem').value = '';
+    $('buscaItem').focus();
+  });
+
+  $('foraCatalogo').addEventListener('change', e=>{
+    estado.foraCatalogo = e.target.checked;
+    $('campoDescLivre').hidden = !e.target.checked;
+    $('familia').disabled = e.target.checked;
+    $('buscaItem').disabled = e.target.checked || (!MODO_DEMO && !estado.familia);
+    if(e.target.checked){ estado.item = null; $('ficha').hidden = true; }
+    limparErro('item'); limparErro('descricaoLivre');
+  });
+
+  $('descricaoLivre').addEventListener('input', e=>{
+    estado.descricaoLivre = e.target.value; limparErro('descricaoLivre');
+  });
+
+  $('quantidade').addEventListener('input', e=>{
+    estado.quantidade = e.target.value; limparErro('quantidade');
+  });
+
+  /* ----- montador da lista ----- */
+  $('familiaLista').addEventListener('change', e=>{
+    rascunho.familia = e.target.value;
+    rascunho.item = null;
+    $('buscaLista').value = '';
+    $('unidadeLista').textContent = '—';
+    if(!MODO_DEMO) $('buscaLista').disabled = !rascunho.familia;
+    esconder('resultadosLista');
+    atualizarBotaoAdd();
+  });
+
+  $('buscaLista').addEventListener('focus', ()=>{
+    if(MODO_DEMO && !$('buscaLista').value)
+      abrirResultados('resultadosLista', itensDe(rascunho.familia), escolherItemLista);
+  });
+
+  $('buscaLista').addEventListener('input', e=>{
+    rascunho.item = null;
+    atualizarBotaoAdd();
+    const achados = filtrar(itensDe(rascunho.familia), e.target.value);
+    if(achados === null){ esconder('resultadosLista'); return; }
+    abrirResultados('resultadosLista', achados, escolherItemLista);
+  });
+
+  $('buscaLista').addEventListener('blur', ()=> setTimeout(()=>esconder('resultadosLista'),180));
+
+  $('descLista').addEventListener('input', e=>{
+    rascunho.descricao = e.target.value;
+    atualizarBotaoAdd();
+  });
+
+  $('qtdLista').addEventListener('input', e=>{
+    rascunho.quantidade = e.target.value;
+    atualizarBotaoAdd();
+  });
+
+  $('alternarLivre').addEventListener('click', alternarModoLivre);
+  $('btnAddItem').addEventListener('click', adicionarItem);
+
+  /* ----- destino ----- */
+  $('unidade').addEventListener('change', e=>{
+    estado.unidade = e.target.value;
+    estado.centroCusto = '';
+    const cc = $('centroCusto');
+    cc.disabled = !MODO_DEMO && !estado.unidade;
+    preencherSelect(cc, (DADOS.centrosCusto[estado.unidade]||[]).map(c=>({v:c.id,t:c.nome})));
+    limparErro('unidade');
+  });
+
+  $('centroCusto').addEventListener('change', e=>{
+    estado.centroCusto = e.target.value; limparErro('centroCusto');
+  });
+
+  /* ----- motivo e prazo ----- */
+  $('dataNecessidade').addEventListener('change', e=>{
+    estado.dataNecessidade = e.target.value; limparErro('dataNecessidade');
+  });
+
+  $('anexos').addEventListener('change', e=>{
+    estado.anexos = [...e.target.files];
+    $('listaAnexos').innerHTML = estado.anexos.map(f=>'<li>📄 '+f.name+'</li>').join('');
+  });
+
+  /* ----- navegação ----- */
+  $('btnAvancar').addEventListener('click', avancar);
+  $('btnVoltar').addEventListener('click', voltar);
+
+  /* ----- controles do modo demo ----- */
+  $('verPassos').addEventListener('click', ()=> trocarVisual('passos'));
+  $('verPagina').addEventListener('click', ()=> trocarVisual('pagina'));
+  $('btnExemplo').addEventListener('click', preencherExemplo);
+  $('btnRecomecar').addEventListener('click', ()=> location.reload());
+}
+
+/* ============================================================================
+   5) BUSCA — compartilhada pelos dois modos
+   ========================================================================== */
+function itensDe(familia){
+  if(!familia) return MODO_DEMO ? DADOS.itens : [];
+  return DADOS.itens.filter(i => i.familia === familia);
+}
+
+// devolve null quando o termo ainda é curto demais (produção exige 3 letras)
+function filtrar(base, termo){
+  const t = (termo||'').trim().toLowerCase();
+  const minimo = MODO_DEMO ? 0 : 3;
+  if(t.length < minimo) return null;
+  if(!t) return base;
+  return base.filter(i =>
+    i.descricao.toLowerCase().includes(t) || i.codigo.toLowerCase().includes(t));
+}
+
+function abrirResultados(boxId, itens, aoEscolher){
+  const box = $(boxId);
+  if(!itens.length){
+    box.innerHTML = '<p class="vazio">Nenhum item encontrado no catálogo.</p>';
+  } else {
+    box.innerHTML = '';
+    itens.forEach(i=>{
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.innerHTML = '<b>'+i.descricao+'</b><span>'+i.codigo+' · '+i.unidade+'</span>';
+      b.addEventListener('mousedown', ev=> ev.preventDefault());
+      b.addEventListener('click', ()=> aoEscolher(i));
+      box.appendChild(b);
+    });
+  }
+  box.hidden = false;
+}
+
+function esconder(boxId){ $(boxId).hidden = true; }
+
+function escolherItem(i){
+  estado.item = i;
+  $('fCodigo').textContent    = i.codigo;
+  $('fDescricao').textContent = i.descricao;
+  $('fUnidade').textContent   = i.unidade;
+  $('fEspec').textContent     = i.especificacao;
+  $('ficha').hidden = false;
+  $('buscaItem').value = i.descricao;
+  $('unidadeMedida').textContent = i.unidade;
+  esconder('resultados');
+  limparErro('item');
+}
+
+/* ============================================================================
+   6) LISTA DE ITENS — montada na própria tela
+   ========================================================================== */
+function escolherItemLista(i){
+  rascunho.item = i;
+  rascunho.familia = i.familia;
+  $('familiaLista').value = i.familia;
+  $('buscaLista').value = i.descricao;
+  $('unidadeLista').textContent = i.unidade;
+  esconder('resultadosLista');
+  atualizarBotaoAdd();
+  $('qtdLista').focus();
+}
+
+function alternarModoLivre(){
+  rascunho.livre = !rascunho.livre;
+  $('addCatalogo').hidden = rascunho.livre;
+  $('addLivre').hidden    = !rascunho.livre;
+  $('alternarLivre').textContent = rascunho.livre
+    ? '← Voltar a buscar no catálogo'
+    : 'O item não está no catálogo';
+  $('unidadeLista').textContent = rascunho.livre ? 'Unidade' : '—';
+  rascunho.item = null;
+  rascunho.descricao = '';
+  $('descLista').value = '';
+  $('buscaLista').value = '';
+  atualizarBotaoAdd();
+}
+
+function atualizarBotaoAdd(){
+  const temItem = rascunho.livre ? rascunho.descricao.trim().length > 1 : !!rascunho.item;
+  const temQtd  = Number(rascunho.quantidade) > 0;
+  $('btnAddItem').disabled = MODO_DEMO ? false : !(temItem && temQtd);
+}
+
+function adicionarItem(){
+  const qtd = Number(rascunho.quantidade) > 0 ? Number(rascunho.quantidade) : 1;
+
+  if(rascunho.livre){
+    if(!rascunho.descricao.trim()){
+      if(!MODO_DEMO) return;
+      return;
+    }
+    estado.itensLista.push({
+      foraCatalogo:true, codigo:null, familia:null,
+      descricao:rascunho.descricao.trim(), unidade:'Unidade', quantidade:qtd
+    });
+  } else {
+    if(!rascunho.item) return;
+    estado.itensLista.push({
+      foraCatalogo:false, codigo:rascunho.item.codigo, familia:rascunho.item.familia,
+      descricao:rascunho.item.descricao, unidade:rascunho.item.unidade,
+      especificacao:rascunho.item.especificacao, quantidade:qtd
+    });
+  }
+
+  // limpa o rascunho, mantendo a família para agilizar vários itens seguidos
+  rascunho.item = null;
+  rascunho.descricao = '';
+  rascunho.quantidade = '';
+  $('buscaLista').value = '';
+  $('descLista').value = '';
+  $('qtdLista').value = '';
+  if(!rascunho.livre) $('unidadeLista').textContent = '—';
+
+  atualizarBotaoAdd();
+  renderLista();
+  limparErro('itensLista');
+}
+
+function removerItem(indice){
+  estado.itensLista.splice(indice,1);
+  renderLista();
+}
+
+function renderLista(){
+  const ul = $('itensLista');
+  ul.innerHTML = '';
+
+  estado.itensLista.forEach((it, idx)=>{
+    const li = document.createElement('li');
+    if(it.foraCatalogo) li.className = 'fora';
+    li.innerHTML =
+      '<div class="info"><b>'+it.descricao+'</b>' +
+      '<span>'+(it.foraCatalogo ? '⚠ fora do catálogo — irá para cadastro' : it.codigo)+'</span></div>' +
+      '<span class="qtd-tag">'+it.quantidade+' '+it.unidade.toLowerCase()+'</span>' +
+      '<button type="button" class="remover" title="Remover">×</button>';
+    li.querySelector('.remover').addEventListener('click', ()=> removerItem(idx));
+    ul.appendChild(li);
+  });
+
+  const vazio = estado.itensLista.length === 0;
+  $('listaVazia').hidden  = !vazio;
+  $('resumoLista').hidden = vazio;
+  $('totalItens').textContent = estado.itensLista.length;
+}
+
+function aoTrocarTipo(tipo){
+  const lista = tipo === 'lista';
+  $('blocoItem').hidden  = lista;
+  $('blocoLista').hidden = !lista;
+  if(passoAtual > sequencia().length-1) passoAtual = sequencia().length-1;
+  render();
+}
+
+/* ============================================================================
+   7) VALIDAÇÃO
+   Mantida inteira. Em MODO_DEMO ela é ignorada — ver o primeiro if.
+   ========================================================================== */
+function erro(campo, msg){
+  const el = document.querySelector('[data-campo="'+campo+'"]');
+  if(!el) return;
+  el.classList.add('invalido');
+  if(!el.querySelector('.erro-msg')){
+    const s = document.createElement('span');
+    s.className = 'erro-msg'; s.textContent = msg;
+    el.appendChild(s);
+  }
+}
+
+function limparErro(campo){
+  const el = document.querySelector('[data-campo="'+campo+'"]');
+  if(!el) return;
+  el.classList.remove('invalido');
+  const s = el.querySelector('.erro-msg');
+  if(s) s.remove();
+}
+
+function validar(passo){
+  if(MODO_DEMO) return true;   // <<< desligar o modo demo reativa tudo abaixo
+
+  let ok = true;
+  const falhar = (c,m)=>{ erro(c,m); ok = false; };
+
+  if(passo === 'item'){
+    if(!estado.tipo) falhar('tipo','Selecione o tipo de solicitação.');
+    else if(estado.tipo === 'lista'){
+      if(estado.itensLista.length === 0) falhar('itensLista','Adicione pelo menos um item à lista.');
+    } else {
+      if(estado.foraCatalogo){
+        if(!estado.descricaoLivre.trim()) falhar('descricaoLivre','Descreva o item.');
+      } else {
+        if(!estado.familia) falhar('familia','Selecione a família.');
+        if(!estado.item)    falhar('item','Busque e selecione o item.');
+      }
+    }
+  }
+
+  if(passo === 'quantidade'){
+    if(!estado.quantidade || Number(estado.quantidade) <= 0)
+      falhar('quantidade','Informe uma quantidade maior que zero.');
+  }
+
+  if(passo === 'destino'){
+    if(!estado.unidade)     falhar('unidade','Selecione a unidade de destino.');
+    if(!estado.centroCusto) falhar('centroCusto','Selecione o centro de custo.');
+  }
+
+  if(passo === 'motivo'){
+    if(!estado.motivo)          falhar('motivo','Selecione o motivo da compra.');
+    if(!estado.prioridade)      falhar('prioridade','Selecione a prioridade.');
+    if(!estado.dataNecessidade) falhar('dataNecessidade','Informe a data de necessidade.');
+  }
+
+  return ok;
+}
+
+function validarTudo(){ return sequencia().every(p => validar(p)); }
+
+/* ============================================================================
+   8) NAVEGAÇÃO E VISUAL
+   ========================================================================== */
+function trocarVisual(modo){
+  modoVisual = modo;
+  $('verPassos').classList.toggle('ativo', modo === 'passos');
+  $('verPagina').classList.toggle('ativo', modo === 'pagina');
+  if(modo === 'passos') passoAtual = 0;
+  render();
+}
+
+function render(){
+  const seq = sequencia();
+
+  if(modoVisual === 'pagina'){
+    document.querySelectorAll('.passo').forEach(s=>{
+      const chave = s.dataset.passo;
+      s.hidden = chave === 'confirmacao' || !seq.includes(chave);
+      if(!s.hidden){
+        const n = seq.indexOf(chave) + 1;
+        s.querySelector('h2').textContent = n + '. ' + TITULOS[chave];
+      }
+    });
+    $('progresso').hidden = true;
+    $('btnVoltar').hidden = true;
+    $('btnAvancar').textContent = 'Enviar solicitação';
+    $('nav').hidden = false;
+    return;
+  }
+
+  if(passoAtual > seq.length-1) passoAtual = seq.length-1;
+  const atual = seq[passoAtual];
+
+  document.querySelectorAll('.passo').forEach(s=>{
+    s.hidden = s.dataset.passo !== atual;
+    if(TITULOS[s.dataset.passo]) s.querySelector('h2').textContent = TITULOS[s.dataset.passo];
+  });
+
+  $('progresso').hidden = false;
+  $('progTexto').textContent  = 'Passo ' + (passoAtual+1) + ' de ' + seq.length;
+  $('progTitulo').textContent = TITULOS[atual] || '';
+  $('progBarra').style.width  = ((passoAtual+1)/seq.length*100) + '%';
+
+  $('btnVoltar').hidden = passoAtual === 0;
+  $('btnAvancar').textContent = passoAtual === seq.length-1 ? 'Enviar solicitação' : 'Continuar';
+  $('nav').hidden = false;
+
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function avancar(){
+  const seq = sequencia();
+  if(modoVisual === 'pagina'){
+    if(!validarTudo()) return;
+    enviar(); return;
+  }
+  if(!validar(seq[passoAtual])) return;
+  if(passoAtual === seq.length-1){ enviar(); return; }
+  passoAtual++;
+  render();
+}
+
+function voltar(){ if(passoAtual > 0){ passoAtual--; render(); } }
+
+/* ============================================================================
+   9) PREENCHIMENTO DE EXEMPLO — só existe no modo demo
+   ========================================================================== */
+function preencherExemplo(){
+  if(estado.tipo === 'lista'){
+    estado.itensLista = [
+      { foraCatalogo:false, codigo:'LP-0220', familia:'LIM', descricao:'Sabonete em barra 90 g', unidade:'Unidade', quantidade:30 },
+      { foraCatalogo:false, codigo:'LP-0304', familia:'LIM', descricao:'Vassoura de piaçava nº 4', unidade:'Unidade', quantidade:6 },
+      { foraCatalogo:false, codigo:'LP-0311', familia:'LIM', descricao:'Detergente neutro 5 L', unidade:'Litro', quantidade:20 },
+      { foraCatalogo:true,  codigo:null, familia:null, descricao:'Rodo de borracha 60 cm', unidade:'Unidade', quantidade:4 }
+    ];
+    renderLista();
+    $('unidade').value = 'G103';
+    $('unidade').dispatchEvent(new Event('change'));
+    $('centroCusto').value = 'G103-MOR';
+    $('centroCusto').dispatchEvent(new Event('change'));
+    marcarRadio('motivo','recorrente');
+    marcarRadio('prioridade','normal');
+  } else {
+    marcarRadio('tipo','item');
+    $('familia').value = 'PNE';
+    $('familia').dispatchEvent(new Event('change'));
+    escolherItem(DADOS.itens.find(i => i.codigo === 'MM3-0412'));
+    $('quantidade').value = 4;
+    $('quantidade').dispatchEvent(new Event('input'));
+    $('unidade').value = 'G103';
+    $('unidade').dispatchEvent(new Event('change'));
+    $('centroCusto').value = 'G103-MAN';
+    $('centroCusto').dispatchEvent(new Event('change'));
+    marcarRadio('motivo','corretiva');
+    marcarRadio('prioridade','alta');
+  }
+
+  const d = new Date(); d.setDate(d.getDate() + 14);
+  $('dataNecessidade').value = d.toISOString().slice(0,10);
+  $('dataNecessidade').dispatchEvent(new Event('change'));
+
+  render();
+}
+
+/* ============================================================================
+   10) ENVIO — ponto de integração
+   ========================================================================== */
+function enviar(){
+  const i = estado.item;
+  const ehLista = estado.tipo === 'lista';
+
+  const payload = {
+    numero:      $('autoNumero').textContent,
+    solicitante: DADOS.solicitante.nome,
+    abertoEm:    new Date().toISOString(),
+    tipo:        estado.tipo || null,
+
+    // pedido de item único
+    item: ehLista ? null : (estado.foraCatalogo
+      ? { foraCatalogo:true, descricao: estado.descricaoLivre }
+      : (i ? { foraCatalogo:false, codigo:i.codigo, descricao:i.descricao,
+               familia:estado.familia, unidade:i.unidade, especificacao:i.especificacao }
+           : null)),
+    quantidade: ehLista ? null : (estado.quantidade ? Number(estado.quantidade) : null),
+
+    // pedido em lista — montada na própria tela, sem planilha
+    itens: ehLista ? estado.itensLista : null,
+    totalItens: ehLista ? estado.itensLista.length : null,
+
+    unidadeDestino: estado.unidade || null,
+    centroCusto:    estado.centroCusto || null,
+
+    motivo:          estado.motivo || null,
+    prioridade:      estado.prioridade || null,
+    dataNecessidade: estado.dataNecessidade || null,
+    anexos:          estado.anexos.map(f=>f.name),
+
+    // Sem campo de valor por decisão de projeto.
+    // O preço entra na etapa de cotação, após a aprovação do gerente.
+    valor: null,
+    status: 'aguardando aprovação',
+
+    _demo: MODO_DEMO || undefined
+  };
+
+  console.log('Payload da solicitação:', payload);
+
+  // TODO: trocar pelo POST real
+  // await fetch('/api/solicitacoes',{method:'POST',
+  //   headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+
+  $('okNumero').textContent  = payload.numero;
+  $('okPayload').textContent = JSON.stringify(payload, null, 2);
+
+  document.querySelectorAll('.passo').forEach(s=>{
+    s.hidden = s.dataset.passo !== 'confirmacao';
+  });
+  $('nav').hidden = true;
+  $('progresso').hidden = true;
+  $('auto').hidden = true;
+  $('btnRecomecar').hidden = !MODO_DEMO;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+iniciar();
+</script>
+
+</body>
+</html>
