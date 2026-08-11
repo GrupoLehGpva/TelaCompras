@@ -4,31 +4,31 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Solicitação de Compra · Grupo Leh</title>
- 
+
 <!--
   ============================================================================
   SOLICITAÇÃO DE COMPRA — Grupo Leh
   Tela do colaborador. Arquivo único, sem dependências, sem build.
- 
+
   >>> CONFIGURE AQUI ANTES DE USAR <<<
   Logo no início do <script>, preencha SUPABASE_KEY com a sua anon key.
- 
+
   >>> ANTES DE GRAVAR, RODE O ALTER TABLE <<<
   Esta versão tem campos novos. O banco precisa das colunas novas.
   Arquivo: alterar-tabelas.sql
- 
+
   >>> ESTA CÓPIA ESTÁ EM MODO DEMO <<<
   Para produção: const MODO_DEMO = false;
- 
+
   CAMPOS OBRIGATÓRIOS DEFINIDOS PELO CLIENTE:
-    1. Centro de custo          4. Data sugerida para entrega
+    1. Centro de custo          4. Data limite para entrega
     2. Tipo de compra           5. Local de entrega
     3. Definição de fornecedor  6. Motivo da compra
- 
+
   NÃO EXISTE CAMPO DE VALOR — o preço é apurado pelo setor de compras.
   ============================================================================
 -->
- 
+
 <style>
   :root{
     --verde:#1f5f3f; --verde-claro:#eaf2ed; --bg:#f5f6f4; --card:#ffffff;
@@ -41,7 +41,7 @@
   body{margin:0;background:var(--bg);color:var(--texto);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
     font-size:16px;line-height:1.5;padding-bottom:120px}
- 
+
   .topo{background:var(--verde);color:#fff;padding:16px 20px;position:sticky;top:0;z-index:20;
     display:flex;justify-content:space-between;align-items:center;gap:12px}
   .topo h1{margin:0;font-size:17px;font-weight:600;letter-spacing:.2px}
@@ -50,7 +50,7 @@
     padding:4px 9px;border-radius:99px;white-space:nowrap;background:rgba(255,255,255,.18)}
   .status.on{background:#bff0d4;color:#10502f}
   .status.off{background:#f6dcb8;color:#7a4a12}
- 
+
   .demo-bar{background:var(--demo-bg);border-bottom:1px solid var(--demo-borda);padding:10px 16px}
   .demo-bar[hidden]{display:none}
   .demo-bar .interno{max-width:560px;margin:0 auto;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
@@ -61,31 +61,31 @@
   .btn-exemplo{border:1px solid var(--demo-borda);background:#fff;color:var(--demo);font:inherit;font-size:13px;
     font-weight:600;padding:7px 12px;border-radius:8px;cursor:pointer;text-decoration:none;display:inline-block}
   .btn-exemplo:hover{background:#fbeed6}
- 
+
   .wrap{max-width:560px;margin:0 auto;padding:16px}
- 
+
   .auto{background:var(--card);border:1px solid var(--borda);border-radius:var(--raio);
     padding:14px 16px;display:flex;flex-wrap:wrap;gap:16px;margin-bottom:16px}
   .auto div{flex:1 1 30%;min-width:100px}
   .auto dt{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:2px}
   .auto dd{margin:0;font-size:14px;font-weight:600}
- 
+
   .progresso{margin-bottom:16px}
   .progresso[hidden]{display:none}
   .progresso .rotulo{display:flex;justify-content:space-between;align-items:baseline;
     font-size:12px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.8px}
   .barra{height:5px;background:var(--borda);border-radius:99px;overflow:hidden}
   .barra i{display:block;height:100%;background:var(--verde);border-radius:99px;transition:width .25s ease}
- 
+
   .passo{background:var(--card);border:1px solid var(--borda);border-radius:var(--raio);padding:20px 18px;margin-bottom:16px}
   .passo h2{margin:0 0 18px;font-size:19px;font-weight:650;letter-spacing:-.2px}
   .passo[hidden]{display:none}
- 
+
   .campo{margin-bottom:22px}
   .campo:last-child{margin-bottom:0}
   .campo > label,.campo > .titulo{display:block;font-weight:600;font-size:15px;margin-bottom:8px}
   .ajuda{display:block;font-size:13px;color:var(--muted);margin-top:6px;line-height:1.45}
- 
+
   input[type=text],input[type=number],input[type=date],select,textarea{
     width:100%;padding:13px 12px;font-size:16px;font-family:inherit;color:inherit;
     background:#fff;border:1px solid var(--borda);border-radius:10px;appearance:none}
@@ -93,7 +93,7 @@
   select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'><path d='M3 5l4 4 4-4' fill='none' stroke='%236b7770' stroke-width='1.6' stroke-linecap='round'/></svg>");
     background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
   input:disabled,select:disabled{background:#f2f4f2;color:var(--muted)}
- 
+
   .opcoes{display:flex;flex-direction:column;gap:8px}
   .opcao{display:flex;gap:11px;align-items:flex-start;border:1px solid var(--borda);border-radius:10px;
     padding:13px 14px;cursor:pointer;background:#fff;transition:border-color .15s,background .15s}
@@ -102,10 +102,10 @@
   .opcao b{display:block;font-weight:600;font-size:15px}
   .opcao em{display:block;font-style:normal;font-size:13px;color:var(--muted);margin-top:1px}
   .opcao.marcada{border-color:var(--verde);background:var(--verde-claro)}
- 
+
   .checkbox{display:flex;gap:11px;align-items:flex-start;cursor:pointer}
   .checkbox input{margin:2px 0 0;accent-color:var(--verde);width:18px;height:18px;flex:none}
- 
+
   .busca{position:relative}
   .resultados{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:5;background:#fff;
     border:1px solid var(--borda);border-radius:10px;max-height:260px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.10)}
@@ -117,7 +117,7 @@
   .resultados b{display:block;font-size:14px;font-weight:600}
   .resultados span{display:block;font-size:12px;color:var(--muted);margin-top:1px}
   .vazio{padding:14px;font-size:13px;color:var(--muted)}
- 
+
   .ficha{background:var(--verde-claro);border:1px solid #cfe0d6;border-radius:10px;padding:14px 16px;margin-top:12px}
   .ficha[hidden]{display:none}
   .ficha dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px}
@@ -125,19 +125,19 @@
   .ficha dd{margin:0;font-size:14px;font-weight:600}
   .ficha .rodape{font-size:12px;color:var(--muted);margin:10px 0 0;display:flex;justify-content:space-between;align-items:center;gap:10px}
   .ficha .rodape button{background:none;border:0;color:var(--verde);font:inherit;font-weight:600;cursor:pointer;padding:0;text-decoration:underline}
- 
+
   .excecao{border:1px dashed #d6b48a;background:#fdf8f1;border-radius:10px;padding:14px 16px;margin-top:18px}
   .excecao .aviso{font-size:13px;color:#8a5a1e;margin:10px 0 0;line-height:1.45}
   .condicional{border:1px dashed #d6b48a;background:#fdf8f1;border-radius:10px;padding:14px 16px;margin-top:12px}
   .condicional[hidden]{display:none}
   .condicional .aviso{font-size:13px;color:#8a5a1e;margin:10px 0 0;line-height:1.45}
- 
+
   .qtd{display:flex;gap:10px;align-items:stretch}
   .qtd input{flex:1 1 auto}
   .qtd .unidade{flex:none;display:flex;align-items:center;padding:0 16px;background:#f2f4f2;
     border:1px solid var(--borda);border-radius:10px;font-size:14px;font-weight:600;color:var(--muted);
     white-space:nowrap;min-width:96px;justify-content:center}
- 
+
   .montador{border:1px solid var(--borda);border-radius:10px;padding:16px;background:#fbfcfb}
   .montador .linha{margin-bottom:12px}
   .montador .linha:last-of-type{margin-bottom:0}
@@ -148,7 +148,7 @@
   .btn-add:disabled{background:#c3cfc8;border-color:#c3cfc8;cursor:not-allowed}
   .link-excecao{background:none;border:0;color:var(--verde);font:inherit;font-size:13px;font-weight:600;
     cursor:pointer;padding:0;text-decoration:underline;margin-top:12px}
- 
+
   .itens-lista{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
   .itens-lista li{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--borda);
     border-radius:10px;padding:12px 14px;background:#fff}
@@ -160,29 +160,29 @@
   .itens-lista .remover{flex:none;background:none;border:0;color:var(--muted);font-size:20px;line-height:1;cursor:pointer;padding:2px 4px}
   .itens-lista .remover:hover{color:var(--erro)}
   .itens-lista .fora{border-style:dashed;border-color:#d6b48a;background:#fdf8f1}
- 
+
   .resumo-lista{display:flex;justify-content:space-between;align-items:center;margin-top:14px;
     padding-top:12px;border-top:1px solid var(--borda);font-size:14px}
   .lista-vazia{margin-top:16px;padding:20px;text-align:center;border:1px dashed var(--borda);
     border-radius:10px;color:var(--muted);font-size:14px}
- 
+
   .anexo{display:flex;align-items:center;gap:10px;justify-content:center;border:1px dashed var(--borda);
     border-radius:10px;padding:16px;cursor:pointer;color:var(--verde);font-weight:600;font-size:15px;background:#fff}
   .anexo:hover{border-color:var(--verde);background:var(--verde-claro)}
   .anexo input{display:none}
   .lista-anexos{list-style:none;margin:10px 0 0;padding:0;font-size:13px;color:var(--muted)}
   .lista-anexos li{padding:4px 0}
- 
+
   .erro-msg{display:block;color:var(--erro);font-size:13px;font-weight:600;margin-top:6px}
   .campo.invalido input,.campo.invalido select,.campo.invalido textarea{border-color:var(--erro);background:var(--erro-bg)}
   .campo.invalido .opcoes .opcao{border-color:#e8b4b0}
   .campo.invalido .montador{border-color:var(--erro)}
- 
+
   .alerta{border:1px solid #e8b4b0;background:var(--erro-bg);color:#7d1d17;border-radius:10px;
     padding:12px 14px;font-size:13px;margin-bottom:16px;line-height:1.5}
   .alerta[hidden]{display:none}
   .alerta code{font-size:12px;word-break:break-all}
- 
+
   .nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--borda);
     padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom));z-index:15}
   .nav[hidden]{display:none}
@@ -194,7 +194,7 @@
   .btn.secundario{background:#fff;color:var(--texto);border-color:var(--borda);flex:0 0 34%}
   .btn.secundario:hover{background:#f2f4f2}
   .btn[hidden]{display:none}
- 
+
   .ok{text-align:center;padding:34px 20px}
   .ok .selo{width:60px;height:60px;border-radius:50%;background:var(--verde);color:#fff;
     display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 16px}
@@ -207,13 +207,13 @@
   details.payload summary{cursor:pointer;font-size:13px;color:var(--muted);font-weight:600}
   details.payload pre{background:#16211c;color:#d7e6dc;padding:14px;border-radius:10px;
     font-size:12px;overflow-x:auto;margin-top:10px;line-height:1.5}
- 
+
   .rodape-nota{max-width:560px;margin:0 auto;padding:0 16px 20px;font-size:12px;color:var(--muted);line-height:1.5}
 </style>
 </head>
- 
+
 <body>
- 
+
 <header class="topo">
   <div>
     <span class="rot">Grupo Leh · Compras</span>
@@ -221,7 +221,7 @@
   </div>
   <span class="status" id="statusConexao">…</span>
 </header>
- 
+
 <div class="demo-bar" id="demoBar">
   <div class="interno">
     <span class="aviso">● Modo demonstração — validação desativada</span>
@@ -233,39 +233,39 @@
     <a class="btn-exemplo" href="compras.html">Tela do comprador →</a>
   </div>
 </div>
- 
+
 <main class="wrap">
- 
+
   <div class="alerta" id="alerta" hidden></div>
- 
+
   <dl class="auto" id="auto">
     <div><dt>Solicitante</dt><dd id="autoSolicitante">—</dd></div>
     <div><dt>Data</dt><dd id="autoData">—</dd></div>
     <div><dt>Nº</dt><dd id="autoNumero">—</dd></div>
   </dl>
- 
+
   <div class="progresso" id="progresso">
     <div class="rotulo"><span id="progTexto">Passo 1 de 5</span><span id="progTitulo">Item</span></div>
     <div class="barra"><i id="progBarra" style="width:20%"></i></div>
   </div>
- 
+
   <form id="form" novalidate>
- 
+
     <!-- ======================= 1 · ITEM ======================= -->
     <section class="passo" data-passo="item">
       <h2>Item</h2>
- 
+
       <div class="campo" data-campo="tipo">
         <span class="titulo">Selecione o tipo de solicitação</span>
         <div class="opcoes" id="tipoOpcoes"></div>
       </div>
- 
+
       <div id="blocoItem">
         <div class="campo" data-campo="familia">
           <label for="familia">Selecione a família</label>
           <select id="familia"><option value="">— selecione —</option></select>
         </div>
- 
+
         <div class="campo" data-campo="item">
           <label for="buscaItem">Busque o item pelo nome ou pelo código</label>
           <div class="busca">
@@ -273,7 +273,7 @@
             <div class="resultados" id="resultados" hidden></div>
           </div>
           <span class="ajuda">A busca traz apenas itens da família selecionada.</span>
- 
+
           <div class="ficha" id="ficha" hidden>
             <dl>
               <dt>Código</dt><dd id="fCodigo"></dd>
@@ -285,7 +285,7 @@
               <button type="button" id="trocarItem">Trocar item</button></p>
           </div>
         </div>
- 
+
         <div class="excecao">
           <label class="checkbox">
             <input type="checkbox" id="foraCatalogo">
@@ -299,7 +299,7 @@
             Use apenas se a busca não retornar o item.</p>
         </div>
       </div>
- 
+
       <div id="blocoLista" hidden>
         <div class="campo" data-campo="itensLista">
           <span class="titulo">Monte a lista de itens</span>
@@ -333,16 +333,16 @@
             <button type="button" class="btn-add" id="btnAddItem" disabled>+ Adicionar à lista</button>
             <button type="button" class="link-excecao" id="alternarLivre">O item não está no catálogo</button>
           </div>
- 
+
           <ul class="itens-lista" id="itensLista"></ul>
           <div class="lista-vazia" id="listaVazia">Nenhum item adicionado ainda.</div>
           <div class="resumo-lista" id="resumoLista" hidden>
-            <span>Itens na lista</span><b id="totalItens">0</b>
+            <span id="resumoTexto">Itens na lista</span><b id="totalItens">0</b>
           </div>
         </div>
       </div>
     </section>
- 
+
     <!-- ======================= 2 · QUANTIDADE ======================= -->
     <section class="passo" data-passo="quantidade" hidden>
       <h2>Quantidade</h2>
@@ -355,17 +355,17 @@
         <span class="ajuda">A unidade de medida vem do cadastro do item e não é editável.</span>
       </div>
     </section>
- 
+
     <!-- ======================= 3 · ENTREGA E CUSTO ======================= -->
     <section class="passo" data-passo="entrega" hidden>
       <h2>Entrega e custo</h2>
- 
+
       <div class="campo" data-campo="localEntrega">
         <label for="localEntrega">Selecione o local de entrega</label>
         <select id="localEntrega"><option value="">— selecione —</option></select>
         <span class="ajuda">Onde a mercadoria deve ser fisicamente entregue.</span>
       </div>
- 
+
       <div class="campo" data-campo="centroCusto">
         <label for="centroCusto">Selecione o centro de custo</label>
         <select id="centroCusto"><option value="">— selecione —</option></select>
@@ -373,21 +373,21 @@
           Pode ser diferente do local de entrega.</span>
       </div>
     </section>
- 
+
     <!-- ======================= 4 · TIPO E FORNECEDOR ======================= -->
     <section class="passo" data-passo="compra" hidden>
       <h2>Tipo de compra e fornecedor</h2>
- 
+
       <div class="campo" data-campo="tipoCompra">
         <span class="titulo">Selecione o tipo de compra</span>
         <div class="opcoes" id="tipoCompraOpcoes"></div>
         <span class="ajuda">Define a tratativa que o setor de compras vai dar ao pedido.</span>
       </div>
- 
+
       <div class="campo" data-campo="definicaoFornecedor">
         <span class="titulo">Selecione a definição de fornecedor</span>
         <div class="opcoes" id="fornecedorOpcoes"></div>
- 
+
         <div class="condicional" id="blocoJustificativa" hidden>
           <div class="campo" data-campo="justificativaFornecedor" style="margin-bottom:0">
             <label for="justificativaFornecedor">Justifique o fornecedor único</label>
@@ -399,17 +399,17 @@
         </div>
       </div>
     </section>
- 
+
     <!-- ======================= 5 · PRAZO E MOTIVO ======================= -->
     <section class="passo" data-passo="prazo" hidden>
       <h2>Prazo e motivo</h2>
- 
+
       <div class="campo" data-campo="dataLimite">
-        <label for="dataLimite">Informe a data sugerida para entrega</label>
+        <label for="dataLimite">Informe a data limite para entrega</label>
         <input type="date" id="dataLimite">
         <span class="ajuda">Data sugerida ou limite em que você precisa do item no local.</span>
       </div>
- 
+
       <div class="campo" data-campo="motivoCompra">
         <label for="motivoCompra">Descreva o motivo da compra</label>
         <input type="text" id="motivoCompra" maxlength="140"
@@ -417,7 +417,7 @@
         <span class="ajuda">Uma linha. Diga para que serve e onde vai ser aplicado.
           Ex.: <i>telas para cerca RH 101 adequação GRCS</i>.</span>
       </div>
- 
+
       <div class="campo">
         <span class="titulo">Anexe foto ou documento <span style="font-weight:400;color:var(--muted)">— opcional</span></span>
         <label class="anexo">📎 Anexar
@@ -426,7 +426,7 @@
         <ul class="lista-anexos" id="listaAnexos"></ul>
       </div>
     </section>
- 
+
     <!-- ======================= CONFIRMAÇÃO ======================= -->
     <section class="passo ok" data-passo="confirmacao" hidden>
       <div class="selo">✓</div>
@@ -449,38 +449,38 @@
         <a class="btn-exemplo" href="compras.html">Abrir a tela do comprador →</a>
       </div>
     </section>
- 
+
   </form>
 </main>
- 
+
 <nav class="nav" id="nav">
   <div class="interno">
     <button type="button" class="btn secundario" id="btnVoltar" hidden>Voltar</button>
     <button type="button" class="btn primario" id="btnAvancar">Continuar</button>
   </div>
 </nav>
- 
+
 <p class="rodape-nota">
   Protótipo para validação. Locais de entrega e centros de custo ainda são dados de exemplo.
   Este formulário não pede valor — o preço é apurado pelo setor de compras após a aprovação do gerente.
 </p>
- 
+
 <script>
 /* ============================================================================
    >>> CONFIGURAÇÃO <<<
    ========================================================================== */
 const SUPABASE_URL = 'https://mbwaqnlmscxbacmxdopr.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_AR4D1JlHB-Z12--QbzwYWQ_URZzmVwl';   // <<< COLE AQUI A SUA ANON / PUBLISHABLE KEY
- 
+
 const MODO_DEMO = true;    // false = produção, validação obrigatória volta a valer
 const CONECTADO = SUPABASE_KEY.trim().length > 20;
- 
+
 /* ============================================================================
    1) DADOS FIXOS
    ========================================================================== */
 const DADOS = {
   solicitante: { nome: 'João da Silva', cargo: 'Líder de Granja' },
- 
+
   familias: [
     { id:'PNE', nome:'Pneus' },
     { id:'PEC', nome:'Peças e rolamentos' },
@@ -490,7 +490,7 @@ const DADOS = {
     { id:'CON', nome:'Material de construção' },
     { id:'ALI', nome:'Alimentos e despensa' }
   ],
- 
+
   // TODO: substituir pelos locais reais de entrega
   locaisEntrega: [
     { id:'ALM-GPVA', nome:'Almoxarifado · Guarapuava' },
@@ -501,7 +501,7 @@ const DADOS = {
     { id:'G104',     nome:'Granja 104' },
     { id:'PI-SEDE',  nome:'Sede · Unidade Piauí' }
   ],
- 
+
   // TODO: substituir pelos centros de custo reais.
   // Lista independente do local de entrega — o gasto pode ser alocado
   // num lugar diferente de onde a mercadoria chega.
@@ -520,26 +520,26 @@ const DADOS = {
     { id:'CC-PI-AGRI',  nome:'Piauí · Agricultura' },
     { id:'CC-PI-COZ',   nome:'Piauí · Cozinha e despensa' }
   ],
- 
+
   tipos: [
     { id:'item',  titulo:'Item único' },
     { id:'lista', titulo:'Lista de itens', ajuda:'Mercado, limpeza ou construção, com muitos itens de uma vez' }
   ],
- 
+
   // Campo 2 do cliente — define a tratativa do comprador
   tiposCompra: [
     { id:'programada', titulo:'Programada', ajuda:'Planejada com antecedência. Entra na fila normal e permite cotação com calma' },
     { id:'normal',     titulo:'Normal',     ajuda:'Necessidade corrente, nada parado' },
     { id:'urgente',    titulo:'Urgente',    ajuda:'Equipamento ou atividade parada. O comprador trata na frente dos demais' }
   ],
- 
+
   // Campo 3 do cliente
   definicoesFornecedor: [
     { id:'cotacao', titulo:'Cotação',         ajuda:'Dois ou mais fornecedores. É o caminho padrão' },
     { id:'unico',   titulo:'Fornecedor único', ajuda:'Exige justificativa do solicitante' }
   ]
 };
- 
+
 const CATALOGO_FALLBACK = [
   { codigo:'MM3-0412', familia:'PNE', descricao:'Pneu 275/80 R22,5 borrachudo', unidade:'Unidade', especificacao:'Radial, uso em eixo de tração' },
   { codigo:'MM2-1180', familia:'PEC', descricao:'Rolamento rígido de esferas 6204 2RS', unidade:'Peça', especificacao:'Diâmetro interno 20 mm' },
@@ -548,14 +548,14 @@ const CATALOGO_FALLBACK = [
   { codigo:'CN-0710',  familia:'CON', descricao:'Cimento CP II 50 kg', unidade:'Saco', especificacao:'Uso geral' }
 ];
 let CATALOGO = [];
- 
+
 /* ============================================================================
    2) API
    ========================================================================== */
 const cabecalhos = extra => Object.assign({
   'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json'
 }, extra || {});
- 
+
 async function apiGet(caminho){
   const r = await fetch(SUPABASE_URL + '/rest/v1/' + caminho, { headers: cabecalhos() });
   if(!r.ok) throw new Error(await r.text());
@@ -568,7 +568,7 @@ async function apiPost(tabela, corpo){
   if(!r.ok) throw new Error(await r.text());
   return r.json();
 }
- 
+
 /* ============================================================================
    3) ESTADO
    ========================================================================== */
@@ -579,21 +579,59 @@ const estado = {
   tipoCompra:'', definicaoFornecedor:'', justificativaFornecedor:'',
   dataLimite:'', motivoCompra:'', anexos:[]
 };
-const rascunho = { familia:'', item:null, livre:false, descricao:'', quantidade:'' };
- 
+const rascunho = { familia:'', item:null, livre:false, descricao:'', quantidade:'', unidade:'' };
+
+/* ============================================================================
+   PLURAL — concordância de unidades e contagens
+   "1 unidade" · "5 unidades" · "20 litros" · "2 metros cúbicos"
+   ========================================================================== */
+const UNIDADES_PLURAL = {
+  'unidade':'unidades','peça':'peças','litro':'litros','saco':'sacos','metro':'metros',
+  'metro cúbico':'metros cúbicos','quilo':'quilos','caixa':'caixas','par':'pares',
+  'rolo':'rolos','pacote':'pacotes','lata':'latas','galão':'galões','fardo':'fardos',
+  'tonelada':'toneladas','conjunto':'conjuntos','jogo':'jogos','kit':'kits',
+  'frasco':'frascos','barra':'barras','folha':'folhas','tubo':'tubos','balde':'baldes'
+};
+
+function pluralPalavra(p){
+  const b = p.toLowerCase();
+  if(/ão$/.test(b))                  return b.replace(/ão$/,'ões');
+  if(/[aeiouáéíóúâêôãõ]$/.test(b))   return b + 's';
+  if(/m$/.test(b))                   return b.replace(/m$/,'ns');
+  if(/(r|z)$/.test(b))               return b + 'es';
+  if(/s$/.test(b))                   return b;
+  if(/il$/.test(b))                  return b.replace(/il$/,'is');
+  if(/l$/.test(b))                   return b.replace(/l$/,'is');
+  return b + 's';
+}
+
+/* devolve a unidade já concordada com a quantidade */
+function unidadePlural(unidade, n){
+  const u = String(unidade || '').trim().toLowerCase();
+  if(!u) return '';
+  if(Number(n) === 1) return u;
+  if(UNIDADES_PLURAL[u]) return UNIDADES_PLURAL[u];
+  return u.split(/\s+/).map(pluralPalavra).join(' ');
+}
+
+/* "1 item" · "29 itens" */
+function contar(n, singular, plural){
+  return n + ' ' + (Number(n) === 1 ? singular : plural);
+}
+
 const $ = id => document.getElementById(id);
 let passoAtual = 0;
 let modoVisual = 'passos';
- 
+
 const sequencia = () => estado.tipo === 'lista'
   ? ['item','entrega','compra','prazo']
   : ['item','quantidade','entrega','compra','prazo'];
- 
+
 const TITULOS = {
   item:'Item', quantidade:'Quantidade', entrega:'Entrega e custo',
   compra:'Tipo de compra e fornecedor', prazo:'Prazo e motivo'
 };
- 
+
 /* ============================================================================
    4) MONTAGEM INICIAL
    ========================================================================== */
@@ -602,31 +640,31 @@ async function iniciar(){
   $('autoSolicitante').textContent = DADOS.solicitante.nome + ' · ' + DADOS.solicitante.cargo;
   $('autoData').textContent = hoje.toLocaleDateString('pt-BR');
   $('autoNumero').textContent = 'SC-' + hoje.getFullYear() + '-' + String(Math.floor(Math.random()*9000)+1000);
- 
+
   montarOpcoes('tipoOpcoes','tipo',DADOS.tipos,aoTrocarTipo);
   montarOpcoes('tipoCompraOpcoes','tipoCompra',DADOS.tiposCompra);
   montarOpcoes('fornecedorOpcoes','definicaoFornecedor',DADOS.definicoesFornecedor, aoTrocarFornecedor);
- 
+
   const familias = DADOS.familias.map(f=>({v:f.id,t:f.nome}));
   preencherSelect($('familia'), familias);
   preencherSelect($('familiaLista'), familias);
   preencherSelect($('localEntrega'), DADOS.locaisEntrega.map(u=>({v:u.id,t:u.nome})));
   preencherSelect($('centroCusto'),  DADOS.centrosCusto.map(c=>({v:c.id,t:c.nome})));
- 
+
   $('dataLimite').min = hoje.toISOString().slice(0,10);
- 
+
   if(!MODO_DEMO){
     $('buscaItem').disabled = true;
     $('buscaLista').disabled = true;
   }
- 
+
   $('demoBar').hidden = !MODO_DEMO;
   ligarEventos();
   renderLista();
   render();
   await carregarCatalogo();
 }
- 
+
 async function carregarCatalogo(){
   const selo = $('statusConexao');
   if(!CONECTADO){
@@ -638,7 +676,7 @@ async function carregarCatalogo(){
   try{
     const dados = await apiGet('catalogo_itens?select=*&ativo=eq.true&order=descricao');
     CATALOGO = dados.length ? dados : CATALOGO_FALLBACK;
-    selo.textContent = CATALOGO.length + ' itens'; selo.className = 'status on';
+    selo.textContent = contar(CATALOGO.length,'item','itens'); selo.className = 'status on';
     if(!dados.length) mostrarAlerta('Conectado, mas a tabela <code>catalogo_itens</code> está vazia.');
   }catch(e){
     CATALOGO = CATALOGO_FALLBACK;
@@ -646,10 +684,10 @@ async function carregarCatalogo(){
     mostrarAlerta('Não consegui ler o catálogo no Supabase. Usando a lista reduzida local.<br><code>'+String(e.message).slice(0,200)+'</code>');
   }
 }
- 
+
 function mostrarAlerta(html){ const el=$('alerta'); el.innerHTML=html; el.hidden=false; }
 function esconderAlerta(){ $('alerta').hidden = true; }
- 
+
 function montarOpcoes(containerId, campo, lista, aoMudar){
   const box = $(containerId);
   box.innerHTML = '';
@@ -680,7 +718,7 @@ function preencherSelect(sel, opcoes){
     sel.appendChild(op);
   });
 }
- 
+
 /* ============================================================================
    5) EVENTOS
    ========================================================================== */
@@ -712,11 +750,15 @@ function ligarEventos(){
     limparErro('item'); limparErro('descricaoLivre');
   });
   $('descricaoLivre').addEventListener('input', e=>{ estado.descricaoLivre = e.target.value; limparErro('descricaoLivre'); });
-  $('quantidade').addEventListener('input', e=>{ estado.quantidade = e.target.value; limparErro('quantidade'); });
- 
+  $('quantidade').addEventListener('input', e=>{
+    estado.quantidade = e.target.value;
+    if(estado.item) $('unidadeMedida').textContent = unidadePlural(estado.item.unidade, estado.quantidade || 1);
+    limparErro('quantidade');
+  });
+
   $('familiaLista').addEventListener('change', e=>{
     rascunho.familia = e.target.value; rascunho.item = null;
-    $('buscaLista').value = ''; $('unidadeLista').textContent = '—';
+    $('buscaLista').value = ''; rascunho.unidade=''; atualizarUnidadeLista();
     if(!MODO_DEMO) $('buscaLista').disabled = !rascunho.familia;
     esconder('resultadosLista'); atualizarBotaoAdd();
   });
@@ -731,25 +773,29 @@ function ligarEventos(){
   });
   $('buscaLista').addEventListener('blur', ()=> setTimeout(()=>esconder('resultadosLista'),180));
   $('descLista').addEventListener('input', e=>{ rascunho.descricao = e.target.value; atualizarBotaoAdd(); });
-  $('qtdLista').addEventListener('input', e=>{ rascunho.quantidade = e.target.value; atualizarBotaoAdd(); });
+  $('qtdLista').addEventListener('input', e=>{
+    rascunho.quantidade = e.target.value;
+    atualizarUnidadeLista();
+    atualizarBotaoAdd();
+  });
   $('alternarLivre').addEventListener('click', alternarModoLivre);
   $('btnAddItem').addEventListener('click', adicionarItem);
- 
+
   $('localEntrega').addEventListener('change', e=>{ estado.localEntrega = e.target.value; limparErro('localEntrega'); });
   $('centroCusto').addEventListener('change',  e=>{ estado.centroCusto  = e.target.value; limparErro('centroCusto');  });
- 
+
   $('justificativaFornecedor').addEventListener('input', e=>{
     estado.justificativaFornecedor = e.target.value; limparErro('justificativaFornecedor');
   });
- 
+
   $('dataLimite').addEventListener('change', e=>{ estado.dataLimite = e.target.value; limparErro('dataLimite'); });
   $('motivoCompra').addEventListener('input', e=>{ estado.motivoCompra = e.target.value; limparErro('motivoCompra'); });
- 
+
   $('anexos').addEventListener('change', e=>{
     estado.anexos = [...e.target.files];
     $('listaAnexos').innerHTML = estado.anexos.map(f=>'<li>📄 '+f.name+'</li>').join('');
   });
- 
+
   $('btnAvancar').addEventListener('click', avancar);
   $('btnVoltar').addEventListener('click', voltar);
   $('verPassos').addEventListener('click', ()=> trocarVisual('passos'));
@@ -757,13 +803,13 @@ function ligarEventos(){
   $('btnExemplo').addEventListener('click', preencherExemplo);
   $('btnRecomecar').addEventListener('click', ()=> location.reload());
 }
- 
+
 function aoTrocarFornecedor(valor){
   const unico = valor === 'unico';
   $('blocoJustificativa').hidden = !unico;
   if(!unico){ estado.justificativaFornecedor = ''; $('justificativaFornecedor').value = ''; limparErro('justificativaFornecedor'); }
 }
- 
+
 /* ============================================================================
    6) BUSCA
    ========================================================================== */
@@ -804,18 +850,23 @@ function escolherItem(i){
   $('fEspec').textContent = i.especificacao || '—';
   $('ficha').hidden = false;
   $('buscaItem').value = i.descricao;
-  $('unidadeMedida').textContent = i.unidade;
+  $('unidadeMedida').textContent = unidadePlural(i.unidade, estado.quantidade || 1);
   esconder('resultados'); limparErro('item');
 }
- 
+
 /* ============================================================================
    7) LISTA DE ITENS
    ========================================================================== */
+function atualizarUnidadeLista(){
+  const u = rascunho.livre ? 'Unidade' : rascunho.unidade;
+  $('unidadeLista').textContent = u ? unidadePlural(u, rascunho.quantidade || 1) : '—';
+}
+
 function escolherItemLista(i){
   rascunho.item = i; rascunho.familia = i.familia;
   $('familiaLista').value = i.familia;
   $('buscaLista').value = i.descricao;
-  $('unidadeLista').textContent = i.unidade;
+  rascunho.unidade = i.unidade; atualizarUnidadeLista();
   esconder('resultadosLista'); atualizarBotaoAdd(); $('qtdLista').focus();
 }
 function alternarModoLivre(){
@@ -823,8 +874,8 @@ function alternarModoLivre(){
   $('addCatalogo').hidden = rascunho.livre;
   $('addLivre').hidden = !rascunho.livre;
   $('alternarLivre').textContent = rascunho.livre ? '← Voltar a buscar no catálogo' : 'O item não está no catálogo';
-  $('unidadeLista').textContent = rascunho.livre ? 'Unidade' : '—';
-  rascunho.item = null; rascunho.descricao = '';
+  rascunho.item = null; rascunho.descricao = ''; rascunho.unidade = '';
+  atualizarUnidadeLista();
   $('descLista').value=''; $('buscaLista').value='';
   atualizarBotaoAdd();
 }
@@ -845,7 +896,8 @@ function adicionarItem(){
   }
   rascunho.item=null; rascunho.descricao=''; rascunho.quantidade='';
   $('buscaLista').value=''; $('descLista').value=''; $('qtdLista').value='';
-  if(!rascunho.livre) $('unidadeLista').textContent='—';
+  if(!rascunho.livre){ rascunho.unidade=''; }
+  atualizarUnidadeLista();
   atualizarBotaoAdd(); renderLista(); limparErro('itensLista');
 }
 function removerItem(i){ estado.itensLista.splice(i,1); renderLista(); }
@@ -856,7 +908,7 @@ function renderLista(){
     if(it.foraCatalogo) li.className='fora';
     li.innerHTML = '<div class="info"><b>'+it.descricao+'</b><span>' +
       (it.foraCatalogo ? '⚠ fora do catálogo — irá para cadastro' : it.codigo) + '</span></div>' +
-      '<span class="qtd-tag">'+it.quantidade+' '+String(it.unidade).toLowerCase()+'</span>' +
+      '<span class="qtd-tag">'+it.quantidade+' '+unidadePlural(it.unidade, it.quantidade)+'</span>' +
       '<button type="button" class="remover" title="Remover">×</button>';
     li.querySelector('.remover').addEventListener('click', ()=> removerItem(idx));
     ul.appendChild(li);
@@ -865,6 +917,7 @@ function renderLista(){
   $('listaVazia').hidden = !vazio;
   $('resumoLista').hidden = vazio;
   $('totalItens').textContent = estado.itensLista.length;
+  $('resumoTexto').textContent = estado.itensLista.length === 1 ? 'Item na lista' : 'Itens na lista';
 }
 function aoTrocarTipo(tipo){
   const lista = tipo === 'lista';
@@ -873,7 +926,7 @@ function aoTrocarTipo(tipo){
   if(passoAtual > sequencia().length-1) passoAtual = sequencia().length-1;
   render();
 }
- 
+
 /* ============================================================================
    8) VALIDAÇÃO — os 6 campos obrigatórios estão aqui
    ========================================================================== */
@@ -898,7 +951,7 @@ function validar(passo){
   if(MODO_DEMO) return true;   // <<< desligar o modo demo reativa tudo abaixo
   let ok = true;
   const falhar = (c,m)=>{ erro(c,m); ok = false; };
- 
+
   if(passo === 'item'){
     if(!estado.tipo) falhar('tipo','Selecione o tipo de solicitação.');
     else if(estado.tipo === 'lista'){
@@ -910,32 +963,32 @@ function validar(passo){
       if(!estado.item)    falhar('item','Busque e selecione o item.');
     }
   }
- 
+
   if(passo === 'quantidade'){
     if(!estado.quantidade || Number(estado.quantidade) <= 0) falhar('quantidade','Informe uma quantidade maior que zero.');
   }
- 
+
   if(passo === 'entrega'){
     if(!estado.localEntrega) falhar('localEntrega','Selecione o local de entrega.');
     if(!estado.centroCusto)  falhar('centroCusto','Selecione o centro de custo.');
   }
- 
+
   if(passo === 'compra'){
     if(!estado.tipoCompra)          falhar('tipoCompra','Selecione o tipo de compra.');
     if(!estado.definicaoFornecedor) falhar('definicaoFornecedor','Selecione a definição de fornecedor.');
     if(estado.definicaoFornecedor === 'unico' && estado.justificativaFornecedor.trim().length < 10)
       falhar('justificativaFornecedor','Justifique o fornecedor único com pelo menos uma frase.');
   }
- 
+
   if(passo === 'prazo'){
-    if(!estado.dataLimite) falhar('dataLimite','Informe a data sugerida para entrega.');
+    if(!estado.dataLimite) falhar('dataLimite','Informe a data limite para entrega.');
     if(estado.motivoCompra.trim().length < 5) falhar('motivoCompra','Descreva o motivo da compra.');
   }
- 
+
   return ok;
 }
 function validarTudo(){ return sequencia().every(p => validar(p)); }
- 
+
 /* ============================================================================
    9) NAVEGAÇÃO
    ========================================================================== */
@@ -983,12 +1036,12 @@ function avancar(){
   passoAtual++; render();
 }
 function voltar(){ if(passoAtual>0){ passoAtual--; render(); } }
- 
+
 /* ============================================================================
    10) EXEMPLO
    ========================================================================== */
 function acharNoCatalogo(cod){ return CATALOGO.find(i=>i.codigo===cod); }
- 
+
 function preencherExemplo(){
   if(estado.tipo === 'lista'){
     const pega = (cod, qtd, desc, un) => {
@@ -1007,7 +1060,7 @@ function preencherExemplo(){
     $('centroCusto').value  = 'CC-103-MOR'; $('centroCusto').dispatchEvent(new Event('change'));
     marcarRadio('tipoCompra','programada');
     marcarRadio('definicaoFornecedor','cotacao');
-    $('motivoCompra').value = 'reposição mensal de limpeza casa dos moradores granja 103';
+    $('motivoCompra').value = 'Reposição mensal de material de limpeza da casa dos moradores da Granja 103';
   } else {
     marcarRadio('tipo','item');
     const pneu = acharNoCatalogo('MM3-0412') || CATALOGO[0];
@@ -1017,9 +1070,9 @@ function preencherExemplo(){
     $('centroCusto').value  = 'CC-FROTA'; $('centroCusto').dispatchEvent(new Event('change'));
     marcarRadio('tipoCompra','urgente');
     marcarRadio('definicaoFornecedor','unico');
-    $('justificativaFornecedor').value = 'medida original, só a concessionária fornece para este modelo';
+    $('justificativaFornecedor').value = 'Peça original: apenas a concessionária fornece esta medida para o modelo do caminhão.';
     $('justificativaFornecedor').dispatchEvent(new Event('input'));
-    $('motivoCompra').value = 'pneus para caminhão placa AXW8H88 reprovado na inspeção';
+    $('motivoCompra').value = 'Pneus para o caminhão placa AXW8H88, reprovado na inspeção';
   }
   $('motivoCompra').dispatchEvent(new Event('input'));
   const d = new Date(); d.setDate(d.getDate() + 14);
@@ -1027,7 +1080,7 @@ function preencherExemplo(){
   $('dataLimite').dispatchEvent(new Event('change'));
   render();
 }
- 
+
 /* ============================================================================
    11) ENVIO
    ========================================================================== */
@@ -1042,11 +1095,11 @@ function montarItens(){
   return [{ foraCatalogo:false, codigo:i.codigo, descricao:i.descricao, unidade:i.unidade,
             quantidade: Number(estado.quantidade) || 1 }];
 }
- 
+
 async function enviar(){
   const botao = $('btnAvancar');
   esconderAlerta();
- 
+
   const cabecalho = {
     numero:                   $('autoNumero').textContent,
     solicitante:              DADOS.solicitante.nome,
@@ -1060,9 +1113,9 @@ async function enviar(){
     status:                   'aguardando aprovacao'
   };
   const itens = montarItens();
- 
+
   if(!CONECTADO){ concluir(cabecalho, itens, 'Não gravado — chave do Supabase não preenchida.'); return; }
- 
+
   botao.disabled = true; botao.textContent = 'Enviando…';
   try{
     const [solicitacao] = await apiPost('solicitacoes', cabecalho);
@@ -1080,7 +1133,7 @@ async function enviar(){
     window.scrollTo({top:0,behavior:'smooth'});
   }
 }
- 
+
 function concluir(cabecalho, itens, nota){
   $('okNumero').textContent = cabecalho.numero + ' · ' + nota;
   $('okPayload').textContent = JSON.stringify({ solicitacao: cabecalho, itens: itens }, null, 2);
@@ -1088,9 +1141,9 @@ function concluir(cabecalho, itens, nota){
   $('nav').hidden = true; $('progresso').hidden = true; $('auto').hidden = true;
   window.scrollTo({top:0,behavior:'smooth'});
 }
- 
+
 iniciar();
 </script>
- 
+
 </body>
 </html>
