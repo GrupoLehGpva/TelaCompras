@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cotação · Setor de Compras · Grupo Leh</title>
+ 
+<!--
+  ============================================================================
+  COTAÇÃO — tela do setor de compras · Grupo Leh
+ 
+  >>> CONFIGURE AQUI <<<  preencha SUPABASE_KEY, igual ao index.html.
+  >>> RODE ANTES <<<      alterar-tabelas.sql (colunas novas)
+ 
+  A tela se adapta à definição de fornecedor escolhida pelo solicitante:
+    - Cotação        → três colunas de preço
+    - Fornecedor único → uma coluna, com a justificativa em destaque
+  ============================================================================
+-->
+ 
+<style>
+  :root{
+    --verde:#1f5f3f; --verde-claro:#eaf2ed; --bg:#f5f6f4; --card:#ffffff;
+    --texto:#16211c; --muted:#6b7770; --borda:#dde3df;
+    --erro:#b3261e; --erro-bg:#fdf0ef; --ouro:#8a5a1e; --ouro-bg:#fdf6e9; --ouro-borda:#e6d3ae;
+    --raio:12px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--texto);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    font-size:16px;line-height:1.5;padding-bottom:90px}
+ 
+  .topo{background:var(--verde);color:#fff;padding:16px 20px;position:sticky;top:0;z-index:20;
+    display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .topo h1{margin:0;font-size:17px;font-weight:600}
+  .topo .rot{display:block;font-size:12px;opacity:.75;margin-top:2px;text-transform:uppercase;letter-spacing:1px}
+  .status{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+    padding:4px 9px;border-radius:99px;white-space:nowrap;background:rgba(255,255,255,.18)}
+  .status.on{background:#bff0d4;color:#10502f}
+  .status.off{background:#f6dcb8;color:#7a4a12}
+ 
+  .wrap{max-width:1000px;margin:0 auto;padding:16px}
+ 
+  .alerta{border:1px solid #e8b4b0;background:var(--erro-bg);color:#7d1d17;border-radius:10px;
+    padding:12px 14px;font-size:13px;margin-bottom:16px;line-height:1.5}
+  .alerta[hidden]{display:none}
+  .alerta code{font-size:12px;word-break:break-all}
+ 
+  h2.secao{font-size:15px;text-transform:uppercase;letter-spacing:.9px;color:var(--muted);font-weight:700;margin:0 0 12px}
+ 
+  .pedidos{display:flex;flex-direction:column;gap:10px}
+  .pedido{background:var(--card);border:1px solid var(--borda);border-radius:var(--raio);
+    padding:14px 16px;cursor:pointer;display:flex;gap:12px;align-items:center;text-align:left;
+    width:100%;font:inherit;color:inherit;transition:border-color .15s;flex-wrap:wrap}
+  .pedido:hover{border-color:var(--verde)}
+  .pedido .col{flex:1 1 240px;min-width:0}
+  .pedido b{display:block;font-size:15px;font-weight:650}
+  .pedido span{display:block;font-size:13px;color:var(--muted);margin-top:2px}
+  .tag{flex:none;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+    padding:5px 10px;border-radius:99px;white-space:nowrap}
+  .tag.programada{background:#e9eef6;color:#2c4a75}
+  .tag.normal{background:#eef0ee;color:var(--muted)}
+  .tag.urgente{background:#fdecea;color:var(--erro)}
+  .tag.unico{background:var(--ouro-bg);color:var(--ouro)}
+  .tag.aguardando{background:var(--ouro-bg);color:var(--ouro)}
+  .tag.cotado{background:var(--verde-claro);color:var(--verde)}
+  .vazio{padding:36px;text-align:center;color:var(--muted);border:1px dashed var(--borda);
+    border-radius:var(--raio);background:var(--card)}
+ 
+  .painel{background:var(--card);border:1px solid var(--borda);border-radius:var(--raio);padding:18px;margin-bottom:16px}
+  .voltar{background:none;border:0;color:var(--verde);font:inherit;font-weight:650;cursor:pointer;
+    padding:0;margin-bottom:14px;font-size:14px}
+ 
+  .cabec{display:flex;flex-wrap:wrap;gap:18px;margin:0}
+  .cabec div{flex:1 1 150px}
+  .cabec dt{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:2px}
+  .cabec dd{margin:0;font-size:14px;font-weight:600}
+  .cabec .largo{flex:1 1 100%}
+ 
+  .aviso-unico{border:1px solid var(--ouro-borda);background:var(--ouro-bg);border-radius:10px;
+    padding:14px 16px;margin-bottom:16px}
+  .aviso-unico[hidden]{display:none}
+  .aviso-unico b{display:block;font-size:14px;color:var(--ouro);margin-bottom:4px}
+  .aviso-unico p{margin:0;font-size:14px;line-height:1.5}
+  .aviso-unico small{display:block;font-size:12px;color:var(--ouro);margin-top:8px}
+ 
+  .fornecedores{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .fornecedores.solo{grid-template-columns:1fr}
+  @media(max-width:640px){.fornecedores{grid-template-columns:1fr}}
+  .fornecedores label{display:block;font-size:12px;font-weight:700;color:var(--muted);
+    margin-bottom:5px;text-transform:uppercase;letter-spacing:.6px}
+  .fornecedores .oculto{display:none}
+  input[type=text],input[type=number]{width:100%;padding:11px 12px;font-size:15px;font-family:inherit;
+    color:inherit;background:#fff;border:1px solid var(--borda);border-radius:9px}
+  input:focus{outline:none;border-color:var(--verde);box-shadow:0 0 0 3px var(--verde-claro)}
+ 
+  .grade-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{width:100%;border-collapse:collapse;min-width:620px;font-size:14px}
+  th,td{padding:11px 10px;text-align:left;border-bottom:1px solid var(--borda);vertical-align:middle}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:700;background:#fafbfa}
+  th.oculto,td.oculto{display:none}
+  td.item b{display:block;font-weight:600;line-height:1.3}
+  td.item span{display:block;font-size:12px;color:var(--muted);margin-top:1px}
+  td.qtd{white-space:nowrap;font-weight:600}
+  td.preco{width:130px}
+  td.preco input{text-align:right}
+  td.preco.melhor input{border-color:var(--verde);background:var(--verde-claro);font-weight:700}
+  tr.fora td.item{border-left:3px solid var(--ouro-borda)}
+  tfoot td{font-weight:700;background:#fafbfa;border-bottom:0}
+  tfoot td.total{text-align:right;white-space:nowrap}
+  tfoot td.vencedor{color:var(--verde)}
+ 
+  .comparacao{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  @media(max-width:640px){.comparacao{grid-template-columns:1fr}}
+  .cartao{border:1px solid var(--borda);border-radius:10px;padding:14px;background:#fbfcfb}
+  .cartao dt{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:4px}
+  .cartao dd{margin:0;font-size:20px;font-weight:700;letter-spacing:-.3px}
+  .cartao small{display:block;font-size:12px;color:var(--muted);font-weight:400;margin-top:4px;line-height:1.4}
+  .cartao.destaque{border-color:var(--verde);background:var(--verde-claro)}
+  .cartao.destaque dd{color:var(--verde)}
+ 
+  .nota{font-size:13px;color:var(--muted);line-height:1.5;margin:14px 0 0}
+ 
+  .nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--borda);
+    padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom));z-index:15}
+  .nav[hidden]{display:none}
+  .nav .interno{max-width:1000px;margin:0 auto;display:flex;gap:10px;justify-content:flex-end;align-items:center}
+  .nav .msg{flex:1;font-size:13px;color:var(--muted)}
+  button.btn{min-height:48px;padding:0 24px;border-radius:10px;font:inherit;font-size:15px;font-weight:650;cursor:pointer;border:1px solid transparent}
+  .btn.primario{background:var(--verde);color:#fff}
+  .btn.primario:hover{background:#184c32}
+  .btn.primario:disabled{background:#8fae9d;cursor:wait}
+  .btn.secundario{background:#fff;color:var(--texto);border-color:var(--borda)}
+</style>
+</head>
+ 
+<body>
+ 
+<header class="topo">
+  <div>
+    <span class="rot">Grupo Leh · Setor de Compras</span>
+    <h1>Cotação</h1>
+  </div>
+  <span class="status" id="statusConexao">…</span>
+</header>
+ 
+<main class="wrap">
+  <div class="alerta" id="alerta" hidden></div>
+ 
+  <section id="telaLista">
+    <h2 class="secao">Solicitações recebidas</h2>
+    <div class="pedidos" id="pedidos"></div>
+  </section>
+ 
+  <section id="telaDetalhe" hidden>
+    <button class="voltar" id="btnVoltarLista">← Voltar para a lista</button>
+ 
+    <div class="painel"><dl class="cabec" id="cabecalho"></dl></div>
+ 
+    <div class="aviso-unico" id="avisoUnico" hidden>
+      <b>⚠ Fornecedor único — o solicitante dispensou a cotação</b>
+      <p id="textoJustificativa"></p>
+      <small>Preencha apenas a coluna do fornecedor escolhido.</small>
+    </div>
+ 
+    <div class="painel">
+      <h2 class="secao" id="tituloFornecedores">Fornecedores cotados</h2>
+      <div class="fornecedores" id="blocoFornecedores">
+        <div id="wrapF1"><label for="forn1">Fornecedor 1</label><input type="text" id="forn1" placeholder="Nome"></div>
+        <div id="wrapF2"><label for="forn2">Fornecedor 2</label><input type="text" id="forn2" placeholder="Nome"></div>
+        <div id="wrapF3"><label for="forn3">Fornecedor 3</label><input type="text" id="forn3" placeholder="Nome"></div>
+      </div>
+    </div>
+ 
+    <div class="painel">
+      <h2 class="secao">Itens e preços</h2>
+      <div class="grade-wrap">
+        <table id="grade">
+          <thead>
+            <tr>
+              <th>Item</th><th>Qtd</th>
+              <th id="thF1">Fornecedor 1</th>
+              <th id="thF2">Fornecedor 2</th>
+              <th id="thF3">Fornecedor 3</th>
+            </tr>
+          </thead>
+          <tbody id="corpoGrade"></tbody>
+          <tfoot id="rodapeGrade"></tfoot>
+        </table>
+      </div>
+      <p class="nota">Preço <b>unitário</b> por item. O melhor preço de cada linha fica destacado em verde.</p>
+    </div>
+ 
+    <div class="painel" id="painelComparacao">
+      <h2 class="secao">Comparação</h2>
+      <div class="comparacao" id="comparacao"></div>
+      <p class="nota" id="notaComparacao"></p>
+    </div>
+  </section>
+</main>
+ 
+<nav class="nav" id="nav" hidden>
+  <div class="interno">
+    <span class="msg" id="msgSalvar"></span>
+    <button type="button" class="btn secundario" id="btnCancelar">Cancelar</button>
+    <button type="button" class="btn primario" id="btnSalvar">Salvar cotação</button>
+  </div>
+</nav>
+ 
+<script>
+/* ============================================================================
+   CONFIGURAÇÃO
+   ========================================================================== */
+const SUPABASE_URL = 'https://mbwaqnlmscxbacmxdopr.supabase.co';
+const SUPABASE_KEY = '';   // <<< COLE AQUI A SUA ANON / PUBLISHABLE KEY
+ 
+const CONECTADO = SUPABASE_KEY.trim().length > 20;
+const $ = id => document.getElementById(id);
+ 
+const TIPO_COMPRA = { programada:'Programada', normal:'Normal', urgente:'Urgente' };
+const DEF_FORN    = { cotacao:'Cotação (2 ou mais)', unico:'Fornecedor único' };
+const LOCAIS = {
+  'ALM-GPVA':'Almoxarifado · Guarapuava', 'ESC-GPVA':'Escritório · Guarapuava',
+  G101:'Granja 101', G102:'Granja 102', G103:'Granja 103', G104:'Granja 104',
+  'PI-SEDE':'Sede · Unidade Piauí'
+};
+const CENTROS = {
+  'CC-101-PROD':'Granja 101 · Produção','CC-101-MAN':'Granja 101 · Manutenção',
+  'CC-102-PROD':'Granja 102 · Produção','CC-102-MAN':'Granja 102 · Manutenção',
+  'CC-103-PROD':'Granja 103 · Produção','CC-103-MAN':'Granja 103 · Manutenção',
+  'CC-103-MOR':'Granja 103 · Casa dos moradores','CC-FROTA':'Frota','CC-AGRI':'Agricultura',
+  'CC-ADM':'Administrativo','CC-RH':'RH','CC-PI-AGRI':'Piauí · Agricultura','CC-PI-COZ':'Piauí · Cozinha e despensa'
+};
+ 
+let pedidos = [], atual = null, itensAtual = [], fornecedorUnico = false;
+ 
+const cabecalhos = extra => Object.assign({
+  'apikey': SUPABASE_KEY, 'Authorization':'Bearer '+SUPABASE_KEY, 'Content-Type':'application/json'
+}, extra||{});
+ 
+async function apiGet(caminho){
+  const r = await fetch(SUPABASE_URL+'/rest/v1/'+caminho,{headers:cabecalhos()});
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function apiPatch(caminho, corpo){
+  const r = await fetch(SUPABASE_URL+'/rest/v1/'+caminho,{
+    method:'PATCH', headers:cabecalhos({'Prefer':'return=minimal'}), body:JSON.stringify(corpo)
+  });
+  if(!r.ok) throw new Error(await r.text());
+}
+ 
+function alerta(html){ const el=$('alerta'); el.innerHTML=html; el.hidden=false; }
+function limpaAlerta(){ $('alerta').hidden=true; }
+const moeda = n => (n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const dataBR = s => s ? new Date(s+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+ 
+/* ============================================================================
+   LISTA
+   ========================================================================== */
+async function carregarPedidos(){
+  const selo = $('statusConexao');
+  if(!CONECTADO){
+    selo.textContent='sem banco'; selo.className='status off';
+    alerta('A chave do Supabase não foi preenchida. Preencha <code>SUPABASE_KEY</code> no início do script desta página.');
+    $('pedidos').innerHTML = '<div class="vazio">Sem conexão com o banco.</div>';
+    return;
+  }
+  try{
+    pedidos = await apiGet('solicitacoes?select=*&order=aberto_em.desc');
+    selo.textContent = pedidos.length+' pedidos'; selo.className='status on';
+    renderPedidos();
+  }catch(e){
+    selo.textContent='offline'; selo.className='status off';
+    alerta('<b>Não consegui ler as solicitações.</b><br><code>'+String(e.message).slice(0,300)+'</code>' +
+      '<br><br>Se o erro mencionar uma coluna que não existe, falta rodar o <code>alterar-tabelas.sql</code>.');
+  }
+}
+ 
+function renderPedidos(){
+  const box = $('pedidos');
+  if(!pedidos.length){
+    box.innerHTML = '<div class="vazio">Nenhuma solicitação ainda.<br>Abra o formulário e envie uma para ela aparecer aqui.</div>';
+    return;
+  }
+  box.innerHTML = '';
+  pedidos.forEach(p=>{
+    const b = document.createElement('button');
+    b.className = 'pedido';
+    const cotado = p.fornecedor_1 || p.fornecedor_2 || p.fornecedor_3;
+    const tc = p.tipo_compra || 'normal';
+    b.innerHTML =
+      '<div class="col"><b>'+p.numero+' · '+(p.motivo || 'sem motivo informado')+'</b>' +
+      '<span>'+(LOCAIS[p.local_entrega]||p.local_entrega||'—')+' · custo em '+
+        (CENTROS[p.centro_custo]||p.centro_custo||'—')+' · entrega até '+dataBR(p.data_necessidade)+'</span></div>' +
+      '<span class="tag '+tc+'">'+(TIPO_COMPRA[tc]||tc)+'</span>' +
+      (p.definicao_fornecedor === 'unico' ? '<span class="tag unico">fornecedor único</span>' : '') +
+      '<span class="tag '+(cotado?'cotado':'aguardando')+'">'+(cotado?'cotado':'a cotar')+'</span>';
+    b.addEventListener('click', ()=> abrir(p));
+    box.appendChild(b);
+  });
+}
+ 
+/* ============================================================================
+   DETALHE
+   ========================================================================== */
+async function abrir(p){
+  limpaAlerta();
+  atual = p;
+  try{
+    itensAtual = await apiGet('solicitacao_itens?solicitacao_id=eq.'+p.id+'&select=*&order=descricao');
+  }catch(e){
+    alerta('<b>Não consegui ler os itens.</b><br><code>'+String(e.message).slice(0,300)+'</code>');
+    return;
+  }
+ 
+  fornecedorUnico = p.definicao_fornecedor === 'unico';
+ 
+  $('cabecalho').innerHTML =
+    campo('Nº', p.numero) +
+    campo('Solicitante', p.solicitante) +
+    campo('Tipo de compra', TIPO_COMPRA[p.tipo_compra] || '—') +
+    campo('Definição de fornecedor', DEF_FORN[p.definicao_fornecedor] || '—') +
+    campo('Local de entrega', LOCAIS[p.local_entrega] || p.local_entrega || '—') +
+    campo('Centro de custo', CENTROS[p.centro_custo] || p.centro_custo || '—') +
+    campo('Entrega até', dataBR(p.data_necessidade)) +
+    campo('Motivo da compra', p.motivo || '—', true);
+ 
+  $('avisoUnico').hidden = !fornecedorUnico;
+  $('textoJustificativa').textContent = p.justificativa_fornecedor || 'Sem justificativa registrada.';
+ 
+  $('tituloFornecedores').textContent = fornecedorUnico ? 'Fornecedor escolhido' : 'Fornecedores cotados';
+  $('blocoFornecedores').classList.toggle('solo', fornecedorUnico);
+  ['2','3'].forEach(n=>{
+    $('wrapF'+n).classList.toggle('oculto', fornecedorUnico);
+    $('thF'+n).classList.toggle('oculto', fornecedorUnico);
+  });
+  $('painelComparacao').hidden = fornecedorUnico;
+ 
+  $('forn1').value = p.fornecedor_1 || '';
+  $('forn2').value = p.fornecedor_2 || '';
+  $('forn3').value = p.fornecedor_3 || '';
+ 
+  renderGrade();
+  $('telaLista').hidden = true;
+  $('telaDetalhe').hidden = false;
+  $('nav').hidden = false;
+  $('msgSalvar').textContent = '';
+  window.scrollTo({top:0});
+}
+ 
+function campo(rot, val, largo){
+  return '<div'+(largo?' class="largo"':'')+'><dt>'+rot+'</dt><dd>'+val+'</dd></div>';
+}
+ 
+function renderGrade(){
+  const corpo = $('corpoGrade');
+  corpo.innerHTML = '';
+ 
+  itensAtual.forEach((it, idx)=>{
+    const tr = document.createElement('tr');
+    if(it.fora_catalogo) tr.className = 'fora';
+    tr.innerHTML =
+      '<td class="item"><b>'+it.descricao+'</b><span>'+
+        (it.fora_catalogo ? '⚠ fora do catálogo' : (it.codigo||'—'))+'</span></td>' +
+      '<td class="qtd">'+it.quantidade+' '+String(it.unidade||'').toLowerCase()+'</td>' +
+      celulaPreco(idx,1) + celulaPreco(idx,2) + celulaPreco(idx,3);
+    corpo.appendChild(tr);
+  });
+ 
+  corpo.querySelectorAll('input[data-idx]').forEach(inp=>{
+    inp.addEventListener('input', e=>{
+      const i = Number(e.target.dataset.idx), n = e.target.dataset.forn;
+      itensAtual[i]['preco_'+n] = e.target.value === '' ? null : Number(e.target.value);
+      calcular();
+    });
+  });
+ 
+  ['1','2','3'].forEach(n=>{
+    $('forn'+n).oninput = ()=>{ $('thF'+n).textContent = $('forn'+n).value || ('Fornecedor '+n); };
+    $('thF'+n).textContent = $('forn'+n).value || ('Fornecedor '+n);
+  });
+ 
+  calcular();
+}
+ 
+function celulaPreco(idx, n){
+  const v = itensAtual[idx]['preco_'+n];
+  const oculto = fornecedorUnico && n !== 1 ? ' oculto' : '';
+  return '<td class="preco'+oculto+'" data-cel="'+idx+'-'+n+'">' +
+    '<input type="number" min="0" step="0.01" inputmode="decimal" placeholder="0,00" ' +
+    'data-idx="'+idx+'" data-forn="'+n+'" value="'+(v===null||v===undefined?'':v)+'"></td>';
+}
+ 
+/* ============================================================================
+   CÁLCULO
+   ========================================================================== */
+function calcular(){
+  const colunas = fornecedorUnico ? [1] : [1,2,3];
+  const totais = {1:0,2:0,3:0}, completo = {1:true,2:true,3:true};
+  let totalItemAItem = 0, algumPreco = false;
+ 
+  itensAtual.forEach((it, idx)=>{
+    const precos = {};
+    colunas.forEach(n=>{
+      const v = it['preco_'+n];
+      precos[n] = (v===null||v===undefined||v==='') ? null : Number(v);
+    });
+    const validos = colunas.map(n=>precos[n]).filter(v=>v!==null && v>0);
+    if(validos.length) algumPreco = true;
+    const menor = validos.length ? Math.min(...validos) : null;
+ 
+    colunas.forEach(n=>{
+      const cel = document.querySelector('[data-cel="'+idx+'-'+n+'"]');
+      if(cel) cel.classList.toggle('melhor', !fornecedorUnico && menor!==null && precos[n]===menor);
+      if(precos[n]===null || precos[n]<=0) completo[n] = false;
+      else totais[n] += precos[n] * Number(it.quantidade||0);
+    });
+ 
+    if(menor!==null) totalItemAItem += menor * Number(it.quantidade||0);
+  });
+ 
+  const candidatos = colunas.filter(n => completo[n] && totais[n] > 0);
+  const melhorTotal = candidatos.length ? Math.min(...candidatos.map(n=>totais[n])) : null;
+ 
+  $('rodapeGrade').innerHTML = algumPreco
+    ? '<tr><td colspan="2">Total</td>' + [1,2,3].map(n=>{
+        const oculto = fornecedorUnico && n!==1 ? ' oculto' : '';
+        const venc = melhorTotal!==null && totais[n]===melhorTotal && completo[n] ? ' vencedor' : '';
+        return '<td class="total'+venc+oculto+'">' +
+          (completo[n] && totais[n]>0 ? moeda(totais[n]) : '<span style="color:var(--muted);font-weight:400">incompleto</span>') +
+          '</td>';
+      }).join('') + '</tr>'
+    : '';
+ 
+  if(fornecedorUnico) return;   // sem comparação quando não há cotação
+ 
+  const box = $('comparacao');
+  if(!algumPreco){
+    box.innerHTML = '<div class="cartao"><dt>Aguardando preços</dt><dd>—</dd><small>Preencha os preços para ver a comparação.</small></div>';
+    $('notaComparacao').textContent = '';
+    return;
+  }
+ 
+  const economia = melhorTotal!==null ? melhorTotal - totalItemAItem : null;
+  const perc = (melhorTotal && economia!==null) ? (economia/melhorTotal*100) : null;
+ 
+  box.innerHTML =
+    '<div class="cartao"><dt>Melhor fornecedor único</dt><dd>' + (melhorTotal!==null ? moeda(melhorTotal) : '—') +
+      '</dd><small>' + (melhorTotal!==null ? 'Comprando tudo de quem deu o menor total.' : 'Nenhum fornecedor cotou todos os itens ainda.') + '</small></div>' +
+    '<div class="cartao destaque"><dt>Comprando item a item</dt><dd>' + moeda(totalItemAItem) +
+      '</dd><small>Somando o menor preço de cada linha.</small></div>' +
+    '<div class="cartao"><dt>Diferença</dt><dd>' + (economia!==null ? moeda(economia) : '—') +
+      '</dd><small>' + (economia!==null && perc!==null ? perc.toFixed(1).replace('.',',')+'% do total' : 'Depende de uma cotação completa.') + '</small></div>';
+ 
+  $('notaComparacao').innerHTML = (economia!==null && economia>0)
+    ? 'Comprar item a item, e não tudo de um fornecedor só, economiza <b>'+moeda(economia)+'</b> neste pedido.'
+    : 'Sem diferença entre comprar tudo de um fornecedor ou item a item neste pedido.';
+}
+ 
+/* ============================================================================
+   SALVAR
+   ========================================================================== */
+async function salvar(){
+  const botao = $('btnSalvar');
+  botao.disabled = true; botao.textContent = 'Salvando…';
+  limpaAlerta();
+  try{
+    await apiPatch('solicitacoes?id=eq.'+atual.id, {
+      fornecedor_1: $('forn1').value || null,
+      fornecedor_2: fornecedorUnico ? null : ($('forn2').value || null),
+      fornecedor_3: fornecedorUnico ? null : ($('forn3').value || null),
+      status: 'cotado'
+    });
+    for(const it of itensAtual){
+      await apiPatch('solicitacao_itens?id=eq.'+it.id, {
+        preco_1: it.preco_1 ?? null,
+        preco_2: fornecedorUnico ? null : (it.preco_2 ?? null),
+        preco_3: fornecedorUnico ? null : (it.preco_3 ?? null)
+      });
+    }
+    $('msgSalvar').textContent = 'Cotação salva.';
+    await carregarPedidos();
+  }catch(e){
+    alerta('<b>Não consegui salvar.</b><br><code>'+String(e.message).slice(0,300)+'</code>');
+    window.scrollTo({top:0,behavior:'smooth'});
+  }finally{
+    botao.disabled = false; botao.textContent = 'Salvar cotação';
+  }
+}
+ 
+function voltarLista(){
+  $('telaDetalhe').hidden = true;
+  $('telaLista').hidden = false;
+  $('nav').hidden = true;
+  atual = null; itensAtual = [];
+  window.scrollTo({top:0});
+}
+ 
+$('btnVoltarLista').addEventListener('click', voltarLista);
+$('btnCancelar').addEventListener('click', voltarLista);
+$('btnSalvar').addEventListener('click', salvar);
+ 
+carregarPedidos();
+</script>
+ 
+</body>
+</html>
