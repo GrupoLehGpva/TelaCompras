@@ -632,6 +632,7 @@ const $ = id => document.getElementById(id);
 let passoAtual = 0;
 let modoVisual = 'passos';
 let ultimoPacote = null;   // o que foi enviado ao n8n
+let SLACK_UID = '';        // id do usuário no Slack, vindo da query string (vai só ao webhook)
 
 const sequencia = () => estado.tipo === 'lista'
   ? ['item','entrega','compra','prazo']
@@ -647,7 +648,24 @@ const TITULOS = {
    ========================================================================== */
 async function iniciar(){
   const hoje = new Date();
-  $('autoSolicitante').textContent = DADOS.solicitante.nome + ' · ' + DADOS.solicitante.cargo;
+
+  /* Nome e uid do solicitante podem vir do Slack pela query string
+     (ex.: ?nome=Guilherme%20Pimp%C3%A3o&uid=U0BL5JPQX97). */
+  const params = new URLSearchParams(location.search);
+  const nomeSlack = (params.get('nome') || '').trim();
+  SLACK_UID = (params.get('uid') || '').trim();
+
+  if(nomeSlack){
+    DADOS.solicitante.nome = nomeSlack;
+    $('autoSolicitante').textContent = nomeSlack + ' · ' + DADOS.solicitante.cargo;
+    const nota = document.createElement('small');
+    nota.textContent = 'vindo do Slack';
+    nota.style.cssText = 'display:block;opacity:.6;font-weight:normal;font-size:.8em';
+    $('autoSolicitante').appendChild(nota);
+  } else {
+    $('autoSolicitante').textContent = DADOS.solicitante.nome + ' · ' + DADOS.solicitante.cargo;
+  }
+
   $('autoData').textContent = hoje.toLocaleDateString('pt-BR');
   $('autoNumero').textContent = 'SC-' + hoje.getFullYear() + '-' + String(Math.floor(Math.random()*9000)+1000);
 
@@ -1124,6 +1142,7 @@ function montarPacote(solicitacaoId, cabecalho, itens){
     solicitacao_id: solicitacaoId,
     numero:         cabecalho.numero,
     solicitante:    cabecalho.solicitante,
+    slack_user_id:  SLACK_UID || '',
     aberto_em:      new Date().toISOString(),
 
     local_entrega:             cabecalho.local_entrega,
