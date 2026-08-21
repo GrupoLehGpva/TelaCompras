@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cotação recebida · Grupo Leh</title>
+<style>
+  :root{ --verde:#2C5F2D; --esc:#15352A; --musgo:#8FB56B; --claro:#EEF3EA;
+         --cinza:#5C6B60; --laranja:#B5541F; }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+       padding:24px;background:var(--claro);
+       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--esc)}
+  .cartao{background:#fff;border-radius:16px;padding:40px 34px;max-width:460px;width:100%;
+          box-shadow:0 4px 24px rgba(21,53,42,.10);text-align:center}
+  .marca{font-size:11px;letter-spacing:2px;font-weight:700;color:var(--musgo);margin-bottom:26px}
+  .icone{width:66px;height:66px;border-radius:50%;margin:0 auto 20px;display:flex;
+         align-items:center;justify-content:center;font-size:32px}
+  .ok .icone{background:#E2EFDA;color:var(--verde)}
+  .erro .icone{background:#FDF4EE;color:var(--laranja)}
+  .load .icone{background:var(--claro);color:var(--verde)}
+  h1{font-size:22px;margin:0 0 10px;line-height:1.3}
+  p{font-size:15px;line-height:1.6;color:var(--cinza);margin:0 0 6px}
+  .dados{margin-top:24px;padding-top:20px;border-top:1px solid #E4E8E0;font-size:13.5px;color:var(--cinza)}
+  .dados b{color:var(--esc)}
+  .btn{display:inline-block;margin-top:22px;background:var(--verde);color:#fff;border:0;
+       border-radius:8px;padding:12px 26px;font-size:15px;font-weight:600;cursor:pointer;
+       font-family:inherit}
+  .btn:disabled{opacity:.5;cursor:default}
+  @keyframes gira{to{transform:rotate(360deg)}}
+  .girando{display:inline-block;animation:gira 1s linear infinite}
+</style>
+</head>
+<body>
+<div class="cartao load" id="cartao">
+  <div class="marca">GRUPO LEH · COTAÇÃO</div>
+  <div class="icone" id="icone"><span class="girando">◠</span></div>
+  <h1 id="titulo">Avisando o Grupo Leh…</h1>
+  <p id="texto">Só um instante.</p>
+  <div class="dados" id="dados" style="display:none"></div>
+  <button class="btn" id="repetir" style="display:none">Tentar de novo</button>
+</div>
+
+<script>
+/* Página que o fornecedor abre ao clicar no botão dentro da planilha.
+   Avisa o fluxo do n8n de que a cotação dele está pronta. */
+const WEBHOOK = 'https://grupoleh.app.n8n.cloud/webhook/fornecedor-pronto';
+
+const q = new URLSearchParams(location.search);
+const dados = {
+  solicitacao: q.get('s') || '',
+  fornecedor:  q.get('f') || '',
+  taskId:      q.get('t') || ''
+};
+
+const cartao = document.getElementById('cartao');
+const icone  = document.getElementById('icone');
+const titulo = document.getElementById('titulo');
+const texto  = document.getElementById('texto');
+const caixa  = document.getElementById('dados');
+const botao  = document.getElementById('repetir');
+
+function mostrarDados(){
+  if(!dados.solicitacao && !dados.fornecedor) return;
+  caixa.style.display = 'block';
+  caixa.innerHTML =
+    (dados.fornecedor  ? '<b>' + dados.fornecedor + '</b><br>' : '') +
+    (dados.solicitacao ? 'Solicitação ' + dados.solicitacao : '');
+}
+
+function estado(classe, simbolo, tit, txt, comBotao){
+  cartao.className = 'cartao ' + classe;
+  icone.innerHTML  = simbolo;
+  titulo.textContent = tit;
+  texto.textContent  = txt;
+  botao.style.display = comBotao ? 'inline-block' : 'none';
+  botao.disabled = false;
+}
+
+async function avisar(){
+  if(!dados.solicitacao || !dados.fornecedor){
+    estado('erro','!','Link incompleto',
+      'Este endereço não traz a solicitação ou o fornecedor. Abra o botão pela planilha que você recebeu.',
+      false);
+    return;
+  }
+  estado('load','<span class="girando">◠</span>','Avisando o Grupo Leh…','Só um instante.',false);
+  botao.disabled = true;
+  try{
+    const r = await fetch(WEBHOOK, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(dados)
+    });
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    estado('ok','✓','Cotação recebida',
+      'Obrigado. O Grupo Leh já foi avisado e seus preços entraram na comparação. '
+      + 'Se precisar corrigir algo, altere a planilha e clique no botão de novo.', false);
+  }catch(e){
+    estado('erro','!','Não conseguimos avisar',
+      'Sua planilha está salva, mas o aviso não chegou. Tente de novo em um minuto — '
+      + 'se continuar, responda o e-mail do Grupo Leh.', true);
+  }
+}
+
+mostrarDados();
+botao.addEventListener('click', avisar);
+avisar();
+</script>
+</body>
+</html>
