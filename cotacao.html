@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#102438">
+<title>Orçamento · Grupo Leh</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  /* identidade Grupo Leh — grupoleh.com.br */
+  color-scheme:light;   /* faz o navegador desenhar lista, data e caixa no tema certo */
+  --marca:#102438;        --sobre-marca:#FFFFFF;
+  --acento:#008C95;       --acento-fundo:#00727A;  --acento-claro:#E2F1F2;  --sobre-acento:#FFFFFF;
+  --fundo:#F0F5FA;        --superficie:#FFFFFF;    --realce:#F7FAFC;        --mudo:#EBF1F6;
+  --texto:#16202B;        --suave:#33475C;         --fraco:#5A6E82;
+  --linha:#DCE4EC;        --linha-forte:#B9C6D4;
+  --alerta:#8A5A00;       --alerta-fundo:#FFF8E8;  --alerta-linha:#EFDDB4;
+  --erro:#B3261E;         --erro-fundo:#FDF2F1;
+  --sans:"Goldplay","Figtree",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --pilula:100px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --marca:#0A1622;        --sobre-marca:#FFFFFF;
+    --acento:#2FB3BC;       --acento-fundo:#56C8CF;  --acento-claro:#0D2A2D;  --sobre-acento:#06141A;
+    --fundo:#0B131B;        --superficie:#111C25;    --realce:#16222D;        --mudo:#182633;
+    --texto:#EDF3F8;        --suave:#BAC7D3;         --fraco:#94A4B3;
+    --linha:#243240;        --linha-forte:#36485B;
+    --alerta:#E0B860;       --alerta-fundo:#241D0E;  --alerta-linha:#3B3218;
+    --erro:#F0A0A0;         --erro-fundo:#2A1616;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --marca:#0A1622;        --sobre-marca:#FFFFFF;
+  --acento:#2FB3BC;       --acento-fundo:#56C8CF;  --acento-claro:#0D2A2D;  --sobre-acento:#06141A;
+  --fundo:#0B131B;        --superficie:#111C25;    --realce:#16222D;        --mudo:#182633;
+  --texto:#EDF3F8;        --suave:#BAC7D3;         --fraco:#94A4B3;
+  --linha:#243240;        --linha-forte:#36485B;
+  --alerta:#E0B860;       --alerta-fundo:#241D0E;  --alerta-linha:#3B3218;
+  --erro:#F0A0A0;         --erro-fundo:#2A1616;
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--fundo);color:var(--texto);font-family:var(--sans);
+  font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;
+  padding-bottom:132px;-webkit-text-size-adjust:100%}
+.col{max-width:1000px;margin:0 auto;padding:0 18px}
+h1,h2,h3{text-wrap:balance}
+
+/* ---------------- cabeçalho ---------------- */
+header{background:var(--marca);color:var(--sobre-marca)}
+header .col{padding:20px 18px;display:flex;flex-wrap:wrap;gap:6px 22px;align-items:flex-end}
+header .rot{font-size:11.5px;letter-spacing:.15em;text-transform:uppercase;
+  opacity:.85;display:block;margin-bottom:4px;font-weight:600}
+header .num{font-family:var(--mono);font-size:23px;font-weight:600;line-height:1.05}
+header .forn{font-size:16px;font-weight:600;padding-bottom:2px;opacity:.92}
+
+.meta{background:var(--superficie);border-bottom:1px solid var(--linha)}
+.meta .col{padding:11px 18px;display:flex;flex-wrap:wrap;gap:6px 30px}
+.meta div{display:flex;gap:8px;align-items:baseline}
+.meta .rot{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--suave);font-weight:700}
+.meta .val{font-weight:600}
+
+/* ---------------- instruções ---------------- */
+.guia{background:var(--superficie);border:1px solid var(--linha);
+  border-top:3px solid var(--acento);border-radius:10px;padding:18px 20px;margin:20px 0}
+.guia h2{margin:0 0 10px;font-size:19px;letter-spacing:-.01em;color:var(--marca);font-weight:700}
+:root[data-theme="dark"] .guia h2{color:var(--acento-fundo)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .guia h2{color:var(--acento-fundo)}}
+.guia ol{margin:0;padding-left:22px;font-size:15.5px}
+.guia li{margin-bottom:8px}
+.guia li:last-child{margin-bottom:0}
+.guia b{font-weight:700}
+.guia .fecho{margin:14px 0 0;font-size:14.5px;color:var(--texto);
+  border-top:1px solid var(--linha);padding-top:12px}
+
+/* ---------------- blocos ---------------- */
+.bloco{background:var(--superficie);border:1px solid var(--linha);border-radius:10px;
+  margin:18px 0;overflow:hidden}
+.bloco > h2{margin:0;font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--suave);font-weight:700;padding:13px 18px;border-bottom:1px solid var(--linha);
+  background:var(--realce);display:flex;justify-content:space-between;gap:12px;
+  align-items:baseline;flex-wrap:wrap}
+.bloco > h2 em{font-style:normal;text-transform:none;letter-spacing:0;
+  font-size:13px;color:var(--suave);font-weight:400}
+.corpo{padding:18px}
+
+/* ---------------- tabela ---------------- */
+.rolagem{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:940px;table-layout:fixed}
+thead th{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--suave);font-weight:700;text-align:left;padding:11px 16px;
+  border-bottom:1px solid var(--linha)}
+tbody td{padding:14px 16px;border-top:1px solid var(--linha);vertical-align:top}
+tr.item.primeira td{border-top:0}
+.n{text-align:right;white-space:nowrap}
+.cod{font-family:var(--mono);font-size:12px;color:var(--fraco);padding-top:16px!important}
+.desc{font-weight:700;letter-spacing:-.005em;display:block;font-size:16px}
+.qt{font-size:14.5px;color:var(--texto);font-weight:600;padding-top:16px!important}
+.tot{font-family:var(--mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums;
+  padding-top:16px!important}
+.tot small{display:block;font-family:var(--sans);font-size:12.5px;font-weight:500;
+  color:var(--suave);margin-top:3px;letter-spacing:0}
+.tot.apagado{color:var(--fraco);font-weight:400;font-size:13.5px;font-family:var(--sans)}
+tr.item.recusado td{background:var(--mudo)}
+tr.item.recusado .desc{color:var(--fraco);text-decoration:line-through;text-decoration-thickness:1px}
+
+input,select,textarea{font-family:var(--sans);font-size:16px;color:var(--texto);
+  background:var(--superficie);border:1px solid var(--linha-forte);border-radius:8px;
+  padding:11px 13px;width:100%}
+textarea{resize:vertical;line-height:1.45}
+input:focus-visible,select:focus-visible,textarea:focus-visible{
+  outline:2px solid var(--acento);outline-offset:1px;border-color:var(--acento)}
+input:disabled,select:disabled{background:var(--mudo);color:var(--fraco)}
+input.preco{font-family:var(--mono);text-align:right;max-width:150px;margin-left:auto;
+  font-variant-numeric:tabular-nums;font-weight:600}
+input.preco.ruim{border-color:var(--erro);background:var(--erro-fundo)}
+
+/* embalagem por unidade */
+.emb{display:flex;align-items:center;gap:7px;flex-wrap:nowrap;margin-top:9px;
+  font-size:13.5px;color:var(--suave);font-weight:500}
+.emb input{width:74px;padding:7px 9px;font-family:var(--mono);text-align:right;font-size:14px}
+.emb select{width:auto;padding:7px 26px 7px 9px;font-size:14px}
+
+/* botão "não tenho" */
+.chip{font-family:var(--sans);font-size:13.5px;font-weight:600;line-height:1.2;
+  background:var(--superficie);color:var(--suave);border:1.5px solid var(--linha-forte);
+  border-radius:var(--pilula);padding:10px 16px;cursor:pointer;white-space:nowrap;
+  display:inline-flex;align-items:center;gap:8px}
+.chip:hover{border-color:var(--acento);color:var(--acento)}
+.chip:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+.chip .marca{width:16px;height:16px;border:1.5px solid var(--linha-forte);border-radius:5px;
+  display:inline-block;flex:0 0 auto;position:relative;background:var(--superficie)}
+.chip[aria-pressed="true"]{background:var(--acento);border-color:var(--acento);color:var(--sobre-acento)}
+.chip[aria-pressed="true"] .marca{background:var(--sobre-acento);border-color:var(--sobre-acento)}
+.chip[aria-pressed="true"] .marca::after{content:"";position:absolute;left:4.5px;top:1px;
+  width:4px;height:9px;border:solid var(--acento);border-width:0 2px 2px 0;transform:rotate(42deg)}
+
+/* botão de observação */
+.btn-obs{margin-top:10px;white-space:nowrap;background:var(--superficie);border:1.5px solid var(--linha-forte);
+  border-radius:var(--pilula);padding:8px 15px;cursor:pointer;color:var(--suave);
+  font-family:var(--sans);font-size:13.5px;font-weight:600;display:inline-flex;
+  align-items:center;gap:7px;line-height:1.2}
+.btn-obs:hover{border-color:var(--acento);color:var(--acento)}
+.btn-obs:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+.btn-obs .sinal{font-size:15px;line-height:1}
+.btn-obs.cheia{border-color:var(--acento);color:var(--acento);background:var(--acento-claro)}
+
+tr.linha-obs td{padding:0 16px 16px;border-top:0}
+tr.linha-obs.escondida{display:none}
+.obs-campo{display:flex;flex-direction:column;gap:6px}
+.obs-campo label{font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--suave);font-weight:700}
+.btn-pronto{align-self:flex-start;margin-top:2px;background:var(--acento);color:var(--sobre-acento);
+  border:0;border-radius:var(--pilula);padding:9px 20px;font-family:var(--sans);
+  font-size:13.5px;font-weight:700;cursor:pointer}
+.btn-pronto:hover{background:var(--acento-fundo)}
+.btn-pronto:focus-visible{outline:2px solid var(--texto);outline-offset:2px}
+
+/* ---------------- campos ---------------- */
+.campos{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+.campo label{display:block;font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--suave);margin-bottom:7px;font-weight:700}
+.pista{font-size:13.5px;color:var(--suave);margin-top:7px}
+
+/* ---------------- pagamento ---------------- */
+.pg{padding:18px 0;border-top:1px solid var(--linha)}
+.pg:first-child{padding-top:0;border-top:0}
+.pg:last-child{padding-bottom:0}
+.pg-topo{display:grid;grid-template-columns:1.5fr .8fr auto;gap:16px;align-items:start}
+.pg .ord{display:block;font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--suave);margin-bottom:7px;font-weight:700}
+.pg .saida{font-family:var(--mono);font-size:16px;font-weight:600;color:var(--acento);
+  white-space:nowrap;padding-top:28px;text-align:right;min-width:140px;font-variant-numeric:tabular-nums}
+.pg .saida small{display:block;font-family:var(--sans);font-size:11px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--suave);font-weight:700;margin-top:3px}
+.pg .obs-campo{margin-top:14px}
+
+/* ---------------- barra fixa ---------------- */
+.barra{position:fixed;left:0;right:0;bottom:0;background:var(--superficie);
+  border-top:1px solid var(--linha-forte);box-shadow:0 -6px 22px rgba(16,36,56,.12);z-index:5}
+.barra .col{padding:13px 18px calc(13px + env(safe-area-inset-bottom));
+  display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.somas{display:flex;gap:22px;align-items:baseline;flex-wrap:wrap}
+.somas .par{display:flex;flex-direction:column}
+.somas .rot{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--suave);font-weight:700}
+.somas .v{font-family:var(--mono);font-size:15px;font-variant-numeric:tabular-nums}
+.somas .par.forte .v{font-size:23px;font-weight:700;letter-spacing:-.02em;color:var(--marca)}
+:root[data-theme="dark"] .somas .par.forte .v{color:var(--texto)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .somas .par.forte .v{color:var(--texto)}}
+button.enviar{background:var(--acento);color:var(--sobre-acento);border:0;border-radius:var(--pilula);
+  padding:15px 34px;font-family:var(--sans);font-size:16px;font-weight:700;cursor:pointer}
+button.enviar:hover:not(:disabled){background:var(--acento-fundo)}
+button.enviar:focus-visible{outline:2px solid var(--texto);outline-offset:3px}
+button.enviar:disabled{opacity:.55;cursor:default}
+
+.aviso-erro{background:var(--erro-fundo);border:1px solid var(--erro);color:var(--erro);
+  border-radius:8px;padding:13px 15px;margin:16px 0;font-size:15px;display:none;font-weight:500}
+
+/* ---------------- telas de recado ---------------- */
+.recado{display:none;max-width:560px;margin:80px auto;padding:0 20px;text-align:center}
+.recado .selo{font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;
+  color:var(--acento);border:1.5px solid var(--acento);border-radius:var(--pilula);
+  padding:7px 16px;display:inline-block}
+.recado h2{font-size:25px;margin:18px 0 8px;letter-spacing:-.02em;font-weight:700}
+.recado p{color:var(--texto);margin:0 0 24px;font-size:15.5px}
+.recado .linha{display:flex;justify-content:space-between;gap:16px;padding:11px 0;
+  border-top:1px solid var(--linha);font-size:14.5px;text-align:left}
+.recado .linha span:last-child{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right}
+.recado button{margin-top:26px;background:none;border:1.5px solid var(--linha-forte);
+  color:var(--suave);border-radius:var(--pilula);padding:12px 24px;font-family:var(--sans);
+  font-size:14.5px;font-weight:600;cursor:pointer}
+.recado button:hover{border-color:var(--acento);color:var(--acento)}
+
+.faixa-demo{background:var(--alerta-fundo);border-bottom:1px solid var(--alerta-linha);color:var(--alerta)}
+.faixa-demo .col{padding:9px 18px;display:flex;gap:10px;flex-wrap:wrap;align-items:baseline}
+.faixa-demo .et{font-size:11px;letter-spacing:.11em;text-transform:uppercase;font-weight:700}
+.faixa-demo .tx{font-size:13.5px}
+
+/* ---------------- celular ---------------- */
+@media (max-width:820px){
+  .col{padding:0 14px}
+  header .num{font-size:20px}
+  table{min-width:0}
+  thead{display:none}
+  table,tbody,tr,td{display:block;width:100%}
+  tr.item{border-top:1px solid var(--linha);padding:6px 0}
+  tr.item.primeira{border-top:0}
+  tbody td{border-top:0;padding:6px 16px}
+  td.c-cod{display:none}
+  td.c-desc{padding-top:14px}
+  td.c-qt,td.c-preco,td.c-tot{display:flex;justify-content:space-between;align-items:center;gap:14px}
+  .qt,.tot,.cod{padding-top:6px!important}
+  td.c-qt::before,td.c-preco::before,td.c-tot::before{
+    font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--fraco);flex:0 0 auto;font-weight:700}
+  td.c-qt::before{content:"Quantidade"}
+  td.c-preco::before{content:"Preço unitário"}
+  td.c-tot::before{content:"Total do item"}
+  .tot small{text-align:right}
+  td.c-chip{padding-top:10px;padding-bottom:4px}
+  .chip{width:100%;justify-content:center;padding:13px 16px;font-size:14.5px}
+  td.c-tot{padding-bottom:14px}
+  tr.linha-obs td{padding:0 16px 16px}
+  .pg-topo{grid-template-columns:1fr;gap:12px}
+  .pg .saida{padding-top:0;text-align:left;min-width:0}
+  .somas{gap:16px}
+  .somas .par.forte .v{font-size:20px}
+  button.enviar{flex:1;min-width:170px}
+  .emb input{width:70px}
+  .emb{flex-wrap:wrap}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div id="carregando" class="recado" style="display:none">
+  <span class="selo">Aguarde</span><h2>Abrindo o pedido de orçamento…</h2>
+</div>
+
+<div id="bloqueio" class="recado">
+  <span class="selo" id="bl-selo">Atenção</span>
+  <h2 id="bl-titulo"></h2><p id="bl-texto"></p>
+</div>
+
+<div id="app" style="display:none">
+
+  <header><div class="col">
+    <div><span class="rot">Grupo Leh · Pedido de orçamento</span><span class="num" id="h-numero">—</span></div>
+    <div class="forn" id="h-forn"></div>
+  </div></header>
+
+  <div class="meta"><div class="col">
+    <div><span class="rot">Entregar em</span><span class="val" id="i-local">—</span></div>
+    <div><span class="rot">Itens</span><span class="val" id="i-itens">—</span></div>
+  </div></div>
+
+  <div class="col">
+
+    <div class="guia">
+      <h2>O Grupo Leh está pedindo o seu orçamento</h2>
+      <ol>
+        <li>Informe o <b>preço unitário</b> de cada item que você fornece — o valor de
+            uma unidade, não do total. Pode escrever com vírgula ou com ponto.</li>
+        <li>Confirme <b>quanto vem em cada unidade</b> (5 L, 200 ml, 25 kg). É isso que
+            permite comparar embalagens diferentes de forma justa.</li>
+        <li>Se você não trabalha com algum item, clique em <b>Não tenho este item</b>.
+            Ele sai da conta e não atrapalha o resto da sua proposta.</li>
+        <li>Informe o <b>frete</b>, a <b>previsão de entrega</b> e até
+            <b>três formas de pagamento</b>, cada uma com o desconto que você oferece, se houver.</li>
+        <li>Você pode <b>escrever uma observação em qualquer ponto</b>: em um item, na
+            entrega, em uma forma de pagamento ou no recado do fim da página.</li>
+      </ol>
+      <p class="fecho">Ao terminar, clique em <b>Enviar orçamento</b>. Precisou corrigir depois?
+         Abra este mesmo link de novo — a sua proposta continua salva aqui.</p>
+    </div>
+
+    <div class="bloco">
+      <h2>Itens <em id="resumo-itens"></em></h2>
+      <div class="rolagem"><table>
+        <thead><tr>
+          <th style="width:84px">Código</th>
+          <th>Item</th>
+          <th class="n" style="width:112px">Quantidade</th>
+          <th class="n" style="width:160px">Preço unitário</th>
+          <th style="width:186px">Não fornece?</th>
+          <th class="n" style="width:146px">Total</th>
+        </tr></thead>
+        <tbody id="linhas"></tbody>
+      </table></div>
+    </div>
+
+    <div class="bloco">
+      <h2>Entrega <em>frete e prazo da sua empresa</em></h2>
+      <div class="corpo">
+        <div class="campos">
+          <div class="campo">
+            <label for="frete">Frete até o local (R$)</label>
+            <input id="frete" inputmode="decimal" placeholder="0,00">
+            <div class="pista">Um valor único para o pedido inteiro. Deixe em branco se a entrega estiver inclusa.</div>
+          </div>
+          <div class="campo">
+            <label for="previsao">Previsão de entrega</label>
+            <input id="previsao" placeholder="ex.: 5 dias úteis após o pedido">
+            <div class="pista">Em quanto tempo você entrega, contando da confirmação da compra.</div>
+          </div>
+        </div>
+        <div class="obs-campo" style="margin-top:16px">
+          <label for="obs-entrega">Observação sobre a entrega</label>
+          <textarea id="obs-entrega" rows="2" placeholder="ex.: entrego em duas remessas, ou frete grátis acima de R$ 1.000,00"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="bloco">
+      <h2>Formas de pagamento <em>até três; o total de cada uma aparece ao lado</em></h2>
+      <div class="corpo">
+        <div id="pgtos"></div>
+        <div class="pista" style="margin-top:16px">
+          O desconto é sempre um número positivo — <b>3</b> significa 3% a menos no total.
+          Se a condição tiver acréscimo em vez de desconto, deixe o campo em zero e
+          escreva isso na observação ao lado.
+        </div>
+      </div>
+    </div>
+
+    <div class="bloco">
+      <h2>Seus dados</h2>
+      <div class="corpo">
+        <div class="campos">
+          <div class="campo"><label for="c-nome">Quem está respondendo</label>
+            <input id="c-nome" placeholder="Seu nome"></div>
+          <div class="campo"><label for="c-email">E-mail para contato</label>
+            <input id="c-email" type="email" inputmode="email" placeholder="vendas@suaempresa.com.br"></div>
+          <div class="campo"><label for="c-validade">Este orçamento vale até</label>
+            <input id="c-validade" type="date"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bloco">
+      <h2>Recado para o Grupo Leh <em>opcional</em></h2>
+      <div class="corpo">
+        <div class="obs-campo">
+          <label for="c-obs">Algo que o nosso comprador precise saber</label>
+          <textarea id="c-obs" rows="4" placeholder="Escreva aqui qualquer coisa relevante: uma condição especial, um item parecido que você tem, um prazo diferente, uma sugestão. Este espaço é seu."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="aviso-erro" id="erro" role="alert"></div>
+  </div>
+
+  <div class="barra"><div class="col">
+    <div class="somas">
+      <div class="par"><span class="rot">Itens</span><span class="v" id="s-itens">R$ 0,00</span></div>
+      <div class="par"><span class="rot">Frete</span><span class="v" id="s-frete">R$ 0,00</span></div>
+      <div class="par forte"><span class="rot">Total</span><span class="v" id="s-total">R$ 0,00</span></div>
+    </div>
+    <button class="enviar" id="btn">Enviar orçamento</button>
+  </div></div>
+</div>
+
+<div id="recibo" class="recado">
+  <span class="selo">Recebido</span>
+  <h2>Orçamento enviado</h2>
+  <p id="r-frase"></p>
+  <div class="linha"><span>Itens com preço</span><span id="r-qtd"></span></div>
+  <div class="linha"><span>Itens que você não fornece</span><span id="r-sem"></span></div>
+  <div class="linha"><span>Soma dos itens</span><span id="r-itens"></span></div>
+  <div class="linha"><span>Frete</span><span id="r-frete"></span></div>
+  <div class="linha"><span>Total</span><span id="r-total"></span></div>
+  <div class="linha"><span>Condição mais barata</span><span id="r-cond"></span></div>
+  <button id="voltar">Corrigir e enviar de novo</button>
+</div>
+
+<script>
+const MODO_DEMO    = false;
+const SUPABASE_URL = 'https://mbwaqnlmscxbacmxdopr.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_AR4D1JlHB-Z12--QbzwYWQ_URZzmVwl';
+
+const FORMAS = ['À vista — PIX','À vista — boleto','Boleto 30 dias',
+                'Boleto 30/60','Boleto 30/60/90','Cartão de crédito','Outro'];
+const BASES  = ['L','mL','kg','g','m','cm','un','pç'];
+
+const DEMO = {
+  ok:true, numero:'SC-2026-3756', fornecedor:'Agroleste', status:'enviada',
+  local_entrega:'Sede Guarapuava', contato_nome:'', contato_email:'',
+  validade_proposta:'', previsao_entrega:'', custo_entrega:null,
+  observacao_entrega:'', observacao:'',
+  itens:[
+    {item_id:'1', codigo:'LIM001', descricao:'Detergente neutro 5 L',    unidade:'Galão',   quantidade:20, preco:null, sem_item:false, observacao:null, conteudo:5,  unidade_base:'L'},
+    {item_id:'2', codigo:'LIM002', descricao:'Rodo de borracha 60 cm',   unidade:'Unidade', quantidade:4,  preco:null, sem_item:false, observacao:null, conteudo:null, unidade_base:null},
+    {item_id:'3', codigo:'LIM003', descricao:'Sabonete em barra 90 g',   unidade:'Unidade', quantidade:30, preco:null, sem_item:false, observacao:null, conteudo:90, unidade_base:'g'},
+    {item_id:'4', codigo:'LIM004', descricao:'Vassoura de piaçava nº 4', unidade:'Unidade', quantidade:1,  preco:null, sem_item:false, observacao:null, conteudo:null, unidade_base:null}
+  ],
+  pagamentos:[]
+};
+
+const token = new URLSearchParams(location.search).get('t') || '';
+let ITENS = [];
+let ESTADO = {soma:0, frete:0, total:0, cotados:0, sem:0, melhor:'—'};
+
+/* --- números: aceita 1,5 · 1.5 · R$ 1.234,56 · 1,234.56 (mesma regra do banco) --- */
+function num(txt){
+  let s = String(txt == null ? '' : txt).trim();
+  if (!s) return null;
+  s = s.toUpperCase().replace(/R\$/g,'').replace(/[\s ]/g,'');
+  if (s.includes(',') && s.includes('.')){
+    s = (s.lastIndexOf(',') > s.lastIndexOf('.'))
+        ? s.replace(/\./g,'').replace(',','.')
+        : s.replace(/,/g,'');
+  } else if (s.includes(',')) { s = s.replace(',','.'); }
+  return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : NaN;
+}
+const brl = v => (v==null||isNaN(v)) ? 'R$ 0,00'
+  : v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const dec = v => Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const qtd = v => Number(v).toLocaleString('pt-BR',{maximumFractionDigits:3});
+const esc = t => String(t==null?'':t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* --- plural das unidades: 1 Galão, 20 Galões --- */
+const PLURAIS = {
+  'litro':'Litros','unidade':'Unidades','galão':'Galões','caixa':'Caixas','pacote':'Pacotes',
+  'saco':'Sacos','saca':'Sacas','par':'Pares','rolo':'Rolos','frasco':'Frascos','balde':'Baldes',
+  'fardo':'Fardos','peça':'Peças','barra':'Barras','lata':'Latas','tubo':'Tubos','metro':'Metros',
+  'quilo':'Quilos','tonelada':'Toneladas','dúzia':'Dúzias','cento':'Centos','milheiro':'Milheiros',
+  'kit':'Kits','jogo':'Jogos','conjunto':'Conjuntos','resma':'Resmas','bobina':'Bobinas',
+  'ampola':'Ampolas','bisnaga':'Bisnagas','bombona':'Bombonas','garrafa':'Garrafas','vidro':'Vidros',
+  'pote':'Potes','bloco':'Blocos','folha':'Folhas','envelope':'Envelopes','tambor':'Tambores'
+};
+const ABREVIACOES = ['kg','g','mg','l','ml','m','cm','mm','m2','m³','un','pç','pc','t','cx','kw','h'];
+
+function pluralizar(u, n){
+  const s = String(u || '').trim();
+  if (!s || Number(n) <= 1) return s;
+  const low = s.toLowerCase();
+  if (ABREVIACOES.includes(low)) return s;              // 20 kg, não 20 kgs
+  if (PLURAIS[low]){                                     // conhecido: respeita a caixa original
+    const p = PLURAIS[low];
+    return (s[0] === s[0].toLowerCase()) ? p.toLowerCase() : p;
+  }
+  if (/ão$/i.test(s))            return s.replace(/ão$/i,'ões');
+  if (/m$/i.test(s))             return s.replace(/m$/i,'ns');
+  if (/(al|ol|ul)$/i.test(s))    return s.replace(/l$/i,'is');
+  if (/el$/i.test(s))            return s.replace(/el$/i,'éis');
+  if (/il$/i.test(s))            return s.replace(/il$/i,'is');
+  if (/[rz]$/i.test(s))          return s + 'es';
+  if (/s$/i.test(s))             return s;               // lápis, ônibus
+  return s + 's';
+}
+
+function mostrar(qual){
+  ['carregando','bloqueio','app','recibo'].forEach(id=>{
+    document.getElementById(id).style.display = (id===qual) ? (id==='app'?'':'block') : 'none';
+  });
+}
+function bloquear(selo,titulo,texto){
+  document.getElementById('bl-selo').textContent   = selo;
+  document.getElementById('bl-titulo').textContent = titulo;
+  document.getElementById('bl-texto').textContent  = texto;
+  mostrar('bloqueio');
+}
+async function rpc(funcao, corpo){
+  const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + funcao, {
+    method:'POST',
+    headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,
+             'Content-Type':'application/json'},
+    body: JSON.stringify(corpo)
+  });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+/* ---------------- itens ---------------- */
+function montarItens(itens){
+  const tb = document.getElementById('linhas');
+  tb.innerHTML = '';
+  itens.forEach((it,i)=>{
+    const unidadeSingular = String(it.unidade||'unidade').toLowerCase();
+    const opcoes = BASES.map(b=>'<option'+(it.unidade_base===b?' selected':'')+'>'+b+'</option>').join('');
+
+    const tr = document.createElement('tr');
+    tr.className = 'item' + (i===0 ? ' primeira' : '');
+    tr.innerHTML =
+      '<td class="c-cod cod">' + esc(it.codigo || '—') + '</td>' +
+      '<td class="c-desc"><span class="desc">' + esc(it.descricao) + '</span>' +
+        '<div class="emb">Cada ' + esc(unidadeSingular) + ':' +
+          '<input data-c="'+i+'" inputmode="decimal" placeholder="—" ' +
+            'aria-label="Quantidade por ' + esc(unidadeSingular) + ' de ' + esc(it.descricao) + '">' +
+          '<select data-u="'+i+'" aria-label="Medida de ' + esc(it.descricao) + '">' +
+            '<option value="">—</option>' + opcoes + '</select>' +
+        '</div>' +
+        '<button type="button" class="btn-obs" data-o="'+i+'">' +
+          '<span class="sinal">+</span><span class="rotulo">Observação neste item</span></button></td>' +
+      '<td class="c-qt qt n" data-q="'+i+'"></td>' +
+      '<td class="c-preco n"><input class="preco" inputmode="decimal" data-i="'+i+'" ' +
+        'placeholder="0,00" aria-label="Preço unitário de ' + esc(it.descricao) + '"></td>' +
+      '<td class="c-chip"><button type="button" class="chip" data-s="'+i+'" aria-pressed="false">' +
+        '<span class="marca"></span>Não tenho este item</button></td>' +
+      '<td class="c-tot tot apagado n" data-t="'+i+'">—</td>';
+    tb.appendChild(tr);
+
+    const trObs = document.createElement('tr');
+    trObs.className = 'linha-obs escondida';
+    trObs.innerHTML = '<td colspan="6"><div class="obs-campo">' +
+      '<label for="obs-'+i+'">Observação sobre ' + esc(it.descricao) + '</label>' +
+      '<textarea id="obs-'+i+'" data-ob="'+i+'" rows="2" ' +
+      'placeholder="ex.: só tenho na embalagem de 2 L, ou este item eu entrego em 10 dias"></textarea>' +
+      '<button type="button" class="btn-pronto" data-p-ok="'+i+'">Concluir observação</button>' +
+      '</div></td>';
+    tb.appendChild(trObs);
+
+    document.querySelector('[data-q="'+i+'"]').textContent =
+      qtd(it.quantidade) + ' ' + pluralizar(it.unidade, it.quantidade);
+
+    const preco = tr.querySelector('input.preco');
+    const chip  = tr.querySelector('.chip');
+    const cont  = tr.querySelector('[data-c]');
+    const base  = tr.querySelector('[data-u]');
+    const area  = trObs.querySelector('textarea');
+    const bobs  = tr.querySelector('.btn-obs');
+
+    if (it.preco != null)    preco.value = dec(it.preco);
+    if (it.conteudo != null) cont.value  = String(it.conteudo).replace('.', ',');
+    if (it.observacao){ area.value = it.observacao; }
+    marcarBotaoObs(i);
+    if (it.sem_item) aplicarRecusa(i, true);
+
+    preco.addEventListener('input', calcular);
+    preco.addEventListener('blur', function(){
+      const v = num(this.value);
+      if (v!=null && !isNaN(v) && v>0) this.value = dec(v);
+      calcular();
+    });
+    preco.addEventListener('keydown', function(e){
+      if (e.key === 'Enter'){
+        e.preventDefault();
+        const todos = [...document.querySelectorAll('input.preco:not(:disabled)')];
+        const p = todos.indexOf(this);
+        if (p > -1 && todos[p+1]) todos[p+1].focus(); else document.getElementById('frete').focus();
+      }
+    });
+    cont.addEventListener('input', calcular);
+    base.addEventListener('change', calcular);
+    chip.addEventListener('click', ()=>{
+      aplicarRecusa(i, chip.getAttribute('aria-pressed') !== 'true');
+      calcular();
+    });
+    bobs.addEventListener('click', ()=>{
+      const fechado = trObs.classList.contains('escondida');
+      trObs.classList.toggle('escondida', !fechado);
+      if (fechado) area.focus();
+    });
+    trObs.querySelector('.btn-pronto').addEventListener('click', ()=>{
+      trObs.classList.add('escondida');
+      marcarBotaoObs(i);
+      bobs.focus();
+    });
+    area.addEventListener('input', ()=>marcarBotaoObs(i));
+  });
+}
+
+function marcarBotaoObs(i){
+  const area = document.querySelector('[data-ob="'+i+'"]');
+  const btn  = document.querySelector('.btn-obs[data-o="'+i+'"]');
+  const tem  = area.value.trim().length > 0;
+  btn.classList.toggle('cheia', tem);
+  btn.querySelector('.sinal').textContent  = tem ? '✓' : '+';
+  btn.querySelector('.rotulo').textContent = tem ? 'Observação anotada' : 'Observação neste item';
+}
+
+function aplicarRecusa(i, ligado){
+  const chip  = document.querySelector('.chip[data-s="'+i+'"]');
+  const preco = document.querySelector('input.preco[data-i="'+i+'"]');
+  const cont  = document.querySelector('[data-c="'+i+'"]');
+  const base  = document.querySelector('[data-u="'+i+'"]');
+  const linha = chip.closest('tr');
+  chip.setAttribute('aria-pressed', ligado ? 'true' : 'false');
+  linha.classList.toggle('recusado', ligado);
+  preco.disabled = ligado;
+  cont.disabled  = ligado;
+  base.disabled  = ligado;
+  preco.classList.remove('ruim');
+  if (ligado) preco.value = '';
+}
+
+/* ---------------- pagamento ---------------- */
+function montarPagamentos(salvos){
+  const box = document.getElementById('pgtos');
+  box.innerHTML = '';
+  for (let n=1;n<=3;n++){
+    const s = (salvos||[]).find(p=>p.ordem===n) || {};
+    const d = document.createElement('div');
+    d.className = 'pg';
+    d.innerHTML =
+      '<div class="pg-topo">' +
+        '<div><span class="ord">Opção ' + n + '</span>' +
+          '<select data-p="'+n+'" aria-label="Forma de pagamento '+n+'">' +
+          '<option value="">— não ofereço —</option>' +
+          FORMAS.map(f=>'<option'+(s.descricao===f?' selected':'')+'>'+f+'</option>').join('') +
+          '</select>' +
+          '<input class="livre" data-l="'+n+'" placeholder="Escreva a condição, ex.: 45 dias" ' +
+          'style="margin-top:10px;display:none" aria-label="Descreva a condição da opção '+n+'"></div>' +
+        '<div><span class="ord">Desconto (%)</span>' +
+          '<input data-a="'+n+'" inputmode="decimal" placeholder="0" aria-label="Desconto em % da opção '+n+'"></div>' +
+        '<div class="saida" data-r="'+n+'"></div>' +
+      '</div>' +
+      '<div class="obs-campo"><label for="pgobs-'+n+'">Observação sobre esta condição</label>' +
+        '<textarea id="pgobs-'+n+'" data-po="'+n+'" rows="2" ' +
+        'placeholder="ex.: desconto válido para pagamento em até 2 dias"></textarea></div>';
+    box.appendChild(d);
+
+    const sel   = d.querySelector('select');
+    const livre = d.querySelector('.livre');
+    const aj    = d.querySelector('[data-a]');
+    const obs   = d.querySelector('textarea');
+    if (s.descricao_livre) livre.value = s.descricao_livre;
+    if (s.ajuste != null)  aj.value = String(s.ajuste).replace('.', ',');
+    if (s.observacao)      obs.value = s.observacao;
+    const alternar = ()=>{ livre.style.display = (sel.value==='Outro') ? '' : 'none'; };
+    alternar();
+    sel.addEventListener('change', ()=>{ alternar(); calcular(); });
+    aj.addEventListener('input', calcular);
+  }
+}
+
+/* ---------------- contas ---------------- */
+function calcular(){
+  let soma=0, cotados=0, sem=0;
+  document.querySelectorAll('input.preco').forEach(inp=>{
+    const i = Number(inp.dataset.i);
+    const recusado = document.querySelector('.chip[data-s="'+i+'"]').getAttribute('aria-pressed')==='true';
+    const cel = document.querySelector('[data-t="'+i+'"]');
+    if (recusado){
+      sem++;
+      cel.textContent = 'não fornece';
+      cel.classList.add('apagado');
+      return;
+    }
+    const v = num(inp.value);
+    const invalido = (v!=null && (isNaN(v) || v<=0));
+    inp.classList.toggle('ruim', invalido);
+    if (v==null || invalido){
+      cel.textContent = invalido ? 'valor inválido' : '—';
+      cel.classList.add('apagado');
+    } else {
+      const t = v * Number(ITENS[i].quantidade);
+      soma += t; cotados++;
+      const c = num(document.querySelector('[data-c="'+i+'"]').value);
+      const b = document.querySelector('[data-u="'+i+'"]').value;
+      let extra = '';
+      if (c!=null && !isNaN(c) && c>0 && b)
+        extra = '<small>' + brl(v/c) + ' por ' + b + '</small>';
+      cel.innerHTML = brl(t) + extra;
+      cel.classList.remove('apagado');
+    }
+  });
+
+  const f = num(document.getElementById('frete').value);
+  const frete = (f==null || isNaN(f) || f<0) ? 0 : f;
+  const total = soma + frete;
+
+  document.getElementById('s-itens').textContent = brl(soma);
+  document.getElementById('s-frete').textContent = brl(frete);
+  document.getElementById('s-total').textContent = brl(total);
+
+  const faltam = ITENS.length - cotados - sem;
+  document.getElementById('resumo-itens').textContent =
+    cotados + ' com preço · ' + sem + ' você não fornece' + (faltam ? ' · ' + faltam + ' em aberto' : '');
+
+  let melhorV = Infinity, melhorN = '—';
+  for (let n=1;n<=3;n++){
+    const sel  = document.querySelector('[data-p="'+n+'"]');
+    const alvo = document.querySelector('[data-r="'+n+'"]');
+    if (!sel.value){ alvo.innerHTML=''; continue; }
+    const a = num(document.querySelector('[data-a="'+n+'"]').value);
+    const p = (a==null||isNaN(a) || a<0) ? 0 : a;
+    const v = total * (1 - p/100);
+    alvo.innerHTML = brl(v) + '<small>' + (p>0 ? p.toLocaleString('pt-BR')+'% de desconto' : 'sem desconto') + '</small>';
+    if (v < melhorV){ melhorV = v; melhorN = sel.value; }
+  }
+  ESTADO = {soma, frete, total, cotados, sem,
+            melhor: (melhorN==='—') ? '—' : melhorN + ' · ' + brl(melhorV)};
+}
+
+/* ---------------- envio ---------------- */
+function erro(msg){
+  const e = document.getElementById('erro');
+  e.textContent = msg; e.style.display='block';
+  e.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function juntarDados(){
+  const precos = [];
+  let ruim = null, ruimC = null;
+  document.querySelectorAll('input.preco').forEach(inp=>{
+    const i = Number(inp.dataset.i);
+    const recusado = document.querySelector('.chip[data-s="'+i+'"]').getAttribute('aria-pressed')==='true';
+    const v = recusado ? null : num(inp.value);
+    const c = recusado ? null : num(document.querySelector('[data-c="'+i+'"]').value);
+    if (!recusado && v!=null && (isNaN(v)||v<=0)) ruim  = ruim  || ITENS[i].descricao;
+    if (!recusado && c!=null && (isNaN(c)||c<=0)) ruimC = ruimC || ITENS[i].descricao;
+    precos.push({
+      item_id: ITENS[i].item_id,
+      preco: (recusado || v==null || isNaN(v)) ? '' : String(v),
+      sem_item: recusado,
+      conteudo: (recusado || c==null || isNaN(c)) ? '' : String(c),
+      unidade_base: recusado ? '' : document.querySelector('[data-u="'+i+'"]').value,
+      observacao: document.querySelector('[data-ob="'+i+'"]').value.trim()
+    });
+  });
+  if (ruim)  return {erro:'O preço de "'+ruim+'" não é válido. Digite apenas o número, maior que zero. '+
+                         'Se você não trabalha com esse item, use o botão "Não tenho este item".'};
+  if (ruimC) return {erro:'A quantidade por unidade de "'+ruimC+'" não é válida. Digite apenas o número.'};
+
+  if (!ESTADO.cotados && ESTADO.sem < ITENS.length)
+    return {erro:'Nenhum item recebeu preço. Preencha ao menos um, ou marque os que você não tem.'};
+
+  const f = num(document.getElementById('frete').value);
+  if (f!=null && (isNaN(f) || f<0)) return {erro:'O valor do frete não é válido. Digite apenas o número.'};
+
+  const pagamentos = [];
+  for (let n=1;n<=3;n++){
+    const d = document.querySelector('[data-p="'+n+'"]').value;
+    if (!d) continue;
+    const livre = document.querySelector('[data-l="'+n+'"]').value.trim();
+    if (d === 'Outro' && !livre)
+      return {erro:'Na opção '+n+' você escolheu "Outro": escreva qual é a condição de pagamento.'};
+    const a = num(document.querySelector('[data-a="'+n+'"]').value);
+    if (a!=null && isNaN(a)) return {erro:'O desconto da opção '+n+' não é um número válido.'};
+    if (a!=null && a<0) return {erro:'O desconto da opção '+n+' não pode ser negativo. Se essa condição tem acréscimo em vez de desconto, descreva na observação ao lado.'};
+    if (a!=null && a>100) return {erro:'O desconto da opção '+n+' não pode passar de 100%.'};
+    pagamentos.push({ordem:n, descricao:d, descricao_livre:livre,
+                     ajuste:(a==null||isNaN(a)) ? '' : String(a),   // positivo = desconto
+                     observacao: document.querySelector('[data-po="'+n+'"]').value.trim()});
+  }
+  if (!pagamentos.length && ESTADO.cotados)
+    return {erro:'Escolha ao menos uma forma de pagamento.'};
+
+  return {dados:{
+    contato_nome:       document.getElementById('c-nome').value,
+    contato_email:      document.getElementById('c-email').value,
+    validade_proposta:  document.getElementById('c-validade').value,
+    previsao_entrega:   document.getElementById('previsao').value,
+    custo_entrega:      document.getElementById('frete').value,
+    observacao_entrega: document.getElementById('obs-entrega').value,
+    observacao:         document.getElementById('c-obs').value,
+    precos, pagamentos
+  }};
+}
+
+function mostrarRecibo(r){
+  const tudoNao = ESTADO.sem === ITENS.length;
+  document.getElementById('r-frase').textContent = tudoNao
+    ? 'Você informou que não fornece nenhum dos itens desta lista. Obrigado por responder — isso já ajuda o nosso comprador.'
+    : 'A sua proposta para o pedido ' + r.numero + ' foi registrada. Nosso comprador vai analisar e entrar em contato.';
+  document.getElementById('r-qtd').textContent   = ESTADO.cotados + ' de ' + ITENS.length;
+  document.getElementById('r-sem').textContent   = ESTADO.sem;
+  document.getElementById('r-itens').textContent = brl(ESTADO.soma);
+  document.getElementById('r-frete').textContent = brl(ESTADO.frete);
+  document.getElementById('r-total').textContent = brl(ESTADO.total);
+  document.getElementById('r-cond').textContent  = ESTADO.melhor;
+  mostrar('recibo');
+  window.scrollTo(0,0);
+}
+
+async function enviar(){
+  document.getElementById('erro').style.display='none';
+  const r = juntarDados();
+  if (r.erro) return erro(r.erro);
+
+  const btn = document.getElementById('btn');
+  btn.disabled = true; btn.textContent = 'Enviando…';
+
+  if (MODO_DEMO){
+    setTimeout(()=>{
+      btn.disabled=false; btn.textContent='Enviar orçamento';
+      mostrarRecibo({numero:'SC-2026-3756'});
+    }, 350);
+    return;
+  }
+  try{
+    const res = await rpc('salvar_cotacao', {p_token: token, p_dados: r.dados});
+    btn.disabled=false; btn.textContent='Enviar orçamento';
+    if (!res || res.ok !== true)
+      return erro((res && res.erro) ? res.erro : 'Não foi possível enviar agora. Tente de novo.');
+    mostrarRecibo(res);
+  }catch(e){
+    btn.disabled=false; btn.textContent='Enviar orçamento';
+    erro('Não conseguimos falar com o servidor. Confira a sua internet e tente de novo.');
+  }
+}
+
+/* ---------------- início ---------------- */
+function preencher(d){
+  ITENS = d.itens || [];
+  document.getElementById('h-numero').textContent = d.numero;
+  document.getElementById('h-forn').textContent   = d.fornecedor;
+  document.getElementById('i-local').textContent  = d.local_entrega || '—';
+  document.getElementById('i-itens').textContent  = ITENS.length;
+  document.title = 'Orçamento ' + d.numero + ' · Grupo Leh';
+
+  if (d.custo_entrega != null) document.getElementById('frete').value = dec(d.custo_entrega);
+  document.getElementById('previsao').value    = d.previsao_entrega   || '';
+  document.getElementById('obs-entrega').value = d.observacao_entrega || '';
+  document.getElementById('c-nome').value      = d.contato_nome       || '';
+  document.getElementById('c-email').value     = d.contato_email      || '';
+  document.getElementById('c-validade').value  = d.validade_proposta  || '';
+  document.getElementById('c-obs').value       = d.observacao         || '';
+
+  montarItens(ITENS);
+  montarPagamentos(d.pagamentos);
+  document.getElementById('frete').addEventListener('input', calcular);
+  document.getElementById('btn').addEventListener('click', enviar);
+  document.getElementById('voltar').addEventListener('click', ()=>{ mostrar('app'); window.scrollTo(0,0); });
+  calcular();
+  mostrar('app');
+
+  if (d.status === 'respondida'){
+    const g = document.querySelector('.guia');
+    g.querySelector('h2').textContent = 'Você já enviou este orçamento';
+    const p = document.createElement('p');
+    p.style.cssText = 'margin:0 0 12px;font-size:15.5px';
+    p.textContent = 'Os valores abaixo são os que recebemos. Pode corrigir o que quiser e ' +
+                    'enviar de novo — a última versão enviada é a que vale.';
+    g.querySelector('h2').after(p);
+  }
+}
+
+(async function(){
+  if (MODO_DEMO){ preencher(DEMO); return; }
+  mostrar('carregando');
+  if (!token) return bloquear('Link incompleto','Falta o código do orçamento',
+    'Este endereço não traz o código. Use o link que o Grupo Leh enviou por e-mail ou WhatsApp.');
+  let d;
+  try { d = await rpc('abrir_cotacao', {p_token: token}); }
+  catch(e){ return bloquear('Sem conexão','Não conseguimos abrir agora',
+    'Falha de conexão com o servidor. Tente de novo em alguns instantes.'); }
+  if (!d || d.ok !== true) return bloquear('Link inválido','Não encontramos este orçamento',
+    (d && d.erro) || 'Confira o endereço que você recebeu.');
+  preencher(d);
+})();
+</script>
+</body>
+</html>
