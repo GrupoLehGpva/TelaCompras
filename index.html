@@ -136,6 +136,7 @@
   .campo:last-child{margin-bottom:0}
   .campo > label,.campo > .titulo{display:block;font-weight:600;font-size:15px;margin-bottom:8px}
   .ajuda{display:block;font-size:13px;color:var(--muted);margin-top:6px;line-height:1.45}
+  .btn-familia[hidden]{display:none}
   .btn-familia{display:block;width:100%;margin-top:12px;padding:12px;border-radius:100px;
     border:1px dashed var(--verde);background:transparent;color:var(--verde);
     font-size:14px;font-weight:600;cursor:pointer}
@@ -364,16 +365,7 @@
         </div>
 
         <div class="excecao">
-          <label class="checkbox">
-            <input type="checkbox" id="foraCatalogo">
-            <span><b>O item não está no catálogo</b></span>
-          </label>
-          <div class="campo" id="campoDescLivre" data-campo="descricaoLivre" hidden style="margin-top:14px">
-            <label for="descricaoLivre">Descreva o item</label>
-            <textarea id="descricaoLivre" rows="3"></textarea>
-          </div>
-          <p class="aviso">Este pedido será encaminhado para cadastro antes de seguir e vai demorar mais.
-            Use apenas se a busca não retornar o item.</p>
+          <p class="aviso"><b>Item fora do catálogo?</b><br>Não achou o item? Ele ainda não está cadastrado. Procure o setor de Compras para incluí-lo no catálogo antes de abrir a solicitação — pedido com item improvisado atrasa a cotação.</p>
         </div>
       </div>
 
@@ -394,12 +386,6 @@
                 </div>
               </div>
             </div>
-            <div id="addLivre" hidden>
-              <div class="linha">
-                <label for="descLista">Descreva o item</label>
-                <input type="text" id="descLista" placeholder="Ex.: parafuso sextavado 1/2">
-              </div>
-            </div>
             <div class="linha">
               <label for="qtdLista">Quantidade</label>
               <div class="qtd">
@@ -408,7 +394,10 @@
               </div>
             </div>
             <button type="button" class="btn-add" id="btnAddItem" disabled>+ Adicionar à lista</button>
-            <button type="button" class="link-excecao" id="alternarLivre">O item não está no catálogo</button>
+          </div>
+
+          <div class="excecao">
+            <p class="aviso"><b>Item fora do catálogo?</b><br>Não achou o item? Ele ainda não está cadastrado. Procure o setor de Compras para incluí-lo no catálogo antes de abrir a solicitação — pedido com item improvisado atrasa a cotação.</p>
           </div>
 
           <button type="button" class="btn-familia" id="outraFamilia" hidden>
@@ -705,13 +694,13 @@ function contar(n, singular, plural){
    ========================================================================== */
 const estado = {
   nomeSolicitante:'', emailSolicitante:'', escopoServico:'',
-  tipo:'', familia:'', item:null, foraCatalogo:false, descricaoLivre:'',
+  tipo:'', familia:'', item:null,
   quantidade:'', itensLista:[],
   localEntrega:'', centroCusto:'',
   tipoCompra:'', definicaoFornecedor:'', justificativaFornecedor:'',
   dataLimite:'', motivoCompra:'', anexos:[]
 };
-const rascunho = { familia:'', item:null, livre:false, descricao:'', quantidade:'', unidade:'' };
+const rascunho = { familia:'', item:null, quantidade:'', unidade:'' };
 
 const $ = id => document.getElementById(id);
 let passoAtual = 0;
@@ -874,15 +863,6 @@ function ligarEventos(){
   $('trocarItem').addEventListener('click', ()=>{
     estado.item = null; $('ficha').hidden = true; $('buscaItem').value = ''; $('buscaItem').focus();
   });
-  $('foraCatalogo').addEventListener('change', e=>{
-    estado.foraCatalogo = e.target.checked;
-    $('campoDescLivre').hidden = !e.target.checked;
-    $('familia').disabled = e.target.checked;
-    $('buscaItem').disabled = e.target.checked;
-    if(e.target.checked){ estado.item = null; $('ficha').hidden = true; }
-    limparErro('item'); limparErro('descricaoLivre');
-  });
-  $('descricaoLivre').addEventListener('input', e=>{ estado.descricaoLivre = e.target.value; limparErro('descricaoLivre'); });
 
   $('quantidade').addEventListener('input', e=>{
     estado.quantidade = e.target.value;
@@ -908,13 +888,11 @@ function ligarEventos(){
     abrirResultados('resultadosLista', achados, escolherItemLista);
   });
   $('buscaLista').addEventListener('blur', ()=>{ timerFechar['resultadosLista'] = setTimeout(()=>esconder('resultadosLista'),180); });
-  $('descLista').addEventListener('input', e=>{ rascunho.descricao = e.target.value; atualizarBotaoAdd(); });
   $('qtdLista').addEventListener('input', e=>{
     rascunho.quantidade = e.target.value;
     atualizarUnidadeLista();
     atualizarBotaoAdd();
   });
-  $('alternarLivre').addEventListener('click', alternarModoLivre);
   $('btnAddItem').addEventListener('click', adicionarItem);
 
   $('localEntrega').addEventListener('change', e=>{ estado.localEntrega = e.target.value; limparErro('localEntrega'); });
@@ -1010,7 +988,7 @@ function escolherItem(i){
    8) LISTA DE ITENS
    ========================================================================== */
 function atualizarUnidadeLista(){
-  const u = rascunho.livre ? 'Unidade' : rascunho.unidade;
+  const u = rascunho.unidade;
   $('unidadeLista').textContent = u ? unidadePlural(u, rascunho.quantidade || 1) : '—';
 }
 
@@ -1022,48 +1000,31 @@ function escolherItemLista(i){
   esconder('resultadosLista'); atualizarBotaoAdd(); $('qtdLista').focus();
 }
 
-function alternarModoLivre(){
-  rascunho.livre = !rascunho.livre;
-  $('addCatalogo').hidden = rascunho.livre;
-  $('addLivre').hidden = !rascunho.livre;
-  $('alternarLivre').textContent = rascunho.livre ? '← Voltar a buscar no catálogo' : 'O item não está no catálogo';
-  rascunho.item = null; rascunho.descricao = ''; rascunho.unidade = '';
-  atualizarUnidadeLista();
-  $('descLista').value=''; $('buscaLista').value='';
-  atualizarBotaoAdd();
-}
 
 function atualizarBotaoAdd(){
-  const temItem = rascunho.livre ? rascunho.descricao.trim().length > 1 : !!rascunho.item;
+  const temItem = !!rascunho.item;
   const temQtd  = Number(rascunho.quantidade) > 0;
   $('btnAddItem').disabled = MODO_DEMO ? false : !(temItem && temQtd);
 }
 
 function adicionarItem(){
   const qtd = Number(rascunho.quantidade) > 0 ? Number(rascunho.quantidade) : 1;
-  if(rascunho.livre){
-    if(!rascunho.descricao.trim()) return;
-    estado.itensLista.push({ foraCatalogo:true, codigo:null, familia:null,
-      descricao:rascunho.descricao.trim(), unidade:'Unidade', quantidade:qtd });
-  } else {
-    if(!rascunho.item) return;
-    const i = rascunho.item;
-    estado.itensLista.push({ foraCatalogo:false, codigo:i.codigo, familia:i.familia,
-      descricao:i.descricao, unidade:i.unidade, quantidade:qtd });
-  }
-  rascunho.item=null; rascunho.descricao=''; rascunho.quantidade='';
-  if(!rascunho.livre){ rascunho.unidade=''; }
+  if(!rascunho.item) return;
+  const i = rascunho.item;
+  estado.itensLista.push({ foraCatalogo:false, codigo:i.codigo, familia:i.familia,
+    descricao:i.descricao, unidade:i.unidade, quantidade:qtd });
+
+  rascunho.item=null; rascunho.quantidade=''; rascunho.unidade='';
   atualizarUnidadeLista();
-  $('buscaLista').value=''; $('descLista').value=''; $('qtdLista').value='';
+  $('buscaLista').value=''; $('qtdLista').value='';
   atualizarBotaoAdd(); renderLista(); limparErro('itensLista');
   $('outraFamilia').hidden = estado.itensLista.length === 0;
-  if(!rascunho.livre) $('buscaLista').focus();
+  $('buscaLista').focus();
 }
 
 /* Trocar de família sem perder nada: limpa só o que monta o próximo item. */
 function trocarDeFamilia(){
   rascunho.familia=''; rascunho.item=null; rascunho.unidade=''; rascunho.quantidade='';
-  if(rascunho.livre) alternarModoLivre();
   $('familiaLista').value=''; $('buscaLista').value=''; $('qtdLista').value='';
   atualizarUnidadeLista(); atualizarBotaoAdd(); esconder('resultadosLista');
   $('familiaLista').focus();
@@ -1168,10 +1129,8 @@ function validar(passo){
     }
     else if(estado.tipo === 'lista'){
       if(!estado.itensLista.length) falhar('itensLista','Adicione pelo menos um item à lista.');
-    } else if(estado.foraCatalogo){
-      if(!estado.descricaoLivre.trim()) falhar('descricaoLivre','Descreva o item.');
     } else {
-      if(!estado.item) falhar('item','Busque e selecione o item.');
+      if(!estado.item) falhar('item','Busque e selecione o item no catálogo.');
     }
   }
   if(passo === 'quantidade'){
@@ -1276,7 +1235,7 @@ function preencherExemplo(){
       pega('LP-0220',30,'Sabonete em barra 90 g','Unidade'),
       pega('LP-0304',6,'Vassoura de piaçava nº 4','Unidade'),
       pega('LP-0311',20,'Detergente neutro 5 L','Litro'),
-      { foraCatalogo:true, codigo:null, descricao:'Rodo de borracha 60 cm', unidade:'Unidade', quantidade:4 }
+      pega('CN-0710',4,'Cimento CP II 50 kg','Saco')
     ];
     renderLista();
     $('localEntrega').value = 'G103'; $('localEntrega').dispatchEvent(new Event('change'));
@@ -1395,10 +1354,6 @@ function montarItens(){
               unidade:'Serviço', quantidade:1 }];
   }
   if(estado.tipo === 'lista') return estado.itensLista;
-  if(estado.foraCatalogo){
-    return [{ foraCatalogo:true, codigo:null, descricao: estado.descricaoLivre || 'Item sem descrição',
-              unidade:'Unidade', quantidade: Number(estado.quantidade) || 1 }];
-  }
   const i = estado.item;
   if(!i) return [];
   return [{ foraCatalogo:false, codigo:i.codigo, descricao:i.descricao, unidade:i.unidade,
