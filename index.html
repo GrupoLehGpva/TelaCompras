@@ -1011,8 +1011,15 @@ function adicionarItem(){
   const qtd = Number(rascunho.quantidade) > 0 ? Number(rascunho.quantidade) : 1;
   if(!rascunho.item) return;
   const i = rascunho.item;
-  estado.itensLista.push({ foraCatalogo:false, codigo:i.codigo, familia:i.familia,
-    descricao:i.descricao, unidade:i.unidade, quantidade:qtd });
+  const repetido = estado.itensLista.find(x => x.codigo === i.codigo);
+  if(repetido){
+    /* Mesmo item duas vezes vira uma linha só: duas linhas do mesmo código
+       confundem a cotação e o fornecedor cota o item duplicado. */
+    repetido.quantidade = Number(repetido.quantidade) + qtd;
+  } else {
+    estado.itensLista.push({ foraCatalogo:false, codigo:i.codigo, familia:i.familia,
+      descricao:i.descricao, unidade:i.unidade, quantidade:qtd });
+  }
 
   rascunho.item=null; rascunho.quantidade=''; rascunho.unidade='';
   atualizarUnidadeLista();
@@ -1112,7 +1119,9 @@ function limparErro(campo){
   if(s) s.remove();
 }
 function validar(passo){
-  if(MODO_DEMO) return true;   // <<< desligar o modo demo reativa tudo abaixo
+  /* A validação vale SEMPRE. O modo demo controla só a barra de cima e o
+     botão de exemplo — nunca a exigência dos campos: foi assim que cards
+     nasceram sem motivo e sem escopo em 28/08. */
   let ok = true;
   const falhar = (c,m)=>{ erro(c,m); ok = false; };
 
@@ -1153,6 +1162,23 @@ function validar(passo){
   return ok;
 }
 function validarTudo(){ return sequencia().every(p => validar(p)); }
+
+/* Antes de enviar, confere TODOS os passos, não só o que está na tela.
+   Se algum falhar, leva a pessoa até ele em vez de recusar em silêncio. */
+function podeEnviar(){
+  const seq = sequencia();
+  const falhou = seq.filter(p => !validar(p));
+  if(!falhou.length) return true;
+  if(modoVisual === 'passos'){
+    passoAtual = seq.indexOf(falhou[0]);
+    render();
+  }
+  const nomes = falhou.map(p => tituloDe(p)).join(', ');
+  mostrarAlerta('<b>Falta preencher antes de enviar:</b> ' + nomes +
+    '.<br>Os campos em vermelho mostram o que está faltando.');
+  window.scrollTo({top:0,behavior:'smooth'});
+  return false;
+}
 
 /* ============================================================================
    10) NAVEGAÇÃO
@@ -1195,9 +1221,9 @@ function render(){
 }
 function avancar(){
   const seq = sequencia();
-  if(modoVisual === 'pagina'){ if(!validarTudo()) return; enviar(); return; }
+  if(modoVisual === 'pagina'){ if(podeEnviar()) enviar(); return; }
   if(!validar(seq[passoAtual])) return;
-  if(passoAtual === seq.length-1){ enviar(); return; }
+  if(passoAtual === seq.length-1){ if(podeEnviar()) enviar(); return; }
   passoAtual++; render();
 }
 function voltar(){ if(passoAtual>0){ passoAtual--; render(); } }
@@ -1314,7 +1340,9 @@ function montarPacote(solicitacaoId, cabecalho, itens){
     titulo_card: cabecalho.numero + ' · ' + (cabecalho.motivo || 'Solicitação de compra'),
     descricao_card:
       '**Solicitante:** ' + cabecalho.solicitante +
-        ' · ' + (estado.emailSolicitante || '—').trim().toLowerCase() + '\n' +
+        (estado.emailSolicitante ? ' · ' + estado.emailSolicitante.trim().toLowerCase() : '') + '\n' +
+      '**Tipo de solicitação:** ' +
+        (({ item:'Item único', lista:'Lista de itens', servico:'Escopo de serviço' })[estado.tipo] || '—') + '\n' +
       '**Local de entrega:** ' + local + '\n' +
       '**Centro de custo:** ' + centro + '\n' +
       '**Tipo de compra:** ' + tipoCompra + '\n' +
@@ -1363,6 +1391,16 @@ function montarItens(){
 async function enviar(){
   const botao = $('btnAvancar');
   esconderAlerta();
+
+  /* Última trava, mesmo que alguém chegue aqui por outro caminho:
+     serviço sem escopo descrito não vira solicitação. */
+  if(estado.tipo === 'servico' && estado.escopoServico.trim().length < 20){
+    erro('escopoServico','Descreva o escopo do serviço — pelo menos uma frase completa.');
+    mostrarAlerta('<b>Não dá para enviar sem o escopo do serviço.</b> ' +
+      'Sem ele o comprador não tem o que cotar e o fornecedor não tem o que orçar.');
+    passoAtual = sequencia().indexOf('item'); render();
+    return;
+  }
 
   const cabecalho = {
     numero:                   $('autoNumero').textContent,
