@@ -136,10 +136,14 @@
   .campo:last-child{margin-bottom:0}
   .campo > label,.campo > .titulo{display:block;font-weight:600;font-size:15px;margin-bottom:8px}
   .ajuda{display:block;font-size:13px;color:var(--muted);margin-top:6px;line-height:1.45}
-  .opcional{display:inline-block;margin-left:8px;padding:2px 8px;border:1px solid var(--linha);
-    border-radius:100px;font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;
-    color:var(--muted);vertical-align:middle}
-  .montador .ajuda{margin-top:12px}
+  .btn-familia{display:block;width:100%;margin-top:12px;padding:12px;border-radius:100px;
+    border:1px dashed var(--verde);background:transparent;color:var(--verde);
+    font-size:14px;font-weight:600;cursor:pointer}
+  .btn-familia:hover{background:var(--verde-claro)}
+  .grupo-familia{margin-top:18px}
+  .grupo-familia:first-child{margin-top:8px}
+  .grupo-familia h3{margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:.6px;
+    text-transform:uppercase;color:var(--muted)}
 
   input[type=text],input[type=number],input[type=date],select,textarea{
     width:100%;padding:13px 12px;font-size:16px;font-family:inherit;color:inherit;
@@ -205,8 +209,10 @@
     cursor:pointer;padding:0;text-decoration:underline;margin-top:12px}
 
   .itens-lista{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
-  .itens-lista li{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--borda);
-    border-radius:10px;padding:12px 14px;background:var(--card)}
+  .itens-lista li{display:block;padding:0;border:0;background:none}
+  .itens-lista .item-linha{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--borda);
+    border-radius:10px;padding:12px 14px;background:var(--card);margin-top:8px}
+  .itens-lista .item-linha:first-of-type{margin-top:0}
   .itens-lista .info{flex:1;min-width:0}
   .itens-lista .info b{display:block;font-size:14px;font-weight:600;line-height:1.35}
   .itens-lista .info span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
@@ -333,7 +339,7 @@
 
       <div id="blocoItem">
         <div class="campo" data-campo="familia">
-          <label for="familia">Família <span class="opcional">opcional</span></label>
+          <label for="familia">Selecione a família</label>
           <select id="familia"><option value="">— selecione —</option></select>
         </div>
 
@@ -343,8 +349,7 @@
             <input type="text" id="buscaItem" autocomplete="off" placeholder="Digite o nome ou o código">
             <div class="resultados" id="resultados" hidden></div>
           </div>
-          <span class="ajuda">Sem família escolhida, a busca varre o catálogo inteiro.
-            A família serve para estreitar quando você já sabe onde procurar.</span>
+          <span class="ajuda">A busca traz os itens da família escolhida. Sem família, ela varre o catálogo inteiro.</span>
 
           <div class="ficha" id="ficha" hidden>
             <dl>
@@ -378,7 +383,7 @@
           <div class="montador" id="montador">
             <div id="addCatalogo">
               <div class="linha">
-                <label for="familiaLista">Família <span class="opcional">opcional</span></label>
+                <label for="familiaLista">Família</label>
                 <select id="familiaLista"><option value="">— selecione —</option></select>
               </div>
               <div class="linha">
@@ -404,9 +409,11 @@
             </div>
             <button type="button" class="btn-add" id="btnAddItem" disabled>+ Adicionar à lista</button>
             <button type="button" class="link-excecao" id="alternarLivre">O item não está no catálogo</button>
-            <p class="ajuda">Troque a família acima quantas vezes quiser: os itens já adicionados
-              continuam na lista, e você segue somando itens de outras famílias.</p>
           </div>
+
+          <button type="button" class="btn-familia" id="outraFamilia" hidden>
+            + Adicionar itens de outra família
+          </button>
 
           <ul class="itens-lista" id="itensLista"></ul>
           <div class="lista-vazia" id="listaVazia">Nenhum item adicionado ainda.</div>
@@ -863,7 +870,7 @@ function ligarEventos(){
     if(achados === null){ esconder('resultados'); return; }
     abrirResultados('resultados', achados, escolherItem);
   });
-  $('buscaItem').addEventListener('blur', ()=> setTimeout(()=>esconder('resultados'),180));
+  $('buscaItem').addEventListener('blur', ()=>{ timerFechar['resultados'] = setTimeout(()=>esconder('resultados'),180); });
   $('trocarItem').addEventListener('click', ()=>{
     estado.item = null; $('ficha').hidden = true; $('buscaItem').value = ''; $('buscaItem').focus();
   });
@@ -883,6 +890,8 @@ function ligarEventos(){
     limparErro('quantidade');
   });
 
+  $('outraFamilia').addEventListener('click', trocarDeFamilia);
+
   $('familiaLista').addEventListener('change', e=>{
     rascunho.familia = e.target.value; rascunho.item = null;
     $('buscaLista').value = ''; rascunho.unidade = ''; atualizarUnidadeLista();
@@ -898,7 +907,7 @@ function ligarEventos(){
     if(achados === null){ esconder('resultadosLista'); return; }
     abrirResultados('resultadosLista', achados, escolherItemLista);
   });
-  $('buscaLista').addEventListener('blur', ()=> setTimeout(()=>esconder('resultadosLista'),180));
+  $('buscaLista').addEventListener('blur', ()=>{ timerFechar['resultadosLista'] = setTimeout(()=>esconder('resultadosLista'),180); });
   $('descLista').addEventListener('input', e=>{ rascunho.descricao = e.target.value; atualizarBotaoAdd(); });
   $('qtdLista').addEventListener('input', e=>{
     rascunho.quantidade = e.target.value;
@@ -956,8 +965,10 @@ function filtrar(base, termo){
   return base.filter(i => i.descricao.toLowerCase().includes(t) || (i.codigo||'').toLowerCase().includes(t));
 }
 const TETO_RESULTADOS = 50;
+const timerFechar = {};
 
 function abrirResultados(boxId, itens, aoEscolher){
+  clearTimeout(timerFechar[boxId]);   // cancela o fechamento agendado pelo blur
   const box = $(boxId);
   if(!itens.length){
     box.innerHTML = '<p class="vazio">Nenhum item encontrado no catálogo.</p>';
@@ -1032,38 +1043,82 @@ function adicionarItem(){
   const qtd = Number(rascunho.quantidade) > 0 ? Number(rascunho.quantidade) : 1;
   if(rascunho.livre){
     if(!rascunho.descricao.trim()) return;
-    estado.itensLista.push({ foraCatalogo:true, codigo:null, descricao:rascunho.descricao.trim(), unidade:'Unidade', quantidade:qtd });
+    estado.itensLista.push({ foraCatalogo:true, codigo:null, familia:null,
+      descricao:rascunho.descricao.trim(), unidade:'Unidade', quantidade:qtd });
   } else {
     if(!rascunho.item) return;
     const i = rascunho.item;
-    estado.itensLista.push({ foraCatalogo:false, codigo:i.codigo, descricao:i.descricao, unidade:i.unidade, quantidade:qtd });
+    estado.itensLista.push({ foraCatalogo:false, codigo:i.codigo, familia:i.familia,
+      descricao:i.descricao, unidade:i.unidade, quantidade:qtd });
   }
   rascunho.item=null; rascunho.descricao=''; rascunho.quantidade='';
   if(!rascunho.livre){ rascunho.unidade=''; }
   atualizarUnidadeLista();
   $('buscaLista').value=''; $('descLista').value=''; $('qtdLista').value='';
   atualizarBotaoAdd(); renderLista(); limparErro('itensLista');
+  $('outraFamilia').hidden = estado.itensLista.length === 0;
+  if(!rascunho.livre) $('buscaLista').focus();
+}
+
+/* Trocar de família sem perder nada: limpa só o que monta o próximo item. */
+function trocarDeFamilia(){
+  rascunho.familia=''; rascunho.item=null; rascunho.unidade=''; rascunho.quantidade='';
+  if(rascunho.livre) alternarModoLivre();
+  $('familiaLista').value=''; $('buscaLista').value=''; $('qtdLista').value='';
+  atualizarUnidadeLista(); atualizarBotaoAdd(); esconder('resultadosLista');
+  $('familiaLista').focus();
 }
 
 function removerItem(i){ estado.itensLista.splice(i,1); renderLista(); }
 
+function nomeFamilia(id){
+  if(!id) return 'Fora do catálogo';
+  const f = DADOS.familias.find(x=>x.id===id);
+  return f ? f.nome : id;
+}
+
 function renderLista(){
   const ul = $('itensLista'); ul.innerHTML = '';
+
+  /* Agrupado por família, na ordem em que cada família entrou no pedido —
+     é assim que a pessoa monta e é assim que ela confere. */
+  const ordem = [];
+  const grupos = {};
   estado.itensLista.forEach((it, idx)=>{
-    const li = document.createElement('li');
-    if(it.foraCatalogo) li.className='fora';
-    li.innerHTML = '<div class="info"><b>'+it.descricao+'</b><span>' +
-      (it.foraCatalogo ? '⚠ fora do catálogo — irá para cadastro' : it.codigo) + '</span></div>' +
-      '<span class="qtd-tag">'+it.quantidade+' '+unidadePlural(it.unidade, it.quantidade)+'</span>' +
-      '<button type="button" class="remover" title="Remover">×</button>';
-    li.querySelector('.remover').addEventListener('click', ()=> removerItem(idx));
-    ul.appendChild(li);
+    const chave = it.familia || '__livre';
+    if(!grupos[chave]){ grupos[chave] = []; ordem.push(chave); }
+    grupos[chave].push({ it, idx });
+  });
+
+  ordem.forEach(chave=>{
+    const bloco = document.createElement('li');
+    bloco.className = 'grupo-familia';
+    const h = document.createElement('h3');
+    h.textContent = nomeFamilia(chave === '__livre' ? null : chave) +
+      ' · ' + contar(grupos[chave].length, 'item', 'itens');
+    bloco.appendChild(h);
+
+    grupos[chave].forEach(({it, idx})=>{
+      const linha = document.createElement('div');
+      linha.className = 'item-linha' + (it.foraCatalogo ? ' fora' : '');
+      linha.innerHTML = '<div class="info"><b>'+it.descricao+'</b><span>' +
+        (it.foraCatalogo ? '⚠ fora do catálogo — irá para cadastro' : it.codigo) + '</span></div>' +
+        '<span class="qtd-tag">'+it.quantidade+' '+unidadePlural(it.unidade, it.quantidade)+'</span>' +
+        '<button type="button" class="remover" title="Remover">×</button>';
+      linha.querySelector('.remover').addEventListener('click', ()=> removerItem(idx));
+      bloco.appendChild(linha);
+    });
+    ul.appendChild(bloco);
   });
   const vazio = estado.itensLista.length === 0;
   $('listaVazia').hidden = !vazio;
   $('resumoLista').hidden = vazio;
   $('totalItens').textContent = estado.itensLista.length;
-  $('resumoTexto').textContent = estado.itensLista.length === 1 ? 'Item na lista' : 'Itens na lista';
+  const familias = new Set(estado.itensLista.map(i=>i.familia || '__livre')).size;
+  $('resumoTexto').textContent =
+    (estado.itensLista.length === 1 ? 'Item na lista' : 'Itens na lista') +
+    (familias > 1 ? ' · ' + contar(familias,'família','famílias') : '');
+  $('outraFamilia').hidden = vazio;
 }
 
 function aoTrocarTipo(tipo){
