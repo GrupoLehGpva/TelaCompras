@@ -136,6 +136,10 @@
   .campo:last-child{margin-bottom:0}
   .campo > label,.campo > .titulo{display:block;font-weight:600;font-size:15px;margin-bottom:8px}
   .ajuda{display:block;font-size:13px;color:var(--muted);margin-top:6px;line-height:1.45}
+  .opcional{display:inline-block;margin-left:8px;padding:2px 8px;border:1px solid var(--linha);
+    border-radius:100px;font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;
+    color:var(--muted);vertical-align:middle}
+  .montador .ajuda{margin-top:12px}
 
   input[type=text],input[type=number],input[type=date],select,textarea{
     width:100%;padding:13px 12px;font-size:16px;font-family:inherit;color:inherit;
@@ -301,6 +305,23 @@
 
   <form id="form" novalidate>
 
+    <!-- ======================= 0 · SOLICITANTE ======================= -->
+    <section class="passo" data-passo="solicitante">
+      <h2>Solicitante</h2>
+
+      <div class="campo" data-campo="nomeSolicitante">
+        <label for="nomeSolicitante">Seu nome completo</label>
+        <input type="text" id="nomeSolicitante" autocomplete="name" placeholder="Ex.: Maria de Souza">
+      </div>
+
+      <div class="campo" data-campo="emailSolicitante">
+        <label for="emailSolicitante">E-mail corporativo</label>
+        <input type="email" id="emailSolicitante" autocomplete="email" inputmode="email"
+               placeholder="nome@leh.com.br">
+        <span class="ajuda">É por ele que a solicitação encontra o seu líder para a primeira aprovação.</span>
+      </div>
+    </section>
+
     <!-- ======================= 1 · ITEM ======================= -->
     <section class="passo" data-passo="item">
       <h2>Item</h2>
@@ -312,7 +333,7 @@
 
       <div id="blocoItem">
         <div class="campo" data-campo="familia">
-          <label for="familia">Selecione a família</label>
+          <label for="familia">Família <span class="opcional">opcional</span></label>
           <select id="familia"><option value="">— selecione —</option></select>
         </div>
 
@@ -322,7 +343,8 @@
             <input type="text" id="buscaItem" autocomplete="off" placeholder="Digite o nome ou o código">
             <div class="resultados" id="resultados" hidden></div>
           </div>
-          <span class="ajuda">A busca traz apenas itens da família selecionada.</span>
+          <span class="ajuda">Sem família escolhida, a busca varre o catálogo inteiro.
+            A família serve para estreitar quando você já sabe onde procurar.</span>
 
           <div class="ficha" id="ficha" hidden>
             <dl>
@@ -356,7 +378,7 @@
           <div class="montador" id="montador">
             <div id="addCatalogo">
               <div class="linha">
-                <label for="familiaLista">Família</label>
+                <label for="familiaLista">Família <span class="opcional">opcional</span></label>
                 <select id="familiaLista"><option value="">— selecione —</option></select>
               </div>
               <div class="linha">
@@ -382,6 +404,8 @@
             </div>
             <button type="button" class="btn-add" id="btnAddItem" disabled>+ Adicionar à lista</button>
             <button type="button" class="link-excecao" id="alternarLivre">O item não está no catálogo</button>
+            <p class="ajuda">Troque a família acima quantas vezes quiser: os itens já adicionados
+              continuam na lista, e você segue somando itens de outras famílias.</p>
           </div>
 
           <ul class="itens-lista" id="itensLista"></ul>
@@ -389,6 +413,16 @@
           <div class="resumo-lista" id="resumoLista" hidden>
             <span id="resumoTexto">Itens na lista</span><b id="totalItens">0</b>
           </div>
+        </div>
+      </div>
+
+      <div id="blocoServico" hidden>
+        <div class="campo" data-campo="escopoServico">
+          <label for="escopoServico">Descreva o escopo do serviço</label>
+          <textarea id="escopoServico" rows="7"
+            placeholder="O que precisa ser feito, onde, e o que caracteriza o serviço concluído."></textarea>
+          <span class="ajuda">Quanto mais claro o escopo, mais comparáveis são as propostas.
+            Diga o local, o que está acontecendo, e o que precisa estar pronto no fim.</span>
         </div>
       </div>
     </section>
@@ -575,8 +609,9 @@ const DADOS = {
   ],
 
   tipos: [
-    { id:'item',  titulo:'Item único' },
-    { id:'lista', titulo:'Lista de itens', ajuda:'Mercado, limpeza ou construção, com muitos itens de uma vez' }
+    { id:'item',    titulo:'Item único' },
+    { id:'lista',   titulo:'Lista de itens', ajuda:'Mercado, limpeza ou construção, com muitos itens de uma vez' },
+    { id:'servico', titulo:'Escopo de serviço', ajuda:'Mão de obra contratada, descrita em texto. Sem itens de catálogo' }
   ],
 
   tiposCompra: [
@@ -662,6 +697,7 @@ function contar(n, singular, plural){
    4) ESTADO
    ========================================================================== */
 const estado = {
+  nomeSolicitante:'', emailSolicitante:'', escopoServico:'',
   tipo:'', familia:'', item:null, foraCatalogo:false, descricaoLivre:'',
   quantidade:'', itensLista:[],
   localEntrega:'', centroCusto:'',
@@ -676,14 +712,20 @@ let modoVisual = 'passos';
 let ultimoPacote = null;   // o que foi enviado ao n8n
 let SLACK_UID = '';        // id do usuário no Slack, vindo da query string (vai só ao webhook)
 
-const sequencia = () => estado.tipo === 'lista'
-  ? ['item','entrega','compra','prazo']
-  : ['item','quantidade','entrega','compra','prazo'];
+const SEM_QUANTIDADE = ['lista','servico'];
+
+const sequencia = () => SEM_QUANTIDADE.includes(estado.tipo)
+  ? ['solicitante','item','entrega','compra','prazo']
+  : ['solicitante','item','quantidade','entrega','compra','prazo'];
 
 const TITULOS = {
+  solicitante:'Solicitante',
   item:'Item', quantidade:'Quantidade', entrega:'Entrega e custo',
   compra:'Tipo de compra e fornecedor', prazo:'Prazo e motivo'
 };
+
+/* O passo "item" muda de nome quando a solicitação é de serviço. */
+const tituloDe = k => (k === 'item' && estado.tipo === 'servico') ? 'Escopo do serviço' : TITULOS[k];
 
 /* ============================================================================
    5) MONTAGEM INICIAL
@@ -697,16 +739,13 @@ async function iniciar(){
   const nomeSlack = (params.get('nome') || '').trim();
   SLACK_UID = (params.get('uid') || '').trim();
 
+  /* O link pode vir com o nome pronto (?nome=...). É só uma sugestão:
+     quem manda é o campo da tela, porque o pedido agora chega por link aberto. */
   if(nomeSlack){
-    DADOS.solicitante.nome = nomeSlack;
-    $('autoSolicitante').textContent = nomeSlack + ' · ' + DADOS.solicitante.cargo;
-    const nota = document.createElement('small');
-    nota.textContent = 'vindo do Slack';
-    nota.style.cssText = 'display:block;opacity:.6;font-weight:normal;font-size:.8em';
-    $('autoSolicitante').appendChild(nota);
-  } else {
-    $('autoSolicitante').textContent = DADOS.solicitante.nome + ' · ' + DADOS.solicitante.cargo;
+    estado.nomeSolicitante = nomeSlack;
+    $('nomeSolicitante').value = nomeSlack;
   }
+  atualizarCabecalhoSolicitante();
 
   $('autoData').textContent = hoje.toLocaleDateString('pt-BR');
   $('autoNumero').textContent = 'SC-' + hoje.getFullYear() + '-' + String(Math.floor(Math.random()*9000)+1000);
@@ -723,10 +762,6 @@ async function iniciar(){
 
   $('dataLimite').min = hoje.toISOString().slice(0,10);
 
-  if(!MODO_DEMO){
-    $('buscaItem').disabled = true;
-    $('buscaLista').disabled = true;
-  }
 
   $('demoBar').hidden = !MODO_DEMO;
   ligarEventos();
@@ -755,6 +790,11 @@ async function carregarCatalogo(){
     selo.textContent = 'offline'; selo.className = 'status off';
     mostrarAlerta('Não consegui ler o catálogo no Supabase. Usando a lista reduzida local.<br><code>'+String(e.message).slice(0,200)+'</code>');
   }
+}
+
+function atualizarCabecalhoSolicitante(){
+  const nome = (estado.nomeSolicitante || '').trim();
+  $('autoSolicitante').textContent = nome || '—';
 }
 
 function mostrarAlerta(html){ const el=$('alerta'); el.innerHTML=html; el.hidden=false; }
@@ -795,14 +835,28 @@ function preencherSelect(sel, opcoes){
    6) EVENTOS
    ========================================================================== */
 function ligarEventos(){
+  $('nomeSolicitante').addEventListener('input', e=>{
+    estado.nomeSolicitante = e.target.value;
+    atualizarCabecalhoSolicitante();
+    limparErro('nomeSolicitante');
+  });
+  $('emailSolicitante').addEventListener('input', e=>{
+    estado.emailSolicitante = e.target.value.trim();
+    limparErro('emailSolicitante');
+  });
+  $('escopoServico').addEventListener('input', e=>{
+    estado.escopoServico = e.target.value;
+    limparErro('escopoServico');
+  });
+
   $('familia').addEventListener('change', e=>{
     estado.familia = e.target.value; estado.item = null;
     $('ficha').hidden = true; $('buscaItem').value = '';
-    if(!MODO_DEMO) $('buscaItem').disabled = !estado.familia;
+
     esconder('resultados'); limparErro('familia');
   });
   $('buscaItem').addEventListener('focus', ()=>{
-    if(MODO_DEMO && !$('buscaItem').value) abrirResultados('resultados', itensDe(estado.familia), escolherItem);
+    if(!$('buscaItem').value) abrirResultados('resultados', itensDe(estado.familia), escolherItem);
   });
   $('buscaItem').addEventListener('input', e=>{
     const achados = filtrar(itensDe(estado.familia), e.target.value);
@@ -817,7 +871,7 @@ function ligarEventos(){
     estado.foraCatalogo = e.target.checked;
     $('campoDescLivre').hidden = !e.target.checked;
     $('familia').disabled = e.target.checked;
-    $('buscaItem').disabled = e.target.checked || (!MODO_DEMO && !estado.familia);
+    $('buscaItem').disabled = e.target.checked;
     if(e.target.checked){ estado.item = null; $('ficha').hidden = true; }
     limparErro('item'); limparErro('descricaoLivre');
   });
@@ -832,11 +886,11 @@ function ligarEventos(){
   $('familiaLista').addEventListener('change', e=>{
     rascunho.familia = e.target.value; rascunho.item = null;
     $('buscaLista').value = ''; rascunho.unidade = ''; atualizarUnidadeLista();
-    if(!MODO_DEMO) $('buscaLista').disabled = !rascunho.familia;
+
     esconder('resultadosLista'); atualizarBotaoAdd();
   });
   $('buscaLista').addEventListener('focus', ()=>{
-    if(MODO_DEMO && !$('buscaLista').value) abrirResultados('resultadosLista', itensDe(rascunho.familia), escolherItemLista);
+    if(!$('buscaLista').value) abrirResultados('resultadosLista', itensDe(rascunho.familia), escolherItemLista);
   });
   $('buscaLista').addEventListener('input', e=>{
     rascunho.item = null; atualizarBotaoAdd();
@@ -891,7 +945,7 @@ function aoTrocarFornecedor(valor){
    7) BUSCA
    ========================================================================== */
 function itensDe(familia){
-  if(!familia) return MODO_DEMO ? CATALOGO : [];
+  if(!familia) return CATALOGO;          // família é filtro, não porteiro
   return CATALOGO.filter(i => i.familia === familia);
 }
 function filtrar(base, termo){
@@ -901,13 +955,16 @@ function filtrar(base, termo){
   if(!t) return base;
   return base.filter(i => i.descricao.toLowerCase().includes(t) || (i.codigo||'').toLowerCase().includes(t));
 }
+const TETO_RESULTADOS = 50;
+
 function abrirResultados(boxId, itens, aoEscolher){
   const box = $(boxId);
   if(!itens.length){
     box.innerHTML = '<p class="vazio">Nenhum item encontrado no catálogo.</p>';
   } else {
+    const excedente = itens.length - TETO_RESULTADOS;
     box.innerHTML = '';
-    itens.forEach(i=>{
+    itens.slice(0, TETO_RESULTADOS).forEach(i=>{
       const b = document.createElement('button');
       b.type='button';
       b.innerHTML = '<b>'+i.descricao+'</b><span>'+i.codigo+' · '+i.unidade+'</span>';
@@ -915,6 +972,12 @@ function abrirResultados(boxId, itens, aoEscolher){
       b.addEventListener('click', ()=> aoEscolher(i));
       box.appendChild(b);
     });
+    if(excedente > 0){
+      const p = document.createElement('p');
+      p.className = 'vazio';
+      p.textContent = 'e mais ' + excedente + ' itens — escreva mais para estreitar a busca.';
+      box.appendChild(p);
+    }
   }
   box.hidden = false;
 }
@@ -1004,9 +1067,9 @@ function renderLista(){
 }
 
 function aoTrocarTipo(tipo){
-  const lista = tipo === 'lista';
-  $('blocoItem').hidden = lista;
-  $('blocoLista').hidden = !lista;
+  $('blocoItem').hidden    = tipo !== 'item';
+  $('blocoLista').hidden   = tipo !== 'lista';
+  $('blocoServico').hidden = tipo !== 'servico';
   if(passoAtual > sequencia().length-1) passoAtual = sequencia().length-1;
   render();
 }
@@ -1037,15 +1100,23 @@ function validar(passo){
   let ok = true;
   const falhar = (c,m)=>{ erro(c,m); ok = false; };
 
+  if(passo === 'solicitante'){
+    if(estado.nomeSolicitante.trim().length < 3) falhar('nomeSolicitante','Escreva o seu nome completo.');
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(estado.emailSolicitante))
+      falhar('emailSolicitante','Informe um e-mail corporativo válido.');
+  }
   if(passo === 'item'){
     if(!estado.tipo) falhar('tipo','Selecione o tipo de solicitação.');
+    else if(estado.tipo === 'servico'){
+      if(estado.escopoServico.trim().length < 20)
+        falhar('escopoServico','Descreva o escopo do serviço — pelo menos uma frase completa.');
+    }
     else if(estado.tipo === 'lista'){
       if(!estado.itensLista.length) falhar('itensLista','Adicione pelo menos um item à lista.');
     } else if(estado.foraCatalogo){
       if(!estado.descricaoLivre.trim()) falhar('descricaoLivre','Descreva o item.');
     } else {
-      if(!estado.familia) falhar('familia','Selecione a família.');
-      if(!estado.item)    falhar('item','Busque e selecione o item.');
+      if(!estado.item) falhar('item','Busque e selecione o item.');
     }
   }
   if(passo === 'quantidade'){
@@ -1085,7 +1156,7 @@ function render(){
     document.querySelectorAll('.passo').forEach(s=>{
       const k = s.dataset.passo;
       s.hidden = k === 'confirmacao' || !seq.includes(k);
-      if(!s.hidden) s.querySelector('h2').textContent = (seq.indexOf(k)+1) + '. ' + TITULOS[k];
+      if(!s.hidden) s.querySelector('h2').textContent = (seq.indexOf(k)+1) + '. ' + tituloDe(k);
     });
     $('progresso').hidden = true;
     $('btnVoltar').hidden = true;
@@ -1097,11 +1168,11 @@ function render(){
   const atual = seq[passoAtual];
   document.querySelectorAll('.passo').forEach(s=>{
     s.hidden = s.dataset.passo !== atual;
-    if(TITULOS[s.dataset.passo]) s.querySelector('h2').textContent = TITULOS[s.dataset.passo];
+    if(TITULOS[s.dataset.passo]) s.querySelector('h2').textContent = tituloDe(s.dataset.passo);
   });
   $('progresso').hidden = false;
   $('progTexto').textContent = 'Passo ' + (passoAtual+1) + ' de ' + seq.length;
-  $('progTitulo').textContent = TITULOS[atual] || '';
+  $('progTitulo').textContent = tituloDe(atual) || '';
   $('progBarra').style.width = ((passoAtual+1)/seq.length*100) + '%';
   $('btnVoltar').hidden = passoAtual === 0;
   $('btnAvancar').textContent = passoAtual === seq.length-1 ? 'Enviar solicitação' : 'Continuar';
@@ -1123,7 +1194,24 @@ function voltar(){ if(passoAtual>0){ passoAtual--; render(); } }
 function acharNoCatalogo(cod){ return CATALOGO.find(i=>i.codigo===cod); }
 
 function preencherExemplo(){
-  if(estado.tipo === 'lista'){
+  if(!$('nomeSolicitante').value){
+    $('nomeSolicitante').value = 'Maria de Souza';
+    $('nomeSolicitante').dispatchEvent(new Event('input'));
+    $('emailSolicitante').value = 'maria.souza@leh.com.br';
+    $('emailSolicitante').dispatchEvent(new Event('input'));
+  }
+  if(estado.tipo === 'servico'){
+    $('escopoServico').value =
+      'Manutenção do telhado do galpão de máquinas da Granja 103: troca das telhas quebradas, ' +
+      'revisão dos rufos e limpeza das calhas. Serviço concluído quando não houver goteira ' +
+      'em dia de chuva forte e as calhas escoarem livremente. Material por conta do contratado.';
+    $('escopoServico').dispatchEvent(new Event('input'));
+    $('localEntrega').value = 'G103'; $('localEntrega').dispatchEvent(new Event('change'));
+    $('centroCusto').value  = 'CC-103-MAN'; $('centroCusto').dispatchEvent(new Event('change'));
+    marcarRadio('tipoCompra','normal');
+    marcarRadio('definicaoFornecedor','cotacao');
+    $('motivoCompra').value = 'Telhado do galpão de máquinas com goteira sobre os equipamentos';
+  } else if(estado.tipo === 'lista'){
     const pega = (cod, qtd, desc, un) => {
       const c = acharNoCatalogo(cod);
       return c ? { foraCatalogo:false, codigo:c.codigo, descricao:c.descricao, unidade:c.unidade, quantidade:qtd }
@@ -1183,8 +1271,11 @@ function montarPacote(solicitacaoId, cabecalho, itens){
   return {
     solicitacao_id: solicitacaoId,
     numero:         cabecalho.numero,
-    solicitante:    cabecalho.solicitante,
-    slack_user_id:  SLACK_UID || '',
+    solicitante:       cabecalho.solicitante,
+    solicitante_email: (estado.emailSolicitante || '').trim().toLowerCase(),
+    tipo_solicitacao:  estado.tipo,
+    escopo_servico:    estado.tipo === 'servico' ? estado.escopoServico.trim() : null,
+    slack_user_id:     SLACK_UID || '',
     aberto_em:      new Date().toISOString(),
 
     local_entrega:             cabecalho.local_entrega,
@@ -1208,14 +1299,17 @@ function montarPacote(solicitacaoId, cabecalho, itens){
     /* prontos para usar no card, sem o n8n precisar montar nada */
     titulo_card: cabecalho.numero + ' · ' + (cabecalho.motivo || 'Solicitação de compra'),
     descricao_card:
-      '**Solicitante:** ' + cabecalho.solicitante + '\n' +
+      '**Solicitante:** ' + cabecalho.solicitante +
+        ' · ' + (estado.emailSolicitante || '—').trim().toLowerCase() + '\n' +
       '**Local de entrega:** ' + local + '\n' +
       '**Centro de custo:** ' + centro + '\n' +
       '**Tipo de compra:** ' + tipoCompra + '\n' +
       '**Definição de fornecedor:** ' + defForn +
         (cabecalho.justificativa_fornecedor ? ' — ' + cabecalho.justificativa_fornecedor : '') + '\n' +
       '**Entrega até:** ' + (cabecalho.data_necessidade || '—') + '\n\n' +
-      '**Itens (' + itens.length + ')**\n' + linhas
+      (estado.tipo === 'servico'
+        ? '**Escopo do serviço**\n' + estado.escopoServico.trim()
+        : '**Itens (' + itens.length + ')**\n' + linhas)
   };
 }
 
@@ -1238,6 +1332,13 @@ async function avisarWebhook(pacote){
    13) ENVIO
    ========================================================================== */
 function montarItens(){
+  if(estado.tipo === 'servico'){
+    /* Serviço não tem catálogo: o escopo vira a única linha do pedido,
+       para o card e o banco continuarem com o mesmo formato. */
+    return [{ foraCatalogo:true, codigo:null, servico:true,
+              descricao: estado.escopoServico.trim() || 'Serviço sem escopo descrito',
+              unidade:'Serviço', quantidade:1 }];
+  }
   if(estado.tipo === 'lista') return estado.itensLista;
   if(estado.foraCatalogo){
     return [{ foraCatalogo:true, codigo:null, descricao: estado.descricaoLivre || 'Item sem descrição',
@@ -1255,7 +1356,7 @@ async function enviar(){
 
   const cabecalho = {
     numero:                   $('autoNumero').textContent,
-    solicitante:              DADOS.solicitante.nome,
+    solicitante:              estado.nomeSolicitante.trim() || DADOS.solicitante.nome,
     local_entrega:            estado.localEntrega || null,
     centro_custo:             estado.centroCusto || null,
     tipo_compra:              estado.tipoCompra || null,
