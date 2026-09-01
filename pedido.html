@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pedido de compra · Grupo Leh</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<!--
+  ============================================================================
+  TELA DO PEDIDO — Grupo Leh · Compras
+  Leitura apenas. Abre por ?id=<uuid da solicitação> ou ?sc=SC-AAAA-NNNN.
+  O link vai no card do ClickUp e nas mensagens de aprovação; quem tem o link
+  vê o pedido, como na tela do fornecedor.
+  ============================================================================
+-->
+<style>
+  :root{
+    /* identidade Grupo Leh — grupoleh.com.br */
+    color-scheme:light;   /* faz o navegador desenhar rádio, seleção e data no tema certo */
+    --marca:#102438;      --sobre-marca:#FFFFFF;
+    --verde:#008C95;      --acento-fundo:#00727A;   --sobre-acento:#FFFFFF;
+    --verde-claro:#E2F1F2;
+    --bg:#F0F5FA;         --card:#FFFFFF;           --realce:#F7FAFC;
+    --texto:#1E293B;      --muted:#6E7F91;
+    --borda:#DCE4EC;      --linha-forte:#B9C6D4;
+    --erro:#B3261E;       --erro-bg:#FDF2F1;        --erro-borda:#E8B4B0;
+    --demo:#8A5A00;       --demo-bg:#FFF8E8;        --demo-borda:#EFDDB4;
+    --ok-bg:#D9F0E2;      --ok-txt:#136B45;
+    --codigo-bg:#102438;  --codigo-txt:#CFE3E5;
+    --raio:12px;          --pilula:100px;
+    --sans:"Goldplay","Figtree",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --marca:#0A1622;      --sobre-marca:#FFFFFF;
+      --verde:#2FB3BC;      --acento-fundo:#56C8CF;   --sobre-acento:#06141A;
+      --verde-claro:#0D2A2D;
+      --bg:#0B131B;         --card:#111C25;           --realce:#16222D;
+      --texto:#E6EDF3;      --muted:#9CABB9;
+      --borda:#243240;      --linha-forte:#36485B;
+      --erro:#F0A0A0;       --erro-bg:#2A1616;        --erro-borda:#5B2A2A;
+      --demo:#E0B860;       --demo-bg:#241D0E;        --demo-borda:#3B3218;
+      --ok-bg:#12301F;      --ok-txt:#7DD3A5;
+      --codigo-bg:#060D13;  --codigo-txt:#CFE3E5;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --marca:#0A1622;      --sobre-marca:#FFFFFF;
+    --verde:#2FB3BC;      --acento-fundo:#56C8CF;   --sobre-acento:#06141A;
+    --verde-claro:#0D2A2D;
+    --bg:#0B131B;         --card:#111C25;           --realce:#16222D;
+    --texto:#E6EDF3;      --muted:#9CABB9;
+    --borda:#243240;      --linha-forte:#36485B;
+    --erro:#F0A0A0;       --erro-bg:#2A1616;        --erro-borda:#5B2A2A;
+    --demo:#E0B860;       --demo-bg:#241D0E;        --demo-borda:#3B3218;
+    --ok-bg:#12301F;      --ok-txt:#7DD3A5;
+    --codigo-bg:#060D13;  --codigo-txt:#CFE3E5;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--texto);
+    font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .topo{background:var(--marca);color:var(--sobre-marca);padding:14px 20px;
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .topo .marca{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;opacity:.72}
+  .topo h1{margin:2px 0 0;font-size:19px;font-weight:650;line-height:1.2}
+  .topo .direita{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .selo{border-radius:var(--pilula);padding:5px 12px;font-size:12px;font-weight:700;
+    background:rgba(255,255,255,.12);color:var(--sobre-marca);white-space:nowrap}
+  .selo.status{background:var(--verde);color:var(--sobre-acento)}
+  .envelope{max-width:1080px;margin:0 auto;padding:20px 16px 64px}
+  .cartao{background:var(--card);border:1px solid var(--borda);border-radius:var(--raio);
+    padding:18px 20px;margin-bottom:16px}
+  .cartao h2{margin:0 0 14px;font-size:13px;font-weight:700;letter-spacing:.7px;
+    text-transform:uppercase;color:var(--muted)}
+  .ficha{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px 22px;margin:0}
+  .ficha dt{font-size:11px;letter-spacing:.7px;text-transform:uppercase;color:var(--muted)}
+  .ficha dd{margin:3px 0 0;font-size:15px;font-weight:600;line-height:1.4;word-break:break-word}
+  .ficha dd.solto{font-weight:400}
+  .barra-ferramentas{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .busca-tabela{flex:1 1 240px;min-width:0}
+  .busca-tabela input{width:100%;padding:11px 12px;font-size:15px;font-family:inherit;color:inherit;
+    background:var(--card);border:1px solid var(--borda);border-radius:10px;appearance:none}
+  .busca-tabela input:focus{outline:none;border-color:var(--verde);box-shadow:0 0 0 3px var(--verde-claro)}
+  .btn{border-radius:var(--pilula);border:1px solid var(--borda);background:var(--card);
+    color:var(--texto);font:inherit;font-size:14px;font-weight:600;padding:10px 18px;cursor:pointer;white-space:nowrap}
+  .btn:hover{border-color:var(--linha-forte)}
+  .rolagem{overflow-x:auto;border:1px solid var(--borda);border-radius:var(--raio);background:var(--card)}
+  table{border-collapse:collapse;width:100%;min-width:560px}
+  thead th{position:sticky;top:0;background:var(--realce);border-bottom:1px solid var(--borda);
+    text-align:left;padding:11px 14px;font-size:11px;letter-spacing:.7px;text-transform:uppercase;
+    color:var(--muted);white-space:nowrap;cursor:pointer;user-select:none}
+  thead th:hover{color:var(--texto)}
+  thead th .seta{opacity:.35;margin-left:6px;font-size:10px}
+  thead th[aria-sort] .seta{opacity:1;color:var(--verde)}
+  tbody td{border-bottom:1px solid var(--borda);padding:11px 14px;vertical-align:top}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:nth-child(even){background:var(--realce)}
+  td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+  td.cod{font-family:var(--mono);font-size:13px;color:var(--muted);white-space:nowrap}
+  td.desc{font-weight:600;min-width:220px}
+  .vazio-tabela{padding:26px 16px;text-align:center;color:var(--muted);font-size:14px}
+  .rodape-tabela{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    margin-top:12px;font-size:13px;color:var(--muted)}
+  .rodape-tabela b{color:var(--texto);font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .escopo{white-space:pre-wrap;font-size:15px;line-height:1.6;margin:0}
+  .aviso{border:1px dashed var(--demo-borda);background:var(--demo-bg);color:var(--demo);
+    border-radius:10px;padding:14px 16px;font-size:13px;line-height:1.5;margin-bottom:16px}
+  .erro{border:1px solid var(--erro-borda);background:var(--erro-bg);color:var(--erro);
+    border-radius:10px;padding:16px;font-size:14px;line-height:1.5}
+  .carregando{color:var(--muted);padding:30px 4px;font-size:14px}
+  .marca-dagua{margin-top:22px;font-size:12px;color:var(--muted);line-height:1.5}
+  @media (max-width:560px){
+    .envelope{padding:14px 10px 48px}
+    .cartao{padding:15px 14px}
+  }
+  @media print{
+    .topo{background:none;color:#000;border-bottom:2px solid #000}
+    .barra-ferramentas,.btn{display:none}
+    .rolagem{overflow:visible;border:0}
+    body{background:#fff}
+  }
+</style>
+</head>
+<body>
+<header class="topo">
+  <div>
+    <div class="marca">Grupo Leh · Compras</div>
+    <h1 id="tituloTopo">Pedido de compra</h1>
+  </div>
+  <div class="direita">
+    <span class="selo status" id="seloStatus" hidden></span>
+    <span class="selo" id="seloNumero" hidden></span>
+  </div>
+</header>
+
+<div class="envelope">
+  <div class="carregando" id="carregando">Carregando o pedido…</div>
+  <div class="erro" id="erro" hidden></div>
+
+  <main id="conteudo" hidden>
+    <section class="cartao">
+      <h2>Solicitação</h2>
+      <dl class="ficha" id="fichaCabecalho"></dl>
+    </section>
+
+    <section class="cartao" id="cartaoMotivo" hidden>
+      <h2>Motivo da compra</h2>
+      <p class="escopo" id="motivoTexto"></p>
+    </section>
+
+    <section class="cartao" id="cartaoJustificativa" hidden>
+      <h2>Justificativa do fornecedor único</h2>
+      <p class="escopo" id="justificativaTexto"></p>
+    </section>
+
+    <section class="cartao" id="cartaoEscopo" hidden>
+      <h2>Escopo do serviço</h2>
+      <p class="escopo" id="escopoTexto"></p>
+    </section>
+
+    <section class="cartao" id="cartaoItens">
+      <h2>Itens do pedido</h2>
+      <div class="barra-ferramentas">
+        <div class="busca-tabela">
+          <input type="search" id="filtro" placeholder="Filtrar por descrição, código ou unidade" autocomplete="off">
+        </div>
+        <button type="button" class="btn" id="btnCSV">Exportar CSV</button>
+        <button type="button" class="btn" id="btnImprimir">Imprimir</button>
+      </div>
+      <div class="rolagem">
+        <table id="tabela">
+          <thead>
+            <tr>
+              <th data-col="codigo">Código<span class="seta">↕</span></th>
+              <th data-col="descricao">Descrição<span class="seta">↕</span></th>
+              <th data-col="unidade">Unidade<span class="seta">↕</span></th>
+              <th data-col="quantidade" class="num">Quantidade<span class="seta">↕</span></th>
+            </tr>
+          </thead>
+          <tbody id="corpoTabela"></tbody>
+        </table>
+        <div class="vazio-tabela" id="tabelaVazia" hidden>Nenhum item corresponde ao filtro.</div>
+      </div>
+      <div class="rodape-tabela">
+        <span id="contagem"></span>
+        <span id="soma"></span>
+      </div>
+    </section>
+
+    <p class="marca-dagua" id="rodape"></p>
+  </main>
+</div>
+
+<script>
+/* ============================================================================
+   CONFIGURAÇÃO — mesma chave pública do formulário
+   ========================================================================== */
+const SUPABASE_URL = 'https://mbwaqnlmscxbacmxdopr.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_AR4D1JlHB-Z12--QbzwYWQ_URZzmVwl';
+
+const $ = id => document.getElementById(id);
+
+async function apiGet(caminho){
+  const r = await fetch(SUPABASE_URL + '/rest/v1/' + caminho, {
+    headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+  });
+  if(!r.ok) throw new Error('HTTP ' + r.status + ' — ' + (await r.text()).slice(0,140));
+  return r.json();
+}
+
+/* ============================================================================
+   NOMES LEGÍVEIS — o banco guarda o código; a tela mostra o nome
+   ========================================================================== */
+const LOCAIS = {
+  'ALM-GPVA':'Almoxarifado · Guarapuava', 'ESC-GPVA':'Escritório · Guarapuava',
+  'G101':'Granja 101', 'G102':'Granja 102', 'G103':'Granja 103', 'G104':'Granja 104',
+  'PI-SEDE':'Sede · Unidade Piauí'
+};
+const CENTROS = {
+  'CC-101-PROD':'Granja 101 · Produção', 'CC-101-MAN':'Granja 101 · Manutenção',
+  'CC-102-PROD':'Granja 102 · Produção', 'CC-102-MAN':'Granja 102 · Manutenção',
+  'CC-103-PROD':'Granja 103 · Produção', 'CC-103-MAN':'Granja 103 · Manutenção',
+  'CC-103-MOR':'Granja 103 · Casa dos moradores', 'CC-FROTA':'Frota',
+  'CC-AGRI':'Agricultura', 'CC-ADM':'Administrativo', 'CC-RH':'RH',
+  'CC-PI-AGRI':'Piauí · Agricultura', 'CC-PI-COZ':'Piauí · Cozinha e despensa'
+};
+const TIPOS_COMPRA = { programada:'Programada', normal:'Normal', urgente:'Urgente' };
+const DEF_FORNECEDOR = { cotacao:'Cotação', unico:'Fornecedor único' };
+
+const legivel = (mapa, cod) => cod ? (mapa[cod] || cod) : '—';
+const dataBR = iso => {
+  if(!iso) return '—';
+  const d = new Date(String(iso).length <= 10 ? iso + 'T12:00:00' : iso);
+  return isNaN(d) ? String(iso) : d.toLocaleDateString('pt-BR');
+};
+const numBR = n => Number(n||0).toLocaleString('pt-BR', {maximumFractionDigits:3});
+const esc = t => String(t==null?'':t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function plural(unidade, q){
+  const u = String(unidade||'').trim();
+  if(!u) return '';
+  if(Number(q) === 1) return u;
+  if(/[sz]$/i.test(u)) return u;
+  if(/l$/i.test(u))  return u + 'es';
+  if(/ão$/i.test(u)) return u.replace(/ão$/i,'ões');
+  return u + 's';
+}
+
+/* ============================================================================
+   ESTADO DA TABELA
+   ========================================================================== */
+let ITENS = [];
+let ordem = { col:null, asc:true };
+let termo = '';
+
+function itensVisiveis(){
+  const t = termo.trim().toLowerCase();
+  let lista = !t ? ITENS.slice() : ITENS.filter(i =>
+    [i.codigo, i.descricao, i.unidade].some(v => String(v||'').toLowerCase().includes(t)));
+  if(ordem.col){
+    const c = ordem.col, sinal = ordem.asc ? 1 : -1;
+    lista.sort((a,b)=>{
+      if(c === 'quantidade') return (Number(a.quantidade||0) - Number(b.quantidade||0)) * sinal;
+      return String(a[c]||'').localeCompare(String(b[c]||''), 'pt-BR', {numeric:true}) * sinal;
+    });
+  }
+  return lista;
+}
+
+function desenharTabela(){
+  const lista = itensVisiveis();
+  $('corpoTabela').innerHTML = lista.map(i => (
+    '<tr>' +
+      '<td class="cod">' + esc(i.codigo || 'sem código') + '</td>' +
+      '<td class="desc">' + esc(i.descricao) + '</td>' +
+      '<td>' + esc(plural(i.unidade, i.quantidade)) + '</td>' +
+      '<td class="num">' + numBR(i.quantidade) + '</td>' +
+    '</tr>'
+  )).join('');
+  $('tabelaVazia').hidden = lista.length > 0;
+  $('contagem').textContent = lista.length === ITENS.length
+    ? ITENS.length + (ITENS.length === 1 ? ' item' : ' itens')
+    : lista.length + ' de ' + ITENS.length + ' itens';
+  const soma = lista.reduce((s,i)=> s + Number(i.quantidade||0), 0);
+  $('soma').innerHTML = 'Soma das quantidades: <b>' + numBR(soma) + '</b>';
+}
+
+function ordenarPor(col){
+  ordem = (ordem.col === col) ? { col, asc: !ordem.asc } : { col, asc: true };
+  document.querySelectorAll('thead th').forEach(th=>{
+    if(th.dataset.col === col){ th.setAttribute('aria-sort', ordem.asc ? 'ascending' : 'descending');
+      th.querySelector('.seta').textContent = ordem.asc ? '↑' : '↓'; }
+    else { th.removeAttribute('aria-sort'); th.querySelector('.seta').textContent = '↕'; }
+  });
+  desenharTabela();
+}
+
+function baixarCSV(){
+  const linhas = [['Código','Descrição','Unidade','Quantidade']]
+    .concat(itensVisiveis().map(i => [i.codigo||'', i.descricao||'', i.unidade||'', String(i.quantidade||'').replace('.',',')]));
+  const csv = '﻿' + linhas.map(l => l.map(c => '"' + String(c).replace(/"/g,'""') + '"').join(';')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'}));
+  a.download = (document.getElementById('seloNumero').textContent || 'pedido') + '.csv';
+  a.click();
+  setTimeout(()=> URL.revokeObjectURL(a.href), 2000);
+}
+
+/* ============================================================================
+   DESENHO DO CABEÇALHO
+   ========================================================================== */
+function campo(rotulo, valor, solto){
+  return '<div><dt>' + rotulo + '</dt><dd' + (solto ? ' class="solto"' : '') + '>' + esc(valor || '—') + '</dd></div>';
+}
+
+function desenhar(s, itens){
+  ITENS = itens;
+  const numero = s.numero || '—';
+  document.title = numero + ' · Pedido de compra';
+  $('tituloTopo').textContent = numero;
+  $('seloNumero').textContent = numero; $('seloNumero').hidden = false;
+  if(s.status){ $('seloStatus').textContent = s.status; $('seloStatus').hidden = false; }
+
+  const ehServico = itens.length === 1 && String(itens[0].unidade||'').toLowerCase() === 'serviço';
+
+  $('fichaCabecalho').innerHTML =
+    campo('Solicitante', s.solicitante) +
+    campo('Aberto em', dataBR(s.aberto_em)) +
+    campo('Tipo de compra', legivel(TIPOS_COMPRA, s.tipo_compra)) +
+    campo('Local de entrega', s.local_entrega_nome || legivel(LOCAIS, s.local_entrega)) +
+    campo('Centro de custo', legivel(CENTROS, s.centro_custo)) +
+    campo('Entrega até', dataBR(s.data_necessidade)) +
+    campo('Definição de fornecedor', legivel(DEF_FORNECEDOR, s.definicao_fornecedor)) +
+    campo('Natureza', ehServico ? 'Escopo de serviço' : (itens.length > 1 ? 'Lista de itens' : 'Item único'));
+
+  if(s.motivo){ $('motivoTexto').textContent = s.motivo; $('cartaoMotivo').hidden = false; }
+  if(s.justificativa_fornecedor){
+    $('justificativaTexto').textContent = s.justificativa_fornecedor;
+    $('cartaoJustificativa').hidden = false;
+  }
+  if(ehServico){
+    $('escopoTexto').textContent = itens[0].descricao;
+    $('cartaoEscopo').hidden = false;
+    $('cartaoItens').hidden = true;
+  } else {
+    desenharTabela();
+  }
+
+  $('rodape').textContent =
+    'Somente leitura. Os preços não aparecem aqui — são apurados pelo setor de compras depois da primeira aprovação. ' +
+    'Lido do banco em ' + new Date().toLocaleString('pt-BR') + '.';
+  $('carregando').hidden = true;
+  $('conteudo').hidden = false;
+}
+
+function falhar(titulo, detalhe){
+  $('carregando').hidden = true;
+  $('erro').innerHTML = '<b>' + esc(titulo) + '</b>' + (detalhe ? '<br>' + esc(detalhe) : '');
+  $('erro').hidden = false;
+}
+
+/* ============================================================================
+   ABERTURA
+   ========================================================================== */
+async function abrir(){
+  const q = new URLSearchParams(location.search);
+  const id = (q.get('id') || '').trim();
+  const sc = (q.get('sc') || q.get('numero') || '').trim();
+
+  if(!id && !sc){
+    falhar('Link incompleto.',
+      'O endereço precisa trazer a solicitação: pedido.html?id=… ou pedido.html?sc=SC-2026-0001');
+    return;
+  }
+  try{
+    const filtro = id ? 'id=eq.' + encodeURIComponent(id) : 'numero=eq.' + encodeURIComponent(sc);
+    const achadas = await apiGet('solicitacoes?select=*&' + filtro + '&limit=1');
+    if(!achadas.length){
+      falhar('Solicitação não encontrada.',
+        'Confira o link. Se a solicitação foi aberta agora, aguarde alguns segundos e recarregue.');
+      return;
+    }
+    const s = achadas[0];
+    const itens = await apiGet('solicitacao_itens?select=*&solicitacao_id=eq.' +
+      encodeURIComponent(s.id) + '&order=descricao');
+    desenhar(s, itens);
+  }catch(e){
+    falhar('Não consegui ler o pedido no banco.', String(e.message).slice(0,220));
+  }
+}
+
+document.querySelectorAll('thead th').forEach(th =>
+  th.addEventListener('click', ()=> ordenarPor(th.dataset.col)));
+$('filtro').addEventListener('input', e => { termo = e.target.value; desenharTabela(); });
+$('btnCSV').addEventListener('click', baixarCSV);
+$('btnImprimir').addEventListener('click', ()=> window.print());
+
+abrir();
+</script>
+
+</body>
+</html>
