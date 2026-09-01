@@ -434,11 +434,8 @@
 
     <!-- ======================= 3 · ENTREGA E CUSTO ======================= -->
     <section class="passo" data-passo="entrega" hidden>
-      <h2>Entrega e custo</h2>
+      <h2>Centro de custo</h2>
 
-      <div class="campo" data-campo="localEntrega">
-        <label for="localEntrega">Selecione o local de entrega</label>
-        <select id="localEntrega"><option value="">— selecione —</option></select>
         <span class="ajuda">Onde a mercadoria deve ser fisicamente entregue.</span>
       </div>
 
@@ -572,16 +569,6 @@ const DADOS = {
   ],
 
   // TODO: substituir pelos locais reais de entrega
-  locaisEntrega: [
-    { id:'ALM-GPVA', nome:'Almoxarifado · Guarapuava' },
-    { id:'ESC-GPVA', nome:'Escritório · Guarapuava' },
-    { id:'G101',     nome:'Granja 101' },
-    { id:'G102',     nome:'Granja 102' },
-    { id:'G103',     nome:'Granja 103' },
-    { id:'G104',     nome:'Granja 104' },
-    { id:'PI-SEDE',  nome:'Sede · Unidade Piauí' }
-  ],
-
   // TODO: substituir pelos centros de custo reais.
   // Lista independente do local de entrega.
   centrosCusto: [
@@ -697,7 +684,7 @@ const estado = {
   nomeSolicitante:'', emailSolicitante:'', escopoServico:'',
   tipo:'', familia:'', item:null,
   quantidade:'', itensLista:[],
-  localEntrega:'', centroCusto:'',
+  centroCusto:'',
   tipoCompra:'', definicaoFornecedor:'', justificativaFornecedor:'',
   dataLimite:'', motivoCompra:'', anexos:[]
 };
@@ -721,7 +708,7 @@ const sequencia = () => SEM_QUANTIDADE.includes(estado.tipo)
 
 const TITULOS = {
   solicitante:'Solicitante',
-  item:'Item', quantidade:'Quantidade', entrega:'Entrega e custo',
+  item:'Item', quantidade:'Quantidade', entrega:'Centro de custo',
   compra:'Tipo de compra e fornecedor', prazo:'Prazo e motivo'
 };
 
@@ -758,7 +745,6 @@ async function iniciar(){
   const familias = DADOS.familias.map(f=>({v:f.id,t:f.nome}));
   preencherSelect($('familia'), familias);
   preencherSelect($('familiaLista'), familias);
-  preencherSelect($('localEntrega'), DADOS.locaisEntrega.map(u=>({v:u.id,t:u.nome})));
   preencherSelect($('centroCusto'),  DADOS.centrosCusto.map(c=>({v:c.id,t:c.nome})));
 
   $('dataLimite').min = hoje.toISOString().slice(0,10);
@@ -898,7 +884,6 @@ function ligarEventos(){
   });
   $('btnAddItem').addEventListener('click', adicionarItem);
 
-  $('localEntrega').addEventListener('change', e=>{ estado.localEntrega = e.target.value; limparErro('localEntrega'); });
   $('centroCusto').addEventListener('change',  e=>{ estado.centroCusto  = e.target.value; limparErro('centroCusto');  });
 
   $('justificativaFornecedor').addEventListener('input', e=>{
@@ -1161,7 +1146,6 @@ function validar(passo){
     if(!estado.quantidade || Number(estado.quantidade) <= 0) falhar('quantidade','Informe uma quantidade maior que zero.');
   }
   if(passo === 'entrega'){
-    if(!estado.localEntrega) falhar('localEntrega','Selecione o local de entrega.');
     if(!estado.centroCusto)  falhar('centroCusto','Selecione o centro de custo.');
   }
   if(passo === 'compra'){
@@ -1263,7 +1247,6 @@ function preencherExemplo(){
       'revisão dos rufos e limpeza das calhas. Serviço concluído quando não houver goteira ' +
       'em dia de chuva forte e as calhas escoarem livremente. Material por conta do contratado.';
     $('escopoServico').dispatchEvent(new Event('input'));
-    $('localEntrega').value = 'G103'; $('localEntrega').dispatchEvent(new Event('change'));
     $('centroCusto').value  = 'CC-103-MAN'; $('centroCusto').dispatchEvent(new Event('change'));
     marcarRadio('tipoCompra','normal');
     marcarRadio('definicaoFornecedor','cotacao');
@@ -1281,7 +1264,6 @@ function preencherExemplo(){
       pega('CN-0710',4,'Cimento CP II 50 kg','Saco')
     ];
     renderLista();
-    $('localEntrega').value = 'G103'; $('localEntrega').dispatchEvent(new Event('change'));
     $('centroCusto').value  = 'CC-103-MOR'; $('centroCusto').dispatchEvent(new Event('change'));
     marcarRadio('tipoCompra','programada');
     marcarRadio('definicaoFornecedor','cotacao');
@@ -1291,7 +1273,6 @@ function preencherExemplo(){
     const pneu = acharNoCatalogo('MM3-0412') || CATALOGO[0];
     if(pneu){ $('familia').value = pneu.familia; $('familia').dispatchEvent(new Event('change')); escolherItem(pneu); }
     $('quantidade').value = 4; $('quantidade').dispatchEvent(new Event('input'));
-    $('localEntrega').value = 'ALM-GPVA'; $('localEntrega').dispatchEvent(new Event('change'));
     $('centroCusto').value  = 'CC-FROTA'; $('centroCusto').dispatchEvent(new Event('change'));
     marcarRadio('tipoCompra','urgente');
     marcarRadio('definicaoFornecedor','unico');
@@ -1315,7 +1296,6 @@ function nomeDe(lista, id){
 }
 
 function montarPacote(solicitacaoId, cabecalho, itens){
-  const local      = nomeDe(DADOS.locaisEntrega, cabecalho.local_entrega);
   const centro     = nomeDe(DADOS.centrosCusto,  cabecalho.centro_custo);
   const tipoCompra = (DADOS.tiposCompra.find(t=>t.id===cabecalho.tipo_compra)||{}).titulo || '';
   const defForn    = (DADOS.definicoesFornecedor.find(f=>f.id===cabecalho.definicao_fornecedor)||{}).titulo || '';
@@ -1335,8 +1315,6 @@ function montarPacote(solicitacaoId, cabecalho, itens){
     slack_user_id:     SLACK_UID || '',
     aberto_em:      new Date().toISOString(),
 
-    local_entrega:             cabecalho.local_entrega,
-    local_entrega_nome:        local,
     centro_custo:              cabecalho.centro_custo,
     centro_custo_nome:         centro,
     tipo_compra:               cabecalho.tipo_compra,
@@ -1360,7 +1338,6 @@ function montarPacote(solicitacaoId, cabecalho, itens){
         (estado.emailSolicitante ? ' · ' + estado.emailSolicitante.trim().toLowerCase() : '') + '\n' +
       '**Tipo de solicitação:** ' +
         (({ item:'Item único', lista:'Lista de itens', servico:'Escopo de serviço' })[estado.tipo] || '—') + '\n' +
-      '**Local de entrega:** ' + local + '\n' +
       '**Centro de custo:** ' + centro + '\n' +
       '**Tipo de compra:** ' + tipoCompra + '\n' +
       '**Definição de fornecedor:** ' + defForn +
@@ -1422,7 +1399,6 @@ async function enviar(){
   const cabecalho = {
     numero:                   $('autoNumero').textContent,
     solicitante:              estado.nomeSolicitante.trim() || DADOS.solicitante.nome,
-    local_entrega:            estado.localEntrega || null,
     centro_custo:             estado.centroCusto || null,
     tipo_compra:              estado.tipoCompra || null,
     definicao_fornecedor:     estado.definicaoFornecedor || null,

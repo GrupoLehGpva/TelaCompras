@@ -216,11 +216,6 @@ async function apiGet(caminho){
 /* ============================================================================
    NOMES LEGÍVEIS — o banco guarda o código; a tela mostra o nome
    ========================================================================== */
-const LOCAIS = {
-  'ALM-GPVA':'Almoxarifado · Guarapuava', 'ESC-GPVA':'Escritório · Guarapuava',
-  'G101':'Granja 101', 'G102':'Granja 102', 'G103':'Granja 103', 'G104':'Granja 104',
-  'PI-SEDE':'Sede · Unidade Piauí'
-};
 const CENTROS = {
   'CC-101-PROD':'Granja 101 · Produção', 'CC-101-MAN':'Granja 101 · Manutenção',
   'CC-102-PROD':'Granja 102 · Produção', 'CC-102-MAN':'Granja 102 · Manutenção',
@@ -332,7 +327,6 @@ function desenhar(s, itens){
     campo('Solicitante', s.solicitante) +
     campo('Aberto em', dataBR(s.aberto_em)) +
     campo('Tipo de compra', legivel(TIPOS_COMPRA, s.tipo_compra)) +
-    campo('Local de entrega', s.local_entrega_nome || legivel(LOCAIS, s.local_entrega)) +
     campo('Centro de custo', legivel(CENTROS, s.centro_custo)) +
     campo('Entrega até', dataBR(s.data_necessidade)) +
     campo('Definição de fornecedor', legivel(DEF_FORNECEDOR, s.definicao_fornecedor)) +
