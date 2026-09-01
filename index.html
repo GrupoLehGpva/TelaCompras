@@ -146,7 +146,7 @@
   .grupo-familia h3{margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:.6px;
     text-transform:uppercase;color:var(--muted)}
 
-  input[type=text],input[type=number],input[type=date],select,textarea{
+  input[type=text],input[type=email],input[type=tel],input[type=number],input[type=date],select,textarea{
     width:100%;padding:13px 12px;font-size:16px;font-family:inherit;color:inherit;
     background:var(--card);border:1px solid var(--borda);border-radius:10px;appearance:none}
   input:focus,select:focus,textarea:focus{outline:none;border-color:var(--verde);box-shadow:0 0 0 3px var(--verde-claro)}
@@ -286,7 +286,7 @@
 
 <div class="demo-bar" id="demoBar">
   <div class="interno">
-    <span class="aviso">● Modo demonstração — validação desativada</span>
+    <span class="aviso">● Modo demonstração — dados de exemplo, validação ativa</span>
     <div class="segmento">
       <button type="button" id="verPassos" class="ativo">Passo a passo</button>
       <button type="button" id="verPagina">Página única</button>
@@ -415,7 +415,7 @@
       <div id="blocoServico" hidden>
         <div class="campo" data-campo="escopoServico">
           <label for="escopoServico">Descreva o escopo do serviço</label>
-          <textarea id="escopoServico" rows="7"
+          <textarea id="escopoServico" rows="7" maxlength="2000"
             placeholder="O que precisa ser feito, onde, e o que caracteriza o serviço concluído."></textarea>
           <span class="ajuda">Quanto mais claro o escopo, mais comparáveis são as propostas.
             Diga o local, o que está acontecendo, e o que precisa estar pronto no fim.</span>
@@ -683,6 +683,11 @@ function unidadePlural(unidade, n){
   if(Number(n) === 1) return u;
   if(UNIDADES_PLURAL[u]) return UNIDADES_PLURAL[u];
   return u.split(/\s+/).map(pluralPalavra).join(' ');
+}
+
+function hojeISO(){
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
 }
 
 function contar(n, singular, plural){
@@ -1157,6 +1162,8 @@ function validar(passo){
   }
   if(passo === 'prazo'){
     if(!estado.dataLimite) falhar('dataLimite','Informe a data limite para entrega.');
+    else if(estado.dataLimite < hojeISO())
+      falhar('dataLimite','A data limite não pode estar no passado.');
     if(estado.motivoCompra.trim().length < 5) falhar('motivoCompra','Descreva o motivo da compra.');
   }
   return ok;
