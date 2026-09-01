@@ -247,6 +247,20 @@ const TIPOS_COMPRA = { programada:'Programada', normal:'Normal', urgente:'Urgent
 const DEF_FORNECEDOR = { cotacao:'Cotação', unico:'Fornecedor único' };
 
 const legivel = (mapa, cod) => cod ? (mapa[cod] || cod) : '—';
+
+/* Os 746 centros do ERP vivem na tabela centros_custo. A tela busca só o do
+   pedido — o mapa acima fica como reserva para as solicitações antigas, que
+   ainda guardam os códigos CC-… criados antes da carga do ERP. */
+let CENTRO_NOME = '';
+async function nomeDoCentro(codigo){
+  if(!codigo) return '';
+  try{
+    const r = await apiGet('centros_custo?select=nome,unidade&codigo=eq.' +
+      encodeURIComponent(codigo) + '&limit=1');
+    if(r.length) return r[0].nome + (r[0].unidade ? ' · ' + r[0].unidade : '');
+  }catch(e){ /* sem banco: cai no mapa de reserva */ }
+  return '';
+}
 const dataBR = iso => {
   if(!iso) return '—';
   const d = new Date(String(iso).length <= 10 ? iso + 'T12:00:00' : iso);
@@ -346,7 +360,7 @@ function desenhar(s, itens){
     campo('Solicitante', s.solicitante) +
     campo('Aberto em', dataBR(s.aberto_em)) +
     campo('Tipo de compra', legivel(TIPOS_COMPRA, s.tipo_compra)) +
-    campo('Centro de custo', legivel(CENTROS, s.centro_custo)) +
+    campo('Centro de custo', CENTRO_NOME || legivel(CENTROS, s.centro_custo)) +
     campo('Entrega até', dataBR(s.data_necessidade)) +
     campo('Definição de fornecedor', legivel(DEF_FORNECEDOR, s.definicao_fornecedor)) +
     campo('Natureza', ehServico ? 'Escopo de serviço' : (itens.length > 1 ? 'Lista de itens' : 'Item único'));
@@ -399,8 +413,12 @@ async function abrir(){
       return;
     }
     const s = achadas[0];
-    const itens = await apiGet('solicitacao_itens?select=*&solicitacao_id=eq.' +
-      encodeURIComponent(s.id) + '&order=descricao');
+    const [itens, centro] = await Promise.all([
+      apiGet('solicitacao_itens?select=*&solicitacao_id=eq.' +
+        encodeURIComponent(s.id) + '&order=descricao'),
+      nomeDoCentro(s.centro_custo)
+    ]);
+    CENTRO_NOME = s.centro_custo_nome || centro;
     desenhar(s, itens);
   }catch(e){
     falhar('Não consegui ler o pedido no banco.', String(e.message).slice(0,220));

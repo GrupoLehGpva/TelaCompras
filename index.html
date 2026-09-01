@@ -452,14 +452,22 @@
     <section class="passo" data-passo="entrega" hidden>
       <h2>Centro de custo</h2>
 
-        <span class="ajuda">Onde a mercadoria deve ser fisicamente entregue.</span>
-      </div>
-
       <div class="campo" data-campo="centroCusto">
-        <label for="centroCusto">Selecione o centro de custo</label>
-        <select id="centroCusto"><option value="">— selecione —</option></select>
+        <label for="buscaCentro">Busque o centro de custo pelo nome, pelo código ou pela unidade</label>
+        <div class="busca">
+          <input type="text" id="buscaCentro" autocomplete="off" placeholder="Ex.: 3180, SOJA OLIMPO, FROTA">
+          <div class="resultados" id="resultadosCentro" hidden></div>
+        </div>
         <span class="ajuda">Onde o valor do gasto será alocado depois que a fatura for paga.
-          Pode ser diferente do local de entrega.</span>
+          São centenas de centros — escreva parte do nome que a lista estreita.</span>
+
+        <div class="ficha" id="fichaCentro" hidden>
+          <dl>
+            <dt>Código</dt><dd id="cCodigo"></dd>
+            <dt>Centro</dt><dd id="cNome"></dd>
+            <dt>Unidade</dt><dd id="cUnidade"></dd>
+          </dl>
+        </div>
       </div>
     </section>
 
@@ -700,7 +708,7 @@ const estado = {
   nomeSolicitante:'', emailSolicitante:'', escopoServico:'',
   tipo:'', familia:'', item:null,
   quantidade:'', itensLista:[],
-  centroCusto:'',
+  centroCusto:'', centroCustoNome:'', centroCustoUnidade:'',
   tipoCompra:'', definicaoFornecedor:'', justificativaFornecedor:'',
   dataLimite:'', motivoCompra:'', anexos:[]
 };
@@ -761,7 +769,6 @@ async function iniciar(){
   const familias = DADOS.familias.map(f=>({v:f.id,t:f.nome}));
   preencherSelect($('familia'), familias);
   preencherSelect($('familiaLista'), familias);
-  preencherSelect($('centroCusto'),  DADOS.centrosCusto.map(c=>({v:c.id,t:c.nome})));
 
   $('dataLimite').min = hoje.toISOString().slice(0,10);
 
@@ -770,7 +777,7 @@ async function iniciar(){
   ligarEventos();
   renderLista();
   render();
-  await carregarCatalogo();
+  await Promise.all([carregarCatalogo(), carregarCentrosCusto()]);
 }
 
 async function carregarCatalogo(){
@@ -793,6 +800,57 @@ async function carregarCatalogo(){
     selo.textContent = 'offline'; selo.className = 'status off';
     mostrarAlerta('Não consegui ler o catálogo no Supabase. Usando a lista reduzida local.<br><code>'+String(e.message).slice(0,200)+'</code>');
   }
+}
+
+/* ----------------------------------------------------------------------------
+   CENTROS DE CUSTO
+   São 746 vindos do ERP — lista grande demais para <select>, por isso o campo
+   é uma busca igual à do item. A lista mora no Supabase (tabela centros_custo);
+   se o banco não responder, cai na lista curta local para o formulário não
+   travar, e o aviso aparece na tela para ninguém enviar pedido com centro errado.
+   -------------------------------------------------------------------------- */
+let CENTROS_CUSTO = [];
+
+async function carregarCentrosCusto(){
+  const local = DADOS.centrosCusto.map(c => ({ codigo:c.id, nome:c.nome, unidade:'', tipo:'' }));
+  if(!CONECTADO){ CENTROS_CUSTO = local; return; }
+  try{
+    const dados = await apiGet('centros_custo?select=codigo,nome,unidade,tipo&ativo=is.true&order=nome&limit=2000');
+    CENTROS_CUSTO = dados.length ? dados : local;
+    if(!dados.length) mostrarAlerta('Conectado, mas a tabela <code>centros_custo</code> está vazia. Usando a lista curta local.');
+  }catch(e){
+    CENTROS_CUSTO = local;
+    mostrarAlerta('Não consegui ler os centros de custo no Supabase. Usando a lista curta local.<br><code>'+String(e.message).slice(0,200)+'</code>');
+  }
+}
+
+function filtrarCentros(termo){
+  const t = (termo||'').trim().toLowerCase();
+  if(!t) return CENTROS_CUSTO;
+  const partes = t.split(/\s+/);
+  return CENTROS_CUSTO.filter(c=>{
+    const alvo = (c.codigo + ' ' + c.nome + ' ' + (c.unidade||'')).toLowerCase();
+    return partes.every(pa => alvo.includes(pa));
+  });
+}
+
+function escolherCentro(c){
+  estado.centroCusto        = c.codigo;
+  estado.centroCustoNome    = c.nome;
+  estado.centroCustoUnidade = c.unidade || '';
+  $('cCodigo').textContent  = c.codigo;
+  $('cNome').textContent    = c.nome;
+  $('cUnidade').textContent = c.unidade || '—';
+  $('fichaCentro').hidden   = false;
+  $('buscaCentro').value    = c.nome;
+  esconder('resultadosCentro');
+  limparErro('centroCusto');
+}
+
+/* Usada só pelo botão de exemplo: pega o primeiro centro que casa com o termo. */
+function escolherCentroPorTermo(termo){
+  const achado = filtrarCentros(termo)[0] || CENTROS_CUSTO[0];
+  if(achado) escolherCentro(achado);
 }
 
 function atualizarCabecalhoSolicitante(){
@@ -900,7 +958,17 @@ function ligarEventos(){
   });
   $('btnAddItem').addEventListener('click', adicionarItem);
 
-  $('centroCusto').addEventListener('change',  e=>{ estado.centroCusto  = e.target.value; limparErro('centroCusto');  });
+  $('buscaCentro').addEventListener('focus', ()=>{
+    if(!$('buscaCentro').value) abrirResultadosCentro(CENTROS_CUSTO);
+  });
+  $('buscaCentro').addEventListener('input', e=>{
+    estado.centroCusto = ''; estado.centroCustoNome = ''; estado.centroCustoUnidade = '';
+    $('fichaCentro').hidden = true;
+    abrirResultadosCentro(filtrarCentros(e.target.value));
+  });
+  $('buscaCentro').addEventListener('blur', ()=>{
+    timerFechar['resultadosCentro'] = setTimeout(()=>esconder('resultadosCentro'),180);
+  });
 
   $('justificativaFornecedor').addEventListener('input', e=>{
     estado.justificativaFornecedor = e.target.value; limparErro('justificativaFornecedor');
@@ -975,6 +1043,38 @@ function abrirResultados(boxId, itens, aoEscolher){
   box.hidden = false;
 }
 function esconder(boxId){ $(boxId).hidden = true; }
+
+/* Mesma caixa de resultados, outro conteúdo: centro de custo tem código, nome
+   e unidade de negócio — o nome sozinho repete demais entre as safras. */
+function abrirResultadosCentro(lista){
+  clearTimeout(timerFechar['resultadosCentro']);
+  const box = $('resultadosCentro');
+  box.innerHTML = '';
+  if(!lista.length){
+    box.innerHTML = '<p class="vazio">Nenhum centro de custo encontrado. ' +
+      'Se ele não existe na lista, fale com o Compras antes de enviar.</p>';
+  } else {
+    const excedente = lista.length - TETO_RESULTADOS;
+    lista.slice(0, TETO_RESULTADOS).forEach(c=>{
+      const b = document.createElement('button');
+      b.type = 'button';
+      const b1 = document.createElement('b'); b1.textContent = c.nome;
+      const s1 = document.createElement('span');
+      s1.textContent = c.codigo + (c.unidade ? ' · ' + c.unidade : '') + (c.tipo ? ' · ' + c.tipo : '');
+      b.appendChild(b1); b.appendChild(s1);
+      b.addEventListener('mousedown', ev=> ev.preventDefault());
+      b.addEventListener('click', ()=> escolherCentro(c));
+      box.appendChild(b);
+    });
+    if(excedente > 0){
+      const p = document.createElement('p');
+      p.className = 'vazio';
+      p.textContent = 'e mais ' + excedente + ' centros — escreva mais para estreitar a busca.';
+      box.appendChild(p);
+    }
+  }
+  box.hidden = false;
+}
 
 function escolherItem(i){
   estado.item = i;
@@ -1263,7 +1363,7 @@ function preencherExemplo(){
       'revisão dos rufos e limpeza das calhas. Serviço concluído quando não houver goteira ' +
       'em dia de chuva forte e as calhas escoarem livremente. Material por conta do contratado.';
     $('escopoServico').dispatchEvent(new Event('input'));
-    $('centroCusto').value  = 'CC-103-MAN'; $('centroCusto').dispatchEvent(new Event('change'));
+    escolherCentroPorTermo('manuten');
     marcarRadio('tipoCompra','normal');
     marcarRadio('definicaoFornecedor','cotacao');
     $('motivoCompra').value = 'Telhado do galpão de máquinas com goteira sobre os equipamentos';
@@ -1280,7 +1380,7 @@ function preencherExemplo(){
       pega('CN-0710',4,'Cimento CP II 50 kg','Saco')
     ];
     renderLista();
-    $('centroCusto').value  = 'CC-103-MOR'; $('centroCusto').dispatchEvent(new Event('change'));
+    escolherCentroPorTermo('morador');
     marcarRadio('tipoCompra','programada');
     marcarRadio('definicaoFornecedor','cotacao');
     $('motivoCompra').value = 'Reposição mensal de material de limpeza da casa dos moradores da Granja 103';
@@ -1289,7 +1389,7 @@ function preencherExemplo(){
     const pneu = acharNoCatalogo('MM3-0412') || CATALOGO[0];
     if(pneu){ $('familia').value = pneu.familia; $('familia').dispatchEvent(new Event('change')); escolherItem(pneu); }
     $('quantidade').value = 4; $('quantidade').dispatchEvent(new Event('input'));
-    $('centroCusto').value  = 'CC-FROTA'; $('centroCusto').dispatchEvent(new Event('change'));
+    escolherCentroPorTermo('frota');
     marcarRadio('tipoCompra','urgente');
     marcarRadio('definicaoFornecedor','unico');
     $('justificativaFornecedor').value = 'Peça original: apenas a concessionária fornece esta medida para o modelo do caminhão.';
@@ -1312,7 +1412,7 @@ function nomeDe(lista, id){
 }
 
 function montarPacote(solicitacaoId, cabecalho, itens){
-  const centro     = nomeDe(DADOS.centrosCusto,  cabecalho.centro_custo);
+  const centro     = estado.centroCustoNome || nomeDe(DADOS.centrosCusto, cabecalho.centro_custo);
   const tipoCompra = (DADOS.tiposCompra.find(t=>t.id===cabecalho.tipo_compra)||{}).titulo || '';
   const defForn    = (DADOS.definicoesFornecedor.find(f=>f.id===cabecalho.definicao_fornecedor)||{}).titulo || '';
 
@@ -1333,6 +1433,7 @@ function montarPacote(solicitacaoId, cabecalho, itens){
 
     centro_custo:              cabecalho.centro_custo,
     centro_custo_nome:         centro,
+    centro_custo_unidade:      estado.centroCustoUnidade || '',
     tipo_compra:               cabecalho.tipo_compra,
     tipo_compra_nome:          tipoCompra,
     definicao_fornecedor:      cabecalho.definicao_fornecedor,
@@ -1354,7 +1455,7 @@ function montarPacote(solicitacaoId, cabecalho, itens){
         (estado.emailSolicitante ? ' · ' + estado.emailSolicitante.trim().toLowerCase() : '') + '\n' +
       '**Tipo de solicitação:** ' +
         (({ item:'Item único', lista:'Lista de itens', servico:'Escopo de serviço' })[estado.tipo] || '—') + '\n' +
-      '**Centro de custo:** ' + centro + '\n' +
+      '**Centro de custo:** ' + centro + ' (' + (cabecalho.centro_custo || '—') + ')' + '\n' +
       '**Tipo de compra:** ' + tipoCompra + '\n' +
       '**Definição de fornecedor:** ' + defForn +
         (cabecalho.justificativa_fornecedor ? ' — ' + cabecalho.justificativa_fornecedor : '') + '\n' +
