@@ -269,14 +269,50 @@ const dataBR = iso => {
 const numBR = n => Number(n||0).toLocaleString('pt-BR', {maximumFractionDigits:3});
 const esc = t => String(t==null?'':t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
+/* ----------------------------------------------------------------------------
+   CONCORDÂNCIA DA UNIDADE
+   "1 unidade", "5 unidades". As irregulares vêm da tabela; o resto segue a
+   regra. Abreviação (kg, m, L, un) não flexiona — "5 kgs" não existe.
+   A capitalização do cadastro é preservada: "Unidade" vira "Unidades".
+   -------------------------------------------------------------------------- */
+const UNIDADES_PLURAL = {
+  'unidade':'unidades','peça':'peças','litro':'litros','saco':'sacos','metro':'metros',
+  'metro cúbico':'metros cúbicos','metro quadrado':'metros quadrados','quilo':'quilos',
+  'caixa':'caixas','par':'pares','rolo':'rolos','pacote':'pacotes','lata':'latas',
+  'galão':'galões','fardo':'fardos','tonelada':'toneladas','conjunto':'conjuntos',
+  'jogo':'jogos','kit':'kits','frasco':'frascos','barra':'barras','folha':'folhas',
+  'tubo':'tubos','balde':'baldes','serviço':'serviços','dúzia':'dúzias',
+  'ampola':'ampolas','bobina':'bobinas','bombona':'bombonas','resma':'resmas'
+};
+const UNIDADES_INVARIAVEIS = new Set(
+  ['kg','g','mg','t','l','ml','m','cm','mm','km','m²','m³','m2','m3','un','pç','pc','cx','h','min']);
+
+function pluralPalavra(b){
+  if(/ão$/.test(b))                 return b.replace(/ão$/,'ões');
+  if(/[aeiouáéíóúâêôãõ]$/.test(b))  return b + 's';
+  if(/m$/.test(b))                  return b.replace(/m$/,'ns');
+  if(/(r|z)$/.test(b))              return b + 'es';
+  if(/s$/.test(b))                  return b;
+  if(/il$/.test(b))                 return b.replace(/il$/,'is');
+  if(/l$/.test(b))                  return b.replace(/l$/,'is');
+  return b + 's';
+}
+
+function comoOriginal(velho, novo){
+  if(velho === velho.toUpperCase()) return novo.toUpperCase();
+  if(velho.charAt(0) !== velho.charAt(0).toLowerCase())
+    return novo.charAt(0).toUpperCase() + novo.slice(1);
+  return novo;
+}
+
 function plural(unidade, q){
-  const u = String(unidade||'').trim();
+  const u = String(unidade || '').trim();
   if(!u) return '';
   if(Number(q) === 1) return u;
-  if(/[sz]$/i.test(u)) return u;
-  if(/l$/i.test(u))  return u + 'es';
-  if(/ão$/i.test(u)) return u.replace(/ão$/i,'ões');
-  return u + 's';
+  const base = u.toLowerCase();
+  if(UNIDADES_INVARIAVEIS.has(base)) return u;
+  const p = UNIDADES_PLURAL[base] || base.split(/\s+/).map(pluralPalavra).join(' ');
+  return comoOriginal(u, p);
 }
 
 /* ============================================================================
