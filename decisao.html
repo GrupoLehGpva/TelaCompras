@@ -183,6 +183,8 @@
   .itens-resumo th{color:var(--muted);font-weight:600;font-size:12px;
     text-transform:uppercase;letter-spacing:.04em}
   .itens-resumo td.qtd{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .topo .direita{min-width:0}
+  .selo{max-width:100%;overflow-wrap:anywhere}
   .rodape-nota{color:var(--muted);font-size:13px;margin-top:22px;line-height:1.6}
 
 </style>
@@ -301,7 +303,9 @@ function desenharVeredito(){
   $('passo').innerHTML      = d.passo;
   document.title = d.titulo + ' · Grupo Leh';
   $('tituloTopo').textContent = d.titulo;
-  if(sc){ $('seloNumero').textContent = sc; $('seloNumero').hidden = false; }
+  // Número vem da URL: cortado no tamanho de um SC real, senão um parâmetro
+  // gigante estica o cabeçalho e a página inteira ganha rolagem lateral.
+  if(sc){ $('seloNumero').textContent = sc.slice(0, 24); $('seloNumero').hidden = false; }
 }
 
 function desenharAcoes(){

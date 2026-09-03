@@ -331,7 +331,11 @@ function ordenarPor(col){
 function baixarCSV(){
   const linhas = [['Código','Descrição','Unidade','Quantidade']]
     .concat(itensVisiveis().map(i => [i.codigo||'', i.descricao||'', i.unidade||'', String(i.quantidade||'').replace('.',',')]));
-  const csv = '﻿' + linhas.map(l => l.map(c => '"' + String(c).replace(/"/g,'""') + '"').join(';')).join('\r\n');
+  /* Célula que começa com = + - @ vira fórmula quando o Excel abre o arquivo.
+     A descrição do item vem do catálogo, mas o CSV é aberto fora daqui: um
+     código que comece com sinal não pode virar comando na planilha de ninguém. */
+  const seguro = c => { const t = String(c); return /^[=+\-@\t\r]/.test(t) ? "'" + t : t; };
+  const csv = '﻿' + linhas.map(l => l.map(c => '"' + seguro(c).replace(/"/g,'""') + '"').join(';')).join('\r\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'}));
   a.download = (document.getElementById('seloNumero').textContent || 'pedido') + '.csv';

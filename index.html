@@ -180,6 +180,13 @@
   .resultados{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:5;background:var(--card);
     border:1px solid var(--borda);border-radius:10px;max-height:260px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.10)}
   .resultados[hidden]{display:none}
+  /* O pedido foi gravado, mas não chegou ao Compras. Isso não pode passar como
+     nota técnica no meio de uma tela de sucesso: quem enviar e for embora nunca
+     vai ser aprovado, e ninguém fica sabendo. */
+  .aviso-falha{margin:16px 0 4px;padding:14px 16px;border-radius:var(--raio);
+    background:var(--erro-bg);border:1px solid var(--erro-borda);color:var(--erro);
+    text-align:left;font-size:14px;line-height:1.6}
+  .aviso-falha[hidden]{display:none}
   .resultados button{display:block;width:100%;text-align:left;background:none;border:0;
     border-bottom:1px solid var(--borda);padding:12px 14px;cursor:pointer;font:inherit}
   .resultados button:last-child{border-bottom:0}
@@ -526,9 +533,11 @@
 
     <!-- ======================= CONFIRMAÇÃO ======================= -->
     <section class="passo ok" data-passo="confirmacao" hidden>
-      <div class="selo">✓</div>
-      <h2>Solicitação enviada</h2>
+      <div class="selo" id="okSelo">✓</div>
+      <h2 id="okTitulo">Solicitação enviada</h2>
       <p class="num" id="okNumero"></p>
+
+      <div class="aviso-falha" id="okAviso" hidden></div>
       <p class="titulo-lista">O que acontece agora:</p>
       <ol>
         <li>Um card é criado no ClickUp com o seu pedido</li>
@@ -1528,7 +1537,7 @@ async function enviar(){
 
   if(!CONECTADO){
     ultimoPacote = montarPacote(null, cabecalho, itens);
-    concluir(cabecalho, itens, 'Não gravado — chave do Supabase não preenchida.');
+    concluir(cabecalho, itens, 'Não gravado — chave do Supabase não preenchida.', false);
     return;
   }
 
@@ -1544,7 +1553,7 @@ async function enviar(){
     const pacote = montarPacote(solicitacao.id, cabecalho, itens);
     const aviso  = await avisarWebhook(pacote);
     ultimoPacote = pacote;
-    concluir(cabecalho, itens, 'Gravado no Supabase · ' + aviso.nota);
+    concluir(cabecalho, itens, 'Gravado no Supabase · ' + aviso.nota, aviso.ok);
   }catch(e){
     botao.disabled = false; botao.textContent = 'Enviar solicitação';
     mostrarAlerta('<b>Não consegui gravar no Supabase.</b><br><code>'+String(e.message).slice(0,300)+'</code>' +
@@ -1553,8 +1562,21 @@ async function enviar(){
   }
 }
 
-function concluir(cabecalho, itens, nota){
+function concluir(cabecalho, itens, nota, cardCriado){
   $('okNumero').textContent = cabecalho.numero + ' · ' + nota;
+
+  const falhou = cardCriado === false;
+  $('okSelo').textContent   = falhou ? '!' : '✓';
+  $('okTitulo').textContent = falhou ? 'Solicitação gravada, mas não chegou ao Compras'
+                                     : 'Solicitação enviada';
+  $('okAviso').hidden = !falhou;
+  if(falhou){
+    $('okAviso').innerHTML =
+      '<b>Ninguém foi avisado ainda.</b> O pedido ficou salvo com o número ' +
+      cabecalho.numero + ', mas o card não foi criado no ClickUp — então nenhuma ' +
+      'aprovação vai começar sozinha.<br><br>' +
+      'Avise o setor de compras com esse número, ou envie de novo daqui a alguns minutos.';
+  }
   $('okPayload').textContent = JSON.stringify(
     ultimoPacote || { solicitacao: cabecalho, itens: itens }, null, 2);
   document.querySelectorAll('.passo').forEach(s=>{ s.hidden = s.dataset.passo !== 'confirmacao'; });
