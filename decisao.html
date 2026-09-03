@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Decisão registrada · Grupo Leh</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<!--
+  ============================================================================
+  TELA DA DECISÃO — Grupo Leh · Compras
+  Para onde o aprovador cai depois de clicar em Aprovar ou Reprovar no Slack.
+  Antes ele caía na página do n8n; esta é nossa.
+
+  O n8n redireciona para cá com:
+    ?d=aprovado|reprovado|ja|erro   o que aconteceu
+    &e=lider|gerencial|financeiro   qual das três aprovações
+    &sc=SC-AAAA-NNNN                número da solicitação (para o resumo)
+    &id=<uuid>                      id da solicitação, quando existir
+    &card=<url do ClickUp>
+
+  A página não decide nada e não grava nada: quem move o card é o n8n. Aqui
+  só se conta o que aconteceu e se mostra o pedido para conferência. Por isso
+  ela pode ser aberta de novo sem efeito colateral.
+  ============================================================================
+-->
+<style>
+  :root{
+    /* Identidade Grupo Leh — livro da marca, maio 2024
+       2965 C #00263d · 2955 C #003865 · 341 C #007A53 · 330 C #00524c
+       321 C #008c95 · 468 C #ddcba3 · Warm Gray 1 C #d7d2cc */
+    color-scheme:light;   /* faz o navegador desenhar rádio, seleção e data no tema certo */
+    --marca:#00263d;      --sobre-marca:#FFFFFF;      --azul:#003865;
+    --verde:#008c95;      --acento-fundo:#00727a;     --sobre-acento:#FFFFFF;
+    --verde-claro:#E2F1F2; --verde-folha:#007A53;     --verde-mata:#00524c;
+    --areia:#ddcba3;      --cinza-quente:#d7d2cc;
+    --bg:#F2F5F8;         --card:#FFFFFF;           --realce:#F7F9FB;
+    --texto:#0F2233;      --muted:#5F7284;
+    --borda:#DBE3EA;      --linha-forte:#B4C2CE;
+    --erro:#B3261E;       --erro-bg:#FDF2F1;        --erro-borda:#E8B4B0;
+    --demo:#8A5A00;       --demo-bg:#FFF8E8;        --demo-borda:#EFDDB4;
+    --ok-bg:#E1F0E9;      --ok-txt:#007A53;
+    --codigo-bg:#00263d;  --codigo-txt:#CFE3E5;
+    --raio:12px;          --pilula:100px;
+    /* O livro da marca adota GoldPlay e autoriza Arial para meios eletrônicos.
+       Figtree entra entre as duas como equivalente aberto mais próximo. */
+    --sans:"Goldplay","Goldplay Alt","Figtree",Arial,Helvetica,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --marca:#001725;      --sobre-marca:#FFFFFF;      --azul:#0A4472;
+      --verde:#2FB3BC;      --acento-fundo:#56C8CF;   --sobre-acento:#04161F;
+      --verde-claro:#0D2A2D; --verde-folha:#3FA37E;   --verde-mata:#0B3B37;
+      --areia:#7A6E55;      --cinza-quente:#6E6A65;
+      --bg:#08131C;         --card:#0F1D28;           --realce:#152431;
+      --texto:#E6EDF3;      --muted:#9CABB9;
+      --borda:#22323F;      --linha-forte:#36485B;
+      --erro:#F0A0A0;       --erro-bg:#2A1616;        --erro-borda:#5B2A2A;
+      --demo:#E0B860;       --demo-bg:#241D0E;        --demo-borda:#3B3218;
+      --ok-bg:#0F2C21;      --ok-txt:#5FC79A;
+      --codigo-bg:#04121B;  --codigo-txt:#CFE3E5;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --marca:#001725;    --sobre-marca:#FFFFFF;    --azul:#0A4472;
+    --verde:#2FB3BC;    --acento-fundo:#56C8CF;   --sobre-acento:#04161F;
+    --verde-claro:#0D2A2D; --verde-folha:#3FA37E;   --verde-mata:#0B3B37;
+    --areia:#7A6E55;    --cinza-quente:#6E6A65;
+    --bg:#08131C;       --card:#0F1D28;         --realce:#152431;
+    --texto:#E6EDF3;    --muted:#9CABB9;
+    --borda:#22323F;    --linha-forte:#36485B;
+    --erro:#F0A0A0;     --erro-bg:#2A1616;      --erro-borda:#5B2A2A;
+    --demo:#E0B860;     --demo-bg:#241D0E;      --demo-borda:#3B3218;
+    --ok-bg:#0F2C21;    --ok-txt:#5FC79A;
+    --codigo-bg:#04121B;  --codigo-txt:#CFE3E5;
+  }
+  .marca-bloco{display:flex;align-items:center;gap:16px;min-width:0}
+  .marca-bloco .titulo-tela{border-left:1px solid rgba(255,255,255,.28);padding-left:16px;min-width:0}
+  .logo-leh{display:block;height:34px;width:auto;flex:none}
+  .logo-leh.impressao{display:none}
+  @media (max-width:420px){ .logo-leh{height:28px} }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--texto);
+    font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .topo{background:var(--marca);color:var(--sobre-marca);padding:14px 20px;
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .topo .marca{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;opacity:.72}
+  .topo h1{margin:2px 0 0;font-size:19px;font-weight:650;line-height:1.2}
+  .topo .direita{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .selo{border-radius:var(--pilula);padding:5px 12px;font-size:12px;font-weight:700;
+    background:rgba(255,255,255,.12);color:var(--sobre-marca);white-space:nowrap}
+  .selo.status{background:var(--verde);color:var(--sobre-acento)}
+  .envelope{max-width:1080px;margin:0 auto;padding:20px 16px 64px}
+  .cartao{background:var(--card);border:1px solid var(--borda);border-radius:var(--raio);
+    padding:18px 20px;margin-bottom:16px}
+  .cartao h2{margin:0 0 14px;font-size:13px;font-weight:700;letter-spacing:.7px;
+    text-transform:uppercase;color:var(--muted)}
+  .ficha{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px 22px;margin:0}
+  .ficha dt{font-size:11px;letter-spacing:.7px;text-transform:uppercase;color:var(--muted)}
+  .ficha dd{margin:3px 0 0;font-size:15px;font-weight:600;line-height:1.4;word-break:break-word}
+  .ficha dd.solto{font-weight:400}
+  .barra-ferramentas{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .busca-tabela{flex:1 1 240px;min-width:0}
+  .busca-tabela input{width:100%;padding:11px 12px;font-size:15px;font-family:inherit;color:inherit;
+    background:var(--card);border:1px solid var(--borda);border-radius:10px;appearance:none}
+  .busca-tabela input:focus{outline:none;border-color:var(--verde);box-shadow:0 0 0 3px var(--verde-claro)}
+  .btn{border-radius:var(--pilula);border:1px solid var(--borda);background:var(--card);
+    color:var(--texto);font:inherit;font-size:14px;font-weight:600;padding:10px 18px;cursor:pointer;white-space:nowrap}
+  .btn:hover{border-color:var(--linha-forte)}
+  .rolagem{overflow-x:auto;border:1px solid var(--borda);border-radius:var(--raio);background:var(--card)}
+  table{border-collapse:collapse;width:100%;min-width:560px}
+  thead th{position:sticky;top:0;background:var(--realce);border-bottom:1px solid var(--borda);
+    text-align:left;padding:11px 14px;font-size:11px;letter-spacing:.7px;text-transform:uppercase;
+    color:var(--muted);white-space:nowrap;cursor:pointer;user-select:none}
+  thead th:hover{color:var(--texto)}
+  thead th .seta{opacity:.35;margin-left:6px;font-size:10px}
+  thead th[aria-sort] .seta{opacity:1;color:var(--verde)}
+  tbody td{border-bottom:1px solid var(--borda);padding:11px 14px;vertical-align:top}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:nth-child(even){background:var(--realce)}
+  td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+  td.cod{font-family:var(--mono);font-size:13px;color:var(--muted);white-space:nowrap}
+  td.desc{font-weight:600;min-width:220px}
+  .vazio-tabela{padding:26px 16px;text-align:center;color:var(--muted);font-size:14px}
+  .rodape-tabela{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    margin-top:12px;font-size:13px;color:var(--muted)}
+  .rodape-tabela b{color:var(--texto);font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .escopo{white-space:pre-wrap;font-size:15px;line-height:1.6;margin:0}
+  .aviso{border:1px dashed var(--demo-borda);background:var(--demo-bg);color:var(--demo);
+    border-radius:10px;padding:14px 16px;font-size:13px;line-height:1.5;margin-bottom:16px}
+  .erro{border:1px solid var(--erro-borda);background:var(--erro-bg);color:var(--erro);
+    border-radius:10px;padding:16px;font-size:14px;line-height:1.5}
+  .carregando{color:var(--muted);padding:30px 4px;font-size:14px}
+  .marca-dagua{margin-top:22px;font-size:12px;color:var(--muted);line-height:1.5}
+  @media (max-width:560px){
+    .envelope{padding:14px 10px 48px}
+    .cartao{padding:15px 14px}
+  }
+  @media print{
+    .topo{background:none;color:#000;border-bottom:2px solid var(--marca)}
+    .logo-leh{display:none}
+    .logo-leh.impressao{display:block}
+    .marca-bloco .titulo-tela{border-left-color:var(--linha-forte)}
+    .barra-ferramentas,.btn{display:none}
+    .rolagem{overflow:visible;border:0}
+    body{background:#fff}
+  }
+
+  /* ---- página da decisão ---- */
+  .envelope{max-width:760px}
+  .veredito{border-radius:var(--raio);padding:26px 24px;margin-bottom:18px;
+    border:1px solid var(--borda);background:var(--card)}
+  .veredito .faixa{display:flex;align-items:center;gap:14px}
+  .veredito .marcador{width:44px;height:44px;border-radius:50%;flex:none;
+    display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700}
+  .veredito h2{margin:0;font-size:22px;line-height:1.2;border:0;padding:0}
+  .veredito .passo{margin:14px 0 0;color:var(--muted);line-height:1.6;font-size:15px}
+  .v-ok .marcador{background:var(--ok-bg);color:var(--ok-txt)}
+  .v-ok h2{color:var(--ok-txt)}
+  .v-nao .marcador{background:var(--erro-bg);color:var(--erro)}
+  .v-nao h2{color:var(--erro)}
+  .v-ja .marcador{background:var(--demo-bg);color:var(--demo)}
+  .v-ja h2{color:var(--demo)}
+  .v-erro .marcador{background:var(--erro-bg);color:var(--erro)}
+  .v-erro h2{color:var(--erro)}
+  .acoes{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+  .acoes a{display:inline-block;text-decoration:none;font-weight:600;font-size:15px;
+    padding:11px 18px;border-radius:var(--pilula);border:1px solid var(--linha-forte);
+    color:var(--texto);background:var(--card)}
+  .acoes a.principal{background:var(--acento-fundo);color:var(--sobre-acento);
+    border-color:var(--acento-fundo)}
+  .acoes a:hover{border-color:var(--verde)}
+  /* A tabela rola dentro dela mesma: no celular, item longo não pode empurrar
+     a página inteira para o lado. */
+  .rolagem{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .itens-resumo{width:100%;border-collapse:collapse;font-size:14px;margin-top:4px}
+  .itens-resumo th,.itens-resumo td{text-align:left;padding:8px 10px;
+    border-bottom:1px solid var(--borda)}
+  .itens-resumo th{color:var(--muted);font-weight:600;font-size:12px;
+    text-transform:uppercase;letter-spacing:.04em}
+  .itens-resumo td.qtd{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .rodape-nota{color:var(--muted);font-size:13px;margin-top:22px;line-height:1.6}
+
+</style>
+</head>
+<body>
+<header class="topo">
+  <div class="marca-bloco">
+    <img class="logo-leh" src="data:image/png;base64,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" alt="Grupo Leh">
+    <img class="logo-leh impressao" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAU8AAABgCAMAAACqngCXAAAASFBMVEUAAAAOJDj39/gZWWEiNkkbMEMKD2NPXWuaoqseMkVWZHNseIU2SFnz8/MOJTl4g48SKDugoaJ1doy0usG8wccAAP9zlZX/r68/Y6PSAAAAGHRSTlMA/P8UYJkOFf/q////Akr/pAYM//8BCAOFzqnsAAAIl0lEQVR42u2c2WKjOgxAIZZsDGVIus3//+kFvG9gB5pkbq2HmRQMgYOszQoNb08XThrS/FZpf0Bo5XmqVP2sPCvPyrPyrDwrz8qz8qw8K8/Ks/KsPCvPB/N8G7ru46OvPE/h2X9eVpkqzxN48u5yqTxP4/l2uVSe5/G0cFaeJ/AUJDteeSaEFvEUtvNNcK08j+rnqpYX3laeSSGkgOeqnr2a90Pl6ckN2hYLeC4UP7Si/lA8T7z/X8wYbo3GtoinodhLM2r8/ixn8KQH7ufJOCW4Ap69sp7tmiGZ7dpNHeS53MBIAfCKCC+gnwSAllC9h6f+0NlbT+E5jyBoHYPkmSpKx+Va/vw0T64IcjuEOkc/HZrrxbHn6WZD20fwbNvBzo6sfOkwT4gcB8/SUCIu58d5CpqXT7FJlpq6M3ga5bzi1Trw/8Wzv0TFnuyTUNODPCVODmRc3BIBjyfVUZTYRGnaH6uoev2P0I24jNzLM3a44kmJs2+f54edL/XywxGeRE128OY/OMfRMg2LfQxPRMp50i39pP6wXZ6Tny8d5TnvVW2i6iqWf5kVNInA5RvgCrB4qW8/kpkdyCg/MjLrOF2Oh+s8nMQC2xsRO1kCz45+Rk+t9NOcmmbwnLidL3W6jHeAJx0FTpaav6uzBe2xSMP42lRKnQE4mo/z4cYgw+jDN/sQoiq6ydM6fKZGXZ6AVsBHfZ68t6RzqPU6XxqsAOoOnmq2B0OM6cPVTVndub5xWPcxEycwJ/biljbTZnTjMnnb2TxvmAhBxONx95Gdeoj156Ad08XJl9p+6GYpsZ9XH0/a+QtucZ4kGXeZsVK32+C283jS8HB9dPRryX5+ZOH91DuUUeWTEwJk8FTW85bDE3EOAZpcntfrNbhrFgnLwjA3qZ8K55wTo3dqS+X1qUlTxLNzyqKOvS3QT/DoUCMuT1iY39QT2OHJV2fTqMhLtvD/RTnJb/bO4PoSPKm8EnHqURpS4jgeJMJjtdI/7ddDDM8PhbPz088Snrg7BNWkXQln8UTt04T6r/pP5V6I7dznGVp6cWF/Lf0EFRyDfIxl+jmEAX4xz6txJuKxMy3EvmzPQmzyRMttE8OQqY9ExRCsjRnvhH7eXJxEfjEYnmgCExR/p3iu5AYh0zQNlyB5l5O9Hwp5rkNGbaFc7zvqS4MSnmNYGtCf3KSQhuMTPIm2THOIu4q82qu5DX2nVN5InGffXTbkzcqXulCTs3jqv/5EQi10fsSUwRNcq6fVSsUHEXNDM/QT3ZnkbnJvQ2/Y7AqJyaddu+vaYp5jJk/WfGXz9PBovRLaRDfd4QZP8TiILeZRB+fGBM9+i6ZeSOIXp+B8/3znCZ7vBfP9FilmxuKsZn5GJFIYivNkKVsI0fpSgucWzq6P5Evdff5dX7pyRnA/Ty/KofJe/8R8j2UCN3lSFQwc4ymbbLqA0mBWPVyK9nrIPfGns/0untyvENg8/UnMMvWTnqOfyuX4s3gwlTtdXO5M4bkgP6LelXwd5tkmvgHO0E9/WWZO2sd8npOqx8fizw+P+6QfAC/Qz1tizAGeLD4DIqaSxIxqwn5+J0rwifp8lGfSy8R4Drabz6+HQPw6D/CkkZBIB+9xc0My/Ps18qx0TTqLp/EyUxZPGVrxIp7xHCXJM6JnV48nRs7PLLBB8ZVlxUsRe0HK9NN4mQ+PX4xnN7kxVG59Htw0cJensBAj1TW41s+PQvVE80V/7e8Bf50iyVMZUDsfmJ0UKeXZ6fByykuYpsL1I3rjqpC+rKZRsaLFMMWT6gSUfK13jAHPpdhP6JoSasJE5Q7rqgQl1Nu5y5PIJ/Mtat3qeGkrsnhqPM6i8HaEP5Sux+nIjoMJ6+0VTl8/7TKRKSm59TpFYlQFEmK5aGL1xEXU0/D0p5JZ6GrMMxdAi3hOlpfhn5f9bL5ovdgKlXFpGgK9CoNNlOdNDWaM6LFePRmBMEZBF/WdldRlJ1E7+XvCBKEjYFUDYVF+9c3QlOrnZJF6u+QlTCXvY5mBRxegZMuNz1NmPMFTS653WE8Uw/IES9Xng9ugse3L/C/h2cnp3Vl5ukreByNdECYV9DOQ5h3Tyz5BXSd6v9Z6nHcu54VFED4z2mTxhCYGFEr8ka169pbJeCrLpg5Jnru9CDRsCANNEHikxsHtkcu/31Y8b+9d/JzTF4EBpETSFlEL6l0m2o0g3OW5XEPDEzw7q6y8zPxUPB+f73kNrMYWIi79CUQ7J0Tij75p8zVznwfQxo7n9UI46s6CyJNDSC4DAvoCwWWufapU1akQgbldD8tVY5znYG/gLS/iOTaZQJfVjsWLjHmj32en4vd/CJ5rLDOfitzCDhAqukjEoeWd5evh6zePOV1AUZ4dj1blukyeRZeaaCyiWy1KjWm+VfkmyWpuIjkNUP4Wmt9T5dvbpTVh6nOqchs8saxXkOSrDA3H2vn71pkoOdYMmXs4bP6ywG1a6vN4wiNbNyErQHtgK+nm74vdIjzP5Ul+L89ml+eb/6OEPZ7skW3bL8cTM3j2YWa5wXN8+Hx/pR/kwR5PLtPPrs3jiY+0Vqo+//UyPNkezy7WUrPBEx6rLKAi739gwtvJO8/lyZrfLZDDs4tFUsOzp7sMu1/r18zfGTyHNpvnb36ZwN6E5+kiZ+olA9dfDnOrr2T9aXbilwdLZto/Ozl6UaDYnid/K8/tnLNMqnou7vE8Ba0092L6IqG/3rlbWdtxwWe/BeR/NuNZRSldEquz/eVmfPXtuXW7TONZJbPOlCNhV1BNk47grL7Il/EI0FpWOhMorzhD+brbhiKrOE/08nirOFNOCe6KO2uama6NYHFWVGUrUypTUbhVZuep6HPf2vnvqCjJIooVZa5byiCK4aviqqSBNu+w1TkC5mWSVTKJLi32Uc2E+1rRqzTr+xj1u8ZajiBegVpnelz+A6OqWCZWzG6tAAAAAElFTkSuQmCC" alt="Grupo Leh">
+    <div class="titulo-tela">
+      <div class="marca">Compras</div>
+      <h1 id="tituloTopo">Decisão registrada</h1>
+    </div>
+  </div>
+  <div class="direita">
+    <span class="selo" id="seloNumero" hidden></span>
+  </div>
+</header>
+
+<div class="envelope">
+
+  <section class="veredito" id="veredito">
+    <div class="faixa">
+      <div class="marcador" id="marcador">·</div>
+      <h2 id="titulo">Registrando…</h2>
+    </div>
+    <p class="passo" id="passo"></p>
+  </section>
+
+  <section class="cartao" id="cartaoPedido" hidden>
+    <h2>O que foi decidido</h2>
+    <dl class="ficha" id="fichaPedido"></dl>
+    <div id="blocoItens"></div>
+  </section>
+
+  <div class="acoes" id="acoes"></div>
+
+  <p class="rodape-nota">
+    Pode fechar esta janela. A decisão já está registrada no card —
+    esta página apenas mostra o que aconteceu.
+  </p>
+</div>
+
+<script>
+/* ============================================================================
+   1) PARÂMETROS
+   ========================================================================== */
+const q   = new URLSearchParams(location.search);
+const dec = (q.get('d') || '').toLowerCase();
+const eta = (q.get('e') || '').toLowerCase();
+const sc  = (q.get('sc') || '').trim();
+const sid = (q.get('id') || '').trim();
+const card = (q.get('card') || '').trim();
+
+const $ = id => document.getElementById(id);
+const esc = t => String(t==null?'':t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* Só aceita link do ClickUp. Sem isso, quem montar a URL na mão consegue
+   pendurar um endereço qualquer num botão que parece nosso. */
+function linkSeguro(u){
+  try{
+    const p = new URL(u);
+    if(p.protocol !== 'https:') return '';
+    if(!/(^|\.)clickup\.com$/.test(p.hostname)) return '';
+    return p.href;
+  }catch(e){ return ''; }
+}
+
+/* ============================================================================
+   2) O TEXTO DE CADA DESFECHO
+   Uma linha para o que aconteceu, outra para o que acontece a seguir. O
+   aprovador clicou e foi embora — ele precisa saber se acabou ali ou não.
+   ========================================================================== */
+const ETAPA_NOME = {
+  lider:      '1ª aprovação · liderança imediata',
+  gerencial:  '2ª aprovação · gerencial',
+  financeiro: '3ª aprovação · financeira'
+};
+const SEGUE = {
+  lider:      'A solicitação segue para o setor de compras cotar com os fornecedores.',
+  gerencial:  'A solicitação segue para a 3ª aprovação, com o financeiro.',
+  financeiro: 'A compra está liberada. O card foi para <b>efetuar compra</b>.'
+};
+
+function desfecho(){
+  const etapa = ETAPA_NOME[eta] || 'Aprovação';
+  if(dec === 'aprovado') return {
+    classe:'v-ok', icone:'✓', titulo:'Aprovado',
+    passo: etapa + '. ' + (SEGUE[eta] || 'A solicitação segue no fluxo.')
+  };
+  if(dec === 'reprovado') return {
+    classe:'v-nao', icone:'✕', titulo:'Reprovado',
+    passo: etapa + '. A solicitação foi encerrada e o card foi para <b>reprovado</b>. ' +
+           'Se quiser registrar o motivo, comente no card — é o que o solicitante vai ler.'
+  };
+  if(dec === 'ja') return {
+    classe:'v-ja', icone:'!', titulo:'Esta solicitação já tinha sido decidida',
+    passo: 'Nada mudou agora. Alguém já respondeu esta etapa antes — pode ter sido você, ' +
+           'num clique anterior. Abra o card para ver em que ponto a solicitação está.'
+  };
+  return {
+    classe:'v-erro', icone:'!', titulo:'Não consegui registrar a decisão',
+    passo: 'O link pode ter expirado ou estar incompleto. Abra o card no ClickUp e ' +
+           'mova a coluna manualmente, ou fale com o setor de compras.'
+  };
+}
+
+/* ============================================================================
+   3) DESENHO
+   ========================================================================== */
+function desenharVeredito(){
+  const d = desfecho();
+  $('veredito').classList.add(d.classe);
+  $('marcador').textContent = d.icone;
+  $('titulo').textContent   = d.titulo;
+  $('passo').innerHTML      = d.passo;
+  document.title = d.titulo + ' · Grupo Leh';
+  $('tituloTopo').textContent = d.titulo;
+  if(sc){ $('seloNumero').textContent = sc; $('seloNumero').hidden = false; }
+}
+
+function desenharAcoes(){
+  const box = $('acoes');
+  const url = linkSeguro(card);
+  if(url){
+    const a = document.createElement('a');
+    a.className = 'principal'; a.href = url; a.target = '_blank'; a.rel = 'noopener';
+    a.textContent = 'Abrir o card no ClickUp';
+    box.appendChild(a);
+  }
+  if(sid || sc){
+    const b = document.createElement('a');
+    b.href = 'pedido.html?' + (sid ? 'id=' + encodeURIComponent(sid) : 'sc=' + encodeURIComponent(sc));
+    b.textContent = 'Ver o pedido completo';
+    box.appendChild(b);
+  }
+}
+
+const campo = (r, v) => '<dt>' + esc(r) + '</dt><dd>' + esc(v || '—') + '</dd>';
+const dataBR = iso => {
+  if(!iso) return '—';
+  const d = new Date(String(iso).length <= 10 ? iso + 'T12:00:00' : iso);
+  return isNaN(d) ? String(iso) : d.toLocaleDateString('pt-BR');
+};
+const numBR = n => Number(n||0).toLocaleString('pt-BR', {maximumFractionDigits:3});
+
+/* ============================================================================
+   4) RESUMO DO PEDIDO — mesma leitura da tela do pedido
+   Vale a pena mesmo depois do clique: é a conferência do que a pessoa acabou
+   de aprovar, sem precisar abrir outra aba. Se o banco não responder, a
+   página continua de pé sem o resumo — o que importa é o veredito.
+   ========================================================================== */
+const SUPABASE_URL = 'https://mbwaqnlmscxbacmxdopr.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_AR4D1JlHB-Z12--QbzwYWQ_URZzmVwl';
+
+async function apiGet(caminho){
+  const r = await fetch(SUPABASE_URL + '/rest/v1/' + caminho, {
+    headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+  });
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+async function nomeDoCentro(codigo){
+  if(!codigo) return '';
+  try{
+    const r = await apiGet('centros_custo?select=nome,unidade&codigo=eq.' +
+      encodeURIComponent(codigo) + '&limit=1');
+    if(r.length) return r[0].nome + (r[0].unidade ? ' · ' + r[0].unidade : '');
+  }catch(e){ /* sem banco: mostra o código puro */ }
+  return '';
+}
+
+async function carregarResumo(){
+  if(!sid && !sc) return;
+  if(dec === 'erro') return;   // sem decisão registrada, resumo só confunde
+  try{
+    const filtro = sid ? 'id=eq.' + encodeURIComponent(sid)
+                       : 'numero=eq.' + encodeURIComponent(sc);
+    const achadas = await apiGet('solicitacoes?select=*&' + filtro + '&limit=1');
+    if(!achadas.length) return;
+    const s = achadas[0];
+
+    const [itens, centro] = await Promise.all([
+      apiGet('solicitacao_itens?select=*&solicitacao_id=eq.' +
+        encodeURIComponent(s.id) + '&order=descricao'),
+      nomeDoCentro(s.centro_custo)
+    ]);
+
+    $('fichaPedido').innerHTML =
+      campo('Solicitação', s.numero) +
+      campo('Solicitante', s.solicitante) +
+      campo('Centro de custo', s.centro_custo_nome || centro || s.centro_custo) +
+      campo('Entrega até', dataBR(s.data_necessidade));
+
+    const ehServico = itens.length === 1 &&
+      String(itens[0].unidade||'').toLowerCase() === 'serviço';
+
+    if(ehServico){
+      $('blocoItens').innerHTML =
+        '<p class="escopo">' + esc(itens[0].descricao) + '</p>';
+    } else if(itens.length){
+      const linhas = itens.map(i =>
+        '<tr><td>' + esc(i.descricao) + '</td>' +
+        '<td class="qtd">' + numBR(i.quantidade) + ' ' + esc(i.unidade || '') + '</td></tr>'
+      ).join('');
+      $('blocoItens').innerHTML =
+        '<div class="rolagem"><table class="itens-resumo">' +
+        '<thead><tr><th>Item</th><th class="qtd">Qtd.</th></tr></thead>' +
+        '<tbody>' + linhas + '</tbody></table></div>';
+    }
+    $('cartaoPedido').hidden = false;
+  }catch(e){ /* o veredito já está na tela; o resumo é bônus */ }
+}
+
+desenharVeredito();
+desenharAcoes();
+carregarResumo();
+</script>
+</body>
+</html>
