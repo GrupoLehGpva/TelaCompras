@@ -172,6 +172,11 @@
       <p class="escopo" id="motivoTexto"></p>
     </section>
 
+    <section class="cartao" id="cartaoObservacao" hidden>
+      <h2>Observação do pedido</h2>
+      <p class="escopo" id="observacaoTexto"></p>
+    </section>
+
     <section class="cartao" id="cartaoJustificativa" hidden>
       <h2>Justificativa do fornecedor único</h2>
       <p class="escopo" id="justificativaTexto"></p>
@@ -397,7 +402,8 @@ function desenhar(s, itens){
   const ehServico = itens.length === 1 && String(itens[0].unidade||'').toLowerCase() === 'serviço';
 
   $('fichaCabecalho').innerHTML =
-    campo('Solicitante', s.solicitante) +
+    campo('Facilitador', s.facilitador || s.solicitante) +
+    (s.solicitante_nome ? campo('Solicitante', s.solicitante_nome) : '') +
     campo('Aberto em', dataBR(s.aberto_em)) +
     campo('Tipo de compra', legivel(TIPOS_COMPRA, s.tipo_compra)) +
     campo('Centro de custo', CENTRO_NOME || legivel(CENTROS, s.centro_custo)) +
@@ -406,6 +412,10 @@ function desenhar(s, itens){
     campo('Natureza', ehServico ? 'Escopo de serviço' : (itens.length > 1 ? 'Lista de itens' : 'Item único'));
 
   if(s.motivo){ $('motivoTexto').textContent = s.motivo; $('cartaoMotivo').hidden = false; }
+  if(s.observacao){
+    $('observacaoTexto').textContent = s.observacao;
+    $('cartaoObservacao').hidden = false;
+  }
   if(s.justificativa_fornecedor){
     $('justificativaTexto').textContent = s.justificativa_fornecedor;
     $('cartaoJustificativa').hidden = false;

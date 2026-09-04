@@ -180,6 +180,20 @@
   .resultados{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:5;background:var(--card);
     border:1px solid var(--borda);border-radius:10px;max-height:260px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.10)}
   .resultados[hidden]{display:none}
+  .marca-opcional{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:var(--pilula);
+    background:var(--realce);border:1px solid var(--borda);color:var(--muted);
+    font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;vertical-align:1px}
+  .veio-do-slack{margin:0 0 16px;padding:10px 14px;border-radius:var(--raio);
+    background:var(--verde-claro);border:1px solid var(--borda);color:var(--texto);
+    font-size:13px;line-height:1.5}
+  .veio-do-slack[hidden]{display:none}
+  /* Campo travado: quem abre o pedido é o facilitador identificado pelo Slack.
+     Deixar editável seria convidar a abrir pedido no nome de outra pessoa. */
+  input[readonly]{background:var(--realce);color:var(--muted);cursor:default}
+  input[readonly]:focus{border-color:var(--borda);box-shadow:none}
+  .travado-nota{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:var(--pilula);
+    background:var(--verde-claro);border:1px solid var(--borda);color:var(--muted);
+    font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;vertical-align:1px}
   /* O pedido foi gravado, mas não chegou ao Compras. Isso não pode passar como
      nota técnica no meio de uma tela de sucesso: quem enviar e for embora nunca
      vai ser aprovado, e ninguém fica sabendo. */
@@ -335,18 +349,28 @@
 
     <!-- ======================= 0 · SOLICITANTE ======================= -->
     <section class="passo" data-passo="solicitante">
-      <h2>Solicitante</h2>
+      <h2>Facilitador da compra</h2>
+
+      <p class="veio-do-slack" id="veioDoSlack" hidden></p>
 
       <div class="campo" data-campo="nomeSolicitante">
-        <label for="nomeSolicitante">Seu nome completo</label>
+        <label for="nomeSolicitante">Nome do facilitador</label>
         <input type="text" id="nomeSolicitante" autocomplete="name" placeholder="Ex.: Maria de Souza">
+        <span class="ajuda" id="ajudaNome">Quem está abrindo o pedido e acompanha ele até o fim.</span>
       </div>
 
       <div class="campo" data-campo="emailSolicitante">
-        <label for="emailSolicitante">E-mail corporativo</label>
+        <label for="emailSolicitante">E-mail corporativo do facilitador</label>
         <input type="email" id="emailSolicitante" autocomplete="email" inputmode="email"
                placeholder="nome@leh.com.br">
-        <span class="ajuda">É por ele que a solicitação encontra o seu líder para a primeira aprovação.</span>
+        <span class="ajuda" id="ajudaEmail">É por ele que a solicitação encontra o líder para a primeira aprovação.</span>
+      </div>
+
+      <div class="campo" data-campo="solicitanteNome">
+        <label for="solicitanteNome">Solicitante <span class="marca-opcional">opcional</span></label>
+        <input type="text" id="solicitanteNome" autocomplete="off"
+               placeholder="Ex.: João da Silva — Granja 103">
+        <span class="ajuda">Quem precisa do item, quando não é você. Em branco, o pedido é seu.</span>
       </div>
     </section>
 
@@ -502,6 +526,14 @@
             e vai junto para quem aprova.</p>
         </div>
       </div>
+
+      <div class="campo" data-campo="observacao">
+        <label for="observacao">Observação do pedido <span class="marca-opcional">opcional</span></label>
+        <textarea id="observacao" rows="3"
+          placeholder="Ex.: combinar a entrega com o Zé antes de descarregar"></textarea>
+        <span class="ajuda">Vale para o pedido inteiro, não para um item. Vai junto para quem cota
+          e para quem aprova.</span>
+      </div>
     </section>
 
     <!-- ======================= 5 · PRAZO E MOTIVO ======================= -->
@@ -584,6 +616,12 @@ const WEBHOOK_URL  = 'https://grupoleh.app.n8n.cloud/webhook/nova-solicitacao'; 
 
 const MODO_DEMO = true;    // false = produção, validação obrigatória volta a valer
 const CONECTADO = SUPABASE_KEY.trim().length > 20;
+
+/* Só facilitador abre pedido. Com isto em true, quem não estiver na tabela
+   `facilitadores` não consegue enviar — nem quem abrir a tela sem passar pelo
+   /compras, porque aí não há usuário do Slack para conferir.
+   Fica false até a lista estar carregada; ligar antes tranca todo mundo. */
+const EXIGIR_FACILITADOR = false;
 
 /* ============================================================================
    1) DADOS FIXOS
@@ -714,7 +752,8 @@ function contar(n, singular, plural){
    4) ESTADO
    ========================================================================== */
 const estado = {
-  nomeSolicitante:'', emailSolicitante:'', escopoServico:'',
+  nomeSolicitante:'', emailSolicitante:'', solicitanteNome:'', escopoServico:'',
+  observacao:'',
   tipo:'', familia:'', item:null,
   quantidade:'', itensLista:[],
   centroCusto:'', centroCustoNome:'', centroCustoUnidade:'',
@@ -757,14 +796,42 @@ async function iniciar(){
   /* Nome e uid do solicitante podem vir do Slack pela query string
      (ex.: ?nome=Guilherme%20Pimp%C3%A3o&uid=U0BL5JPQX97). */
   const params = new URLSearchParams(location.search);
-  const nomeSlack = (params.get('nome') || '').trim();
+  const nomeSlack  = (params.get('nome') || '').trim();
+  const emailSlack = (params.get('email') || '').trim().toLowerCase();
   SLACK_UID = (params.get('uid') || '').trim();
 
-  /* O link pode vir com o nome pronto (?nome=...). É só uma sugestão:
-     quem manda é o campo da tela, porque o pedido agora chega por link aberto. */
+  /* O link do /compras traz nome e e-mail do usuário do Slack. É preenchimento,
+     não trava: quem abre a tela pelo link direto digita, e quem veio do Slack
+     com o cadastro errado consegue corrigir na hora. */
   if(nomeSlack){
     estado.nomeSolicitante = nomeSlack;
     $('nomeSolicitante').value = nomeSlack;
+  }
+  if(emailSlack){
+    estado.emailSolicitante = emailSlack;
+    $('emailSolicitante').value = emailSlack;
+  }
+  /* Só facilitador abre pedido, e quem diz quem é o facilitador é o Slack — não
+     o campo da tela. Por isso o que vem do link fica TRAVADO: campo editável é
+     convite para abrir pedido no nome de outra pessoa.
+
+     O que não vier continua editável, senão a tela fica intransponível. Hoje o
+     e-mail é esse caso: falta o escopo users:read.email no app do Slack e o
+     perfil volta sem ele. No dia que a credencial do n8n for reconectada com o
+     escopo, o e-mail passa a chegar e trava sozinho — sem mexer aqui. */
+  travarCampo('nomeSolicitante', !!nomeSlack);
+  travarCampo('emailSolicitante', !!emailSlack);
+
+  if(nomeSlack && emailSlack){
+    $('veioDoSlack').textContent =
+      'Nome e e-mail são do seu usuário do Slack e não podem ser alterados aqui. ' +
+      'Só facilitador de compras abre pedido.';
+    $('veioDoSlack').hidden = false;
+  } else if(nomeSlack || emailSlack){
+    $('veioDoSlack').textContent = nomeSlack
+      ? 'O nome veio do seu usuário do Slack. O e-mail ainda não vem de lá — preencha abaixo com o seu e-mail corporativo.'
+      : 'O e-mail veio do seu usuário do Slack. Preencha o nome acima.';
+    $('veioDoSlack').hidden = false;
   }
   atualizarCabecalhoSolicitante();
 
@@ -786,7 +853,7 @@ async function iniciar(){
   ligarEventos();
   renderLista();
   render();
-  await Promise.all([carregarCatalogo(), carregarCentrosCusto()]);
+  await Promise.all([carregarCatalogo(), carregarCentrosCusto(), carregarFacilitador(SLACK_UID)]);
 }
 
 async function carregarCatalogo(){
@@ -809,6 +876,63 @@ async function carregarCatalogo(){
     selo.textContent = 'offline'; selo.className = 'status off';
     mostrarAlerta('Não consegui ler o catálogo no Supabase. Usando a lista reduzida local.<br><code>'+String(e.message).slice(0,200)+'</code>');
   }
+}
+
+/* ----------------------------------------------------------------------------
+   FACILITADOR
+   Quem abre o pedido vem do Slack, mas o nome e o e-mail vêm da tabela
+   `facilitadores` — não do perfil do Slack. O e-mail de lá é o que a pessoa
+   cadastrou no Slack; o que a aprovação precisa é o corporativo, e esse quem
+   controla é a casa.
+   -------------------------------------------------------------------------- */
+let FACILITADOR = null;      // a linha da tabela, quando encontrada
+let FACILITADOR_BUSCADO = false;
+
+async function carregarFacilitador(uid){
+  if(!CONECTADO || !uid) return;
+  try{
+    const r = await apiGet('facilitadores?select=slack_user_id,nome,email,unidade' +
+      '&ativo=is.true&slack_user_id=eq.' + encodeURIComponent(uid) + '&limit=1');
+    FACILITADOR = r.length ? r[0] : null;
+  }catch(e){
+    /* Tabela ainda não existe, ou banco fora do ar. Não é motivo para travar a
+       tela: cai no que veio pelo link do Slack. */
+    FACILITADOR = null;
+  }
+  FACILITADOR_BUSCADO = true;
+  aplicarFacilitador();
+}
+
+function aplicarFacilitador(){
+  if(FACILITADOR){
+    estado.nomeSolicitante  = FACILITADOR.nome;
+    estado.emailSolicitante = String(FACILITADOR.email || '').trim().toLowerCase();
+    $('nomeSolicitante').value  = estado.nomeSolicitante;
+    $('emailSolicitante').value = estado.emailSolicitante;
+    travarCampo('nomeSolicitante', true);
+    travarCampo('emailSolicitante', true);
+    limparErro('nomeSolicitante'); limparErro('emailSolicitante');
+    atualizarCabecalhoSolicitante();
+    $('veioDoSlack').textContent =
+      'Você está identificado como facilitador de compras' +
+      (FACILITADOR.unidade ? ' · ' + FACILITADOR.unidade : '') +
+      '. Nome e e-mail vêm do cadastro e não podem ser alterados aqui.';
+    $('veioDoSlack').hidden = false;
+    return;
+  }
+  if(EXIGIR_FACILITADOR && FACILITADOR_BUSCADO){
+    $('veioDoSlack').textContent =
+      'Este acesso não está na lista de facilitadores de compras, então não dá para abrir pedido por aqui. ' +
+      'Abra a tela pelo comando /compras no Slack, ou fale com o setor de compras para ser incluído.';
+    $('veioDoSlack').hidden = false;
+    mostrarAlerta('<b>Só facilitador de compras abre pedido.</b> ' +
+      'Se você é facilitador e está vendo isso, o seu usuário do Slack ainda não foi cadastrado.');
+  }
+}
+
+/* A trava do envio mora aqui para valer em qualquer caminho até o botão. */
+function facilitadorLiberado(){
+  return !EXIGIR_FACILITADOR || !!FACILITADOR;
 }
 
 /* ----------------------------------------------------------------------------
@@ -862,6 +986,22 @@ function escolherCentroPorTermo(termo){
   if(achado) escolherCentro(achado);
 }
 
+/* readonly, não disabled: o valor continua legível e selecionável, e a tela
+   consegue mostrar por que o campo não aceita digitação. */
+function travarCampo(id, travar){
+  const campo = $(id);
+  campo.readOnly = !!travar;
+  const ajuda = $(id === 'nomeSolicitante' ? 'ajudaNome' : 'ajudaEmail');
+  const jaTem = ajuda.querySelector('.travado-nota');
+  if(travar && !jaTem){
+    const selo = document.createElement('span');
+    selo.className = 'travado-nota';
+    selo.textContent = 'do Slack';
+    ajuda.appendChild(document.createTextNode(' '));
+    ajuda.appendChild(selo);
+  }
+}
+
 function atualizarCabecalhoSolicitante(){
   const nome = (estado.nomeSolicitante || '').trim();
   $('autoSolicitante').textContent = nome || '—';
@@ -910,6 +1050,8 @@ function ligarEventos(){
     atualizarCabecalhoSolicitante();
     limparErro('nomeSolicitante');
   });
+  $('solicitanteNome').addEventListener('input', e=>{ estado.solicitanteNome = e.target.value; });
+  $('observacao').addEventListener('input',      e=>{ estado.observacao = e.target.value; });
   $('emailSolicitante').addEventListener('input', e=>{
     estado.emailSolicitante = e.target.value.trim();
     limparErro('emailSolicitante');
@@ -1251,7 +1393,7 @@ function validar(passo){
   const falhar = (c,m)=>{ erro(c,m); ok = false; };
 
   if(passo === 'solicitante'){
-    if(estado.nomeSolicitante.trim().length < 3) falhar('nomeSolicitante','Escreva o seu nome completo.');
+    if(estado.nomeSolicitante.trim().length < 3) falhar('nomeSolicitante','Escreva o nome completo do facilitador.');
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(estado.emailSolicitante))
       falhar('emailSolicitante','Informe um e-mail corporativo válido.');
   }
@@ -1365,6 +1507,10 @@ function preencherExemplo(){
     $('nomeSolicitante').dispatchEvent(new Event('input'));
     $('emailSolicitante').value = 'maria.souza@leh.com.br';
     $('emailSolicitante').dispatchEvent(new Event('input'));
+    $('solicitanteNome').value = 'João da Silva — Granja 103';
+    $('solicitanteNome').dispatchEvent(new Event('input'));
+    $('observacao').value = 'Combinar a entrega com o Zé antes de descarregar.';
+    $('observacao').dispatchEvent(new Event('input'));
   }
   if(estado.tipo === 'servico'){
     $('escopoServico').value =
@@ -1435,6 +1581,8 @@ function montarPacote(solicitacaoId, cabecalho, itens){
     numero:         cabecalho.numero,
     solicitante:       cabecalho.solicitante,
     solicitante_email: (estado.emailSolicitante || '').trim().toLowerCase(),
+    solicitante_nome:  (estado.solicitanteNome || '').trim(),
+    observacao:        (estado.observacao || '').trim(),
     tipo_solicitacao:  estado.tipo,
     escopo_servico:    estado.tipo === 'servico' ? estado.escopoServico.trim() : null,
     slack_user_id:     SLACK_UID || '',
@@ -1460,15 +1608,17 @@ function montarPacote(solicitacaoId, cabecalho, itens){
     /* prontos para usar no card, sem o n8n precisar montar nada */
     titulo_card: cabecalho.numero + ' · ' + (cabecalho.motivo || 'Solicitação de compra'),
     descricao_card:
-      '**Solicitante:** ' + cabecalho.solicitante +
+      '**Facilitador:** ' + cabecalho.solicitante +
         (estado.emailSolicitante ? ' · ' + estado.emailSolicitante.trim().toLowerCase() : '') + '\n' +
+      (estado.solicitanteNome.trim() ? '**Solicitante:** ' + estado.solicitanteNome.trim() + '\n' : '') +
       '**Tipo de solicitação:** ' +
         (({ item:'Item único', lista:'Lista de itens', servico:'Escopo de serviço' })[estado.tipo] || '—') + '\n' +
       '**Centro de custo:** ' + centro + ' (' + (cabecalho.centro_custo || '—') + ')' + '\n' +
       '**Tipo de compra:** ' + tipoCompra + '\n' +
       '**Definição de fornecedor:** ' + defForn +
         (cabecalho.justificativa_fornecedor ? ' — ' + cabecalho.justificativa_fornecedor : '') + '\n' +
-      '**Entrega até:** ' + (cabecalho.data_necessidade || '—') + '\n\n' +
+      '**Entrega até:** ' + (cabecalho.data_necessidade || '—') + '\n' +
+      (estado.observacao.trim() ? '**Observação:** ' + estado.observacao.trim() + '\n' : '') + '\n' +
       (estado.tipo === 'servico'
         ? '**Escopo do serviço**\n' + estado.escopoServico.trim()
         : '**Itens (' + itens.length + ')**\n' + linhas)
@@ -1512,6 +1662,14 @@ async function enviar(){
   const botao = $('btnAvancar');
   esconderAlerta();
 
+  if(!facilitadorLiberado()){
+    mostrarAlerta('<b>Só facilitador de compras abre pedido.</b> ' +
+      'O seu usuário do Slack não está na lista. Abra a tela pelo <code>/compras</code> ' +
+      'no Slack, ou fale com o setor de compras para ser incluído.');
+    window.scrollTo({top:0,behavior:'smooth'});
+    return;
+  }
+
   /* Última trava, mesmo que alguém chegue aqui por outro caminho:
      serviço sem escopo descrito não vira solicitação. */
   if(estado.tipo === 'servico' && estado.escopoServico.trim().length < 20){
@@ -1525,6 +1683,12 @@ async function enviar(){
   const cabecalho = {
     numero:                   $('autoNumero').textContent,
     solicitante:              estado.nomeSolicitante.trim() || DADOS.solicitante.nome,
+    /* `solicitante` é histórico e continua guardando quem abriu o pedido; as três
+       colunas abaixo são as que a tela realmente usa hoje. */
+    facilitador:              estado.nomeSolicitante.trim() || null,
+    facilitador_email:        (estado.emailSolicitante || '').trim().toLowerCase() || null,
+    solicitante_nome:         estado.solicitanteNome.trim() || null,
+    observacao:               estado.observacao.trim() || null,
     centro_custo:             estado.centroCusto || null,
     tipo_compra:              estado.tipoCompra || null,
     definicao_fornecedor:     estado.definicaoFornecedor || null,

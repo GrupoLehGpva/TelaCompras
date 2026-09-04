@@ -424,9 +424,11 @@ async function carregarResumo(){
 
     $('fichaPedido').innerHTML =
       campo('Solicitação', s.numero) +
-      campo('Solicitante', s.solicitante) +
+      campo('Facilitador', s.facilitador || s.solicitante) +
+      (s.solicitante_nome ? campo('Solicitante', s.solicitante_nome) : '') +
       campo('Centro de custo', s.centro_custo_nome || centro || s.centro_custo) +
-      campo('Entrega até', dataBR(s.data_necessidade));
+      campo('Entrega até', dataBR(s.data_necessidade)) +
+      (s.observacao ? campo('Observação', s.observacao) : '');
 
     const ehServico = itens.length === 1 &&
       String(itens[0].unidade||'').toLowerCase() === 'serviço';
