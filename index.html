@@ -607,7 +607,7 @@
    >>> CONFIGURAÇÃO <<<
    ========================================================================== */
 const SUPABASE_URL = 'https://mbwaqnlmscxbacmxdopr.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_AR4D1JlHB-Z12--QbzwYWQ_URZzmVwl';   // <<< COLE AQUI A SUA ANON / PUBLISHABLE KEY
+const SUPABASE_KEY = 'sb_publishable_AR4D1JlHB-Z12--QbzwYWQ_URZzmVwl';
 
 /* URL do webhook do n8n que cria o card no ClickUp.
    Pode ficar vazia: o formulário continua gravando no Supabase,
@@ -720,21 +720,23 @@ async function apiPost(tabela, corpo){
    ========================================================================== */
 const UNIDADES_PLURAL = {
   'unidade':'unidades','peça':'peças','litro':'litros','saco':'sacos','metro':'metros',
-  'metro cúbico':'metros cúbicos','quilo':'quilos','caixa':'caixas','par':'pares',
-  'rolo':'rolos','pacote':'pacotes','lata':'latas','galão':'galões','fardo':'fardos',
-  'tonelada':'toneladas','conjunto':'conjuntos','jogo':'jogos','kit':'kits',
-  'frasco':'frascos','barra':'barras','folha':'folhas','tubo':'tubos','balde':'baldes'
+  'metro cúbico':'metros cúbicos','metro quadrado':'metros quadrados','quilo':'quilos',
+  'caixa':'caixas','par':'pares','rolo':'rolos','pacote':'pacotes','lata':'latas',
+  'galão':'galões','fardo':'fardos','tonelada':'toneladas','conjunto':'conjuntos',
+  'jogo':'jogos','kit':'kits','frasco':'frascos','barra':'barras','folha':'folhas',
+  'tubo':'tubos','balde':'baldes','serviço':'serviços','dúzia':'dúzias',
+  'ampola':'ampolas','bobina':'bobinas','bombona':'bombonas','resma':'resmas'
 };
 
-function pluralPalavra(p){
-  const b = p.toLowerCase();
-  if(/ão$/.test(b))                  return b.replace(/ão$/,'ões');
-  if(/[aeiouáéíóúâêôãõ]$/.test(b))   return b + 's';
-  if(/m$/.test(b))                   return b.replace(/m$/,'ns');
-  if(/(r|z)$/.test(b))               return b + 'es';
-  if(/s$/.test(b))                   return b;
-  if(/il$/.test(b))                  return b.replace(/il$/,'is');
-  if(/l$/.test(b))                   return b.replace(/l$/,'is');
+function pluralPalavra(entrada){
+  const b = String(entrada).toLowerCase();
+  if(/ão$/.test(b))                 return b.replace(/ão$/,'ões');
+  if(/[aeiouáéíóúâêôãõ]$/.test(b))  return b + 's';
+  if(/m$/.test(b))                  return b.replace(/m$/,'ns');
+  if(/(r|z)$/.test(b))              return b + 'es';
+  if(/s$/.test(b))                  return b;
+  if(/il$/.test(b))                 return b.replace(/il$/,'is');
+  if(/l$/.test(b))                  return b.replace(/l$/,'is');
   return b + 's';
 }
 

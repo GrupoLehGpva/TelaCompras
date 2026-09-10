@@ -314,10 +314,12 @@
    ========================================================================== */
 const SUPABASE_URL = 'https://mbwaqnlmscxbacmxdopr.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_AR4D1JlHB-Z12--QbzwYWQ_URZzmVwl';
-/* O mesmo endpoint que o botão do Slack usa. A diferença é o f=json: com ele o
-   n8n responde em JSON em vez de redirecionar, que é o que a tela precisa para
-   tirar a linha da fila. Quem decide continua sendo o servidor. */
-const ENDPOINT_DECISAO = 'https://grupoleh.app.n8n.cloud/webhook/decisao-5a31745968808aaf41ce';
+/* Porta separada da do Slack, de propósito.
+   O botão do Slack é um link: tudo o que ele carrega vai na URL, e URL fica em
+   log de servidor, em histórico e no Referer. O motivo de uma reprovação não
+   pode viver aí — nem o token do aprovador. Por isso a tela usa POST, com tudo
+   no corpo. Do lado do n8n as duas portas viram a mesma coisa antes de decidir. */
+const ENDPOINT_DECISAO = 'https://grupoleh.app.n8n.cloud/webhook/decisao-tela-5a31745968808aaf41ce';
 
 const q = new URLSearchParams(location.search);
 const TOKEN = (q.get('t') || '').trim();
@@ -473,11 +475,19 @@ async function decidir(itens, decisao, motivo){
   const feitos = [], recusados = [];
   for(const s of alvos){
     try{
-      const r = await fetch(ENDPOINT_DECISAO + '?' + new URLSearchParams({
-        t: s.card_id || '', e: s.etapa_atual || '',
-        d: decisao === 'aprovado' ? 'a' : 'r',
-        f: 'json', sc: s.numero || '', sid: s.id || '', m: motivo || ''
-      }).toString());
+      const r = await fetch(ENDPOINT_DECISAO, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({
+          token: TOKEN,
+          solicitacao_id: s.id || '',
+          card_id: s.card_id || '',
+          etapa: s.etapa_atual || '',
+          numero: s.numero || '',
+          decisao: decisao,
+          motivo: motivo || ''
+        })
+      });
       const j = await r.json().catch(()=>({}));
       if(r.ok && j.ok) { feitos.push(s); marcadas.delete(s.id); }
       else { emVoo.delete(s.id); recusados.push((s.numero||s.id) + (j.mensagem ? ' — ' + j.mensagem : '')); }

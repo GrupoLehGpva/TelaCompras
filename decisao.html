@@ -351,7 +351,8 @@ const UNIDADES_PLURAL = {
 const UNIDADES_INVARIAVEIS = new Set(
   ['kg','g','mg','t','l','ml','m','cm','mm','km','m²','m³','m2','m3','un','pç','pc','cx','h','min']);
 
-function pluralPalavra(b){
+function pluralPalavra(entrada){
+  const b = String(entrada).toLowerCase();
   if(/ão$/.test(b))                 return b.replace(/ão$/,'ões');
   if(/[aeiouáéíóúâêôãõ]$/.test(b))  return b + 's';
   if(/m$/.test(b))                  return b.replace(/m$/,'ns');
@@ -396,6 +397,19 @@ async function apiGet(caminho){
   return r.json();
 }
 
+/* Um pedido por vez, pela função — a tabela não é mais aberta à chave
+   pública. Ver pedido.html para o porquê. */
+async function apiRpc(nome, corpo){
+  const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + nome, {
+    method:'POST',
+    headers:{ apikey: SUPABASE_KEY, Authorization:'Bearer ' + SUPABASE_KEY,
+              'Content-Type':'application/json' },
+    body: JSON.stringify(corpo)
+  });
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
 async function nomeDoCentro(codigo){
   if(!codigo) return '';
   try{
@@ -410,17 +424,14 @@ async function carregarResumo(){
   if(!sid && !sc) return;
   if(dec === 'erro') return;   // sem decisão registrada, resumo só confunde
   try{
-    const filtro = sid ? 'id=eq.' + encodeURIComponent(sid)
-                       : 'numero=eq.' + encodeURIComponent(sc);
-    const achadas = await apiGet('solicitacoes?select=*&' + filtro + '&limit=1');
-    if(!achadas.length) return;
-    const s = achadas[0];
-
-    const [itens, centro] = await Promise.all([
-      apiGet('solicitacao_itens?select=*&solicitacao_id=eq.' +
-        encodeURIComponent(s.id) + '&order=descricao'),
-      nomeDoCentro(s.centro_custo)
-    ]);
+    const resposta = await apiRpc('abrir_pedido', {
+      p_id: sid || null,
+      p_numero: sid ? null : (sc || null)
+    });
+    if(!resposta || resposta.ok !== true) return;
+    const s = resposta.pedido;
+    const itens = resposta.itens || [];
+    const centro = s.centro_custo_nome || await nomeDoCentro(s.centro_custo);
 
     $('fichaPedido').innerHTML =
       campo('Solicitação', s.numero) +

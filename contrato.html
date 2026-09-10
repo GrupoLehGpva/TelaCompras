@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Contrato · Compras · Grupo Leh</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<!--
+  ============================================================================
+  TESTE DE CONTRATO — Grupo Leh · Compras
+
+  As baterias do projeto rodam com o servidor SIMULADO. Isso pega quase tudo,
+  menos uma coisa: quando a tela e o servidor combinam formatos diferentes.
+  Foi assim que a fila de aprovação passou dias falando POST/JSON com um
+  endpoint que só entendia GET/query — e nenhum teste viu, porque cada teste
+  simulava o servidor do jeito que a tela esperava.
+
+  Esta página não simula nada. Ela conversa com o Supabase e com o n8n de
+  verdade, do mesmo endereço em que as telas rodam, e diz se as bordas ainda
+  encaixam. Nenhum teste daqui move card nem grava decisão: todos usam dados
+  propositalmente inválidos, ou só leem.
+
+  Abra: contrato.html   (e, se quiser testar a fila, contrato.html?t=<token>)
+  ============================================================================
+-->
+<style>
+:root{
+    /* Identidade Grupo Leh — livro da marca, maio 2024
+       2965 C #00263d · 2955 C #003865 · 341 C #007A53 · 330 C #00524c
+       321 C #008c95 · 468 C #ddcba3 · Warm Gray 1 C #d7d2cc */
+    color-scheme:light;   /* faz o navegador desenhar rádio, seleção e data no tema certo */
+    --marca:#00263d;      --sobre-marca:#FFFFFF;      --azul:#003865;
+    --verde:#008c95;      --acento-fundo:#00727a;     --sobre-acento:#FFFFFF;
+    --verde-claro:#E2F1F2; --verde-folha:#007A53;     --verde-mata:#00524c;
+    --areia:#ddcba3;      --cinza-quente:#d7d2cc;
+    --bg:#F2F5F8;         --card:#FFFFFF;           --realce:#F7F9FB;
+    --texto:#0F2233;      --muted:#5F7284;
+    --borda:#DBE3EA;      --linha-forte:#B4C2CE;
+    --erro:#B3261E;       --erro-bg:#FDF2F1;        --erro-borda:#E8B4B0;
+    --demo:#8A5A00;       --demo-bg:#FFF8E8;        --demo-borda:#EFDDB4;
+    --ok-bg:#E1F0E9;      --ok-txt:#007A53;
+    --codigo-bg:#00263d;  --codigo-txt:#CFE3E5;
+    --raio:12px;          --pilula:100px;
+    /* O livro da marca adota GoldPlay e autoriza Arial para meios eletrônicos.
+       Figtree entra entre as duas como equivalente aberto mais próximo. */
+    --sans:"Goldplay","Goldplay Alt","Figtree",Arial,Helvetica,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --marca:#001725;      --sobre-marca:#FFFFFF;      --azul:#0A4472;
+      --verde:#2FB3BC;      --acento-fundo:#56C8CF;   --sobre-acento:#04161F;
+      --verde-claro:#0D2A2D; --verde-folha:#3FA37E;   --verde-mata:#0B3B37;
+      --areia:#7A6E55;      --cinza-quente:#6E6A65;
+      --bg:#08131C;         --card:#0F1D28;           --realce:#152431;
+      --texto:#E6EDF3;      --muted:#9CABB9;
+      --borda:#22323F;      --linha-forte:#36485B;
+      --erro:#F0A0A0;       --erro-bg:#2A1616;        --erro-borda:#5B2A2A;
+      --demo:#E0B860;       --demo-bg:#241D0E;        --demo-borda:#3B3218;
+      --ok-bg:#0F2C21;      --ok-txt:#5FC79A;
+      --codigo-bg:#04121B;  --codigo-txt:#CFE3E5;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --marca:#001725;    --sobre-marca:#FFFFFF;    --azul:#0A4472;
+    --verde:#2FB3BC;    --acento-fundo:#56C8CF;   --sobre-acento:#04161F;
+    --verde-claro:#0D2A2D; --verde-folha:#3FA37E;   --verde-mata:#0B3B37;
+    --areia:#7A6E55;    --cinza-quente:#6E6A65;
+    --bg:#08131C;       --card:#0F1D28;         --realce:#152431;
+    --texto:#E6EDF3;    --muted:#9CABB9;
+    --borda:#22323F;    --linha-forte:#36485B;
+    --erro:#F0A0A0;     --erro-bg:#2A1616;      --erro-borda:#5B2A2A;
+    --demo:#E0B860;     --demo-bg:#241D0E;      --demo-borda:#3B3218;
+    --ok-bg:#0F2C21;    --ok-txt:#5FC79A;
+    --codigo-bg:#04121B;  --codigo-txt:#CFE3E5;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--texto);font-family:var(--sans);
+       font-size:15px;line-height:1.5}
+  .faixa{background:var(--marca);color:var(--sobre-marca);padding:18px 20px}
+  .faixa h1{margin:0;font-size:19px;letter-spacing:.2px}
+  .faixa p{margin:6px 0 0;font-size:13px;opacity:.85;max-width:70ch}
+  main{max-width:900px;margin:0 auto;padding:20px 16px 60px}
+  .barra{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 18px}
+  button{font:inherit;font-weight:600;border:0;border-radius:var(--pilula);
+         padding:10px 20px;background:var(--acento-fundo);color:var(--sobre-acento);cursor:pointer}
+  button:disabled{opacity:.5;cursor:default}
+  .placar{font-family:var(--mono);font-size:13px;color:var(--muted)}
+  .grupo{background:var(--card);border:1px solid var(--borda);border-radius:var(--raio);
+         margin:0 0 14px;overflow:hidden}
+  .grupo > h2{margin:0;padding:12px 16px;font-size:14px;background:var(--realce);
+              border-bottom:1px solid var(--borda)}
+  .grupo > h2 small{display:block;font-weight:400;color:var(--muted);margin-top:3px}
+  .linha{display:grid;grid-template-columns:78px 1fr;gap:12px;padding:11px 16px;
+         border-top:1px solid var(--borda);align-items:start}
+  .grupo .linha:first-of-type{border-top:0}
+  .selo{font-family:var(--mono);font-size:11px;font-weight:600;text-align:center;
+        padding:3px 0;border-radius:6px;letter-spacing:.5px}
+  .passa{background:var(--ok-bg);color:var(--ok-txt)}
+  .falha{background:var(--erro-bg);color:var(--erro)}
+  .aviso{background:var(--demo-bg);color:var(--demo)}
+  .indo{background:var(--realce);color:var(--muted)}
+  .titulo{font-weight:600}
+  .detalhe{color:var(--muted);font-size:13px;margin-top:3px;
+           font-family:var(--mono);overflow-wrap:anywhere}
+  .rodape{color:var(--muted);font-size:13px;margin-top:22px;max-width:72ch}
+  code{font-family:var(--mono);font-size:.92em;background:var(--realce);
+       padding:1px 5px;border-radius:4px}
+  @media (max-width:520px){ .linha{grid-template-columns:64px 1fr} }
+</style>
+</head>
+<body>
+
+<div class="faixa">
+  <h1>Teste de contrato</h1>
+  <p>Conversa com o Supabase e com o n8n de verdade e confere se as bordas encaixam.
+     Nada aqui move card nem grava decisão — os testes de escrita usam dados inválidos de propósito.</p>
+</div>
+
+<main>
+  <div class="barra">
+    <button id="btnRodar">Rodar tudo</button>
+    <span class="placar" id="placar">pronto</span>
+  </div>
+  <div id="saida"></div>
+  <p class="rodape" id="nota"></p>
+</main>
+
+<script>
+const SUPABASE_URL = 'https://mbwaqnlmscxbacmxdopr.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_AR4D1JlHB-Z12--QbzwYWQ_URZzmVwl';
+const ENDPOINT_TELA = 'https://grupoleh.app.n8n.cloud/webhook/decisao-tela-5a31745968808aaf41ce';
+const TOKEN = (new URLSearchParams(location.search).get('t') || '').trim();
+
+const $ = id => document.getElementById(id);
+const esc = t => String(t==null?'':t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+let grupoAtual = null, contas = { passa:0, falha:0, aviso:0 };
+
+function grupo(titulo, sub){
+  const d = document.createElement('div');
+  d.className = 'grupo';
+  d.innerHTML = '<h2>' + esc(titulo) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</h2>';
+  $('saida').appendChild(d);
+  grupoAtual = d;
+}
+
+function registrar(tipo, titulo, detalhe){
+  contas[tipo] = (contas[tipo]||0) + 1;
+  const rot = { passa:'PASSA', falha:'FALHA', aviso:'ATENÇÃO' }[tipo];
+  const l = document.createElement('div');
+  l.className = 'linha';
+  l.innerHTML = '<span class="selo ' + tipo + '">' + rot + '</span>' +
+    '<div><div class="titulo">' + esc(titulo) + '</div>' +
+    (detalhe ? '<div class="detalhe">' + esc(String(detalhe).slice(0,300)) + '</div>' : '') + '</div>';
+  grupoAtual.appendChild(l);
+  $('placar').textContent = contas.passa + ' passam · ' + contas.falha + ' falham · ' + (contas.aviso||0) + ' em atenção';
+}
+
+const passa = (t,d)=> registrar('passa',t,d);
+const falha = (t,d)=> registrar('falha',t,d);
+const aviso = (t,d)=> registrar('aviso',t,d);
+const confere = (cond, titulo, detalhe)=> cond ? passa(titulo) : falha(titulo, detalhe);
+
+async function rpc(nome, corpo){
+  const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + nome, {
+    method:'POST',
+    headers:{ apikey:SUPABASE_KEY, Authorization:'Bearer ' + SUPABASE_KEY, 'Content-Type':'application/json' },
+    body: JSON.stringify(corpo)
+  });
+  return { status:r.status, corpo: await r.json().catch(()=>null) };
+}
+
+async function tabela(caminho){
+  const r = await fetch(SUPABASE_URL + '/rest/v1/' + caminho, {
+    headers:{ apikey:SUPABASE_KEY, Authorization:'Bearer ' + SUPABASE_KEY }
+  });
+  return { status:r.status, corpo: await r.json().catch(()=>null) };
+}
+
+/* ------------------------------------------------------------------ */
+async function rodar(){
+  $('btnRodar').disabled = true;
+  $('saida').innerHTML = '';
+  contas = { passa:0, falha:0, aviso:0 };
+
+  /* 1 — ler um pedido pela função */
+  grupo('Ler um pedido', 'A tela do pedido e a da decisão leem por abrir_pedido, nunca pela tabela.');
+  try{
+    const vazio = await rpc('abrir_pedido', { p_id:null, p_numero:null });
+    confere(vazio.status === 200 && vazio.corpo && vazio.corpo.ok === false,
+      'sem chave nenhuma, recusa', 'HTTP ' + vazio.status + ' — ' + JSON.stringify(vazio.corpo));
+
+    const inexistente = await rpc('abrir_pedido', { p_id:null, p_numero:'SC-0000-0000' });
+    confere(inexistente.corpo && inexistente.corpo.ok === false && inexistente.corpo.erro === 'nao_encontrada',
+      'pedido que não existe responde nao_encontrada', JSON.stringify(inexistente.corpo));
+
+    const real = await rpc('abrir_pedido', { p_id:null, p_numero:'SC-TESTE-001' });
+    if(real.corpo && real.corpo.ok === true){
+      const ped = real.corpo.pedido || {};
+      confere(typeof ped.numero === 'string', 'pedido volta com número', JSON.stringify(ped).slice(0,160));
+      confere(Array.isArray(real.corpo.itens), 'itens vêm como lista', typeof real.corpo.itens);
+      confere('centro_custo_nome' in ped, 'centro de custo já vem com nome',
+        'a tela mostraria o código puro sem isto');
+    } else {
+      aviso('não achei SC-TESTE-001', 'sem os dados de teste este bloco não conclui: ' + JSON.stringify(real.corpo));
+    }
+  }catch(e){ falha('o Supabase não respondeu', e.message); }
+
+  /* 2 — a tabela continua fechada? */
+  grupo('Listar sem chave', 'A chave desta página é pública. Ninguém pode listar a base com ela.');
+  try{
+    const lista = await tabela('solicitacoes?select=id&limit=5');
+    const linhas = Array.isArray(lista.corpo) ? lista.corpo.length : null;
+    if(lista.status >= 400 || linhas === 0){
+      passa('a tabela de solicitações não devolve nada', 'HTTP ' + lista.status + ' · linhas: ' + linhas);
+    } else {
+      falha('a tabela ainda pode ser listada com a chave pública',
+        linhas + ' linhas vieram sem nenhum filtro — falta trocar a política de leitura');
+    }
+    const itens = await tabela('solicitacao_itens?select=id&limit=5');
+    const li = Array.isArray(itens.corpo) ? itens.corpo.length : null;
+    (itens.status >= 400 || li === 0)
+      ? passa('os itens também não', 'HTTP ' + itens.status + ' · linhas: ' + li)
+      : falha('os itens ainda podem ser listados', li + ' linhas sem filtro');
+  }catch(e){ falha('não consegui testar a leitura da tabela', e.message); }
+
+  grupo('Escrever sem permissão', 'Só o formulário grava, e só criando. Alterar e apagar não.');
+  try{
+    const r = await fetch(SUPABASE_URL + '/rest/v1/solicitacoes?numero=eq.SC-TESTE-001', {
+      method:'PATCH',
+      headers:{ apikey:SUPABASE_KEY, Authorization:'Bearer ' + SUPABASE_KEY,
+                'Content-Type':'application/json', Prefer:'return=representation' },
+      body: JSON.stringify({ motivo:'teste de contrato — não deveria gravar' })
+    });
+    const corpo = await r.json().catch(()=>null);
+    const mexeu = Array.isArray(corpo) && corpo.length > 0;
+    confere(!mexeu, 'alterar um pedido não muda nada',
+      mexeu ? 'ALTEROU ' + corpo.length + ' linha(s) — a política de escrita está aberta' : 'HTTP ' + r.status);
+  }catch(e){ passa('alterar nem chega a sair', e.message); }
+
+  /* 3 — o endpoint da decisão */
+  grupo('Endpoint da decisão', 'A porta que a fila usa. Testada com token inválido: não move nada.');
+  try{
+    const r = await fetch(ENDPOINT_TELA, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ token:'contrato-token-invalido', solicitacao_id:'00000000-0000-0000-0000-000000000000',
+                             card_id:'nao-existe', etapa:'lider', numero:'SC-0000-0000',
+                             decisao:'aprovado', motivo:'' })
+    });
+    const txt = await r.text();
+    let j = null; try{ j = JSON.parse(txt); }catch(e){}
+    confere(r.status === 200, 'a porta responde', 'HTTP ' + r.status + ' — ' + txt.slice(0,120));
+    confere(j !== null, 'responde em JSON, não em redirect',
+      'a fila precisa ler a resposta para tirar a linha; veio: ' + txt.slice(0,120));
+    confere(j && j.ok === false, 'token inválido é recusado',
+      'RECUSA ESPERADA. veio: ' + txt.slice(0,160));
+    confere(j && typeof j.mensagem === 'string', 'a recusa vem com motivo legível', JSON.stringify(j));
+  }catch(e){
+    falha('a tela não consegue falar com o n8n', e.message +
+      ' — normalmente é CORS ou o fluxo despublicado');
+  }
+
+  /* 4 — a fila, quando há token */
+  grupo('Fila do aprovador', TOKEN ? 'Token veio no link.' : 'Sem ?t=<token> no link: só dá para testar a recusa.');
+  try{
+    const falso = await rpc('aprovador_do_token', { p_token:'token-que-nao-existe' });
+    confere(Array.isArray(falso.corpo) && falso.corpo.length === 0,
+      'token inventado não abre fila nenhuma', JSON.stringify(falso.corpo));
+
+    if(TOKEN){
+      const quem = await rpc('aprovador_do_token', { p_token:TOKEN });
+      const a = Array.isArray(quem.corpo) ? quem.corpo[0] : null;
+      confere(!!a, 'o token do link é de um aprovador ativo', JSON.stringify(quem.corpo));
+      if(a){
+        confere(Array.isArray(a.etapas) && a.etapas.length > 0, 'o aprovador tem etapas', JSON.stringify(a.etapas));
+        const fila = await rpc('fila_de_aprovacao', { p_token:TOKEN });
+        confere(Array.isArray(fila.corpo), 'a fila volta como lista', typeof fila.corpo);
+        if(Array.isArray(fila.corpo) && fila.corpo.length){
+          const s = fila.corpo[0];
+          confere(!!s.card_id, 'cada linha traz o card', 'sem card_id a decisão não teria o que mover');
+          confere(!!s.etapa_atual, 'cada linha traz a etapa', JSON.stringify(s).slice(0,140));
+          confere(!!s.id, 'cada linha traz o id da solicitação');
+        } else {
+          aviso('a fila está vazia', 'nada esperando este aprovador agora');
+        }
+      }
+    }
+  }catch(e){ falha('não consegui testar a fila', e.message); }
+
+  $('nota').textContent = contas.falha === 0
+    ? 'Tudo encaixando. Este teste fala com os sistemas de verdade — se um dia ele acusar falha sem ninguém ter mexido na tela, o que mudou foi o servidor.'
+    : 'Há falha acima. Antes de mexer na tela, confira o que o servidor está respondendo — o detalhe em cinza é a resposta crua.';
+  $('btnRodar').disabled = false;
+}
+
+$('btnRodar').addEventListener('click', rodar);
+rodar();
+</script>
+</body>
+</html>
