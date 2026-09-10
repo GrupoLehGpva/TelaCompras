@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Solicitação de Compra · Grupo Leh</title>
+<meta name="theme-color" content="#102438">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 
 <!--
   ============================================================================
@@ -40,36 +44,86 @@
 
 <style>
   :root{
-    --verde:#1f5f3f; --verde-claro:#eaf2ed; --bg:#f5f6f4; --card:#ffffff;
-    --texto:#16211c; --muted:#6b7770; --borda:#dde3df;
-    --erro:#b3261e; --erro-bg:#fdf0ef;
-    --demo:#8a5a1e; --demo-bg:#fdf6e9; --demo-borda:#e6d3ae;
-    --raio:12px;
+    /* Identidade Grupo Leh — livro da marca, maio 2024
+       2965 C #00263d · 2955 C #003865 · 341 C #007A53 · 330 C #00524c
+       321 C #008c95 · 468 C #ddcba3 · Warm Gray 1 C #d7d2cc */
+    color-scheme:light;   /* faz o navegador desenhar rádio, seleção e data no tema certo */
+    --marca:#00263d;      --sobre-marca:#FFFFFF;      --azul:#003865;
+    --verde:#008c95;      --acento-fundo:#00727a;     --sobre-acento:#FFFFFF;
+    --verde-claro:#E2F1F2; --verde-folha:#007A53;     --verde-mata:#00524c;
+    --areia:#ddcba3;      --cinza-quente:#d7d2cc;
+    --bg:#F2F5F8;         --card:#FFFFFF;           --realce:#F7F9FB;
+    --texto:#0F2233;      --muted:#5F7284;
+    --borda:#DBE3EA;      --linha-forte:#B4C2CE;
+    --erro:#B3261E;       --erro-bg:#FDF2F1;        --erro-borda:#E8B4B0;
+    --demo:#8A5A00;       --demo-bg:#FFF8E8;        --demo-borda:#EFDDB4;
+    --ok-bg:#E1F0E9;      --ok-txt:#007A53;
+    --codigo-bg:#00263d;  --codigo-txt:#CFE3E5;
+    --raio:12px;          --pilula:100px;
+    /* O livro da marca adota GoldPlay e autoriza Arial para meios eletrônicos.
+       Figtree entra entre as duas como equivalente aberto mais próximo. */
+    --sans:"Goldplay","Goldplay Alt","Figtree",Arial,Helvetica,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
   }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --marca:#001725;      --sobre-marca:#FFFFFF;      --azul:#0A4472;
+      --verde:#2FB3BC;      --acento-fundo:#56C8CF;   --sobre-acento:#04161F;
+      --verde-claro:#0D2A2D; --verde-folha:#3FA37E;   --verde-mata:#0B3B37;
+      --areia:#7A6E55;      --cinza-quente:#6E6A65;
+      --bg:#08131C;         --card:#0F1D28;           --realce:#152431;
+      --texto:#E6EDF3;      --muted:#9CABB9;
+      --borda:#22323F;      --linha-forte:#36485B;
+      --erro:#F0A0A0;       --erro-bg:#2A1616;        --erro-borda:#5B2A2A;
+      --demo:#E0B860;       --demo-bg:#241D0E;        --demo-borda:#3B3218;
+      --ok-bg:#0F2C21;      --ok-txt:#5FC79A;
+      --codigo-bg:#04121B;  --codigo-txt:#CFE3E5;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --marca:#001725;    --sobre-marca:#FFFFFF;    --azul:#0A4472;
+    --verde:#2FB3BC;    --acento-fundo:#56C8CF;   --sobre-acento:#04161F;
+    --verde-claro:#0D2A2D; --verde-folha:#3FA37E;   --verde-mata:#0B3B37;
+    --areia:#7A6E55;    --cinza-quente:#6E6A65;
+    --bg:#08131C;       --card:#0F1D28;         --realce:#152431;
+    --texto:#E6EDF3;    --muted:#9CABB9;
+    --borda:#22323F;    --linha-forte:#36485B;
+    --erro:#F0A0A0;     --erro-bg:#2A1616;      --erro-borda:#5B2A2A;
+    --demo:#E0B860;     --demo-bg:#241D0E;      --demo-borda:#3B3218;
+    --ok-bg:#0F2C21;    --ok-txt:#5FC79A;
+    --codigo-bg:#04121B;  --codigo-txt:#CFE3E5;
+  }
+  .marca-bloco{display:flex;align-items:center;gap:16px;min-width:0}
+  .marca-bloco .titulo-tela{border-left:1px solid rgba(255,255,255,.28);padding-left:16px;min-width:0}
+  .logo-leh{display:block;height:34px;width:auto;flex:none}
+  .logo-leh.impressao{display:none}
+  @media (max-width:420px){ .logo-leh{height:28px} }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   body{margin:0;background:var(--bg);color:var(--texto);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    font-family:var(--sans);
     font-size:16px;line-height:1.5;padding-bottom:120px}
 
-  .topo{background:var(--verde);color:#fff;padding:16px 20px;position:sticky;top:0;z-index:20;
+  .topo{background:var(--marca);color:var(--sobre-marca);padding:16px 20px;position:sticky;top:0;z-index:20;
     display:flex;justify-content:space-between;align-items:center;gap:12px}
   .topo h1{margin:0;font-size:17px;font-weight:600;letter-spacing:.2px}
   .topo .rot{display:block;font-size:12px;opacity:.75;margin-top:2px;text-transform:uppercase;letter-spacing:1px}
   .status{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
     padding:4px 9px;border-radius:99px;white-space:nowrap;background:rgba(255,255,255,.18)}
-  .status.on{background:#bff0d4;color:#10502f}
-  .status.off{background:#f6dcb8;color:#7a4a12}
+  .status.on{background:var(--ok-bg);color:var(--ok-txt)}
+  .status.off{background:var(--demo-bg);color:var(--demo)}
 
   .demo-bar{background:var(--demo-bg);border-bottom:1px solid var(--demo-borda);padding:10px 16px}
   .demo-bar[hidden]{display:none}
   .demo-bar .interno{max-width:560px;margin:0 auto;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
   .demo-bar .aviso{font-size:11px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:var(--demo);flex:1 1 100%}
-  .segmento{display:flex;border:1px solid var(--demo-borda);border-radius:8px;overflow:hidden;background:#fff}
+  .segmento{display:flex;border:1px solid var(--demo-borda);border-radius:8px;overflow:hidden;background:var(--card)}
   .segmento button{border:0;background:none;font:inherit;font-size:13px;font-weight:600;color:var(--demo);padding:7px 12px;cursor:pointer}
-  .segmento button.ativo{background:var(--demo);color:#fff}
-  .btn-exemplo{border:1px solid var(--demo-borda);background:#fff;color:var(--demo);font:inherit;font-size:13px;
+  .segmento button.ativo{background:var(--demo);color:var(--card)}
+  .btn-exemplo{border:1px solid var(--demo-borda);background:var(--card);color:var(--demo);font:inherit;font-size:13px;
     font-weight:600;padding:7px 12px;border-radius:8px;cursor:pointer;text-decoration:none;display:inline-block}
-  .btn-exemplo:hover{background:#fbeed6}
+  .btn-exemplo:hover{background:var(--demo-bg)}
 
   .wrap{max-width:560px;margin:0 auto;padding:16px}
 
@@ -94,19 +148,26 @@
   .campo:last-child{margin-bottom:0}
   .campo > label,.campo > .titulo{display:block;font-weight:600;font-size:15px;margin-bottom:8px}
   .ajuda{display:block;font-size:13px;color:var(--muted);margin-top:6px;line-height:1.45}
+  .familia-travada[hidden]{display:none}
+  .familia-travada{display:block;margin:12px 0 0;padding:12px 14px;border-radius:10px;
+    background:var(--verde-claro);color:var(--ok-txt);font-size:13px;line-height:1.45}
+  .grupo-familia{margin-top:18px}
+  .grupo-familia:first-child{margin-top:8px}
+  .grupo-familia h3{margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:.6px;
+    text-transform:uppercase;color:var(--muted)}
 
-  input[type=text],input[type=number],input[type=date],select,textarea{
+  input[type=text],input[type=email],input[type=tel],input[type=number],input[type=date],select,textarea{
     width:100%;padding:13px 12px;font-size:16px;font-family:inherit;color:inherit;
-    background:#fff;border:1px solid var(--borda);border-radius:10px;appearance:none}
+    background:var(--card);border:1px solid var(--borda);border-radius:10px;appearance:none}
   input:focus,select:focus,textarea:focus{outline:none;border-color:var(--verde);box-shadow:0 0 0 3px var(--verde-claro)}
   select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'><path d='M3 5l4 4 4-4' fill='none' stroke='%236b7770' stroke-width='1.6' stroke-linecap='round'/></svg>");
     background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
-  input:disabled,select:disabled{background:#f2f4f2;color:var(--muted)}
+  input:disabled,select:disabled{background:var(--realce);color:var(--muted)}
 
   .opcoes{display:flex;flex-direction:column;gap:8px}
   .opcao{display:flex;gap:11px;align-items:flex-start;border:1px solid var(--borda);border-radius:10px;
-    padding:13px 14px;cursor:pointer;background:#fff;transition:border-color .15s,background .15s}
-  .opcao:hover{border-color:#b9c4bd}
+    padding:13px 14px;cursor:pointer;background:var(--card);transition:border-color .15s,background .15s}
+  .opcao:hover{border-color:var(--linha-forte)}
   .opcao input{margin:2px 0 0;accent-color:var(--verde);width:18px;height:18px;flex:none}
   .opcao b{display:block;font-weight:600;font-size:15px}
   .opcao em{display:block;font-style:normal;font-size:13px;color:var(--muted);margin-top:1px}
@@ -116,9 +177,30 @@
   .checkbox input{margin:2px 0 0;accent-color:var(--verde);width:18px;height:18px;flex:none}
 
   .busca{position:relative}
-  .resultados{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:5;background:#fff;
+  .resultados{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:5;background:var(--card);
     border:1px solid var(--borda);border-radius:10px;max-height:260px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.10)}
   .resultados[hidden]{display:none}
+  .marca-opcional{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:var(--pilula);
+    background:var(--realce);border:1px solid var(--borda);color:var(--muted);
+    font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;vertical-align:1px}
+  .veio-do-slack{margin:0 0 16px;padding:10px 14px;border-radius:var(--raio);
+    background:var(--verde-claro);border:1px solid var(--borda);color:var(--texto);
+    font-size:13px;line-height:1.5}
+  .veio-do-slack[hidden]{display:none}
+  /* Campo travado: quem abre o pedido é o facilitador identificado pelo Slack.
+     Deixar editável seria convidar a abrir pedido no nome de outra pessoa. */
+  input[readonly]{background:var(--realce);color:var(--muted);cursor:default}
+  input[readonly]:focus{border-color:var(--borda);box-shadow:none}
+  .travado-nota{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:var(--pilula);
+    background:var(--verde-claro);border:1px solid var(--borda);color:var(--muted);
+    font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;vertical-align:1px}
+  /* O pedido foi gravado, mas não chegou ao Compras. Isso não pode passar como
+     nota técnica no meio de uma tela de sucesso: quem enviar e for embora nunca
+     vai ser aprovado, e ninguém fica sabendo. */
+  .aviso-falha{margin:16px 0 4px;padding:14px 16px;border-radius:var(--raio);
+    background:var(--erro-bg);border:1px solid var(--erro-borda);color:var(--erro);
+    text-align:left;font-size:14px;line-height:1.6}
+  .aviso-falha[hidden]{display:none}
   .resultados button{display:block;width:100%;text-align:left;background:none;border:0;
     border-bottom:1px solid var(--borda);padding:12px 14px;cursor:pointer;font:inherit}
   .resultados button:last-child{border-bottom:0}
@@ -127,7 +209,7 @@
   .resultados span{display:block;font-size:12px;color:var(--muted);margin-top:1px}
   .vazio{padding:14px;font-size:13px;color:var(--muted)}
 
-  .ficha{background:var(--verde-claro);border:1px solid #cfe0d6;border-radius:10px;padding:14px 16px;margin-top:12px}
+  .ficha{background:var(--verde-claro);border:1px solid var(--borda);border-radius:10px;padding:14px 16px;margin-top:12px}
   .ficha[hidden]{display:none}
   .ficha dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px}
   .ficha dt{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);padding-top:2px}
@@ -135,32 +217,34 @@
   .ficha .rodape{font-size:12px;color:var(--muted);margin:10px 0 0;display:flex;justify-content:space-between;align-items:center;gap:10px}
   .ficha .rodape button{background:none;border:0;color:var(--verde);font:inherit;font-weight:600;cursor:pointer;padding:0;text-decoration:underline}
 
-  .excecao{border:1px dashed #d6b48a;background:#fdf8f1;border-radius:10px;padding:14px 16px;margin-top:18px}
-  .excecao .aviso{font-size:13px;color:#8a5a1e;margin:10px 0 0;line-height:1.45}
-  .condicional{border:1px dashed #d6b48a;background:#fdf8f1;border-radius:10px;padding:14px 16px;margin-top:12px}
+  .excecao{border:1px dashed var(--demo-borda);background:var(--demo-bg);border-radius:10px;padding:14px 16px;margin-top:18px}
+  .excecao .aviso{font-size:13px;color:var(--demo);margin:10px 0 0;line-height:1.45}
+  .condicional{border:1px dashed var(--demo-borda);background:var(--demo-bg);border-radius:10px;padding:14px 16px;margin-top:12px}
   .condicional[hidden]{display:none}
-  .condicional .aviso{font-size:13px;color:#8a5a1e;margin:10px 0 0;line-height:1.45}
+  .condicional .aviso{font-size:13px;color:var(--demo);margin:10px 0 0;line-height:1.45}
 
   .qtd{display:flex;gap:10px;align-items:stretch}
   .qtd input{flex:1 1 auto}
-  .qtd .unidade{flex:none;display:flex;align-items:center;padding:0 16px;background:#f2f4f2;
+  .qtd .unidade{flex:none;display:flex;align-items:center;padding:0 16px;background:var(--realce);
     border:1px solid var(--borda);border-radius:10px;font-size:14px;font-weight:600;color:var(--muted);
     white-space:nowrap;min-width:96px;justify-content:center}
 
-  .montador{border:1px solid var(--borda);border-radius:10px;padding:16px;background:#fbfcfb}
+  .montador{border:1px solid var(--borda);border-radius:10px;padding:16px;background:var(--realce)}
   .montador .linha{margin-bottom:12px}
   .montador .linha:last-of-type{margin-bottom:0}
   .montador label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--muted)}
-  .btn-add{width:100%;min-height:46px;margin-top:14px;border-radius:10px;border:1px solid var(--verde);
-    background:var(--verde);color:#fff;font:inherit;font-size:15px;font-weight:650;cursor:pointer}
-  .btn-add:hover{background:#184c32}
-  .btn-add:disabled{background:#c3cfc8;border-color:#c3cfc8;cursor:not-allowed}
+  .btn-add{width:100%;min-height:46px;margin-top:14px;border-radius:var(--pilula);border:1px solid var(--verde);
+    background:var(--verde);color:var(--sobre-acento);font:inherit;font-size:15px;font-weight:650;cursor:pointer}
+  .btn-add:hover{background:var(--acento-fundo)}
+  .btn-add:disabled{background:var(--linha-forte);border-color:var(--linha-forte);cursor:not-allowed}
   .link-excecao{background:none;border:0;color:var(--verde);font:inherit;font-size:13px;font-weight:600;
     cursor:pointer;padding:0;text-decoration:underline;margin-top:12px}
 
   .itens-lista{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
-  .itens-lista li{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--borda);
-    border-radius:10px;padding:12px 14px;background:#fff}
+  .itens-lista li{display:block;padding:0;border:0;background:none}
+  .itens-lista .item-linha{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--borda);
+    border-radius:10px;padding:12px 14px;background:var(--card);margin-top:8px}
+  .itens-lista .item-linha:first-of-type{margin-top:0}
   .itens-lista .info{flex:1;min-width:0}
   .itens-lista .info b{display:block;font-size:14px;font-weight:600;line-height:1.35}
   .itens-lista .info span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
@@ -168,7 +252,7 @@
     padding:5px 10px;font-size:13px;font-weight:700;white-space:nowrap}
   .itens-lista .remover{flex:none;background:none;border:0;color:var(--muted);font-size:20px;line-height:1;cursor:pointer;padding:2px 4px}
   .itens-lista .remover:hover{color:var(--erro)}
-  .itens-lista .fora{border-style:dashed;border-color:#d6b48a;background:#fdf8f1}
+  .itens-lista .fora{border-style:dashed;border-color:var(--demo-borda);background:var(--demo-bg)}
 
   .resumo-lista{display:flex;justify-content:space-between;align-items:center;margin-top:14px;
     padding-top:12px;border-top:1px solid var(--borda);font-size:14px}
@@ -176,7 +260,7 @@
     border-radius:10px;color:var(--muted);font-size:14px}
 
   .anexo{display:flex;align-items:center;gap:10px;justify-content:center;border:1px dashed var(--borda);
-    border-radius:10px;padding:16px;cursor:pointer;color:var(--verde);font-weight:600;font-size:15px;background:#fff}
+    border-radius:10px;padding:16px;cursor:pointer;color:var(--verde);font-weight:600;font-size:15px;background:var(--card)}
   .anexo:hover{border-color:var(--verde);background:var(--verde-claro)}
   .anexo input{display:none}
   .lista-anexos{list-style:none;margin:10px 0 0;padding:0;font-size:13px;color:var(--muted)}
@@ -184,28 +268,28 @@
 
   .erro-msg{display:block;color:var(--erro);font-size:13px;font-weight:600;margin-top:6px}
   .campo.invalido input,.campo.invalido select,.campo.invalido textarea{border-color:var(--erro);background:var(--erro-bg)}
-  .campo.invalido .opcoes .opcao{border-color:#e8b4b0}
+  .campo.invalido .opcoes .opcao{border-color:var(--erro-borda)}
   .campo.invalido .montador{border-color:var(--erro)}
 
-  .alerta{border:1px solid #e8b4b0;background:var(--erro-bg);color:#7d1d17;border-radius:10px;
+  .alerta{border:1px solid var(--erro-borda);background:var(--erro-bg);color:var(--erro);border-radius:10px;
     padding:12px 14px;font-size:13px;margin-bottom:16px;line-height:1.5}
   .alerta[hidden]{display:none}
   .alerta code{font-size:12px;word-break:break-all}
 
-  .nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--borda);
+  .nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--borda);
     padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom));z-index:15}
   .nav[hidden]{display:none}
   .nav .interno{max-width:560px;margin:0 auto;display:flex;gap:10px}
-  button.btn{flex:1;min-height:50px;border-radius:10px;font:inherit;font-size:16px;font-weight:650;cursor:pointer;border:1px solid transparent}
-  .btn.primario{background:var(--verde);color:#fff}
-  .btn.primario:hover{background:#184c32}
-  .btn.primario:disabled{background:#8fae9d;cursor:wait}
-  .btn.secundario{background:#fff;color:var(--texto);border-color:var(--borda);flex:0 0 34%}
-  .btn.secundario:hover{background:#f2f4f2}
+  button.btn{flex:1;min-height:50px;border-radius:var(--pilula);font:inherit;font-size:16px;font-weight:650;cursor:pointer;border:1px solid transparent}
+  .btn.primario{background:var(--verde);color:var(--sobre-acento)}
+  .btn.primario:hover{background:var(--acento-fundo)}
+  .btn.primario:disabled{background:var(--linha-forte);cursor:wait}
+  .btn.secundario{background:var(--card);color:var(--texto);border-color:var(--borda);flex:0 0 34%}
+  .btn.secundario:hover{background:var(--realce)}
   .btn[hidden]{display:none}
 
   .ok{text-align:center;padding:34px 20px}
-  .ok .selo{width:60px;height:60px;border-radius:50%;background:var(--verde);color:#fff;
+  .ok .selo{width:60px;height:60px;border-radius:50%;background:var(--verde);color:var(--sobre-acento);
     display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 16px}
   .ok h2{margin:0 0 4px;font-size:21px}
   .ok .num{font-size:14px;color:var(--muted);margin:0 0 22px}
@@ -214,7 +298,7 @@
   .ok .acoes{margin-top:24px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
   details.payload{margin-top:22px;text-align:left}
   details.payload summary{cursor:pointer;font-size:13px;color:var(--muted);font-weight:600}
-  details.payload pre{background:#16211c;color:#d7e6dc;padding:14px;border-radius:10px;
+  details.payload pre{background:var(--codigo-bg);color:var(--codigo-txt);padding:14px;border-radius:10px;
     font-size:12px;overflow-x:auto;margin-top:10px;line-height:1.5}
 
   .rodape-nota{max-width:560px;margin:0 auto;padding:0 16px 20px;font-size:12px;color:var(--muted);line-height:1.5}
@@ -224,16 +308,20 @@
 <body>
 
 <header class="topo">
-  <div>
-    <span class="rot">Grupo Leh · Compras</span>
-    <h1>Solicitação de Compra</h1>
+  <div class="marca-bloco">
+    <img class="logo-leh" src="data:image/png;base64,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" alt="Grupo Leh">
+    <img class="logo-leh impressao" src="data:image/png;base64,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" alt="Grupo Leh">
+    <div class="titulo-tela">
+      <span class="rot">Compras</span>
+      <h1>Solicitação de Compra</h1>
+    </div>
   </div>
   <span class="status" id="statusConexao">…</span>
 </header>
 
 <div class="demo-bar" id="demoBar">
   <div class="interno">
-    <span class="aviso">● Modo demonstração — validação desativada</span>
+    <span class="aviso">● Modo demonstração — dados de exemplo, validação ativa</span>
     <div class="segmento">
       <button type="button" id="verPassos" class="ativo">Passo a passo</button>
       <button type="button" id="verPagina">Página única</button>
@@ -259,6 +347,33 @@
 
   <form id="form" novalidate>
 
+    <!-- ======================= 0 · SOLICITANTE ======================= -->
+    <section class="passo" data-passo="solicitante">
+      <h2>Facilitador da compra</h2>
+
+      <p class="veio-do-slack" id="veioDoSlack" hidden></p>
+
+      <div class="campo" data-campo="nomeSolicitante">
+        <label for="nomeSolicitante">Nome do facilitador</label>
+        <input type="text" id="nomeSolicitante" autocomplete="name" placeholder="Ex.: Maria de Souza">
+        <span class="ajuda" id="ajudaNome">Quem está abrindo o pedido e acompanha ele até o fim.</span>
+      </div>
+
+      <div class="campo" data-campo="emailSolicitante">
+        <label for="emailSolicitante">E-mail corporativo do facilitador</label>
+        <input type="email" id="emailSolicitante" autocomplete="email" inputmode="email"
+               placeholder="nome@leh.com.br">
+        <span class="ajuda" id="ajudaEmail">É por ele que a solicitação encontra o líder para a primeira aprovação.</span>
+      </div>
+
+      <div class="campo" data-campo="solicitanteNome">
+        <label for="solicitanteNome">Solicitante <span class="marca-opcional">opcional</span></label>
+        <input type="text" id="solicitanteNome" autocomplete="off"
+               placeholder="Ex.: João da Silva — Granja 103">
+        <span class="ajuda">Quem precisa do item, quando não é você. Em branco, o pedido é seu.</span>
+      </div>
+    </section>
+
     <!-- ======================= 1 · ITEM ======================= -->
     <section class="passo" data-passo="item">
       <h2>Item</h2>
@@ -280,7 +395,7 @@
             <input type="text" id="buscaItem" autocomplete="off" placeholder="Digite o nome ou o código">
             <div class="resultados" id="resultados" hidden></div>
           </div>
-          <span class="ajuda">A busca traz apenas itens da família selecionada.</span>
+          <span class="ajuda">A busca traz os itens da família escolhida. Sem família, ela varre o catálogo inteiro.</span>
 
           <div class="ficha" id="ficha" hidden>
             <dl>
@@ -295,16 +410,7 @@
         </div>
 
         <div class="excecao">
-          <label class="checkbox">
-            <input type="checkbox" id="foraCatalogo">
-            <span><b>O item não está no catálogo</b></span>
-          </label>
-          <div class="campo" id="campoDescLivre" data-campo="descricaoLivre" hidden style="margin-top:14px">
-            <label for="descricaoLivre">Descreva o item</label>
-            <textarea id="descricaoLivre" rows="3"></textarea>
-          </div>
-          <p class="aviso">Este pedido será encaminhado para cadastro antes de seguir e vai demorar mais.
-            Use apenas se a busca não retornar o item.</p>
+          <p class="aviso"><b>Item fora do catálogo?</b><br>Não achou o item? Ele ainda não está cadastrado. Procure o setor de Compras para incluí-lo no catálogo antes de abrir a solicitação — pedido com item improvisado atrasa a cotação.</p>
         </div>
       </div>
 
@@ -314,7 +420,7 @@
           <div class="montador" id="montador">
             <div id="addCatalogo">
               <div class="linha">
-                <label for="familiaLista">Família</label>
+                <label for="familiaLista">Família da solicitação</label>
                 <select id="familiaLista"><option value="">— selecione —</option></select>
               </div>
               <div class="linha">
@@ -325,12 +431,6 @@
                 </div>
               </div>
             </div>
-            <div id="addLivre" hidden>
-              <div class="linha">
-                <label for="descLista">Descreva o item</label>
-                <input type="text" id="descLista" placeholder="Ex.: parafuso sextavado 1/2">
-              </div>
-            </div>
             <div class="linha">
               <label for="qtdLista">Quantidade</label>
               <div class="qtd">
@@ -339,14 +439,29 @@
               </div>
             </div>
             <button type="button" class="btn-add" id="btnAddItem" disabled>+ Adicionar à lista</button>
-            <button type="button" class="link-excecao" id="alternarLivre">O item não está no catálogo</button>
           </div>
+
+          <div class="excecao">
+            <p class="aviso"><b>Item fora do catálogo?</b><br>Não achou o item? Ele ainda não está cadastrado. Procure o setor de Compras para incluí-lo no catálogo antes de abrir a solicitação — pedido com item improvisado atrasa a cotação.</p>
+          </div>
+
+          <p class="familia-travada" id="familiaTravada" hidden></p>
 
           <ul class="itens-lista" id="itensLista"></ul>
           <div class="lista-vazia" id="listaVazia">Nenhum item adicionado ainda.</div>
           <div class="resumo-lista" id="resumoLista" hidden>
             <span id="resumoTexto">Itens na lista</span><b id="totalItens">0</b>
           </div>
+        </div>
+      </div>
+
+      <div id="blocoServico" hidden>
+        <div class="campo" data-campo="escopoServico">
+          <label for="escopoServico">Descreva o escopo do serviço</label>
+          <textarea id="escopoServico" rows="7" maxlength="2000"
+            placeholder="O que precisa ser feito, onde, e o que caracteriza o serviço concluído."></textarea>
+          <span class="ajuda">Quanto mais claro o escopo, mais comparáveis são as propostas.
+            Diga o local, o que está acontecendo, e o que precisa estar pronto no fim.</span>
         </div>
       </div>
     </section>
@@ -366,19 +481,24 @@
 
     <!-- ======================= 3 · ENTREGA E CUSTO ======================= -->
     <section class="passo" data-passo="entrega" hidden>
-      <h2>Entrega e custo</h2>
-
-      <div class="campo" data-campo="localEntrega">
-        <label for="localEntrega">Selecione o local de entrega</label>
-        <select id="localEntrega"><option value="">— selecione —</option></select>
-        <span class="ajuda">Onde a mercadoria deve ser fisicamente entregue.</span>
-      </div>
+      <h2>Centro de custo</h2>
 
       <div class="campo" data-campo="centroCusto">
-        <label for="centroCusto">Selecione o centro de custo</label>
-        <select id="centroCusto"><option value="">— selecione —</option></select>
+        <label for="buscaCentro">Busque o centro de custo pelo nome, pelo código ou pela unidade</label>
+        <div class="busca">
+          <input type="text" id="buscaCentro" autocomplete="off" placeholder="Ex.: 3180, SOJA OLIMPO, FROTA">
+          <div class="resultados" id="resultadosCentro" hidden></div>
+        </div>
         <span class="ajuda">Onde o valor do gasto será alocado depois que a fatura for paga.
-          Pode ser diferente do local de entrega.</span>
+          São centenas de centros — escreva parte do nome que a lista estreita.</span>
+
+        <div class="ficha" id="fichaCentro" hidden>
+          <dl>
+            <dt>Código</dt><dd id="cCodigo"></dd>
+            <dt>Centro</dt><dd id="cNome"></dd>
+            <dt>Unidade</dt><dd id="cUnidade"></dd>
+          </dl>
+        </div>
       </div>
     </section>
 
@@ -405,6 +525,14 @@
           <p class="aviso">Comprar sem cotação é exceção. A justificativa fica registrada no pedido
             e vai junto para quem aprova.</p>
         </div>
+      </div>
+
+      <div class="campo" data-campo="observacao">
+        <label for="observacao">Observação do pedido <span class="marca-opcional">opcional</span></label>
+        <textarea id="observacao" rows="3"
+          placeholder="Ex.: combinar a entrega com o Zé antes de descarregar"></textarea>
+        <span class="ajuda">Vale para o pedido inteiro, não para um item. Vai junto para quem cota
+          e para quem aprova.</span>
       </div>
     </section>
 
@@ -437,9 +565,11 @@
 
     <!-- ======================= CONFIRMAÇÃO ======================= -->
     <section class="passo ok" data-passo="confirmacao" hidden>
-      <div class="selo">✓</div>
-      <h2>Solicitação enviada</h2>
+      <div class="selo" id="okSelo">✓</div>
+      <h2 id="okTitulo">Solicitação enviada</h2>
       <p class="num" id="okNumero"></p>
+
+      <div class="aviso-falha" id="okAviso" hidden></div>
       <p class="titulo-lista">O que acontece agora:</p>
       <ol>
         <li>Um card é criado no ClickUp com o seu pedido</li>
@@ -477,7 +607,7 @@
    >>> CONFIGURAÇÃO <<<
    ========================================================================== */
 const SUPABASE_URL = 'https://mbwaqnlmscxbacmxdopr.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_AR4D1JlHB-Z12--QbzwYWQ_URZzmVwl';   // <<< COLE AQUI A SUA ANON / PUBLISHABLE KEY
+const SUPABASE_KEY = 'sb_publishable_AR4D1JlHB-Z12--QbzwYWQ_URZzmVwl';
 
 /* URL do webhook do n8n que cria o card no ClickUp.
    Pode ficar vazia: o formulário continua gravando no Supabase,
@@ -486,6 +616,12 @@ const WEBHOOK_URL  = 'https://grupoleh.app.n8n.cloud/webhook/nova-solicitacao'; 
 
 const MODO_DEMO = true;    // false = produção, validação obrigatória volta a valer
 const CONECTADO = SUPABASE_KEY.trim().length > 20;
+
+/* Só facilitador abre pedido. Com isto em true, quem não estiver na tabela
+   `facilitadores` não consegue enviar — nem quem abrir a tela sem passar pelo
+   /compras, porque aí não há usuário do Slack para conferir.
+   Fica false até a lista estar carregada; ligar antes tranca todo mundo. */
+const EXIGIR_FACILITADOR = false;
 
 /* ============================================================================
    1) DADOS FIXOS
@@ -504,16 +640,6 @@ const DADOS = {
   ],
 
   // TODO: substituir pelos locais reais de entrega
-  locaisEntrega: [
-    { id:'ALM-GPVA', nome:'Almoxarifado · Guarapuava' },
-    { id:'ESC-GPVA', nome:'Escritório · Guarapuava' },
-    { id:'G101',     nome:'Granja 101' },
-    { id:'G102',     nome:'Granja 102' },
-    { id:'G103',     nome:'Granja 103' },
-    { id:'G104',     nome:'Granja 104' },
-    { id:'PI-SEDE',  nome:'Sede · Unidade Piauí' }
-  ],
-
   // TODO: substituir pelos centros de custo reais.
   // Lista independente do local de entrega.
   centrosCusto: [
@@ -533,8 +659,9 @@ const DADOS = {
   ],
 
   tipos: [
-    { id:'item',  titulo:'Item único' },
-    { id:'lista', titulo:'Lista de itens', ajuda:'Mercado, limpeza ou construção, com muitos itens de uma vez' }
+    { id:'item',    titulo:'Item único' },
+    { id:'lista',   titulo:'Lista de itens', ajuda:'Mercado, limpeza ou construção, com muitos itens de uma vez' },
+    { id:'servico', titulo:'Escopo de serviço', ajuda:'Mão de obra contratada, descrita em texto. Sem itens de catálogo' }
   ],
 
   tiposCompra: [
@@ -572,13 +699,18 @@ async function apiGet(caminho){
   if(!r.ok) throw new Error(await r.text());
   return r.json();
 }
-async function apiPost(tabela, corpo){
-  const r = await fetch(SUPABASE_URL + '/rest/v1/' + tabela, {
-    method:'POST', headers: cabecalhos({'Prefer':'return=representation'}), body: JSON.stringify(corpo)
+async function apiRpc(nome, corpo){
+  const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + nome, {
+    method:'POST', headers: cabecalhos(), body: JSON.stringify(corpo)
   });
   if(!r.ok) throw new Error(await r.text());
   return r.json();
 }
+/* Não existe mais escrita direta em tabela a partir desta página.
+   Ficava aqui um apiPost com `Prefer: return=representation`; ele foi embora
+   junto com o bug que causou: RETURNING passa pela política de leitura, e
+   fechar a leitura pública fez a gravação parar. Quem grava agora é a função
+   criar_solicitacao, e a tabela pode ficar fechada dos dois lados. */
 
 /* ============================================================================
    3) PLURAL — concordância de unidades e contagens
@@ -586,21 +718,23 @@ async function apiPost(tabela, corpo){
    ========================================================================== */
 const UNIDADES_PLURAL = {
   'unidade':'unidades','peça':'peças','litro':'litros','saco':'sacos','metro':'metros',
-  'metro cúbico':'metros cúbicos','quilo':'quilos','caixa':'caixas','par':'pares',
-  'rolo':'rolos','pacote':'pacotes','lata':'latas','galão':'galões','fardo':'fardos',
-  'tonelada':'toneladas','conjunto':'conjuntos','jogo':'jogos','kit':'kits',
-  'frasco':'frascos','barra':'barras','folha':'folhas','tubo':'tubos','balde':'baldes'
+  'metro cúbico':'metros cúbicos','metro quadrado':'metros quadrados','quilo':'quilos',
+  'caixa':'caixas','par':'pares','rolo':'rolos','pacote':'pacotes','lata':'latas',
+  'galão':'galões','fardo':'fardos','tonelada':'toneladas','conjunto':'conjuntos',
+  'jogo':'jogos','kit':'kits','frasco':'frascos','barra':'barras','folha':'folhas',
+  'tubo':'tubos','balde':'baldes','serviço':'serviços','dúzia':'dúzias',
+  'ampola':'ampolas','bobina':'bobinas','bombona':'bombonas','resma':'resmas'
 };
 
-function pluralPalavra(p){
-  const b = p.toLowerCase();
-  if(/ão$/.test(b))                  return b.replace(/ão$/,'ões');
-  if(/[aeiouáéíóúâêôãõ]$/.test(b))   return b + 's';
-  if(/m$/.test(b))                   return b.replace(/m$/,'ns');
-  if(/(r|z)$/.test(b))               return b + 'es';
-  if(/s$/.test(b))                   return b;
-  if(/il$/.test(b))                  return b.replace(/il$/,'is');
-  if(/l$/.test(b))                   return b.replace(/l$/,'is');
+function pluralPalavra(entrada){
+  const b = String(entrada).toLowerCase();
+  if(/ão$/.test(b))                 return b.replace(/ão$/,'ões');
+  if(/[aeiouáéíóúâêôãõ]$/.test(b))  return b + 's';
+  if(/m$/.test(b))                  return b.replace(/m$/,'ns');
+  if(/(r|z)$/.test(b))              return b + 'es';
+  if(/s$/.test(b))                  return b;
+  if(/il$/.test(b))                 return b.replace(/il$/,'is');
+  if(/l$/.test(b))                  return b.replace(/l$/,'is');
   return b + 's';
 }
 
@@ -612,6 +746,11 @@ function unidadePlural(unidade, n){
   return u.split(/\s+/).map(pluralPalavra).join(' ');
 }
 
+function hojeISO(){
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+}
+
 function contar(n, singular, plural){
   return n + ' ' + (Number(n) === 1 ? singular : plural);
 }
@@ -620,13 +759,19 @@ function contar(n, singular, plural){
    4) ESTADO
    ========================================================================== */
 const estado = {
-  tipo:'', familia:'', item:null, foraCatalogo:false, descricaoLivre:'',
+  nomeSolicitante:'', emailSolicitante:'', solicitanteNome:'', escopoServico:'',
+  observacao:'',
+  tipo:'', familia:'', item:null,
   quantidade:'', itensLista:[],
-  localEntrega:'', centroCusto:'',
+  centroCusto:'', centroCustoNome:'', centroCustoUnidade:'',
   tipoCompra:'', definicaoFornecedor:'', justificativaFornecedor:'',
   dataLimite:'', motivoCompra:'', anexos:[]
 };
-const rascunho = { familia:'', item:null, livre:false, descricao:'', quantidade:'', unidade:'' };
+const rascunho = { familia:'', item:null, quantidade:'', unidade:'' };
+
+/* Uma solicitação = uma família. Famílias diferentes costumam ter centro de
+   custo e local de entrega diferentes, e o pedido misturado esconde isso. */
+let familiaDoPedido = '';
 
 const $ = id => document.getElementById(id);
 let passoAtual = 0;
@@ -634,14 +779,20 @@ let modoVisual = 'passos';
 let ultimoPacote = null;   // o que foi enviado ao n8n
 let SLACK_UID = '';        // id do usuário no Slack, vindo da query string (vai só ao webhook)
 
-const sequencia = () => estado.tipo === 'lista'
-  ? ['item','entrega','compra','prazo']
-  : ['item','quantidade','entrega','compra','prazo'];
+const SEM_QUANTIDADE = ['lista','servico'];
+
+const sequencia = () => SEM_QUANTIDADE.includes(estado.tipo)
+  ? ['solicitante','item','entrega','compra','prazo']
+  : ['solicitante','item','quantidade','entrega','compra','prazo'];
 
 const TITULOS = {
-  item:'Item', quantidade:'Quantidade', entrega:'Entrega e custo',
+  solicitante:'Solicitante',
+  item:'Item', quantidade:'Quantidade', entrega:'Centro de custo',
   compra:'Tipo de compra e fornecedor', prazo:'Prazo e motivo'
 };
+
+/* O passo "item" muda de nome quando a solicitação é de serviço. */
+const tituloDe = k => (k === 'item' && estado.tipo === 'servico') ? 'Escopo do serviço' : TITULOS[k];
 
 /* ============================================================================
    5) MONTAGEM INICIAL
@@ -652,19 +803,44 @@ async function iniciar(){
   /* Nome e uid do solicitante podem vir do Slack pela query string
      (ex.: ?nome=Guilherme%20Pimp%C3%A3o&uid=U0BL5JPQX97). */
   const params = new URLSearchParams(location.search);
-  const nomeSlack = (params.get('nome') || '').trim();
+  const nomeSlack  = (params.get('nome') || '').trim();
+  const emailSlack = (params.get('email') || '').trim().toLowerCase();
   SLACK_UID = (params.get('uid') || '').trim();
 
+  /* O link do /compras traz nome e e-mail do usuário do Slack. É preenchimento,
+     não trava: quem abre a tela pelo link direto digita, e quem veio do Slack
+     com o cadastro errado consegue corrigir na hora. */
   if(nomeSlack){
-    DADOS.solicitante.nome = nomeSlack;
-    $('autoSolicitante').textContent = nomeSlack + ' · ' + DADOS.solicitante.cargo;
-    const nota = document.createElement('small');
-    nota.textContent = 'vindo do Slack';
-    nota.style.cssText = 'display:block;opacity:.6;font-weight:normal;font-size:.8em';
-    $('autoSolicitante').appendChild(nota);
-  } else {
-    $('autoSolicitante').textContent = DADOS.solicitante.nome + ' · ' + DADOS.solicitante.cargo;
+    estado.nomeSolicitante = nomeSlack;
+    $('nomeSolicitante').value = nomeSlack;
   }
+  if(emailSlack){
+    estado.emailSolicitante = emailSlack;
+    $('emailSolicitante').value = emailSlack;
+  }
+  /* Só facilitador abre pedido, e quem diz quem é o facilitador é o Slack — não
+     o campo da tela. Por isso o que vem do link fica TRAVADO: campo editável é
+     convite para abrir pedido no nome de outra pessoa.
+
+     O que não vier continua editável, senão a tela fica intransponível. Hoje o
+     e-mail é esse caso: falta o escopo users:read.email no app do Slack e o
+     perfil volta sem ele. No dia que a credencial do n8n for reconectada com o
+     escopo, o e-mail passa a chegar e trava sozinho — sem mexer aqui. */
+  travarCampo('nomeSolicitante', !!nomeSlack);
+  travarCampo('emailSolicitante', !!emailSlack);
+
+  if(nomeSlack && emailSlack){
+    $('veioDoSlack').textContent =
+      'Nome e e-mail são do seu usuário do Slack e não podem ser alterados aqui. ' +
+      'Só facilitador de compras abre pedido.';
+    $('veioDoSlack').hidden = false;
+  } else if(nomeSlack || emailSlack){
+    $('veioDoSlack').textContent = nomeSlack
+      ? 'O nome veio do seu usuário do Slack. O e-mail ainda não vem de lá — preencha abaixo com o seu e-mail corporativo.'
+      : 'O e-mail veio do seu usuário do Slack. Preencha o nome acima.';
+    $('veioDoSlack').hidden = false;
+  }
+  atualizarCabecalhoSolicitante();
 
   $('autoData').textContent = hoje.toLocaleDateString('pt-BR');
   $('autoNumero').textContent = 'SC-' + hoje.getFullYear() + '-' + String(Math.floor(Math.random()*9000)+1000);
@@ -676,21 +852,15 @@ async function iniciar(){
   const familias = DADOS.familias.map(f=>({v:f.id,t:f.nome}));
   preencherSelect($('familia'), familias);
   preencherSelect($('familiaLista'), familias);
-  preencherSelect($('localEntrega'), DADOS.locaisEntrega.map(u=>({v:u.id,t:u.nome})));
-  preencherSelect($('centroCusto'),  DADOS.centrosCusto.map(c=>({v:c.id,t:c.nome})));
 
   $('dataLimite').min = hoje.toISOString().slice(0,10);
 
-  if(!MODO_DEMO){
-    $('buscaItem').disabled = true;
-    $('buscaLista').disabled = true;
-  }
 
   $('demoBar').hidden = !MODO_DEMO;
   ligarEventos();
   renderLista();
   render();
-  await carregarCatalogo();
+  await Promise.all([carregarCatalogo(), carregarCentrosCusto(), carregarFacilitador(SLACK_UID)]);
 }
 
 async function carregarCatalogo(){
@@ -713,6 +883,137 @@ async function carregarCatalogo(){
     selo.textContent = 'offline'; selo.className = 'status off';
     mostrarAlerta('Não consegui ler o catálogo no Supabase. Usando a lista reduzida local.<br><code>'+String(e.message).slice(0,200)+'</code>');
   }
+}
+
+/* ----------------------------------------------------------------------------
+   FACILITADOR
+   Quem abre o pedido vem do Slack, mas o nome e o e-mail vêm da tabela
+   `facilitadores` — não do perfil do Slack. O e-mail de lá é o que a pessoa
+   cadastrou no Slack; o que a aprovação precisa é o corporativo, e esse quem
+   controla é a casa.
+   -------------------------------------------------------------------------- */
+let FACILITADOR = null;      // a linha da tabela, quando encontrada
+let FACILITADOR_BUSCADO = false;
+
+async function carregarFacilitador(uid){
+  if(!CONECTADO || !uid) return;
+  try{
+    /* Pela função, não pela tabela: a tabela guarda o organograma inteiro —
+       quem é chefe de quem, quem substitui quem — e a chave desta página é
+       pública. A função devolve só a pessoa daquele id do Slack. */
+    const r = await apiRpc('facilitador_por_slack', { p_uid: uid });
+    FACILITADOR = r.length ? r[0] : null;
+  }catch(e){
+    /* Tabela ainda não existe, ou banco fora do ar. Não é motivo para travar a
+       tela: cai no que veio pelo link do Slack. */
+    FACILITADOR = null;
+  }
+  FACILITADOR_BUSCADO = true;
+  aplicarFacilitador();
+}
+
+function aplicarFacilitador(){
+  if(FACILITADOR){
+    estado.nomeSolicitante  = FACILITADOR.nome;
+    estado.emailSolicitante = String(FACILITADOR.email || '').trim().toLowerCase();
+    $('nomeSolicitante').value  = estado.nomeSolicitante;
+    $('emailSolicitante').value = estado.emailSolicitante;
+    travarCampo('nomeSolicitante', true);
+    travarCampo('emailSolicitante', true);
+    limparErro('nomeSolicitante'); limparErro('emailSolicitante');
+    atualizarCabecalhoSolicitante();
+    $('veioDoSlack').textContent =
+      'Você está identificado como facilitador de compras' +
+      (FACILITADOR.unidade ? ' · ' + FACILITADOR.unidade : '') +
+      '. Nome e e-mail vêm do cadastro e não podem ser alterados aqui.';
+    $('veioDoSlack').hidden = false;
+    return;
+  }
+  if(EXIGIR_FACILITADOR && FACILITADOR_BUSCADO){
+    $('veioDoSlack').textContent =
+      'Este acesso não está na lista de facilitadores de compras, então não dá para abrir pedido por aqui. ' +
+      'Abra a tela pelo comando /compras no Slack, ou fale com o setor de compras para ser incluído.';
+    $('veioDoSlack').hidden = false;
+    mostrarAlerta('<b>Só facilitador de compras abre pedido.</b> ' +
+      'Se você é facilitador e está vendo isso, o seu usuário do Slack ainda não foi cadastrado.');
+  }
+}
+
+/* A trava do envio mora aqui para valer em qualquer caminho até o botão. */
+function facilitadorLiberado(){
+  return !EXIGIR_FACILITADOR || !!FACILITADOR;
+}
+
+/* ----------------------------------------------------------------------------
+   CENTROS DE CUSTO
+   São 746 vindos do ERP — lista grande demais para <select>, por isso o campo
+   é uma busca igual à do item. A lista mora no Supabase (tabela centros_custo);
+   se o banco não responder, cai na lista curta local para o formulário não
+   travar, e o aviso aparece na tela para ninguém enviar pedido com centro errado.
+   -------------------------------------------------------------------------- */
+let CENTROS_CUSTO = [];
+
+async function carregarCentrosCusto(){
+  const local = DADOS.centrosCusto.map(c => ({ codigo:c.id, nome:c.nome, unidade:'', tipo:'' }));
+  if(!CONECTADO){ CENTROS_CUSTO = local; return; }
+  try{
+    const dados = await apiGet('centros_custo?select=codigo,nome,unidade,tipo&ativo=is.true&order=nome&limit=2000');
+    CENTROS_CUSTO = dados.length ? dados : local;
+    if(!dados.length) mostrarAlerta('Conectado, mas a tabela <code>centros_custo</code> está vazia. Usando a lista curta local.');
+  }catch(e){
+    CENTROS_CUSTO = local;
+    mostrarAlerta('Não consegui ler os centros de custo no Supabase. Usando a lista curta local.<br><code>'+String(e.message).slice(0,200)+'</code>');
+  }
+}
+
+function filtrarCentros(termo){
+  const t = (termo||'').trim().toLowerCase();
+  if(!t) return CENTROS_CUSTO;
+  const partes = t.split(/\s+/);
+  return CENTROS_CUSTO.filter(c=>{
+    const alvo = (c.codigo + ' ' + c.nome + ' ' + (c.unidade||'')).toLowerCase();
+    return partes.every(pa => alvo.includes(pa));
+  });
+}
+
+function escolherCentro(c){
+  estado.centroCusto        = c.codigo;
+  estado.centroCustoNome    = c.nome;
+  estado.centroCustoUnidade = c.unidade || '';
+  $('cCodigo').textContent  = c.codigo;
+  $('cNome').textContent    = c.nome;
+  $('cUnidade').textContent = c.unidade || '—';
+  $('fichaCentro').hidden   = false;
+  $('buscaCentro').value    = c.nome;
+  esconder('resultadosCentro');
+  limparErro('centroCusto');
+}
+
+/* Usada só pelo botão de exemplo: pega o primeiro centro que casa com o termo. */
+function escolherCentroPorTermo(termo){
+  const achado = filtrarCentros(termo)[0] || CENTROS_CUSTO[0];
+  if(achado) escolherCentro(achado);
+}
+
+/* readonly, não disabled: o valor continua legível e selecionável, e a tela
+   consegue mostrar por que o campo não aceita digitação. */
+function travarCampo(id, travar){
+  const campo = $(id);
+  campo.readOnly = !!travar;
+  const ajuda = $(id === 'nomeSolicitante' ? 'ajudaNome' : 'ajudaEmail');
+  const jaTem = ajuda.querySelector('.travado-nota');
+  if(travar && !jaTem){
+    const selo = document.createElement('span');
+    selo.className = 'travado-nota';
+    selo.textContent = 'do Slack';
+    ajuda.appendChild(document.createTextNode(' '));
+    ajuda.appendChild(selo);
+  }
+}
+
+function atualizarCabecalhoSolicitante(){
+  const nome = (estado.nomeSolicitante || '').trim();
+  $('autoSolicitante').textContent = nome || '—';
 }
 
 function mostrarAlerta(html){ const el=$('alerta'); el.innerHTML=html; el.hidden=false; }
@@ -753,33 +1054,40 @@ function preencherSelect(sel, opcoes){
    6) EVENTOS
    ========================================================================== */
 function ligarEventos(){
+  $('nomeSolicitante').addEventListener('input', e=>{
+    estado.nomeSolicitante = e.target.value;
+    atualizarCabecalhoSolicitante();
+    limparErro('nomeSolicitante');
+  });
+  $('solicitanteNome').addEventListener('input', e=>{ estado.solicitanteNome = e.target.value; });
+  $('observacao').addEventListener('input',      e=>{ estado.observacao = e.target.value; });
+  $('emailSolicitante').addEventListener('input', e=>{
+    estado.emailSolicitante = e.target.value.trim();
+    limparErro('emailSolicitante');
+  });
+  $('escopoServico').addEventListener('input', e=>{
+    estado.escopoServico = e.target.value;
+    limparErro('escopoServico');
+  });
+
   $('familia').addEventListener('change', e=>{
     estado.familia = e.target.value; estado.item = null;
     $('ficha').hidden = true; $('buscaItem').value = '';
-    if(!MODO_DEMO) $('buscaItem').disabled = !estado.familia;
+
     esconder('resultados'); limparErro('familia');
   });
   $('buscaItem').addEventListener('focus', ()=>{
-    if(MODO_DEMO && !$('buscaItem').value) abrirResultados('resultados', itensDe(estado.familia), escolherItem);
+    if(!$('buscaItem').value) abrirResultados('resultados', itensDe(estado.familia), escolherItem);
   });
   $('buscaItem').addEventListener('input', e=>{
     const achados = filtrar(itensDe(estado.familia), e.target.value);
     if(achados === null){ esconder('resultados'); return; }
     abrirResultados('resultados', achados, escolherItem);
   });
-  $('buscaItem').addEventListener('blur', ()=> setTimeout(()=>esconder('resultados'),180));
+  $('buscaItem').addEventListener('blur', ()=>{ timerFechar['resultados'] = setTimeout(()=>esconder('resultados'),180); });
   $('trocarItem').addEventListener('click', ()=>{
     estado.item = null; $('ficha').hidden = true; $('buscaItem').value = ''; $('buscaItem').focus();
   });
-  $('foraCatalogo').addEventListener('change', e=>{
-    estado.foraCatalogo = e.target.checked;
-    $('campoDescLivre').hidden = !e.target.checked;
-    $('familia').disabled = e.target.checked;
-    $('buscaItem').disabled = e.target.checked || (!MODO_DEMO && !estado.familia);
-    if(e.target.checked){ estado.item = null; $('ficha').hidden = true; }
-    limparErro('item'); limparErro('descricaoLivre');
-  });
-  $('descricaoLivre').addEventListener('input', e=>{ estado.descricaoLivre = e.target.value; limparErro('descricaoLivre'); });
 
   $('quantidade').addEventListener('input', e=>{
     estado.quantidade = e.target.value;
@@ -790,11 +1098,11 @@ function ligarEventos(){
   $('familiaLista').addEventListener('change', e=>{
     rascunho.familia = e.target.value; rascunho.item = null;
     $('buscaLista').value = ''; rascunho.unidade = ''; atualizarUnidadeLista();
-    if(!MODO_DEMO) $('buscaLista').disabled = !rascunho.familia;
+
     esconder('resultadosLista'); atualizarBotaoAdd();
   });
   $('buscaLista').addEventListener('focus', ()=>{
-    if(MODO_DEMO && !$('buscaLista').value) abrirResultados('resultadosLista', itensDe(rascunho.familia), escolherItemLista);
+    if(!$('buscaLista').value) abrirResultados('resultadosLista', itensDe(rascunho.familia), escolherItemLista);
   });
   $('buscaLista').addEventListener('input', e=>{
     rascunho.item = null; atualizarBotaoAdd();
@@ -802,18 +1110,25 @@ function ligarEventos(){
     if(achados === null){ esconder('resultadosLista'); return; }
     abrirResultados('resultadosLista', achados, escolherItemLista);
   });
-  $('buscaLista').addEventListener('blur', ()=> setTimeout(()=>esconder('resultadosLista'),180));
-  $('descLista').addEventListener('input', e=>{ rascunho.descricao = e.target.value; atualizarBotaoAdd(); });
+  $('buscaLista').addEventListener('blur', ()=>{ timerFechar['resultadosLista'] = setTimeout(()=>esconder('resultadosLista'),180); });
   $('qtdLista').addEventListener('input', e=>{
     rascunho.quantidade = e.target.value;
     atualizarUnidadeLista();
     atualizarBotaoAdd();
   });
-  $('alternarLivre').addEventListener('click', alternarModoLivre);
   $('btnAddItem').addEventListener('click', adicionarItem);
 
-  $('localEntrega').addEventListener('change', e=>{ estado.localEntrega = e.target.value; limparErro('localEntrega'); });
-  $('centroCusto').addEventListener('change',  e=>{ estado.centroCusto  = e.target.value; limparErro('centroCusto');  });
+  $('buscaCentro').addEventListener('focus', ()=>{
+    if(!$('buscaCentro').value) abrirResultadosCentro(CENTROS_CUSTO);
+  });
+  $('buscaCentro').addEventListener('input', e=>{
+    estado.centroCusto = ''; estado.centroCustoNome = ''; estado.centroCustoUnidade = '';
+    $('fichaCentro').hidden = true;
+    abrirResultadosCentro(filtrarCentros(e.target.value));
+  });
+  $('buscaCentro').addEventListener('blur', ()=>{
+    timerFechar['resultadosCentro'] = setTimeout(()=>esconder('resultadosCentro'),180);
+  });
 
   $('justificativaFornecedor').addEventListener('input', e=>{
     estado.justificativaFornecedor = e.target.value; limparErro('justificativaFornecedor');
@@ -849,7 +1164,7 @@ function aoTrocarFornecedor(valor){
    7) BUSCA
    ========================================================================== */
 function itensDe(familia){
-  if(!familia) return MODO_DEMO ? CATALOGO : [];
+  if(!familia) return CATALOGO;          // família é filtro, não porteiro
   return CATALOGO.filter(i => i.familia === familia);
 }
 function filtrar(base, termo){
@@ -859,13 +1174,18 @@ function filtrar(base, termo){
   if(!t) return base;
   return base.filter(i => i.descricao.toLowerCase().includes(t) || (i.codigo||'').toLowerCase().includes(t));
 }
+const TETO_RESULTADOS = 50;
+const timerFechar = {};
+
 function abrirResultados(boxId, itens, aoEscolher){
+  clearTimeout(timerFechar[boxId]);   // cancela o fechamento agendado pelo blur
   const box = $(boxId);
   if(!itens.length){
     box.innerHTML = '<p class="vazio">Nenhum item encontrado no catálogo.</p>';
   } else {
+    const excedente = itens.length - TETO_RESULTADOS;
     box.innerHTML = '';
-    itens.forEach(i=>{
+    itens.slice(0, TETO_RESULTADOS).forEach(i=>{
       const b = document.createElement('button');
       b.type='button';
       b.innerHTML = '<b>'+i.descricao+'</b><span>'+i.codigo+' · '+i.unidade+'</span>';
@@ -873,10 +1193,48 @@ function abrirResultados(boxId, itens, aoEscolher){
       b.addEventListener('click', ()=> aoEscolher(i));
       box.appendChild(b);
     });
+    if(excedente > 0){
+      const p = document.createElement('p');
+      p.className = 'vazio';
+      p.textContent = 'e mais ' + excedente + ' itens — escreva mais para estreitar a busca.';
+      box.appendChild(p);
+    }
   }
   box.hidden = false;
 }
 function esconder(boxId){ $(boxId).hidden = true; }
+
+/* Mesma caixa de resultados, outro conteúdo: centro de custo tem código, nome
+   e unidade de negócio — o nome sozinho repete demais entre as safras. */
+function abrirResultadosCentro(lista){
+  clearTimeout(timerFechar['resultadosCentro']);
+  const box = $('resultadosCentro');
+  box.innerHTML = '';
+  if(!lista.length){
+    box.innerHTML = '<p class="vazio">Nenhum centro de custo encontrado. ' +
+      'Se ele não existe na lista, fale com o Compras antes de enviar.</p>';
+  } else {
+    const excedente = lista.length - TETO_RESULTADOS;
+    lista.slice(0, TETO_RESULTADOS).forEach(c=>{
+      const b = document.createElement('button');
+      b.type = 'button';
+      const b1 = document.createElement('b'); b1.textContent = c.nome;
+      const s1 = document.createElement('span');
+      s1.textContent = c.codigo + (c.unidade ? ' · ' + c.unidade : '') + (c.tipo ? ' · ' + c.tipo : '');
+      b.appendChild(b1); b.appendChild(s1);
+      b.addEventListener('mousedown', ev=> ev.preventDefault());
+      b.addEventListener('click', ()=> escolherCentro(c));
+      box.appendChild(b);
+    });
+    if(excedente > 0){
+      const p = document.createElement('p');
+      p.className = 'vazio';
+      p.textContent = 'e mais ' + excedente + ' centros — escreva mais para estreitar a busca.';
+      box.appendChild(p);
+    }
+  }
+  box.hidden = false;
+}
 
 function escolherItem(i){
   estado.item = i;
@@ -894,7 +1252,7 @@ function escolherItem(i){
    8) LISTA DE ITENS
    ========================================================================== */
 function atualizarUnidadeLista(){
-  const u = rascunho.livre ? 'Unidade' : rascunho.unidade;
+  const u = rascunho.unidade;
   $('unidadeLista').textContent = u ? unidadePlural(u, rascunho.quantidade || 1) : '—';
 }
 
@@ -906,65 +1264,111 @@ function escolherItemLista(i){
   esconder('resultadosLista'); atualizarBotaoAdd(); $('qtdLista').focus();
 }
 
-function alternarModoLivre(){
-  rascunho.livre = !rascunho.livre;
-  $('addCatalogo').hidden = rascunho.livre;
-  $('addLivre').hidden = !rascunho.livre;
-  $('alternarLivre').textContent = rascunho.livre ? '← Voltar a buscar no catálogo' : 'O item não está no catálogo';
-  rascunho.item = null; rascunho.descricao = ''; rascunho.unidade = '';
-  atualizarUnidadeLista();
-  $('descLista').value=''; $('buscaLista').value='';
-  atualizarBotaoAdd();
-}
 
 function atualizarBotaoAdd(){
-  const temItem = rascunho.livre ? rascunho.descricao.trim().length > 1 : !!rascunho.item;
+  const temItem = !!rascunho.item;
   const temQtd  = Number(rascunho.quantidade) > 0;
   $('btnAddItem').disabled = MODO_DEMO ? false : !(temItem && temQtd);
 }
 
 function adicionarItem(){
   const qtd = Number(rascunho.quantidade) > 0 ? Number(rascunho.quantidade) : 1;
-  if(rascunho.livre){
-    if(!rascunho.descricao.trim()) return;
-    estado.itensLista.push({ foraCatalogo:true, codigo:null, descricao:rascunho.descricao.trim(), unidade:'Unidade', quantidade:qtd });
+  if(!rascunho.item) return;
+  const i = rascunho.item;
+  if(familiaDoPedido && i.familia !== familiaDoPedido) return;
+  const repetido = estado.itensLista.find(x => x.codigo === i.codigo);
+  if(repetido){
+    /* Mesmo item duas vezes vira uma linha só: duas linhas do mesmo código
+       confundem a cotação e o fornecedor cota o item duplicado. */
+    repetido.quantidade = Number(repetido.quantidade) + qtd;
   } else {
-    if(!rascunho.item) return;
-    const i = rascunho.item;
-    estado.itensLista.push({ foraCatalogo:false, codigo:i.codigo, descricao:i.descricao, unidade:i.unidade, quantidade:qtd });
+    estado.itensLista.push({ foraCatalogo:false, codigo:i.codigo, familia:i.familia,
+      descricao:i.descricao, unidade:i.unidade, quantidade:qtd });
   }
-  rascunho.item=null; rascunho.descricao=''; rascunho.quantidade='';
-  if(!rascunho.livre){ rascunho.unidade=''; }
+
+  rascunho.item=null; rascunho.quantidade=''; rascunho.unidade='';
   atualizarUnidadeLista();
-  $('buscaLista').value=''; $('descLista').value=''; $('qtdLista').value='';
+  $('buscaLista').value=''; $('qtdLista').value='';
   atualizarBotaoAdd(); renderLista(); limparErro('itensLista');
+  $('buscaLista').focus();
+}
+
+/* A família do pedido é a do primeiro item. Depois disso ela trava: item de
+   outra família vai em outra solicitação, porque o centro de custo e o local
+   de entrega podem ser outros. */
+function travarFamilia(){
+  const antes = familiaDoPedido;
+  familiaDoPedido = estado.itensLista.length ? (estado.itensLista[0].familia || '') : '';
+  if(familiaDoPedido){
+    rascunho.familia = familiaDoPedido;
+    $('familiaLista').value = familiaDoPedido;
+    $('familiaLista').disabled = true;
+    $('familiaTravada').innerHTML =
+      'Esta solicitação é da família <b>' + nomeFamilia(familiaDoPedido) + '</b>. ' +
+      'Item de outra família precisa de uma nova solicitação — o centro de custo e o ' +
+      'local de entrega costumam ser diferentes.';
+    $('familiaTravada').hidden = false;
+  } else {
+    $('familiaLista').disabled = false;
+    $('familiaTravada').hidden = true;
+    if(antes){ rascunho.familia=''; $('familiaLista').value=''; $('buscaLista').value=''; rascunho.item=null; }
+  }
 }
 
 function removerItem(i){ estado.itensLista.splice(i,1); renderLista(); }
 
+function nomeFamilia(id){
+  if(!id) return 'Fora do catálogo';
+  const f = DADOS.familias.find(x=>x.id===id);
+  return f ? f.nome : id;
+}
+
 function renderLista(){
   const ul = $('itensLista'); ul.innerHTML = '';
+
+  /* Agrupado por família, na ordem em que cada família entrou no pedido —
+     é assim que a pessoa monta e é assim que ela confere. */
+  const ordem = [];
+  const grupos = {};
   estado.itensLista.forEach((it, idx)=>{
-    const li = document.createElement('li');
-    if(it.foraCatalogo) li.className='fora';
-    li.innerHTML = '<div class="info"><b>'+it.descricao+'</b><span>' +
-      (it.foraCatalogo ? '⚠ fora do catálogo — irá para cadastro' : it.codigo) + '</span></div>' +
-      '<span class="qtd-tag">'+it.quantidade+' '+unidadePlural(it.unidade, it.quantidade)+'</span>' +
-      '<button type="button" class="remover" title="Remover">×</button>';
-    li.querySelector('.remover').addEventListener('click', ()=> removerItem(idx));
-    ul.appendChild(li);
+    const chave = it.familia || '__livre';
+    if(!grupos[chave]){ grupos[chave] = []; ordem.push(chave); }
+    grupos[chave].push({ it, idx });
+  });
+
+  ordem.forEach(chave=>{
+    const bloco = document.createElement('li');
+    bloco.className = 'grupo-familia';
+    const h = document.createElement('h3');
+    h.textContent = nomeFamilia(chave === '__livre' ? null : chave) +
+      ' · ' + contar(grupos[chave].length, 'item', 'itens');
+    bloco.appendChild(h);
+
+    grupos[chave].forEach(({it, idx})=>{
+      const linha = document.createElement('div');
+      linha.className = 'item-linha' + (it.foraCatalogo ? ' fora' : '');
+      linha.innerHTML = '<div class="info"><b>'+it.descricao+'</b><span>' +
+        (it.foraCatalogo ? '⚠ fora do catálogo — irá para cadastro' : it.codigo) + '</span></div>' +
+        '<span class="qtd-tag">'+it.quantidade+' '+unidadePlural(it.unidade, it.quantidade)+'</span>' +
+        '<button type="button" class="remover" title="Remover">×</button>';
+      linha.querySelector('.remover').addEventListener('click', ()=> removerItem(idx));
+      bloco.appendChild(linha);
+    });
+    ul.appendChild(bloco);
   });
   const vazio = estado.itensLista.length === 0;
   $('listaVazia').hidden = !vazio;
   $('resumoLista').hidden = vazio;
   $('totalItens').textContent = estado.itensLista.length;
-  $('resumoTexto').textContent = estado.itensLista.length === 1 ? 'Item na lista' : 'Itens na lista';
+  $('resumoTexto').textContent =
+    estado.itensLista.length === 1 ? 'Item na lista' : 'Itens na lista';
+  travarFamilia();
 }
 
 function aoTrocarTipo(tipo){
-  const lista = tipo === 'lista';
-  $('blocoItem').hidden = lista;
-  $('blocoLista').hidden = !lista;
+  $('blocoItem').hidden    = tipo !== 'item';
+  $('blocoLista').hidden   = tipo !== 'lista';
+  $('blocoServico').hidden = tipo !== 'servico';
   if(passoAtual > sequencia().length-1) passoAtual = sequencia().length-1;
   render();
 }
@@ -991,26 +1395,33 @@ function limparErro(campo){
   if(s) s.remove();
 }
 function validar(passo){
-  if(MODO_DEMO) return true;   // <<< desligar o modo demo reativa tudo abaixo
+  /* A validação vale SEMPRE. O modo demo controla só a barra de cima e o
+     botão de exemplo — nunca a exigência dos campos: foi assim que cards
+     nasceram sem motivo e sem escopo em 28/08. */
   let ok = true;
   const falhar = (c,m)=>{ erro(c,m); ok = false; };
 
+  if(passo === 'solicitante'){
+    if(estado.nomeSolicitante.trim().length < 3) falhar('nomeSolicitante','Escreva o nome completo do facilitador.');
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(estado.emailSolicitante))
+      falhar('emailSolicitante','Informe um e-mail corporativo válido.');
+  }
   if(passo === 'item'){
     if(!estado.tipo) falhar('tipo','Selecione o tipo de solicitação.');
+    else if(estado.tipo === 'servico'){
+      if(estado.escopoServico.trim().length < 20)
+        falhar('escopoServico','Descreva o escopo do serviço — pelo menos uma frase completa.');
+    }
     else if(estado.tipo === 'lista'){
       if(!estado.itensLista.length) falhar('itensLista','Adicione pelo menos um item à lista.');
-    } else if(estado.foraCatalogo){
-      if(!estado.descricaoLivre.trim()) falhar('descricaoLivre','Descreva o item.');
     } else {
-      if(!estado.familia) falhar('familia','Selecione a família.');
-      if(!estado.item)    falhar('item','Busque e selecione o item.');
+      if(!estado.item) falhar('item','Busque e selecione o item no catálogo.');
     }
   }
   if(passo === 'quantidade'){
     if(!estado.quantidade || Number(estado.quantidade) <= 0) falhar('quantidade','Informe uma quantidade maior que zero.');
   }
   if(passo === 'entrega'){
-    if(!estado.localEntrega) falhar('localEntrega','Selecione o local de entrega.');
     if(!estado.centroCusto)  falhar('centroCusto','Selecione o centro de custo.');
   }
   if(passo === 'compra'){
@@ -1021,11 +1432,30 @@ function validar(passo){
   }
   if(passo === 'prazo'){
     if(!estado.dataLimite) falhar('dataLimite','Informe a data limite para entrega.');
+    else if(estado.dataLimite < hojeISO())
+      falhar('dataLimite','A data limite não pode estar no passado.');
     if(estado.motivoCompra.trim().length < 5) falhar('motivoCompra','Descreva o motivo da compra.');
   }
   return ok;
 }
 function validarTudo(){ return sequencia().every(p => validar(p)); }
+
+/* Antes de enviar, confere TODOS os passos, não só o que está na tela.
+   Se algum falhar, leva a pessoa até ele em vez de recusar em silêncio. */
+function podeEnviar(){
+  const seq = sequencia();
+  const falhou = seq.filter(p => !validar(p));
+  if(!falhou.length) return true;
+  if(modoVisual === 'passos'){
+    passoAtual = seq.indexOf(falhou[0]);
+    render();
+  }
+  const nomes = falhou.map(p => tituloDe(p)).join(', ');
+  mostrarAlerta('<b>Falta preencher antes de enviar:</b> ' + nomes +
+    '.<br>Os campos em vermelho mostram o que está faltando.');
+  window.scrollTo({top:0,behavior:'smooth'});
+  return false;
+}
 
 /* ============================================================================
    10) NAVEGAÇÃO
@@ -1043,7 +1473,7 @@ function render(){
     document.querySelectorAll('.passo').forEach(s=>{
       const k = s.dataset.passo;
       s.hidden = k === 'confirmacao' || !seq.includes(k);
-      if(!s.hidden) s.querySelector('h2').textContent = (seq.indexOf(k)+1) + '. ' + TITULOS[k];
+      if(!s.hidden) s.querySelector('h2').textContent = (seq.indexOf(k)+1) + '. ' + tituloDe(k);
     });
     $('progresso').hidden = true;
     $('btnVoltar').hidden = true;
@@ -1055,11 +1485,11 @@ function render(){
   const atual = seq[passoAtual];
   document.querySelectorAll('.passo').forEach(s=>{
     s.hidden = s.dataset.passo !== atual;
-    if(TITULOS[s.dataset.passo]) s.querySelector('h2').textContent = TITULOS[s.dataset.passo];
+    if(TITULOS[s.dataset.passo]) s.querySelector('h2').textContent = tituloDe(s.dataset.passo);
   });
   $('progresso').hidden = false;
   $('progTexto').textContent = 'Passo ' + (passoAtual+1) + ' de ' + seq.length;
-  $('progTitulo').textContent = TITULOS[atual] || '';
+  $('progTitulo').textContent = tituloDe(atual) || '';
   $('progBarra').style.width = ((passoAtual+1)/seq.length*100) + '%';
   $('btnVoltar').hidden = passoAtual === 0;
   $('btnAvancar').textContent = passoAtual === seq.length-1 ? 'Enviar solicitação' : 'Continuar';
@@ -1068,9 +1498,9 @@ function render(){
 }
 function avancar(){
   const seq = sequencia();
-  if(modoVisual === 'pagina'){ if(!validarTudo()) return; enviar(); return; }
+  if(modoVisual === 'pagina'){ if(podeEnviar()) enviar(); return; }
   if(!validar(seq[passoAtual])) return;
-  if(passoAtual === seq.length-1){ enviar(); return; }
+  if(passoAtual === seq.length-1){ if(podeEnviar()) enviar(); return; }
   passoAtual++; render();
 }
 function voltar(){ if(passoAtual>0){ passoAtual--; render(); } }
@@ -1081,7 +1511,27 @@ function voltar(){ if(passoAtual>0){ passoAtual--; render(); } }
 function acharNoCatalogo(cod){ return CATALOGO.find(i=>i.codigo===cod); }
 
 function preencherExemplo(){
-  if(estado.tipo === 'lista'){
+  if(!$('nomeSolicitante').value){
+    $('nomeSolicitante').value = 'Maria de Souza';
+    $('nomeSolicitante').dispatchEvent(new Event('input'));
+    $('emailSolicitante').value = 'maria.souza@leh.com.br';
+    $('emailSolicitante').dispatchEvent(new Event('input'));
+    $('solicitanteNome').value = 'João da Silva — Granja 103';
+    $('solicitanteNome').dispatchEvent(new Event('input'));
+    $('observacao').value = 'Combinar a entrega com o Zé antes de descarregar.';
+    $('observacao').dispatchEvent(new Event('input'));
+  }
+  if(estado.tipo === 'servico'){
+    $('escopoServico').value =
+      'Manutenção do telhado do galpão de máquinas da Granja 103: troca das telhas quebradas, ' +
+      'revisão dos rufos e limpeza das calhas. Serviço concluído quando não houver goteira ' +
+      'em dia de chuva forte e as calhas escoarem livremente. Material por conta do contratado.';
+    $('escopoServico').dispatchEvent(new Event('input'));
+    escolherCentroPorTermo('manuten');
+    marcarRadio('tipoCompra','normal');
+    marcarRadio('definicaoFornecedor','cotacao');
+    $('motivoCompra').value = 'Telhado do galpão de máquinas com goteira sobre os equipamentos';
+  } else if(estado.tipo === 'lista'){
     const pega = (cod, qtd, desc, un) => {
       const c = acharNoCatalogo(cod);
       return c ? { foraCatalogo:false, codigo:c.codigo, descricao:c.descricao, unidade:c.unidade, quantidade:qtd }
@@ -1091,11 +1541,10 @@ function preencherExemplo(){
       pega('LP-0220',30,'Sabonete em barra 90 g','Unidade'),
       pega('LP-0304',6,'Vassoura de piaçava nº 4','Unidade'),
       pega('LP-0311',20,'Detergente neutro 5 L','Litro'),
-      { foraCatalogo:true, codigo:null, descricao:'Rodo de borracha 60 cm', unidade:'Unidade', quantidade:4 }
+      pega('CN-0710',4,'Cimento CP II 50 kg','Saco')
     ];
     renderLista();
-    $('localEntrega').value = 'G103'; $('localEntrega').dispatchEvent(new Event('change'));
-    $('centroCusto').value  = 'CC-103-MOR'; $('centroCusto').dispatchEvent(new Event('change'));
+    escolherCentroPorTermo('morador');
     marcarRadio('tipoCompra','programada');
     marcarRadio('definicaoFornecedor','cotacao');
     $('motivoCompra').value = 'Reposição mensal de material de limpeza da casa dos moradores da Granja 103';
@@ -1104,8 +1553,7 @@ function preencherExemplo(){
     const pneu = acharNoCatalogo('MM3-0412') || CATALOGO[0];
     if(pneu){ $('familia').value = pneu.familia; $('familia').dispatchEvent(new Event('change')); escolherItem(pneu); }
     $('quantidade').value = 4; $('quantidade').dispatchEvent(new Event('input'));
-    $('localEntrega').value = 'ALM-GPVA'; $('localEntrega').dispatchEvent(new Event('change'));
-    $('centroCusto').value  = 'CC-FROTA'; $('centroCusto').dispatchEvent(new Event('change'));
+    escolherCentroPorTermo('frota');
     marcarRadio('tipoCompra','urgente');
     marcarRadio('definicaoFornecedor','unico');
     $('justificativaFornecedor').value = 'Peça original: apenas a concessionária fornece esta medida para o modelo do caminhão.';
@@ -1128,8 +1576,7 @@ function nomeDe(lista, id){
 }
 
 function montarPacote(solicitacaoId, cabecalho, itens){
-  const local      = nomeDe(DADOS.locaisEntrega, cabecalho.local_entrega);
-  const centro     = nomeDe(DADOS.centrosCusto,  cabecalho.centro_custo);
+  const centro     = estado.centroCustoNome || nomeDe(DADOS.centrosCusto, cabecalho.centro_custo);
   const tipoCompra = (DADOS.tiposCompra.find(t=>t.id===cabecalho.tipo_compra)||{}).titulo || '';
   const defForn    = (DADOS.definicoesFornecedor.find(f=>f.id===cabecalho.definicao_fornecedor)||{}).titulo || '';
 
@@ -1141,14 +1588,18 @@ function montarPacote(solicitacaoId, cabecalho, itens){
   return {
     solicitacao_id: solicitacaoId,
     numero:         cabecalho.numero,
-    solicitante:    cabecalho.solicitante,
-    slack_user_id:  SLACK_UID || '',
+    solicitante:       cabecalho.solicitante,
+    solicitante_email: (estado.emailSolicitante || '').trim().toLowerCase(),
+    solicitante_nome:  (estado.solicitanteNome || '').trim(),
+    observacao:        (estado.observacao || '').trim(),
+    tipo_solicitacao:  estado.tipo,
+    escopo_servico:    estado.tipo === 'servico' ? estado.escopoServico.trim() : null,
+    slack_user_id:     SLACK_UID || '',
     aberto_em:      new Date().toISOString(),
 
-    local_entrega:             cabecalho.local_entrega,
-    local_entrega_nome:        local,
     centro_custo:              cabecalho.centro_custo,
     centro_custo_nome:         centro,
+    centro_custo_unidade:      estado.centroCustoUnidade || '',
     tipo_compra:               cabecalho.tipo_compra,
     tipo_compra_nome:          tipoCompra,
     definicao_fornecedor:      cabecalho.definicao_fornecedor,
@@ -1166,14 +1617,20 @@ function montarPacote(solicitacaoId, cabecalho, itens){
     /* prontos para usar no card, sem o n8n precisar montar nada */
     titulo_card: cabecalho.numero + ' · ' + (cabecalho.motivo || 'Solicitação de compra'),
     descricao_card:
-      '**Solicitante:** ' + cabecalho.solicitante + '\n' +
-      '**Local de entrega:** ' + local + '\n' +
-      '**Centro de custo:** ' + centro + '\n' +
+      '**Facilitador:** ' + cabecalho.solicitante +
+        (estado.emailSolicitante ? ' · ' + estado.emailSolicitante.trim().toLowerCase() : '') + '\n' +
+      (estado.solicitanteNome.trim() ? '**Solicitante:** ' + estado.solicitanteNome.trim() + '\n' : '') +
+      '**Tipo de solicitação:** ' +
+        (({ item:'Item único', lista:'Lista de itens', servico:'Escopo de serviço' })[estado.tipo] || '—') + '\n' +
+      '**Centro de custo:** ' + centro + ' (' + (cabecalho.centro_custo || '—') + ')' + '\n' +
       '**Tipo de compra:** ' + tipoCompra + '\n' +
       '**Definição de fornecedor:** ' + defForn +
         (cabecalho.justificativa_fornecedor ? ' — ' + cabecalho.justificativa_fornecedor : '') + '\n' +
-      '**Entrega até:** ' + (cabecalho.data_necessidade || '—') + '\n\n' +
-      '**Itens (' + itens.length + ')**\n' + linhas
+      '**Entrega até:** ' + (cabecalho.data_necessidade || '—') + '\n' +
+      (estado.observacao.trim() ? '**Observação:** ' + estado.observacao.trim() + '\n' : '') + '\n' +
+      (estado.tipo === 'servico'
+        ? '**Escopo do serviço**\n' + estado.escopoServico.trim()
+        : '**Itens (' + itens.length + ')**\n' + linhas)
   };
 }
 
@@ -1196,11 +1653,14 @@ async function avisarWebhook(pacote){
    13) ENVIO
    ========================================================================== */
 function montarItens(){
-  if(estado.tipo === 'lista') return estado.itensLista;
-  if(estado.foraCatalogo){
-    return [{ foraCatalogo:true, codigo:null, descricao: estado.descricaoLivre || 'Item sem descrição',
-              unidade:'Unidade', quantidade: Number(estado.quantidade) || 1 }];
+  if(estado.tipo === 'servico'){
+    /* Serviço não tem catálogo: o escopo vira a única linha do pedido,
+       para o card e o banco continuarem com o mesmo formato. */
+    return [{ foraCatalogo:true, codigo:null, servico:true,
+              descricao: estado.escopoServico.trim() || 'Serviço sem escopo descrito',
+              unidade:'Serviço', quantidade:1 }];
   }
+  if(estado.tipo === 'lista') return estado.itensLista;
   const i = estado.item;
   if(!i) return [];
   return [{ foraCatalogo:false, codigo:i.codigo, descricao:i.descricao, unidade:i.unidade,
@@ -1211,39 +1671,75 @@ async function enviar(){
   const botao = $('btnAvancar');
   esconderAlerta();
 
+  if(!facilitadorLiberado()){
+    mostrarAlerta('<b>Só facilitador de compras abre pedido.</b> ' +
+      'O seu usuário do Slack não está na lista. Abra a tela pelo <code>/compras</code> ' +
+      'no Slack, ou fale com o setor de compras para ser incluído.');
+    window.scrollTo({top:0,behavior:'smooth'});
+    return;
+  }
+
+  /* Última trava, mesmo que alguém chegue aqui por outro caminho:
+     serviço sem escopo descrito não vira solicitação. */
+  if(estado.tipo === 'servico' && estado.escopoServico.trim().length < 20){
+    erro('escopoServico','Descreva o escopo do serviço — pelo menos uma frase completa.');
+    mostrarAlerta('<b>Não dá para enviar sem o escopo do serviço.</b> ' +
+      'Sem ele o comprador não tem o que cotar e o fornecedor não tem o que orçar.');
+    passoAtual = sequencia().indexOf('item'); render();
+    return;
+  }
+
   const cabecalho = {
     numero:                   $('autoNumero').textContent,
-    solicitante:              DADOS.solicitante.nome,
-    local_entrega:            estado.localEntrega || null,
+    solicitante:              estado.nomeSolicitante.trim() || DADOS.solicitante.nome,
+    /* `solicitante` é histórico e continua guardando quem abriu o pedido; as três
+       colunas abaixo são as que a tela realmente usa hoje. */
+    facilitador:              estado.nomeSolicitante.trim() || null,
+    facilitador_email:        (estado.emailSolicitante || '').trim().toLowerCase() || null,
+    solicitante_nome:         estado.solicitanteNome.trim() || null,
+    observacao:               estado.observacao.trim() || null,
     centro_custo:             estado.centroCusto || null,
     tipo_compra:              estado.tipoCompra || null,
     definicao_fornecedor:     estado.definicaoFornecedor || null,
     justificativa_fornecedor: estado.definicaoFornecedor === 'unico' ? (estado.justificativaFornecedor || null) : null,
     data_necessidade:         estado.dataLimite || null,
     motivo:                   estado.motivoCompra || null,
+    /* O Slack de quem abriu vai junto: é por ele que o fluxo descobre o
+       superior imediato, sem depender do e-mail estar escrito igual. */
+    slack_user_id:            SLACK_UID || null,
     status:                   'aguardando aprovacao'
   };
   const itens = montarItens();
 
   if(!CONECTADO){
     ultimoPacote = montarPacote(null, cabecalho, itens);
-    concluir(cabecalho, itens, 'Não gravado — chave do Supabase não preenchida.');
+    concluir(cabecalho, itens, 'Não gravado — chave do Supabase não preenchida.', false);
     return;
   }
 
   botao.disabled = true; botao.textContent = 'Enviando…';
   try{
-    const [solicitacao] = await apiPost('solicitacoes', cabecalho);
-    if(itens.length){
-      await apiPost('solicitacao_itens', itens.map(it=>({
-        solicitacao_id: solicitacao.id, codigo: it.codigo, descricao: it.descricao,
-        unidade: it.unidade, quantidade: it.quantidade, fora_catalogo: !!it.foraCatalogo
-      })));
+    /* Uma chamada, não duas.
+       Antes o cabeçalho ia num POST e os itens em outro: falha entre os dois
+       deixava um pedido sem itens e ninguém ficava sabendo. A função grava os
+       dois na mesma transação — ou entra tudo, ou não entra nada.
+       E não é mais um INSERT na tabela: o RETURNING de um insert passa pela
+       política de LEITURA, e foi assim que fechar a leitura pública derrubou a
+       gravação. Pela função isso não existe. */
+    const criada = await apiRpc('criar_solicitacao', {
+      p_cabecalho: cabecalho,
+      p_itens: itens.map(it => ({
+        codigo: it.codigo, descricao: it.descricao, unidade: it.unidade,
+        quantidade: it.quantidade, fora_catalogo: !!it.foraCatalogo
+      }))
+    });
+    if(!criada || criada.ok !== true){
+      throw new Error((criada && criada.mensagem) || 'o banco recusou a gravação');
     }
-    const pacote = montarPacote(solicitacao.id, cabecalho, itens);
+    const pacote = montarPacote(criada.id, cabecalho, itens);
     const aviso  = await avisarWebhook(pacote);
     ultimoPacote = pacote;
-    concluir(cabecalho, itens, 'Gravado no Supabase · ' + aviso.nota);
+    concluir(cabecalho, itens, 'Gravado no Supabase · ' + aviso.nota, aviso.ok);
   }catch(e){
     botao.disabled = false; botao.textContent = 'Enviar solicitação';
     mostrarAlerta('<b>Não consegui gravar no Supabase.</b><br><code>'+String(e.message).slice(0,300)+'</code>' +
@@ -1252,8 +1748,21 @@ async function enviar(){
   }
 }
 
-function concluir(cabecalho, itens, nota){
+function concluir(cabecalho, itens, nota, cardCriado){
   $('okNumero').textContent = cabecalho.numero + ' · ' + nota;
+
+  const falhou = cardCriado === false;
+  $('okSelo').textContent   = falhou ? '!' : '✓';
+  $('okTitulo').textContent = falhou ? 'Solicitação gravada, mas não chegou ao Compras'
+                                     : 'Solicitação enviada';
+  $('okAviso').hidden = !falhou;
+  if(falhou){
+    $('okAviso').innerHTML =
+      '<b>Ninguém foi avisado ainda.</b> O pedido ficou salvo com o número ' +
+      cabecalho.numero + ', mas o card não foi criado no ClickUp — então nenhuma ' +
+      'aprovação vai começar sozinha.<br><br>' +
+      'Avise o setor de compras com esse número, ou envie de novo daqui a alguns minutos.';
+  }
   $('okPayload').textContent = JSON.stringify(
     ultimoPacote || { solicitacao: cabecalho, itens: itens }, null, 2);
   document.querySelectorAll('.passo').forEach(s=>{ s.hidden = s.dataset.passo !== 'confirmacao'; });

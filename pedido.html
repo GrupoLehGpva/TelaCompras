@@ -1,0 +1,717 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pedido de compra · Grupo Leh</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<!--
+  ============================================================================
+  TELA DO PEDIDO — Grupo Leh · Compras
+  Leitura apenas. Abre por ?id=<uuid da solicitação> ou ?sc=SC-AAAA-NNNN.
+  O link vai no card do ClickUp e nas mensagens de aprovação; quem tem o link
+  vê o pedido, como na tela do fornecedor.
+  ============================================================================
+-->
+<style>
+  :root{
+    /* Identidade Grupo Leh — livro da marca, maio 2024
+       2965 C #00263d · 2955 C #003865 · 341 C #007A53 · 330 C #00524c
+       321 C #008c95 · 468 C #ddcba3 · Warm Gray 1 C #d7d2cc */
+    color-scheme:light;   /* faz o navegador desenhar rádio, seleção e data no tema certo */
+    --marca:#00263d;      --sobre-marca:#FFFFFF;      --azul:#003865;
+    --verde:#008c95;      --acento-fundo:#00727a;     --sobre-acento:#FFFFFF;
+    --verde-claro:#E2F1F2; --verde-folha:#007A53;     --verde-mata:#00524c;
+    --areia:#ddcba3;      --cinza-quente:#d7d2cc;
+    --bg:#F2F5F8;         --card:#FFFFFF;           --realce:#F7F9FB;
+    --texto:#0F2233;      --muted:#5F7284;
+    --borda:#DBE3EA;      --linha-forte:#B4C2CE;
+    --erro:#B3261E;       --erro-bg:#FDF2F1;        --erro-borda:#E8B4B0;
+    --demo:#8A5A00;       --demo-bg:#FFF8E8;        --demo-borda:#EFDDB4;
+    --ok-bg:#E1F0E9;      --ok-txt:#007A53;
+    --codigo-bg:#00263d;  --codigo-txt:#CFE3E5;
+    --raio:12px;          --pilula:100px;
+    /* O livro da marca adota GoldPlay e autoriza Arial para meios eletrônicos.
+       Figtree entra entre as duas como equivalente aberto mais próximo. */
+    --sans:"Goldplay","Goldplay Alt","Figtree",Arial,Helvetica,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --marca:#001725;      --sobre-marca:#FFFFFF;      --azul:#0A4472;
+      --verde:#2FB3BC;      --acento-fundo:#56C8CF;   --sobre-acento:#04161F;
+      --verde-claro:#0D2A2D; --verde-folha:#3FA37E;   --verde-mata:#0B3B37;
+      --areia:#7A6E55;      --cinza-quente:#6E6A65;
+      --bg:#08131C;         --card:#0F1D28;           --realce:#152431;
+      --texto:#E6EDF3;      --muted:#9CABB9;
+      --borda:#22323F;      --linha-forte:#36485B;
+      --erro:#F0A0A0;       --erro-bg:#2A1616;        --erro-borda:#5B2A2A;
+      --demo:#E0B860;       --demo-bg:#241D0E;        --demo-borda:#3B3218;
+      --ok-bg:#0F2C21;      --ok-txt:#5FC79A;
+      --codigo-bg:#04121B;  --codigo-txt:#CFE3E5;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --marca:#001725;    --sobre-marca:#FFFFFF;    --azul:#0A4472;
+    --verde:#2FB3BC;    --acento-fundo:#56C8CF;   --sobre-acento:#04161F;
+    --verde-claro:#0D2A2D; --verde-folha:#3FA37E;   --verde-mata:#0B3B37;
+    --areia:#7A6E55;    --cinza-quente:#6E6A65;
+    --bg:#08131C;       --card:#0F1D28;         --realce:#152431;
+    --texto:#E6EDF3;    --muted:#9CABB9;
+    --borda:#22323F;    --linha-forte:#36485B;
+    --erro:#F0A0A0;     --erro-bg:#2A1616;      --erro-borda:#5B2A2A;
+    --demo:#E0B860;     --demo-bg:#241D0E;      --demo-borda:#3B3218;
+    --ok-bg:#0F2C21;    --ok-txt:#5FC79A;
+    --codigo-bg:#04121B;  --codigo-txt:#CFE3E5;
+  }
+  .marca-bloco{display:flex;align-items:center;gap:16px;min-width:0}
+  .marca-bloco .titulo-tela{border-left:1px solid rgba(255,255,255,.28);padding-left:16px;min-width:0}
+  .logo-leh{display:block;height:34px;width:auto;flex:none}
+  .logo-leh.impressao{display:none}
+  @media (max-width:420px){ .logo-leh{height:28px} }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--texto);
+    font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .topo{background:var(--marca);color:var(--sobre-marca);padding:14px 20px;
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .topo .marca{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;opacity:.72}
+  .topo h1{margin:2px 0 0;font-size:19px;font-weight:650;line-height:1.2}
+  .topo .direita{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .selo{border-radius:var(--pilula);padding:5px 12px;font-size:12px;font-weight:700;
+    background:rgba(255,255,255,.12);color:var(--sobre-marca);white-space:nowrap}
+  .selo.status{background:var(--verde);color:var(--sobre-acento)}
+  .envelope{max-width:1080px;margin:0 auto;padding:20px 16px 64px}
+  .cartao{background:var(--card);border:1px solid var(--borda);border-radius:var(--raio);
+    padding:18px 20px;margin-bottom:16px}
+  .cartao h2{margin:0 0 14px;font-size:13px;font-weight:700;letter-spacing:.7px;
+    text-transform:uppercase;color:var(--muted)}
+  .ficha{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px 22px;margin:0}
+  .ficha dt{font-size:11px;letter-spacing:.7px;text-transform:uppercase;color:var(--muted)}
+  .ficha dd{margin:3px 0 0;font-size:15px;font-weight:600;line-height:1.4;word-break:break-word}
+  .ficha dd.solto{font-weight:400}
+  .barra-ferramentas{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .busca-tabela{flex:1 1 240px;min-width:0}
+  .busca-tabela input{width:100%;padding:11px 12px;font-size:15px;font-family:inherit;color:inherit;
+    background:var(--card);border:1px solid var(--borda);border-radius:10px;appearance:none}
+  .busca-tabela input:focus{outline:none;border-color:var(--verde);box-shadow:0 0 0 3px var(--verde-claro)}
+  .btn{border-radius:var(--pilula);border:1px solid var(--borda);background:var(--card);
+    color:var(--texto);font:inherit;font-size:14px;font-weight:600;padding:10px 18px;cursor:pointer;white-space:nowrap}
+  .btn:hover{border-color:var(--linha-forte)}
+  .rolagem{overflow-x:auto;border:1px solid var(--borda);border-radius:var(--raio);background:var(--card)}
+  table{border-collapse:collapse;width:100%;min-width:560px}
+  thead th{position:sticky;top:0;background:var(--realce);border-bottom:1px solid var(--borda);
+    text-align:left;padding:11px 14px;font-size:11px;letter-spacing:.7px;text-transform:uppercase;
+    color:var(--muted);white-space:nowrap;cursor:pointer;user-select:none}
+  thead th:hover{color:var(--texto)}
+  thead th .seta{opacity:.35;margin-left:6px;font-size:10px}
+  thead th[aria-sort] .seta{opacity:1;color:var(--verde)}
+  tbody td{border-bottom:1px solid var(--borda);padding:11px 14px;vertical-align:top}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:nth-child(even){background:var(--realce)}
+  td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+  td.cod{font-family:var(--mono);font-size:13px;color:var(--muted);white-space:nowrap}
+  td.desc{font-weight:600;min-width:220px}
+  .vazio-tabela{padding:26px 16px;text-align:center;color:var(--muted);font-size:14px}
+  .rodape-tabela{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    margin-top:12px;font-size:13px;color:var(--muted)}
+  .rodape-tabela b{color:var(--texto);font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .escopo{white-space:pre-wrap;font-size:15px;line-height:1.6;margin:0}
+  .aviso{border:1px dashed var(--demo-borda);background:var(--demo-bg);color:var(--demo);
+    border-radius:10px;padding:14px 16px;font-size:13px;line-height:1.5;margin-bottom:16px}
+  .erro{border:1px solid var(--erro-borda);background:var(--erro-bg);color:var(--erro);
+    border-radius:10px;padding:16px;font-size:14px;line-height:1.5}
+  .carregando{color:var(--muted);padding:30px 4px;font-size:14px}
+  .marca-dagua{margin-top:22px;font-size:12px;color:var(--muted);line-height:1.5}
+  @media (max-width:560px){
+    .envelope{padding:14px 10px 48px}
+    .cartao{padding:15px 14px}
+  }
+  @media print{
+    .topo{background:none;color:#000;border-bottom:2px solid var(--marca)}
+    .logo-leh{display:none}
+    .logo-leh.impressao{display:block}
+    .marca-bloco .titulo-tela{border-left-color:var(--linha-forte)}
+    .barra-ferramentas,.btn{display:none}
+    .rolagem{overflow:visible;border:0}
+    body{background:#fff}
+  }
+
+  /* ---- voltar para a fila: topo, à esquerda, onde o olho procura ---- */
+  .voltar-topo{display:inline-flex;align-items:center;gap:7px;margin:0 0 14px;
+    padding:8px 14px 8px 11px;border:1px solid var(--borda);border-radius:var(--pilula);
+    background:var(--card);color:var(--verde);font-size:14px;font-weight:600;
+    text-decoration:none;line-height:1}
+  .voltar-topo:hover{border-color:var(--verde);background:var(--verde-claro)}
+  .voltar-topo[hidden]{display:none}
+  .voltar-topo svg{flex:none}
+  @media print{ .voltar-topo{display:none} }
+
+  /* ---- barra de aprovação: só aparece quando a tela é aberta pela fila ---- */
+  .barra-aprova{position:sticky;bottom:0;z-index:20;margin-top:20px;
+    background:var(--card);border:1px solid var(--borda);border-radius:var(--raio);
+    padding:14px 18px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;
+    justify-content:space-between;box-shadow:0 -6px 22px rgba(0,20,32,.10)}
+  .barra-aprova[hidden]{display:none}
+  .barra-aprova .texto{color:var(--muted);font-size:14px;line-height:1.5;min-width:0}
+  .barra-aprova .texto b{color:var(--texto);display:block;font-size:15px}
+  .barra-aprova .botoes{display:flex;gap:10px;flex-wrap:wrap}
+  .barra-aprova button{padding:11px 20px;border-radius:var(--pilula);font:inherit;font-size:15px;
+    font-weight:650;cursor:pointer;border:1px solid var(--linha-forte);background:var(--card);color:var(--texto)}
+  .barra-aprova button.sim{background:var(--acento-fundo);border-color:var(--acento-fundo);color:var(--sobre-acento)}
+  .barra-aprova button.nao{background:var(--erro-bg);border-color:var(--erro-borda);color:var(--erro)}
+  .barra-aprova button[disabled]{opacity:.55;cursor:default}
+  .barra-aprova a.voltar{color:var(--verde);font-size:14px;font-weight:600;text-decoration:none;white-space:nowrap}
+  .barra-aprova a.voltar:hover{text-decoration:underline}
+  .barra-aprova.ok{border-color:var(--ok-txt);background:var(--ok-bg)}
+  .barra-aprova.ok .texto b{color:var(--ok-txt)}
+  .barra-aprova.nao-ok{border-color:var(--erro-borda);background:var(--erro-bg)}
+  .barra-aprova.nao-ok .texto b{color:var(--erro)}
+  @media print{ .barra-aprova{display:none} }
+
+  .fundo-modal{position:fixed;inset:0;background:rgba(0,20,32,.55);display:flex;
+    align-items:center;justify-content:center;padding:20px;z-index:50}
+  .fundo-modal[hidden]{display:none}
+  .modal{background:var(--card);border-radius:var(--raio);border:1px solid var(--borda);
+    max-width:520px;width:100%;padding:24px;box-shadow:0 18px 48px rgba(0,20,32,.28)}
+  .modal h2{margin:0 0 6px;font-size:19px;color:var(--erro);border:0;padding:0}
+  .modal p.sub{margin:0 0 16px;color:var(--muted);font-size:14px;line-height:1.55}
+  .modal textarea{width:100%;padding:11px 13px;border:1px solid var(--borda);border-radius:var(--raio);
+    background:var(--card);color:var(--texto);font:inherit;font-size:14px;resize:vertical;min-height:110px}
+  .modal textarea:focus{outline:none;border-color:var(--verde)}
+  .modal .erro-campo{color:var(--erro);font-size:13px;margin:8px 0 0}
+  .modal .erro-campo[hidden]{display:none}
+  .modal .rodape{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+  .modal .rodape button{padding:10px 18px;border-radius:var(--pilula);font:inherit;font-size:14px;
+    font-weight:650;cursor:pointer;border:1px solid var(--linha-forte);background:var(--card);color:var(--texto)}
+  .modal .rodape button.confirmar{background:var(--erro);border-color:var(--erro);color:#fff}
+  .modal .rodape button[disabled]{opacity:.6;cursor:default}
+</style>
+</head>
+<body>
+<header class="topo">
+  <div class="marca-bloco">
+    <img class="logo-leh" src="data:image/png;base64,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" alt="Grupo Leh">
+    <img class="logo-leh impressao" src="data:image/png;base64,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" alt="Grupo Leh">
+    <div class="titulo-tela">
+      <div class="marca">Compras</div>
+      <h1 id="tituloTopo">Pedido de compra</h1>
+    </div>
+  </div>
+  <div class="direita">
+    <span class="selo status" id="seloStatus" hidden></span>
+    <span class="selo" id="seloNumero" hidden></span>
+  </div>
+</header>
+
+<div class="envelope">
+  <a class="voltar-topo" id="voltarTopo" href="#" hidden>
+    <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M9.5 3 L4.5 8 L9.5 13" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>Voltar para a fila</a>
+
+  <div class="carregando" id="carregando">Carregando o pedido…</div>
+  <div class="erro" id="erro" hidden></div>
+
+  <main id="conteudo" hidden>
+    <section class="cartao">
+      <h2>Solicitação</h2>
+      <dl class="ficha" id="fichaCabecalho"></dl>
+    </section>
+
+    <section class="cartao" id="cartaoMotivo" hidden>
+      <h2>Motivo da compra</h2>
+      <p class="escopo" id="motivoTexto"></p>
+    </section>
+
+    <section class="cartao" id="cartaoObservacao" hidden>
+      <h2>Observação do pedido</h2>
+      <p class="escopo" id="observacaoTexto"></p>
+    </section>
+
+    <section class="cartao" id="cartaoJustificativa" hidden>
+      <h2>Justificativa do fornecedor único</h2>
+      <p class="escopo" id="justificativaTexto"></p>
+    </section>
+
+    <section class="cartao" id="cartaoEscopo" hidden>
+      <h2>Escopo do serviço</h2>
+      <p class="escopo" id="escopoTexto"></p>
+    </section>
+
+    <section class="cartao" id="cartaoItens">
+      <h2>Itens do pedido</h2>
+      <div class="barra-ferramentas">
+        <div class="busca-tabela">
+          <input type="search" id="filtro" placeholder="Filtrar por descrição, código ou unidade" autocomplete="off">
+        </div>
+        <button type="button" class="btn" id="btnCSV">Exportar CSV</button>
+        <button type="button" class="btn" id="btnImprimir">Imprimir</button>
+      </div>
+      <div class="rolagem">
+        <table id="tabela">
+          <thead>
+            <tr>
+              <th data-col="codigo">Código<span class="seta">↕</span></th>
+              <th data-col="descricao">Descrição<span class="seta">↕</span></th>
+              <th data-col="unidade">Unidade<span class="seta">↕</span></th>
+              <th data-col="quantidade" class="num">Quantidade<span class="seta">↕</span></th>
+            </tr>
+          </thead>
+          <tbody id="corpoTabela"></tbody>
+        </table>
+        <div class="vazio-tabela" id="tabelaVazia" hidden>Nenhum item corresponde ao filtro.</div>
+      </div>
+      <div class="rodape-tabela">
+        <span id="contagem"></span>
+        <span id="soma"></span>
+      </div>
+    </section>
+
+    <p class="marca-dagua" id="rodape"></p>
+  </main>
+
+  <div class="barra-aprova" id="barraAprova" hidden>
+    <div class="texto" id="textoAprova"></div>
+    <div class="botoes" id="botoesAprova">
+      <button type="button" class="sim" id="btnAprovar">Aprovar</button>
+      <button type="button" class="nao" id="btnReprovar">Reprovar</button>
+    </div>
+  </div>
+</div>
+
+<div class="fundo-modal" id="fundoModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tituloModal">
+    <h2 id="tituloModal">Reprovar solicitação</h2>
+    <p class="sub" id="subModal"></p>
+    <label for="motivoReprova" style="display:block;font-size:14px;font-weight:600;margin-bottom:6px">
+      Por que está reprovando?
+    </label>
+    <textarea id="motivoReprova"
+      placeholder="Ex.: já temos esse item em estoque na Granja 103; falar com o almoxarifado antes."></textarea>
+    <p class="erro-campo" id="erroMotivo" hidden></p>
+    <p class="sub" style="margin:10px 0 0">
+      O motivo vai para quem abriu o pedido, junto com o aviso de reprovação, e fica registrado no card.
+    </p>
+    <div class="rodape">
+      <button type="button" id="btnCancelar">Cancelar</button>
+      <button type="button" class="confirmar" id="btnConfirmarReprova">Reprovar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   CONFIGURAÇÃO — mesma chave pública do formulário
+   ========================================================================== */
+const SUPABASE_URL = 'https://mbwaqnlmscxbacmxdopr.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_AR4D1JlHB-Z12--QbzwYWQ_URZzmVwl';
+
+const $ = id => document.getElementById(id);
+const PARAMS = new URLSearchParams(location.search);
+
+async function apiGet(caminho){
+  const r = await fetch(SUPABASE_URL + '/rest/v1/' + caminho, {
+    headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+  });
+  if(!r.ok) throw new Error('HTTP ' + r.status + ' — ' + (await r.text()).slice(0,140));
+  return r.json();
+}
+
+/* Chamar a função em vez de ler a tabela.
+   A chave desta página é pública — está aqui no código, tem que estar. Se a
+   página lê a TABELA, quem copiar a chave lê a tabela inteira: todos os
+   pedidos, com nome de quem pediu e o motivo escrito à mão. Pela FUNÇÃO só
+   vem um pedido, e só para quem já sabe qual. */
+async function apiRpc(nome, corpo){
+  const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + nome, {
+    method:'POST',
+    headers:{ apikey: SUPABASE_KEY, Authorization:'Bearer ' + SUPABASE_KEY,
+              'Content-Type':'application/json' },
+    body: JSON.stringify(corpo)
+  });
+  if(!r.ok) throw new Error('HTTP ' + r.status + ' — ' + (await r.text()).slice(0,140));
+  return r.json();
+}
+
+/* ============================================================================
+   NOMES LEGÍVEIS — o banco guarda o código; a tela mostra o nome
+   ========================================================================== */
+const CENTROS = {
+  'CC-101-PROD':'Granja 101 · Produção', 'CC-101-MAN':'Granja 101 · Manutenção',
+  'CC-102-PROD':'Granja 102 · Produção', 'CC-102-MAN':'Granja 102 · Manutenção',
+  'CC-103-PROD':'Granja 103 · Produção', 'CC-103-MAN':'Granja 103 · Manutenção',
+  'CC-103-MOR':'Granja 103 · Casa dos moradores', 'CC-FROTA':'Frota',
+  'CC-AGRI':'Agricultura', 'CC-ADM':'Administrativo', 'CC-RH':'RH',
+  'CC-PI-AGRI':'Piauí · Agricultura', 'CC-PI-COZ':'Piauí · Cozinha e despensa'
+};
+const TIPOS_COMPRA = { programada:'Programada', normal:'Normal', urgente:'Urgente' };
+const DEF_FORNECEDOR = { cotacao:'Cotação', unico:'Fornecedor único' };
+
+const legivel = (mapa, cod) => cod ? (mapa[cod] || cod) : '—';
+
+/* Os 746 centros do ERP vivem na tabela centros_custo. A tela busca só o do
+   pedido — o mapa acima fica como reserva para as solicitações antigas, que
+   ainda guardam os códigos CC-… criados antes da carga do ERP. */
+let CENTRO_NOME = '';
+async function nomeDoCentro(codigo){
+  if(!codigo) return '';
+  try{
+    const r = await apiGet('centros_custo?select=nome,unidade&codigo=eq.' +
+      encodeURIComponent(codigo) + '&limit=1');
+    if(r.length) return r[0].nome + (r[0].unidade ? ' · ' + r[0].unidade : '');
+  }catch(e){ /* sem banco: cai no mapa de reserva */ }
+  return '';
+}
+const dataBR = iso => {
+  if(!iso) return '—';
+  const d = new Date(String(iso).length <= 10 ? iso + 'T12:00:00' : iso);
+  return isNaN(d) ? String(iso) : d.toLocaleDateString('pt-BR');
+};
+const numBR = n => Number(n||0).toLocaleString('pt-BR', {maximumFractionDigits:3});
+const esc = t => String(t==null?'':t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ----------------------------------------------------------------------------
+   CONCORDÂNCIA DA UNIDADE
+   "1 unidade", "5 unidades". As irregulares vêm da tabela; o resto segue a
+   regra. Abreviação (kg, m, L, un) não flexiona — "5 kgs" não existe.
+   A capitalização do cadastro é preservada: "Unidade" vira "Unidades".
+   -------------------------------------------------------------------------- */
+const UNIDADES_PLURAL = {
+  'unidade':'unidades','peça':'peças','litro':'litros','saco':'sacos','metro':'metros',
+  'metro cúbico':'metros cúbicos','metro quadrado':'metros quadrados','quilo':'quilos',
+  'caixa':'caixas','par':'pares','rolo':'rolos','pacote':'pacotes','lata':'latas',
+  'galão':'galões','fardo':'fardos','tonelada':'toneladas','conjunto':'conjuntos',
+  'jogo':'jogos','kit':'kits','frasco':'frascos','barra':'barras','folha':'folhas',
+  'tubo':'tubos','balde':'baldes','serviço':'serviços','dúzia':'dúzias',
+  'ampola':'ampolas','bobina':'bobinas','bombona':'bombonas','resma':'resmas'
+};
+const UNIDADES_INVARIAVEIS = new Set(
+  ['kg','g','mg','t','l','ml','m','cm','mm','km','m²','m³','m2','m3','un','pç','pc','cx','h','min']);
+
+function pluralPalavra(entrada){
+  const b = String(entrada).toLowerCase();
+  if(/ão$/.test(b))                 return b.replace(/ão$/,'ões');
+  if(/[aeiouáéíóúâêôãõ]$/.test(b))  return b + 's';
+  if(/m$/.test(b))                  return b.replace(/m$/,'ns');
+  if(/(r|z)$/.test(b))              return b + 'es';
+  if(/s$/.test(b))                  return b;
+  if(/il$/.test(b))                 return b.replace(/il$/,'is');
+  if(/l$/.test(b))                  return b.replace(/l$/,'is');
+  return b + 's';
+}
+
+function comoOriginal(velho, novo){
+  if(velho === velho.toUpperCase()) return novo.toUpperCase();
+  if(velho.charAt(0) !== velho.charAt(0).toLowerCase())
+    return novo.charAt(0).toUpperCase() + novo.slice(1);
+  return novo;
+}
+
+function plural(unidade, q){
+  const u = String(unidade || '').trim();
+  if(!u) return '';
+  if(Number(q) === 1) return u;
+  const base = u.toLowerCase();
+  if(UNIDADES_INVARIAVEIS.has(base)) return u;
+  const p = UNIDADES_PLURAL[base] || base.split(/\s+/).map(pluralPalavra).join(' ');
+  return comoOriginal(u, p);
+}
+
+/* ============================================================================
+   ESTADO DA TABELA
+   ========================================================================== */
+let ITENS = [];
+let ordem = { col:null, asc:true };
+let termo = '';
+
+function itensVisiveis(){
+  const t = termo.trim().toLowerCase();
+  let lista = !t ? ITENS.slice() : ITENS.filter(i =>
+    [i.codigo, i.descricao, i.unidade].some(v => String(v||'').toLowerCase().includes(t)));
+  if(ordem.col){
+    const c = ordem.col, sinal = ordem.asc ? 1 : -1;
+    lista.sort((a,b)=>{
+      if(c === 'quantidade') return (Number(a.quantidade||0) - Number(b.quantidade||0)) * sinal;
+      return String(a[c]||'').localeCompare(String(b[c]||''), 'pt-BR', {numeric:true}) * sinal;
+    });
+  }
+  return lista;
+}
+
+function desenharTabela(){
+  const lista = itensVisiveis();
+  $('corpoTabela').innerHTML = lista.map(i => (
+    '<tr>' +
+      '<td class="cod">' + esc(i.codigo || 'sem código') + '</td>' +
+      '<td class="desc">' + esc(i.descricao) + '</td>' +
+      '<td>' + esc(plural(i.unidade, i.quantidade)) + '</td>' +
+      '<td class="num">' + numBR(i.quantidade) + '</td>' +
+    '</tr>'
+  )).join('');
+  $('tabelaVazia').hidden = lista.length > 0;
+  $('contagem').textContent = lista.length === ITENS.length
+    ? ITENS.length + (ITENS.length === 1 ? ' item' : ' itens')
+    : lista.length + ' de ' + ITENS.length + ' itens';
+  const soma = lista.reduce((s,i)=> s + Number(i.quantidade||0), 0);
+  $('soma').innerHTML = 'Soma das quantidades: <b>' + numBR(soma) + '</b>';
+}
+
+function ordenarPor(col){
+  ordem = (ordem.col === col) ? { col, asc: !ordem.asc } : { col, asc: true };
+  document.querySelectorAll('thead th').forEach(th=>{
+    if(th.dataset.col === col){ th.setAttribute('aria-sort', ordem.asc ? 'ascending' : 'descending');
+      th.querySelector('.seta').textContent = ordem.asc ? '↑' : '↓'; }
+    else { th.removeAttribute('aria-sort'); th.querySelector('.seta').textContent = '↕'; }
+  });
+  desenharTabela();
+}
+
+function baixarCSV(){
+  const linhas = [['Código','Descrição','Unidade','Quantidade']]
+    .concat(itensVisiveis().map(i => [i.codigo||'', i.descricao||'', i.unidade||'', String(i.quantidade||'').replace('.',',')]));
+  /* Célula que começa com = + - @ vira fórmula quando o Excel abre o arquivo.
+     A descrição do item vem do catálogo, mas o CSV é aberto fora daqui: um
+     código que comece com sinal não pode virar comando na planilha de ninguém. */
+  const seguro = c => { const t = String(c); return /^[=+\-@\t\r]/.test(t) ? "'" + t : t; };
+  const csv = '﻿' + linhas.map(l => l.map(c => '"' + seguro(c).replace(/"/g,'""') + '"').join(';')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'}));
+  a.download = (document.getElementById('seloNumero').textContent || 'pedido') + '.csv';
+  a.click();
+  setTimeout(()=> URL.revokeObjectURL(a.href), 2000);
+}
+
+/* ============================================================================
+   DESENHO DO CABEÇALHO
+   ========================================================================== */
+function campo(rotulo, valor, solto){
+  return '<div><dt>' + rotulo + '</dt><dd' + (solto ? ' class="solto"' : '') + '>' + esc(valor || '—') + '</dd></div>';
+}
+
+function desenhar(s, itens){
+  ITENS = itens;
+  const numero = s.numero || '—';
+  document.title = numero + ' · Pedido de compra';
+  $('tituloTopo').textContent = numero;
+  $('seloNumero').textContent = numero; $('seloNumero').hidden = false;
+  if(s.status){ $('seloStatus').textContent = s.status; $('seloStatus').hidden = false; }
+
+  const ehServico = itens.length === 1 && String(itens[0].unidade||'').toLowerCase() === 'serviço';
+
+  $('fichaCabecalho').innerHTML =
+    campo('Facilitador', s.facilitador || s.solicitante) +
+    (s.solicitante_nome ? campo('Solicitante', s.solicitante_nome) : '') +
+    campo('Aberto em', dataBR(s.aberto_em)) +
+    campo('Tipo de compra', legivel(TIPOS_COMPRA, s.tipo_compra)) +
+    campo('Centro de custo', CENTRO_NOME || legivel(CENTROS, s.centro_custo)) +
+    campo('Entrega até', dataBR(s.data_necessidade)) +
+    campo('Definição de fornecedor', legivel(DEF_FORNECEDOR, s.definicao_fornecedor)) +
+    campo('Natureza', ehServico ? 'Escopo de serviço' : (itens.length > 1 ? 'Lista de itens' : 'Item único'));
+
+  if(s.motivo){ $('motivoTexto').textContent = s.motivo; $('cartaoMotivo').hidden = false; }
+  if(s.observacao){
+    $('observacaoTexto').textContent = s.observacao;
+    $('cartaoObservacao').hidden = false;
+  }
+  if(s.justificativa_fornecedor){
+    $('justificativaTexto').textContent = s.justificativa_fornecedor;
+    $('cartaoJustificativa').hidden = false;
+  }
+  if(ehServico){
+    $('escopoTexto').textContent = itens[0].descricao;
+    $('cartaoEscopo').hidden = false;
+    $('cartaoItens').hidden = true;
+  } else {
+    desenharTabela();
+  }
+
+  $('rodape').textContent =
+    'Somente leitura. Os preços não aparecem aqui — são apurados pelo setor de compras depois da primeira aprovação. ' +
+    'Lido do banco em ' + new Date().toLocaleString('pt-BR') + '.';
+  $('carregando').hidden = true;
+  $('conteudo').hidden = false;
+}
+
+function falhar(titulo, detalhe){
+  $('carregando').hidden = true;
+  $('erro').innerHTML = '<b>' + esc(titulo) + '</b>' + (detalhe ? '<br>' + esc(detalhe) : '');
+  $('erro').hidden = false;
+}
+
+/* ============================================================================
+   ABERTURA
+   ========================================================================== */
+let SOLICITACAO = null;
+
+async function abrir(){
+  const id = (PARAMS.get('id') || '').trim();
+  const sc = (PARAMS.get('sc') || PARAMS.get('numero') || '').trim();
+
+  if(!id && !sc){
+    falhar('Link incompleto.',
+      'O endereço precisa trazer a solicitação: pedido.html?id=… ou pedido.html?sc=SC-2026-0001');
+    return;
+  }
+  try{
+    const resposta = await apiRpc('abrir_pedido', {
+      p_id: id || null,
+      p_numero: id ? null : (sc || null)
+    });
+    if(!resposta || resposta.ok !== true){
+      falhar('Solicitação não encontrada.',
+        'Confira o link. Se a solicitação foi aberta agora, aguarde alguns segundos e recarregue.');
+      return;
+    }
+    const s = resposta.pedido;
+    const itens = resposta.itens || [];
+    CENTRO_NOME = s.centro_custo_nome || await nomeDoCentro(s.centro_custo);
+    SOLICITACAO = s;
+    desenhar(s, itens);
+    /* Depois de desenhar: a barra de aprovação é um extra, e não pode atrasar
+       nem derrubar a leitura do pedido. */
+    prepararAprovacao().catch(()=>{});
+  }catch(e){
+    falhar('Não consegui ler o pedido no banco.', String(e.message).slice(0,220));
+  }
+}
+
+document.querySelectorAll('thead th').forEach(th =>
+  th.addEventListener('click', ()=> ordenarPor(th.dataset.col)));
+$('filtro').addEventListener('input', e => { termo = e.target.value; desenharTabela(); });
+$('btnCSV').addEventListener('click', baixarCSV);
+$('btnImprimir').addEventListener('click', ()=> window.print());
+
+abrir();
+
+/* ============================================================================
+   APROVAR OU REPROVAR DAQUI
+   A tela do pedido é de leitura. Ela só ganha botões quando é aberta a partir
+   da fila de um aprovador — o link traz ?t=<token>&e=<etapa>. E mesmo assim,
+   só se este pedido estiver de fato na fila daquela pessoa: token velho, ou
+   pedido que já foi decidido, não mostra botão nenhum.
+   ========================================================================== */
+/* POST, não link: o token do aprovador e o motivo da reprovação não podem
+   viajar em query string (fica em log, em histórico, no Referer). Mesma porta
+   que a fila usa. */
+const ENDPOINT_DECISAO = 'https://grupoleh.app.n8n.cloud/webhook/decisao-tela-5a31745968808aaf41ce';
+const MOTIVO_MINIMO = 10;
+const TOKEN_APROVADOR = (PARAMS.get('t') || '').trim();
+
+let NA_FILA = null;      // a linha da fila, quando este pedido é daquele aprovador
+let decidindo = false;
+
+async function rpc(nome, corpo){
+  const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + nome, {
+    method:'POST',
+    headers:{ apikey:SUPABASE_KEY, Authorization:'Bearer ' + SUPABASE_KEY,
+              'Content-Type':'application/json' },
+    body: JSON.stringify(corpo)
+  });
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+async function prepararAprovacao(){
+  if(!TOKEN_APROVADOR) return;
+  /* O caminho de volta aparece assim que a tela sabe que veio de uma fila —
+     antes de saber se este pedido é daquele aprovador. Quem clicou numa
+     linha errada precisa conseguir voltar do mesmo jeito. */
+  const voltar = $('voltarTopo');
+  voltar.href = 'aprovacoes.html?t=' + encodeURIComponent(TOKEN_APROVADOR);
+  voltar.hidden = false;
+  let fila = [];
+  try{ fila = await rpc('fila_de_aprovacao', { p_token: TOKEN_APROVADOR }); }
+  catch(e){ return; }   /* sem fila, a tela continua sendo de leitura */
+
+  const aqui = fila.find(f => f.id === (SOLICITACAO && SOLICITACAO.id));
+  if(!aqui){
+    mostrarBarra('Este pedido não está esperando a sua aprovação.',
+      'Ele pode já ter sido decidido, ou estar em outra etapa.', 'nao-ok', false);
+    return;
+  }
+  NA_FILA = aqui;
+  mostrarBarra('Sua decisão sobre esta solicitação',
+    'Aprovando, ela segue para a próxima etapa. Reprovando, o motivo vai para quem pediu.', '', true);
+}
+
+function mostrarBarra(titulo, sub, classe, comBotoes){
+  $('barraAprova').className = 'barra-aprova ' + (classe || '');
+  $('textoAprova').innerHTML = '<b>' + esc(titulo) + '</b>' + esc(sub || '');
+  $('botoesAprova').querySelectorAll('button').forEach(b => b.hidden = !comBotoes);
+  $('barraAprova').hidden = false;
+}
+
+async function decidir(decisao, motivo){
+  if(decidindo || !NA_FILA) return;
+  decidindo = true;
+  $('btnAprovar').disabled = true; $('btnReprovar').disabled = true;
+  try{
+    const r = await fetch(ENDPOINT_DECISAO, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({
+        token: TOKEN_APROVADOR,
+        solicitacao_id: NA_FILA.id || '',
+        card_id: NA_FILA.card_id || '',
+        etapa: NA_FILA.etapa_atual || '',
+        numero: NA_FILA.numero || '',
+        decisao: decisao,
+        motivo: motivo || ''
+      })
+    });
+    const j = await r.json().catch(()=>({}));
+    if(r.ok && j.ok){
+      NA_FILA = null;
+      mostrarBarra(decisao === 'aprovado' ? 'Aprovado.' : 'Reprovado.',
+        decisao === 'aprovado'
+          ? 'A solicitação segue para a próxima etapa.'
+          : 'Quem abriu o pedido vai receber o aviso com o motivo.',
+        decisao === 'aprovado' ? 'ok' : 'nao-ok', false);
+    } else {
+      mostrarBarra('Não consegui registrar a decisão.',
+        (j.mensagem || 'Tente de novo, ou abra o card no ClickUp.'), 'nao-ok', true);
+      $('btnAprovar').disabled = false; $('btnReprovar').disabled = false;
+    }
+  }catch(e){
+    mostrarBarra('Não consegui registrar a decisão.',
+      'A rede falhou no meio. Tente de novo.', 'nao-ok', true);
+    $('btnAprovar').disabled = false; $('btnReprovar').disabled = false;
+  }
+  decidindo = false;
+}
+
+function abrirReprova(){
+  $('subModal').textContent = 'Solicitação ' + ((NA_FILA && NA_FILA.numero) || '');
+  $('motivoReprova').value = '';
+  $('erroMotivo').hidden = true;
+  $('fundoModal').hidden = false;
+  $('motivoReprova').focus();
+}
+function fecharReprova(){ $('fundoModal').hidden = true; }
+
+$('btnAprovar').addEventListener('click', ()=> decidir('aprovado', ''));
+$('btnReprovar').addEventListener('click', abrirReprova);
+$('btnCancelar').addEventListener('click', fecharReprova);
+$('btnConfirmarReprova').addEventListener('click', async ()=>{
+  const motivo = $('motivoReprova').value.trim();
+  if(motivo.length < MOTIVO_MINIMO){
+    $('erroMotivo').textContent =
+      'Escreva o motivo — é o que a pessoa que pediu vai ler para entender a recusa.';
+    $('erroMotivo').hidden = false;
+    $('motivoReprova').focus();
+    return;
+  }
+  fecharReprova();
+  await decidir('reprovado', motivo);
+});
+$('fundoModal').addEventListener('click', e=>{ if(e.target === $('fundoModal')) fecharReprova(); });
+document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && !$('fundoModal').hidden) fecharReprova(); });
+</script>
+
+</body>
+</html>

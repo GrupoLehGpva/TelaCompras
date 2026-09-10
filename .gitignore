@@ -1,1 +1,11 @@
 CLAUDE.md
+t-*.png
+
+# Planilhas com dados de gente de verdade. O repositório é PÚBLICO — a tabela
+# de lideranças tem nome, e-mail e hierarquia dos colaboradores, e não pode
+# virar página na internet. Elas ficam só na pasta local.
+*.xlsx
+
+# Pastas de trabalho, não fazem parte do site
+Claude outputs/
+demonstracao/
