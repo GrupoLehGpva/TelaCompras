@@ -706,13 +706,11 @@ async function apiRpc(nome, corpo){
   if(!r.ok) throw new Error(await r.text());
   return r.json();
 }
-async function apiPost(tabela, corpo){
-  const r = await fetch(SUPABASE_URL + '/rest/v1/' + tabela, {
-    method:'POST', headers: cabecalhos({'Prefer':'return=representation'}), body: JSON.stringify(corpo)
-  });
-  if(!r.ok) throw new Error(await r.text());
-  return r.json();
-}
+/* Não existe mais escrita direta em tabela a partir desta página.
+   Ficava aqui um apiPost com `Prefer: return=representation`; ele foi embora
+   junto com o bug que causou: RETURNING passa pela política de leitura, e
+   fechar a leitura pública fez a gravação parar. Quem grava agora é a função
+   criar_solicitacao, e a tabela pode ficar fechada dos dois lados. */
 
 /* ============================================================================
    3) PLURAL — concordância de unidades e contagens
@@ -1706,6 +1704,9 @@ async function enviar(){
     justificativa_fornecedor: estado.definicaoFornecedor === 'unico' ? (estado.justificativaFornecedor || null) : null,
     data_necessidade:         estado.dataLimite || null,
     motivo:                   estado.motivoCompra || null,
+    /* O Slack de quem abriu vai junto: é por ele que o fluxo descobre o
+       superior imediato, sem depender do e-mail estar escrito igual. */
+    slack_user_id:            SLACK_UID || null,
     status:                   'aguardando aprovacao'
   };
   const itens = montarItens();
@@ -1718,14 +1719,24 @@ async function enviar(){
 
   botao.disabled = true; botao.textContent = 'Enviando…';
   try{
-    const [solicitacao] = await apiPost('solicitacoes', cabecalho);
-    if(itens.length){
-      await apiPost('solicitacao_itens', itens.map(it=>({
-        solicitacao_id: solicitacao.id, codigo: it.codigo, descricao: it.descricao,
-        unidade: it.unidade, quantidade: it.quantidade, fora_catalogo: !!it.foraCatalogo
-      })));
+    /* Uma chamada, não duas.
+       Antes o cabeçalho ia num POST e os itens em outro: falha entre os dois
+       deixava um pedido sem itens e ninguém ficava sabendo. A função grava os
+       dois na mesma transação — ou entra tudo, ou não entra nada.
+       E não é mais um INSERT na tabela: o RETURNING de um insert passa pela
+       política de LEITURA, e foi assim que fechar a leitura pública derrubou a
+       gravação. Pela função isso não existe. */
+    const criada = await apiRpc('criar_solicitacao', {
+      p_cabecalho: cabecalho,
+      p_itens: itens.map(it => ({
+        codigo: it.codigo, descricao: it.descricao, unidade: it.unidade,
+        quantidade: it.quantidade, fora_catalogo: !!it.foraCatalogo
+      }))
+    });
+    if(!criada || criada.ok !== true){
+      throw new Error((criada && criada.mensagem) || 'o banco recusou a gravação');
     }
-    const pacote = montarPacote(solicitacao.id, cabecalho, itens);
+    const pacote = montarPacote(criada.id, cabecalho, itens);
     const aviso  = await avisarWebhook(pacote);
     ultimoPacote = pacote;
     concluir(cabecalho, itens, 'Gravado no Supabase · ' + aviso.nota, aviso.ok);
