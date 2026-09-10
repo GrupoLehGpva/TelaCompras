@@ -168,9 +168,30 @@
 
   .rolagem{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--borda);
     border-radius:var(--raio);background:var(--card)}
-  table.fila{width:100%;border-collapse:collapse;font-size:14px;min-width:960px}
-  table.fila th,table.fila td{padding:11px 12px;border-bottom:1px solid var(--borda);
+
+  /* Larguras fixas, e não "o que couber".
+     Com largura automática, um nome comprido em "quem pediu" empurrava a tabela
+     para além da tela e levava a coluna da decisão junto — os botões ficavam
+     fora do campo de visão, atrás da barra de rolagem. Quem abre a fila para
+     decidir não deveria precisar rolar de lado para achar o botão de decidir. */
+  table.fila{width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed;min-width:1040px}
+  table.fila col.c-sel   {width:44px}
+  table.fila col.c-num   {width:136px}
+  table.fila col.c-ass   {width:auto}   /* o assunto fica com a sobra: é por ele que se decide */
+  table.fila col.c-quem  {width:208px}
+  table.fila col.c-itens {width:58px}
+  table.fila col.c-data  {width:106px}
+  table.fila col.c-etapa {width:112px}
+  table.fila col.c-dec   {width:198px}
+  table.fila th,table.fila td{padding:16px 12px;border-bottom:1px solid var(--borda);
     text-align:left;vertical-align:middle}
+  /* Duas linhas, e o resto vira reticências: a linha cresce um pouco, nunca
+     quatro vezes por causa de um nome comprido.
+     O corte vai num span DENTRO da célula, nunca na célula: `display:-webkit-box`
+     num <td> tira dele o comportamento de célula e a tabela desmonta — foi o
+     que aconteceu na primeira tentativa, com linha de 227 pixels. */
+  table.fila td .corta{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+    overflow:hidden;line-height:1.35}
   table.fila thead th{background:var(--realce);color:var(--muted);font-size:11px;font-weight:700;
     text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;position:sticky;top:0;z-index:1}
   table.fila tbody tr:last-child td{border-bottom:0}
@@ -178,7 +199,12 @@
   table.fila td.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
   table.fila td.acoes{white-space:nowrap;text-align:right}
   .numero-sc{font-family:var(--mono);font-size:13px;font-weight:600;white-space:nowrap}
-  .assunto{display:block;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .assunto{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+    overflow:hidden;line-height:1.35}
+  .quem-nome{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+    overflow:hidden;line-height:1.3}
+  .quem-cc{display:block;margin-top:3px;font-size:12px;color:var(--muted);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .etapa{display:inline-block;padding:2px 9px;border-radius:var(--pilula);font-size:11px;
     font-weight:700;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;
     background:var(--realce);border:1px solid var(--borda);color:var(--muted)}
@@ -188,7 +214,8 @@
   .hoje{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:var(--pilula);
     background:var(--verde);color:#fff;font-size:10px;font-weight:700;text-transform:uppercase;
     letter-spacing:.04em}
-  .btn-linha{padding:6px 12px;margin-left:6px;border-radius:var(--pilula);border:1px solid var(--linha-forte);
+  table.fila td.acoes{white-space:nowrap;text-align:right;padding-right:22px}
+  .btn-linha{padding:7px 14px;margin-left:8px;border-radius:var(--pilula);border:1px solid var(--linha-forte);
     background:var(--card);color:var(--texto);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
   .btn-linha:hover{border-color:var(--verde)}
   .btn-linha.sim{background:var(--ok-bg);border-color:var(--ok-txt);color:var(--ok-txt)}
@@ -262,13 +289,16 @@
 
     <div class="rolagem">
       <table class="fila">
+        <colgroup>
+          <col class="c-sel"><col class="c-num"><col class="c-ass"><col class="c-quem">
+          <col class="c-itens"><col class="c-data"><col class="c-etapa"><col class="c-dec">
+        </colgroup>
         <thead>
           <tr>
             <th style="width:38px"><input type="checkbox" id="marcarTodas" title="Marcar todas"></th>
             <th>Solicitação</th>
             <th>Assunto</th>
             <th>Quem pediu</th>
-            <th>Centro de custo</th>
             <th class="num">Itens</th>
             <th>Entrega até</th>
             <th>Etapa</th>
@@ -414,13 +444,25 @@ function desenhar(){
     const cel = (txt, cls) => {
       const td = document.createElement('td');
       if(cls) td.className = cls;
-      if(cls === 'assunto-cel'){ const s2=document.createElement('span'); s2.className='assunto'; s2.textContent=txt; s2.title=txt; td.appendChild(s2); }
-      else td.textContent = txt;
+      if(cls === 'assunto-cel'){ const s2=document.createElement('span'); s2.className='assunto corta'; s2.textContent=txt; s2.title=txt; td.appendChild(s2); }
+      else { const sp=document.createElement('span'); sp.className='corta';
+              sp.textContent=txt; sp.title=txt; td.appendChild(sp); }
       return td;
     };
     tr.appendChild(cel(s.motivo || '—', 'assunto-cel'));
-    tr.appendChild(cel(s.solicitante_nome || s.facilitador || '—'));
-    tr.appendChild(cel(s.centro_custo_nome || s.centro_custo || '—'));
+
+    /* Quem pediu e centro de custo dividem uma coluna, em duas linhas.
+       Separados, cada um puxava largura da tabela e o assunto — que é por onde
+       se decide — ficava com as sobras. */
+    const tdQ = document.createElement('td');
+    const nome = document.createElement('span');
+    nome.className = 'quem-nome corta';
+    nome.textContent = s.solicitante_nome || s.facilitador || '—';
+    const cc = document.createElement('span');
+    cc.className = 'quem-cc';
+    cc.textContent = s.centro_custo_nome || s.centro_custo || '—';
+    tdQ.appendChild(nome); tdQ.appendChild(cc);
+    tr.appendChild(tdQ);
     tr.appendChild(cel(String(s.total_itens == null ? '—' : s.total_itens), 'num'));
     tr.appendChild(cel(dataBR(s.data_necessidade)));
 
