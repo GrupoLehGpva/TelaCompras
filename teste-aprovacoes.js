@@ -28,7 +28,7 @@ const FILA = [
 const QUEM = [{id:'brandao', nome:'Brandão', etapas:['lider','gerencial']}];
 
 let TOKEN_ATUAL = 'tk-brandao';
-async function tela(b, {token='tk-brandao', quem=QUEM, fila=FILA, decisao={ok:true}, falhaRpc=null}={}){
+async function tela(b, {token='tk-brandao', quem=QUEM, fila=FILA, decisao={ok:true}, falhaRpc=null, demora=0}={}){
   TOKEN_ATUAL = token;
   const p = await b.newPage();
   p.__posts = [];
@@ -50,7 +50,11 @@ async function tela(b, {token='tk-brandao', quem=QUEM, fila=FILA, decisao={ok:tr
     p.__posts.push(Object.assign({ metodo: r.request().method() }, corpo));
     if(decisao === 'cai') return r.abort();
     if(decisao === 500)   return r.fulfill({status:500,contentType:'application/json',body:'{}'});
-    return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(decisao)});
+    /* `demora` segura a resposta para dar tempo de observar o que a tela mostra
+       ENQUANTO espera — que é o estado que ninguém testa e o usuário sempre vê. */
+    const responder = () => r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(decisao)});
+    if(demora) return new Promise(res => setTimeout(()=>{ responder(); res(); }, demora));
+    return responder();
   });
   await p.goto(base + (token ? '?t=' + encodeURIComponent(token) : ''), {waitUntil:'load'});
   await p.waitForTimeout(600);
@@ -267,6 +271,39 @@ p = await tela(b, {fila:[]});
 ok('18 estado vazio', await p.locator('#filaVazia').isVisible(), 'não mostrou o vazio');
 ok('18 texto do vazio', /Nada esperando por você/.test(await p.locator('#filaVazia b').textContent()||''), 'texto: ' + await p.locator('#filaVazia b').textContent());
 ok('18 sem erro', !(await p.locator('#erro').isVisible()), 'tratou fila vazia como erro');
+await p.close();
+
+/* 19 — o que a tela mostra ENQUANTO o servidor não respondeu.
+       Pedido do Grupo Leh: botão apagado sem explicação passa por tela travada,
+       e tela que parece travada leva a clicar de novo. */
+p = await tela(b, {demora: 1500});
+await p.locator('#corpoFila tr').first().locator('button', {hasText:'Aprovar'}).first().click();
+await p.waitForTimeout(350);                       // no meio do caminho, de propósito
+ok('19 avisa no topo',   await p.locator('#avisoTopo').isVisible(), 'nada avisou que estava processando');
+ok('19 diz o que faz',   /Registrando a decisão/.test(await p.locator('#avisoTopo').textContent()||''),
+   'texto: ' + await p.locator('#avisoTopo').textContent());
+ok('19 tem a rodinha',   await p.locator('#avisoTopo .girando').count() === 1, 'sem indicador de movimento');
+ok('19 a linha avisa',   /Registrando/.test(await p.locator('#corpoFila tr').first().textContent()||''),
+   'a linha clicada não disse nada');
+ok('19 botão some',      await p.locator('#corpoFila tr').first().locator('button').count() === 0,
+   'o botão continuou clicável durante o envio');
+ok('19 lote também',     /Registrando/.test(await p.locator('#btnLote').textContent()||''),
+   'botão de lote: ' + await p.locator('#btnLote').textContent());
+await p.waitForTimeout(1600);                      // agora a resposta chegou
+ok('19 aviso vira resultado', /aprovada/i.test(await p.locator('#avisoTopo').textContent()||''),
+   'depois de pronto, o aviso ficou em "Registrando": ' + await p.locator('#avisoTopo').textContent());
+ok('19 linha sai da fila', await p.locator('#corpoFila tr').count() === FILA.length - 1,
+   'linhas: ' + await p.locator('#corpoFila tr').count());
+await p.close();
+
+/* 20 — falhou no meio: a linha VOLTA a ser clicável, senão o pedido fica preso */
+p = await tela(b, {decisao: 500, demora: 400});
+await p.locator('#corpoFila tr').first().locator('button', {hasText:'Aprovar'}).first().click();
+await p.waitForTimeout(1200);
+ok('20 volta a poder clicar', await p.locator('#corpoFila tr').first().locator('button').count() === 2,
+   'a linha ficou travada em "Registrando" depois do erro');
+ok('20 explica a falha', /Não consegui registrar/.test(await p.locator('#avisoTopo').textContent()||''),
+   'texto: ' + await p.locator('#avisoTopo').textContent());
 await p.close();
 
 await b.close();

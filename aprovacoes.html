@@ -291,6 +291,20 @@
   .aviso-topo[hidden]{display:none}
   .aviso-topo.ok{background:var(--ok-bg);border:1px solid var(--ok-txt);color:var(--ok-txt)}
   .aviso-topo.ruim{background:var(--erro-bg);border:1px solid var(--erro-borda);color:var(--erro)}
+  /* Enquanto o servidor não responde, a pessoa precisa VER que o clique valeu.
+     Antes, os botões só ficavam apagados — e botão apagado sem explicação passa
+     por tela travada, o que leva a clicar de novo. */
+  .aviso-topo.processando{background:var(--realce);border:1px solid var(--linha-forte);
+    color:var(--texto);display:flex;align-items:center;gap:10px}
+  .girando{width:15px;height:15px;flex:none;border-radius:50%;
+    border:2px solid var(--linha-forte);border-top-color:var(--verde);
+    animation:gira .7s linear infinite}
+  @keyframes gira{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){ .girando{animation-duration:2.4s} }
+
+  .enviando-linha{display:inline-flex;align-items:center;gap:8px;color:var(--muted);
+    font-size:13.5px;font-weight:600;padding:7px 4px;white-space:nowrap}
+  tr.em-voo{background:var(--realce)}
   @media (max-width:640px){ .assunto{max-width:200px} }
 
 </style>
@@ -563,6 +577,22 @@ function desenhar(){
 
     const tdA = document.createElement('td');
     tdA.className = 'acoes';
+
+    /* Esta linha já foi clicada e a resposta não voltou. Some com os botões e
+       diz o que está acontecendo: some com o clique duplo e com a dúvida. */
+    if(emVoo.has(s.id)){
+      tr.classList.add('em-voo');
+      const av = document.createElement('span');
+      av.className = 'enviando-linha';
+      const g = document.createElement('span'); g.className = 'girando';
+      av.appendChild(g);
+      av.appendChild(document.createTextNode('Registrando…'));
+      tdA.appendChild(av);
+      tr.appendChild(tdA);
+      corpo.appendChild(tr);
+      return;
+    }
+
     const bSim = document.createElement('button');
     bSim.type='button'; bSim.className='btn-linha sim'; bSim.textContent='Aprovar';
     bSim.addEventListener('click', ()=> decidir([s], 'aprovado', ''));
@@ -581,9 +611,11 @@ function desenhar(){
 
   const marcadasVisiveis = lista.filter(s=>marcadas.has(s.id)).length;
   $('btnLote').disabled = marcadasVisiveis === 0 || enviando;
-  $('btnLote').textContent = marcadasVisiveis
-    ? 'Aprovar ' + marcadasVisiveis + (marcadasVisiveis === 1 ? ' selecionada' : ' selecionadas')
-    : 'Aprovar selecionadas';
+  $('btnLote').textContent = enviando
+    ? 'Registrando…'
+    : marcadasVisiveis
+      ? 'Aprovar ' + marcadasVisiveis + (marcadasVisiveis === 1 ? ' selecionada' : ' selecionadas')
+      : 'Aprovar selecionadas';
   $('marcarTodas').checked = lista.length > 0 && marcadasVisiveis === lista.length;
 
   $('contaFila').textContent = FILA.length;
@@ -601,8 +633,11 @@ async function decidir(itens, decisao, motivo){
   const alvos = (itens || []).filter(s => s && !emVoo.has(s.id));
   if(enviando || !alvos.length) return;
   alvos.forEach(s => emVoo.add(s.id));
-  enviando = true; desenhar();
-  avisar('', null);
+  enviando = true;
+  avisar(alvos.length === 1
+    ? 'Registrando a decisão…'
+    : 'Registrando ' + alvos.length + ' decisões…', 'processando');
+  desenhar();
 
   const feitos = [], recusados = [];
   for(const s of alvos){
@@ -651,6 +686,12 @@ function avisar(texto, tipo){
   if(!texto){ el.hidden = true; return; }
   el.className = 'aviso-topo ' + (tipo || '');
   el.textContent = texto;
+  /* O aviso de "processando" ganha a rodinha. Montado por nó, não por innerHTML:
+     o texto pode conter número de solicitação vindo do banco. */
+  if(tipo === 'processando'){
+    const g = document.createElement('span'); g.className = 'girando';
+    el.insertBefore(g, el.firstChild);
+  }
   el.hidden = false;
 }
 

@@ -158,7 +158,7 @@ const b = await chromium.launch();
 /* ============================================================================
    BARRA DE APROVAÇÃO — só existe quando a tela é aberta pela fila
    ========================================================================== */
-async function comFila(b, {fila, decisao={ok:true}, token='tk-brandao', id=SOL.id}={}){
+async function comFila(b, {fila, decisao={ok:true}, token='tk-brandao', id=SOL.id, demora=0}={}){
   const p = await b.newPage();
   p.__chamadas = [];
   await mock.instalar(p, { pedido: SOL, itens: ITENS, fila: fila||[] });
@@ -170,7 +170,11 @@ async function comFila(b, {fila, decisao={ok:true}, token='tk-brandao', id=SOL.i
     try { corpo = JSON.parse(r.request().postData() || '{}'); } catch(e){ corpo = { __sem_corpo: r.request().url() }; }
     p.__chamadas.push(corpo);
     if(decisao === 'cai') return r.abort();
-    return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(decisao)});
+    /* `demora` segura a resposta: é o único jeito de testar o que a tela mostra
+       ENQUANTO espera — o estado que o usuário sempre vê e ninguém testa. */
+    const responder = () => r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(decisao)});
+    if(demora) return new Promise(res => setTimeout(()=>{ responder(); res(); }, demora));
+    return responder();
   });
   await p.goto(ARQ + '?id=' + id + (token ? '&t=' + token + '&e=lider' : ''), {waitUntil:'load'});
   await p.waitForTimeout(900);
@@ -209,6 +213,19 @@ const NA_FILA = [{id:SOL.id, numero:SOL.numero, card_id:'card-1', etapa_atual:'l
      'corpo: ' + JSON.stringify(p.__chamadas[0]));
   ok('mostra o resultado', /Aprovado\./.test(await p.locator('#textoAprova').textContent()||''), 'texto: ' + await p.locator('#textoAprova').textContent());
   ok('botões somem depois', !(await p.locator('#btnAprovar').isVisible()), 'botão continuou');
+  await p.close(); }
+
+// o que a barra mostra ENQUANTO o servidor não respondeu
+{ const p = await comFila(b, {fila:NA_FILA, demora:1500});
+  await p.click('#btnAprovar');
+  await p.waitForTimeout(350);
+  const t = await p.locator('#textoAprova').textContent() || '';
+  ok('avisa que está registrando', /Registrando/.test(t), 'texto: ' + t);
+  ok('mostra a rodinha', await p.locator('#textoAprova .girando').count() === 1, 'sem indicador de movimento');
+  ok('botões escondidos', !(await p.locator('#btnAprovar').isVisible()), 'dava para clicar de novo enquanto enviava');
+  await p.waitForTimeout(1600);
+  ok('vira resultado', /Aprovado\./.test(await p.locator('#textoAprova').textContent()||''),
+     'ficou preso em Registrando: ' + await p.locator('#textoAprova').textContent());
   await p.close(); }
 
 // reprovar exige motivo

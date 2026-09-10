@@ -164,6 +164,13 @@
   .barra-aprova button.sim{background:var(--acento-fundo);border-color:var(--acento-fundo);color:var(--sobre-acento)}
   .barra-aprova button.nao{background:var(--erro-bg);border-color:var(--erro-borda);color:var(--erro)}
   .barra-aprova button[disabled]{opacity:.55;cursor:default}
+  /* Enquanto o servidor não responde, a barra diz o que está acontecendo.
+     Botão apagado e nada escrito passa por tela travada. */
+  .barra-aprova .texto .girando{width:14px;height:14px;display:inline-block;vertical-align:-2px;
+    margin-right:8px;border-radius:50%;border:2px solid var(--linha-forte);
+    border-top-color:var(--verde);animation:gira .7s linear infinite}
+  @keyframes gira{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){ .barra-aprova .texto .girando{animation-duration:2.4s} }
   .barra-aprova a.voltar{color:var(--verde);font-size:14px;font-weight:600;text-decoration:none;white-space:nowrap}
   .barra-aprova a.voltar:hover{text-decoration:underline}
   .barra-aprova.ok{border-color:var(--ok-txt);background:var(--ok-bg)}
@@ -639,9 +646,10 @@ async function prepararAprovacao(){
     'Aprovando, ela segue para a próxima etapa. Reprovando, o motivo vai para quem pediu.', '', true);
 }
 
-function mostrarBarra(titulo, sub, classe, comBotoes){
+function mostrarBarra(titulo, sub, classe, comBotoes, girando){
   $('barraAprova').className = 'barra-aprova ' + (classe || '');
-  $('textoAprova').innerHTML = '<b>' + esc(titulo) + '</b>' + esc(sub || '');
+  $('textoAprova').innerHTML = (girando ? '<span class="girando" aria-hidden="true"></span>' : '') +
+    '<b>' + esc(titulo) + '</b>' + esc(sub || '');
   $('botoesAprova').querySelectorAll('button').forEach(b => b.hidden = !comBotoes);
   $('barraAprova').hidden = false;
 }
@@ -650,6 +658,11 @@ async function decidir(decisao, motivo){
   if(decidindo || !NA_FILA) return;
   decidindo = true;
   $('btnAprovar').disabled = true; $('btnReprovar').disabled = true;
+  mostrarBarra('Registrando…',
+    decisao === 'aprovado'
+      ? 'Movendo o card e gravando a aprovação.'
+      : 'Movendo o card e avisando quem pediu.',
+    '', false, true);
   try{
     const r = await fetch(ENDPOINT_DECISAO, {
       method:'POST',
@@ -674,12 +687,12 @@ async function decidir(decisao, motivo){
         decisao === 'aprovado' ? 'ok' : 'nao-ok', false);
     } else {
       mostrarBarra('Não consegui registrar a decisão.',
-        (j.mensagem || 'Tente de novo, ou abra o card no ClickUp.'), 'nao-ok', true);
+        (j.mensagem || 'Tente de novo, ou abra o card no ClickUp.'), 'nao-ok', true, false);
       $('btnAprovar').disabled = false; $('btnReprovar').disabled = false;
     }
   }catch(e){
     mostrarBarra('Não consegui registrar a decisão.',
-      'A rede falhou no meio. Tente de novo.', 'nao-ok', true);
+      'A rede falhou no meio. Tente de novo.', 'nao-ok', true, false);
     $('btnAprovar').disabled = false; $('btnReprovar').disabled = false;
   }
   decidindo = false;
