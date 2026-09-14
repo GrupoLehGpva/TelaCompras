@@ -61,9 +61,18 @@ if (!decisao || !ESPERADO[etapa] || !t.id) {
   return parar('erro', 'link incompleto ou solicitação inexistente');
 }
 
-// Reprovar pela tela exige motivo. A tela já cobra, mas a tela não é a
-// autoridade — o motivo é o que a pessoa que pediu vai ler.
-if (formato === 'json' && decisao === 'reprovado' && motivo.length < 10) {
+// ---------------------------------------------------------------------------
+// REPROVAR SEM MOTIVO NÃO EXISTE. Em nenhum caminho.
+//
+// Esta trava valia só para a tela (`formato === 'json'`), e o botão do Slack
+// passava direto. O banco ainda barraria, pelo CHECK `ck_recusa_tem_motivo` —
+// mas tarde demais: o card já teria mudado de coluna e a solicitação ficaria
+// para trás. É exatamente o descasamento que custou a tarde de 10/09.
+//
+// A tela cobra primeiro, para a pessoa não perder o clique. Esta é a que vale:
+// mora antes de qualquer coisa se mover.
+// ---------------------------------------------------------------------------
+if (decisao === 'reprovado' && motivo.length < 10) {
   return parar('erro', 'reprovação precisa de motivo');
 }
 
@@ -86,12 +95,12 @@ const APROVOU = {
   gerencial: '✅ Aprovado na aprovação gerencial' + quem + ' em ' + agora + '. Segue para o financeiro.',
   financeiro: '✅ Aprovado na aprovação financeira' + quem + ' em ' + agora + '. Liberado para efetuar a compra.'
 };
+
+// O motivo está garantido pela trava acima: reprovação sem ele não chega aqui.
 const comentario = decisao === 'aprovado'
   ? APROVOU[etapa]
   : '❌ Reprovado na aprovação ' + ROTULO[etapa] + quem + ' em ' + agora + '.\n\n'
-    + (motivo
-        ? '*Motivo:* ' + motivo
-        : 'Se quiser registrar o motivo, comente aqui no card — é o que o solicitante vai ler.');
+    + '*Motivo:* ' + motivo;
 
 return [{ json: {
   agir: true, formato, taskId: t.id, numero, etapa, decisao, motivo,
