@@ -39,14 +39,10 @@ set search_path to 'public'
 as $function$
 declare
   v_id     uuid := gen_random_uuid();
-  v_numero text := nullif(trim(p_cabecalho->>'numero'), '');
+  v_numero text;
   v_quem   text := nullif(trim(p_cabecalho->>'solicitante'), '');
   v_itens  int  := 0;
 begin
-  if v_numero is null then
-    return jsonb_build_object('ok', false, 'erro', 'sem_numero',
-      'mensagem', 'A solicitação precisa de um número.');
-  end if;
   if v_quem is null then
     return jsonb_build_object('ok', false, 'erro', 'sem_solicitante',
       'mensagem', 'A solicitação precisa dizer quem está pedindo.');
@@ -55,6 +51,25 @@ begin
   -- Aqui entra, quando for a hora, a trava de que só facilitador abre pedido.
   -- Fica marcada de propósito: é uma linha, e o lugar dela é este — no servidor,
   -- não na tela, que qualquer um contorna.
+
+  -- -------------------------------------------------------------------------
+  -- O NÚMERO NÃO VEM MAIS DE QUEM CHAMA.
+  --
+  -- Ele entrou na mesma lista fechada de card_id, etapa_atual e
+  -- aprovador_atual: é do fluxo, não de quem pede. Um `numero` mandado no
+  -- cabeçalho é simplesmente ignorado — a página que chama esta função é
+  -- pública, e deixá-la escolher o número é deixá-la colidir de propósito
+  -- com um pedido que já existe.
+  --
+  -- No ensaio o contador não é tocado. A conferência de contrato roda várias
+  -- vezes por dia; se ela consumisse número, a numeração do mês encheria de
+  -- buraco sem nenhum pedido ter sido aberto.
+  -- -------------------------------------------------------------------------
+  if p_ensaio then
+    v_numero := 'ENSAIO-' || substring(v_id::text, 1, 8);
+  else
+    v_numero := proximo_numero();
+  end if;
 
   insert into solicitacoes (
     id, numero, solicitante, facilitador, facilitador_email, solicitante_nome,

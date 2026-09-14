@@ -411,7 +411,7 @@ const FORMAS = ['À vista — PIX','À vista — boleto','Boleto 30 dias',
 const BASES  = ['L','mL','kg','g','m','cm','un','pç'];
 
 const DEMO = {
-  ok:true, numero:'SC-2026-3756', fornecedor:'Agroleste', status:'enviada',
+  ok:true, numero:'C2609-00042', fornecedor:'Agroleste', status:'enviada',
   local_entrega:'Sede Guarapuava', contato_nome:'', contato_email:'',
   validade_proposta:'', previsao_entrega:'', custo_entrega:null,
   observacao_entrega:'', observacao:'',
@@ -803,7 +803,7 @@ async function enviar(){
   if (MODO_DEMO){
     setTimeout(()=>{
       btn.disabled=false; btn.textContent='Enviar orçamento';
-      mostrarRecibo({numero:'SC-2026-3756'});
+      mostrarRecibo({numero:'C2609-00042'});
     }, 350);
     return;
   }

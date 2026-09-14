@@ -9,17 +9,17 @@ const ok = (n,c,d)=> c ? null : falhas.push(n + ' — ' + d);
 const hoje  = new Date().toISOString();
 const ontem = new Date(Date.now() - 2*864e5).toISOString();
 const FILA = [
-  {id:'a1', numero:'SC-2026-1001', card_id:'c1', etapa_atual:'lider',
+  {id:'a1', numero:'C2609-01001', card_id:'c1', etapa_atual:'lider',
    facilitador:'Guilherme Pimpão', solicitante_nome:'João da Silva',
    centro_custo:'20', centro_custo_nome:'FABRICA DE RAÇÕES', tipo_compra:'urgente',
    data_necessidade:'2026-12-01', motivo:'Pneu careca reprovado na inspeção',
    observacao:null, aberto_em:hoje, total_itens:2},
-  {id:'a2', numero:'SC-2026-1002', card_id:'c2', etapa_atual:'gerencial',
+  {id:'a2', numero:'C2609-01002', card_id:'c2', etapa_atual:'gerencial',
    facilitador:'Maria de Souza', solicitante_nome:null,
    centro_custo:'1994', centro_custo_nome:'CONFINAMENTO DE BOVINOS', tipo_compra:'normal',
    data_necessidade:'2026-11-10', motivo:'Reposição de sal mineral',
    observacao:null, aberto_em:ontem, total_itens:5},
-  {id:'a3', numero:'SC-2026-1003', card_id:'c3', etapa_atual:'lider',
+  {id:'a3', numero:'C2609-01003', card_id:'c3', etapa_atual:'lider',
    facilitador:'Ana Paula', solicitante_nome:null,
    centro_custo:'3176', centro_custo_nome:'COMERCIAL', tipo_compra:'programada',
    data_necessidade:'2026-10-05', motivo:'Material de escritório do trimestre',
@@ -158,7 +158,7 @@ await p.close();
 p = await tela(b);
 await p.locator('#corpoFila .btn-linha.nao').first().click(); await p.waitForTimeout(250);
 ok('10 abre a caixa', await p.locator('#fundoModal').isVisible(), 'caixa não abriu');
-ok('10 diz qual pedido', /SC-2026-1001/.test(await p.locator('#subModal').textContent()||''), 'sub: ' + await p.locator('#subModal').textContent());
+ok('10 diz qual pedido', /C2609-01001/.test(await p.locator('#subModal').textContent()||''), 'sub: ' + await p.locator('#subModal').textContent());
 await p.click('#btnConfirmarReprova'); await p.waitForTimeout(250);
 ok('10 barra sem motivo', await p.locator('#erroMotivo').isVisible(), 'aceitou sem motivo');
 ok('10 caixa continua', await p.locator('#fundoModal').isVisible(), 'fechou mesmo sem motivo');

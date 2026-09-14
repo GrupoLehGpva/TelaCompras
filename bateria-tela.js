@@ -210,7 +210,7 @@ const b = await chromium.launch();
 // 17 — texto muito longo no escopo e no motivo
 { const p = await nova(b); await base(p,'servico');
   await p.evaluate(()=>{ $('escopoServico').value='x'.repeat(5000); $('escopoServico').dispatchEvent(new Event('input')); });
-  const tam = await p.evaluate(()=> montarPacote(null,{numero:'SC-1',solicitante:'G',local_entrega:'G103',
+  const tam = await p.evaluate(()=> montarPacote(null,{numero:'C2609-00001',solicitante:'G',local_entrega:'G103',
     centro_custo:'CC-103-MAN',tipo_compra:'normal',definicao_fornecedor:'cotacao',justificativa_fornecedor:null,
     data_necessidade:'2026-09-11',motivo:'m'}, montarItens()).descricao_card.length);
   if(tam > 4000) nota('17 escopo de 5.000 caracteres vai inteiro para o card', 'descrição com '+tam+' caracteres');
@@ -239,11 +239,18 @@ const b = await chromium.launch();
   ok('18 a busca fica presa na família do pedido', buscaSoDaFamilia);
   await p.close(); }
 
-// 19 — voltar escondido no primeiro passo, número da solicitação preenchido
+// 19 — voltar escondido no primeiro passo, e o número NÃO nasce na tela
 { const p = await nova(b);
   ok('19 Voltar escondido no passo 1', !(await p.locator('#btnVoltar').isVisible()));
-  const num = await p.textContent('#autoNumero');
-  ok('19 número no formato SC-AAAA-NNNN', /^SC-\d{4}-\d{4}$/.test(num.trim()), num);
+
+  /* O número era sorteado aqui — 'SC-' + ano + Math.random entre 9.000, numa
+     coluna com UNIQUE. A conferência que existia neste lugar aprovava o
+     sorteio; era ela que dava cobertura ao bug. Agora o que ela tem que
+     provar é o contrário: que a tela NÃO inventa número nenhum. */
+  const num = (await p.textContent('#autoNumero')).trim();
+  ok('19 a tela não inventa número', num === 'gerado ao enviar', num);
+  const sorteia = await p.evaluate(()=> /Math\.random/.test(iniciar.toString()));
+  ok('19 nenhum sorteio sobrou no formulário', !sorteia);
   await p.close(); }
 
 // 20 — página única mostra todos os passos do tipo escolhido

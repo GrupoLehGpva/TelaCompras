@@ -14,7 +14,7 @@ node conferir-repetidos.js || falhou=1
 
 for b in bateria-tela.js teste-centros.js teste-pedido.js teste-decisao.js \
          teste-aprovacoes.js teste-historico.js teste-facilitador.js \
-         teste-acompanhar.js teste-cliques.js bateria-erros.js; do
+         teste-acompanhar.js teste-numeracao.js teste-cliques.js bateria-erros.js; do
   echo
   echo "== $b =="
   saida=$(node "$b" 2>&1) || { echo "$saida" | tail -20; falhou=1; continue; }

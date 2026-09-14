@@ -13,7 +13,7 @@ const ok = (n, c, d) => c ? null : falhas.push(n + ' — ' + d);
 
 const hoje = new Date().toISOString();
 const FILA = [
-  {id:'a1', numero:'SC-2026-1001', card_id:'c1', etapa_atual:'lider',
+  {id:'a1', numero:'C2609-01001', card_id:'c1', etapa_atual:'lider',
    facilitador:'Guilherme Pimpão', solicitante_nome:'João da Silva',
    centro_custo:'20', centro_custo_nome:'FÁBRICA DE RAÇÕES', tipo_compra:'urgente',
    data_necessidade:'2026-12-01', motivo:'Pneu careca', observacao:null,
@@ -21,11 +21,11 @@ const FILA = [
 ];
 const QUEM = [{id:'brandao', nome:'Brandão', etapas:['lider','gerencial']}];
 const HIST = [
-  {id:'h1', numero:'SC-2026-0901', etapa:'lider', resposta:'aprovado', motivo:null,
+  {id:'h1', numero:'C2608-00901', etapa:'lider', resposta:'aprovado', motivo:null,
    decidido_em:'2026-09-01T13:00:00Z', aberto_em:'2026-08-25T09:00:00Z',
    facilitador:'Maria de Souza',
    centro_custo_nome:'CONFINAMENTO DE BOVINOS', situacao:'em cotação'},
-  {id:'h2', numero:'SC-2026-0902', etapa:'gerencial', resposta:'reprovado',
+  {id:'h2', numero:'C2608-00902', etapa:'gerencial', resposta:'reprovado',
    motivo:'Já temos esse item em estoque na Granja 103.',
    decidido_em:'2026-08-28T18:30:00Z', aberto_em:'2026-08-20T09:00:00Z',
    facilitador:'Ana Paula',

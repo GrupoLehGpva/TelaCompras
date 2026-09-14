@@ -110,7 +110,7 @@ ok('9 barra sem centro', (await p.locator('[data-campo="centroCusto"].invalido')
 // 10 — nome do centro entra no pacote do ClickUp
 await p.evaluate(()=>{ escolherCentroPorTermo('3000'); });
 const pacote = await p.evaluate(()=>montarPacote(null,
-  {numero:'SC-2026-0001',solicitante:'Teste',centro_custo:estado.centroCusto,tipo_compra:'normal',
+  {numero:'C2609-00001',solicitante:'Teste',centro_custo:estado.centroCusto,tipo_compra:'normal',
    definicao_fornecedor:'cotacao',justificativa_fornecedor:null,data_necessidade:'2026-12-01',
    motivo:'teste'},
   [{codigo:'X',descricao:'Serviço',unidade:'Serviço',quantidade:1,foraCatalogo:false}]));

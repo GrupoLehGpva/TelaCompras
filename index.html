@@ -843,7 +843,13 @@ async function iniciar(){
   atualizarCabecalhoSolicitante();
 
   $('autoData').textContent = hoje.toLocaleDateString('pt-BR');
-  $('autoNumero').textContent = 'SC-' + hoje.getFullYear() + '-' + String(Math.floor(Math.random()*9000)+1000);
+  /* O número NÃO nasce mais aqui.
+     Nascia como 'SC-' + ano + sorteio entre 9.000 — numa coluna com UNIQUE.
+     Pelo paradoxo do aniversário, com cerca de 110 pedidos no ano a chance de
+     dois sorteios baterem passa de 50%, e quando batesse o banco recusaria a
+     gravação e a pessoa perderia o formulário inteiro.
+     Agora quem numera é o banco, na hora de gravar, em sequência. */
+  $('autoNumero').textContent = 'gerado ao enviar';
 
   montarOpcoes('tipoOpcoes','tipo',DADOS.tipos,aoTrocarTipo);
   montarOpcoes('tipoCompraOpcoes','tipoCompra',DADOS.tiposCompra);
@@ -1690,7 +1696,8 @@ async function enviar(){
   }
 
   const cabecalho = {
-    numero:                   $('autoNumero').textContent,
+    /* Sem `numero`: quem numera é o banco. Mandar um daqui seria mentira —
+       criar_solicitacao ignora o que vier da tela, de propósito. */
     solicitante:              estado.nomeSolicitante.trim() || DADOS.solicitante.nome,
     /* `solicitante` é histórico e continua guardando quem abriu o pedido; as três
        colunas abaixo são as que a tela realmente usa hoje. */
@@ -1712,6 +1719,9 @@ async function enviar(){
   const itens = montarItens();
 
   if(!CONECTADO){
+    /* Sem banco não há número — e inventar um aqui é justamente o que acabou
+       de sair. A confirmação diz isso com todas as letras. */
+    cabecalho.numero = 'sem número (não gravado)';
     ultimoPacote = montarPacote(null, cabecalho, itens);
     concluir(cabecalho, itens, 'Não gravado — chave do Supabase não preenchida.', false);
     return;
@@ -1736,6 +1746,9 @@ async function enviar(){
     if(!criada || criada.ok !== true){
       throw new Error((criada && criada.mensagem) || 'o banco recusou a gravação');
     }
+    /* O número chega agora, do banco, e é este que vale daqui para frente:
+       o título do card, a confirmação na tela e o link do pedido. */
+    cabecalho.numero = criada.numero;
     const pacote = montarPacote(criada.id, cabecalho, itens);
     const aviso  = await avisarWebhook(pacote);
     ultimoPacote = pacote;

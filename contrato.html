@@ -195,7 +195,7 @@ async function rodar(){
     confere(vazio.status === 200 && vazio.corpo && vazio.corpo.ok === false,
       'sem chave nenhuma, recusa', 'HTTP ' + vazio.status + ' — ' + JSON.stringify(vazio.corpo));
 
-    const inexistente = await rpc('abrir_pedido', { p_id:null, p_numero:'SC-0000-0000' });
+    const inexistente = await rpc('abrir_pedido', { p_id:null, p_numero:'C0000-00000' });
     confere(inexistente.corpo && inexistente.corpo.ok === false && inexistente.corpo.erro === 'nao_encontrada',
       'pedido que não existe responde nao_encontrada', JSON.stringify(inexistente.corpo));
 
@@ -214,12 +214,27 @@ async function rodar(){
   /* 1b — a escrita que PRECISA dar certo */
   grupo('Abrir um pedido', 'O teste que faltava. Grava pelo caminho de verdade e desfaz na mesma chamada.');
   try{
-    const semNumero = await rpc('criar_solicitacao', { p_cabecalho: { solicitante: 'CONFERIDOR' } });
-    confere(semNumero.corpo && semNumero.corpo.ok === false && semNumero.corpo.erro === 'sem_numero',
-      'pedido sem número é recusado', JSON.stringify(semNumero.corpo));
+    /* O número não vem mais da tela: quem numera é o banco, em sequência.
+       Por isso pedido SEM número tem que ser ACEITO — era justamente o que
+       esta conferência recusava antes. */
+    const semNumero = await rpc('criar_solicitacao', {
+      p_ensaio: true, p_cabecalho: { solicitante: 'CONFERIDOR' } });
+    confere(semNumero.corpo && semNumero.corpo.ok === true,
+      'pedido sem número é aceito — quem numera é o banco',
+      JSON.stringify(semNumero.corpo));
+
+    /* E um número mandado de fora não pode valer. A página que chama esta
+       função é pública; se ela escolhesse o número, escolheria colidir com um
+       pedido que já existe. */
+    const numeroEscolhido = await rpc('criar_solicitacao', {
+      p_ensaio: true, p_cabecalho: { solicitante: 'CONFERIDOR', numero: 'EU-ESCOLHO-0001' } });
+    confere(numeroEscolhido.corpo && numeroEscolhido.corpo.ok === true
+            && numeroEscolhido.corpo.numero !== 'EU-ESCOLHO-0001',
+      'número mandado pela tela é ignorado',
+      JSON.stringify(numeroEscolhido.corpo));
 
     const invasor = await rpc('criar_solicitacao', { p_ensaio: true, p_cabecalho: {
-      numero: 'SC-CONFERIDOR', solicitante: 'CONFERIDOR',
+      solicitante: 'CONFERIDOR',
       card_id: 'INVASOR', etapa_atual: 'financeiro', aprovador_atual: 'wienfried' } });
     confere(invasor.corpo && invasor.corpo.ok === true,
       'quem abre pedido não escolhe a etapa nem o aprovador',
@@ -227,7 +242,7 @@ async function rodar(){
 
     const escrita = await rpc('criar_solicitacao', {
       p_ensaio: true,
-      p_cabecalho: { numero: 'SC-CONFERIDOR', solicitante: 'CONFERIDOR',
+      p_cabecalho: { solicitante: 'CONFERIDOR',
                      facilitador_email: 'ensaio@leh.com.br', centro_custo: '3180',
                      tipo_compra: 'normal', motivo: 'conferência de contrato' },
       p_itens: [{ codigo: 'X-1', descricao: 'Item de conferência', unidade: 'Unidade', quantidade: 1 }]
@@ -281,7 +296,7 @@ async function rodar(){
       method:'POST',
       headers:{ 'Content-Type':'application/json' },
       body: JSON.stringify({ token:'contrato-token-invalido', solicitacao_id:'00000000-0000-0000-0000-000000000000',
-                             card_id:'nao-existe', etapa:'lider', numero:'SC-0000-0000',
+                             card_id:'nao-existe', etapa:'lider', numero:'C0000-00000',
                              decisao:'aprovado', motivo:'' })
     });
     const txt = await r.text();

@@ -5,7 +5,7 @@ const falhas = [];
 const ok = (c,cond,det='') => { if(!cond) falhas.push(c + (det?' — '+det:'')); };
 
 const SOL = {
-  id:'11111111-1111-1111-1111-111111111111', numero:'SC-2026-0042',
+  id:'11111111-1111-1111-1111-111111111111', numero:'C2609-00042',
   solicitante:'Maria de Souza', aberto_em:'2026-08-28T13:04:00Z',
   local_entrega:'G103', local_entrega_nome:null, centro_custo:'CC-103-MOR',
   tipo_compra:'programada', definicao_fornecedor:'unico',
@@ -33,7 +33,7 @@ const b = await chromium.launch();
 
 // 1 — lista de itens
 { const p = await abrir(b);
-  ok('1 título traz o número', (await p.textContent('#tituloTopo')).includes('SC-2026-0042'));
+  ok('1 título traz o número', (await p.textContent('#tituloTopo')).includes('C2609-00042'));
   const ficha = await p.textContent('#fichaCabecalho');
   ok('1 centro legível', /Casa dos moradores/.test(ficha));
   ok('1 data em pt-BR', /15\/09\/2026/.test(ficha), ficha);
@@ -78,8 +78,8 @@ const b = await chromium.launch();
   await p.close(); }
 
 // 5 — abrir por número
-{ const p = await abrir(b, {url:ARQ+'?sc=SC-2026-0042'});
-  ok('5 abre por número', (await p.textContent('#tituloTopo')).includes('SC-2026-0042'));
+{ const p = await abrir(b, {url:ARQ+'?sc=C2609-00042'});
+  ok('5 abre por número', (await p.textContent('#tituloTopo')).includes('C2609-00042'));
   await p.close(); }
 
 // 6 — banco fora do ar

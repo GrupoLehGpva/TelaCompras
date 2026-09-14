@@ -19,7 +19,7 @@ function respostaAbrirPedido(pedido, itens){
 /* Como a função criar_solicitacao responde de verdade (ver criar-solicitacao.sql).
    O formulário grava por ela, não por INSERT na tabela — e é aqui que o formato
    dessa resposta mora, para as baterias não inventarem um formato próprio. */
-function respostaCriarSolicitacao({ id = 'sc-de-mentira-0001', numero = 'SC-2026-0001', itens = 1 } = {}){
+function respostaCriarSolicitacao({ id = 'sol-de-mentira-0001', numero = 'C2609-00001', itens = 1 } = {}){
   return { ok: true, id, numero, itens };
 }
 

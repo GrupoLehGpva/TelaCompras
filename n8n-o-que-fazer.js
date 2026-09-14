@@ -53,7 +53,19 @@ if (origem === 'tela') {
   }
 }
 
-const numero = ((t.name || '').match(/SC-[A-Z0-9]+-\d+/) || [''])[0]
+// O número está no começo do título do card: "C2609-00001 · motivo do pedido".
+// Ler por POSIÇÃO e não por formato é o que evita ter que voltar aqui toda vez
+// que a numeração mudar — a versão anterior procurava /SC-.../ e teria voltado
+// vazia no dia em que o SC saiu de cena.
+//
+// O teste do dígito é o que impede um título sem número — "AR-CONDICIONADO ·
+// trocar" — de ser lido como código. Custa um caso: rótulos de demonstração
+// como SC-DEMO-C não passam, e caem no número vindo do banco, que é a fonte
+// certa de qualquer jeito.
+const doTitulo = String(t.name || '').split('·')[0].trim();
+const pareceNumero = /^[A-Z0-9][A-Z0-9-]{2,23}$/.test(doTitulo)
+  && /\d/.test(doTitulo) && doTitulo.includes('-');
+const numero = (pareceNumero ? doTitulo : '')
   || (permissao && permissao.numero) || String(q.sc || '');
 
 // Link torto, card que não existe, etapa desconhecida: não encosta em nada.

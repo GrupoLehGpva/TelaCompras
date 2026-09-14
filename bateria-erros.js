@@ -48,7 +48,7 @@ function servir(p, plano){
   });
 }
 
-const SOL = n => [Object.assign({ id:'aaaa-1111', numero:'SC-2026-0001', solicitante:'Maria',
+const SOL = n => [Object.assign({ id:'aaaa-1111', numero:'C2609-00001', solicitante:'Maria',
   centro_custo:'3180', data_necessidade:'2026-12-01', motivo:'teste', status:'solicitado' }, n||{})];
 
 (async () => {
@@ -173,7 +173,7 @@ await p.close();
 
 // B3 — banco fora do ar não pode apagar o veredito
 p = await b.newPage(); await servir(p, {padrao:500});
-await p.goto(dir + 'decisao.html?d=reprovado&e=financeiro&sc=SC-2026-0001&id=aaaa-1111', {waitUntil:'load'});
+await p.goto(dir + 'decisao.html?d=reprovado&e=financeiro&sc=C2609-00001&id=aaaa-1111', {waitUntil:'load'});
 await p.waitForTimeout(800);
 ok('B3 veredito de pé', (await p.locator('#titulo').textContent()) === 'Reprovado', 'perdeu o veredito no 500');
 await p.close();
@@ -237,7 +237,12 @@ await p.waitForTimeout(1200);
 ok('C3 avisa que não chegou', await p.locator('#okAviso').isVisible(), 'a falha do webhook passou como sucesso');
 ok('C3 título muda', /não chegou ao Compras/.test(await p.locator('#okTitulo').textContent()||''), 'título continuou de sucesso');
 ok('C3 selo de alerta', (await p.locator('#okSelo').textContent()) === '!', 'manteve o ✓ de sucesso');
-ok('C3 diz o número', /SC-\d{4}-\d{4}/.test(await p.locator('#okAviso').textContent()||''), 'não mostrou o número para avisar o compras');
+/* O aviso precisa trazer o número QUE O BANCO DEU — é com ele que a pessoa
+   vai falar com o compras, já que o card não foi criado. O mock responde
+   C2609-00001 (ver mock-supabase.js). */
+ok('C3 diz o número que o banco deu',
+   /C2609-00001/.test(await p.locator('#okAviso').textContent()||''),
+   'aviso sem o número: ' + (await p.locator('#okAviso').textContent()||'').slice(0,120));
 await p.close();
 
 // C5 — webhook OK: a tela de sucesso continua sendo de sucesso

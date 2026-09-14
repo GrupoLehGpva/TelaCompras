@@ -53,7 +53,7 @@ const preencher = p => p.evaluate(()=>{
   $('motivoCompra').dispatchEvent(new Event('input'));
 });
 const pacote = p => p.evaluate(()=>montarPacote(null, {
-  numero:'SC-2026-0001', solicitante: estado.nomeSolicitante,
+  numero:'C2609-00001', solicitante: estado.nomeSolicitante,
   centro_custo: estado.centroCusto, tipo_compra:'normal', definicao_fornecedor:'cotacao',
   justificativa_fornecedor:null, data_necessidade:'2026-12-01', motivo:'teste'
 }, [{codigo:'X',descricao:'Serviço',unidade:'Serviço',quantidade:1,foraCatalogo:false}]));

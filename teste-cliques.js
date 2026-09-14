@@ -140,7 +140,12 @@ await avancar(p);
 await p.waitForTimeout(900);
 ok('1 confirmou', (await visivel(p)) === 'confirmacao', 'não chegou na confirmação, está em ' + await visivel(p));
 ok('1 sem alerta de falha', !(await p.locator('#okAviso').isVisible()), 'alarmou com o webhook OK');
-ok('1 número na confirmação', /SC-\d{4}-\d{4}/.test(await p.locator('#okNumero').textContent()), 'sem número');
+/* O número que aparece aqui é o que o BANCO devolveu, não um sorteio da tela.
+   O mock responde C2609-00001; se a tela voltasse a inventar o seu, este
+   teste seria o primeiro a cair. */
+ok('1 número na confirmação vem do banco',
+   /C2609-00001/.test(await p.locator('#okNumero').textContent()),
+   'veio: ' + await p.locator('#okNumero').textContent());
 
 // recomeçar
 await p.click('#btnRecomecar'); await p.waitForTimeout(400);

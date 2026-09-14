@@ -5,7 +5,7 @@ const base = 'file://' + __dirname + '/decisao.html';
 const falhas = [];
 const ok = (n,c,d)=> c ? null : falhas.push(n + ' — ' + d);
 
-const SOL = [{ id:'aaaa-1111', numero:'SC-2026-0001', solicitante:'Maria de Souza',
+const SOL = [{ id:'aaaa-1111', numero:'C2609-00001', solicitante:'Maria de Souza',
   centro_custo:'3180', centro_custo_nome:null, data_necessidade:'2026-12-01', motivo:'teste' }];
 const ITENS = [{descricao:'Pneu 295/80 R22.5', unidade:'Unidade', quantidade:4},
                {descricao:'Detergente neutro 5 L', unidade:'Litro', quantidade:20}];
@@ -46,11 +46,11 @@ const b = await chromium.launch();
 const CARD = 'https://app.clickup.com/t/86abc123';
 
 // 1 — aprovado na liderança
-let p = await abrir(b, '?d=aprovado&e=lider&sc=SC-2026-0001&id=aaaa-1111&card=' + encodeURIComponent(CARD));
+let p = await abrir(b, '?d=aprovado&e=lider&sc=C2609-00001&id=aaaa-1111&card=' + encodeURIComponent(CARD));
 ok('1 título', (await p.locator('#titulo').textContent()) === 'Aprovado', 'veio ' + await p.locator('#titulo').textContent());
 ok('1 próximo passo', /cotar com os fornecedores/.test(await p.locator('#passo').textContent()), 'passo errado');
 ok('1 classe', await p.locator('#veredito.v-ok').count() === 1, 'sem a classe de aprovado');
-ok('1 selo do número', (await p.locator('#seloNumero').textContent()) === 'SC-2026-0001', 'selo errado');
+ok('1 selo do número', (await p.locator('#seloNumero').textContent()) === 'C2609-00001', 'selo errado');
 
 // 2 — resumo veio do banco
 ok('2 resumo visível', await p.locator('#cartaoPedido').isVisible(), 'resumo não apareceu');
@@ -66,14 +66,14 @@ ok('3 abre em nova aba', (await p.locator('.acoes a').first().getAttribute('targ
 await p.close();
 
 // 4 — reprovado
-p = await abrir(b, '?d=reprovado&e=gerencial&sc=SC-2026-0001');
+p = await abrir(b, '?d=reprovado&e=gerencial&sc=C2609-00001');
 ok('4 título', (await p.locator('#titulo').textContent()) === 'Reprovado', 'veio ' + await p.locator('#titulo').textContent());
 ok('4 classe', await p.locator('#veredito.v-nao').count() === 1, 'sem a classe de reprovado');
 ok('4 orienta comentar', /comente no card/.test(await p.locator('#passo').textContent()), 'não orienta o motivo');
 await p.close();
 
 // 5 — já decidido (clique duplo)
-p = await abrir(b, '?d=ja&e=financeiro&sc=SC-2026-0001');
+p = await abrir(b, '?d=ja&e=financeiro&sc=C2609-00001');
 ok('5 título', /já tinha sido decidida/.test(await p.locator('#titulo').textContent()), 'veio ' + await p.locator('#titulo').textContent());
 ok('5 diz que nada mudou', /Nada mudou agora/.test(await p.locator('#passo').textContent()), 'não deixa claro');
 await p.close();
@@ -91,12 +91,12 @@ ok('7 sem botões', (await p.locator('.acoes a').count()) === 0, 'apareceu botã
 await p.close();
 
 // 8 — etapa desconhecida não quebra
-p = await abrir(b, '?d=aprovado&e=xpto&sc=SC-2026-0001');
+p = await abrir(b, '?d=aprovado&e=xpto&sc=C2609-00001');
 ok('8 texto genérico', /segue no fluxo/.test(await p.locator('#passo').textContent()), 'não caiu no texto genérico');
 await p.close();
 
 // 9 — card apontando para fora do ClickUp é recusado
-p = await abrir(b, '?d=aprovado&e=lider&sc=SC-2026-0001&card=' + encodeURIComponent('https://evil.example.com/x'));
+p = await abrir(b, '?d=aprovado&e=lider&sc=C2609-00001&card=' + encodeURIComponent('https://evil.example.com/x'));
 const hrefs = await p.locator('.acoes a').evaluateAll(as => as.map(a=>a.getAttribute('href')));
 ok('9 recusa domínio estranho', !hrefs.some(h => /evil/.test(h||'')), 'aceitou link de fora: ' + hrefs.join(','));
 await p.close();
@@ -112,7 +112,7 @@ ok('10 mostra como texto', (await p.locator('#seloNumero').textContent()).includ
 await p.close();
 
 // 11 — banco fora do ar: veredito continua de pé
-p = await abrir(b, '?d=aprovado&e=lider&sc=SC-2026-0001&id=aaaa-1111', true);
+p = await abrir(b, '?d=aprovado&e=lider&sc=C2609-00001&id=aaaa-1111', true);
 ok('11 veredito sobrevive', (await p.locator('#titulo').textContent()) === 'Aprovado', 'veredito sumiu sem banco');
 ok('11 resumo escondido', !(await p.locator('#cartaoPedido').isVisible()), 'mostrou resumo vazio');
 ok('11 botão do pedido fica', (await p.locator('.acoes a').count()) >= 1, 'perdeu os botões');
@@ -122,7 +122,7 @@ await p.close();
 p = await b.newPage();
 await p.setViewportSize({width:375,height:720});
 await p.route('**supabase.co/**', r => r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(mock.corpoPorUrl(r.request().url(), {pedido: SOL[0]}))}));
-await p.goto(base + '?d=aprovado&e=lider&sc=SC-2026-0001&id=aaaa-1111', {waitUntil:'load'});
+await p.goto(base + '?d=aprovado&e=lider&sc=C2609-00001&id=aaaa-1111', {waitUntil:'load'});
 await p.waitForTimeout(600);
 const larg = await p.evaluate(()=>({doc:document.documentElement.scrollWidth, win:window.innerWidth}));
 ok('12 sem rolagem lateral', larg.doc <= larg.win + 1, larg.doc + ' > ' + larg.win);

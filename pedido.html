@@ -10,7 +10,7 @@
 <!--
   ============================================================================
   TELA DO PEDIDO — Grupo Leh · Compras
-  Leitura apenas. Abre por ?id=<uuid da solicitação> ou ?sc=SC-AAAA-NNNN.
+  Leitura apenas. Abre por ?id=<uuid da solicitação> ou ?sc=C2609-00001.
   O link vai no card do ClickUp e nas mensagens de aprovação; quem tem o link
   vê o pedido, como na tela do fornecedor.
   ============================================================================
@@ -561,7 +561,7 @@ async function abrir(){
 
   if(!id && !sc){
     falhar('Link incompleto.',
-      'O endereço precisa trazer a solicitação: pedido.html?id=… ou pedido.html?sc=SC-2026-0001');
+      'O endereço precisa trazer a solicitação: pedido.html?id=… ou pedido.html?sc=C2609-00001');
     return;
   }
   try{
