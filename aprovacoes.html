@@ -149,6 +149,28 @@
     body{background:#fff}
   }
 
+  /* ---- uma cor por etapa, igual à tela de acompanhamento ---- */
+  :root{
+    --et-lider:#003865;  --et-lider-bg:#E4ECF4;
+    --et-cot:#8A5A00;    --et-cot-bg:#FBF1DD;
+    --et-ger:#00727a;    --et-ger-bg:#E0F1F2;
+    --et-fin:#007A53;    --et-fin-bg:#E3F1EA;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --et-lider:#6FB3E8;  --et-lider-bg:#10283C;
+      --et-cot:#E0B860;    --et-cot-bg:#2C2410;
+      --et-ger:#56C8CF;    --et-ger-bg:#0D2A2D;
+      --et-fin:#3FA37E;    --et-fin-bg:#0F2C21;
+    }
+  }
+  :root[data-theme="dark"]{
+    --et-lider:#6FB3E8;  --et-lider-bg:#10283C;
+    --et-cot:#E0B860;    --et-cot-bg:#2C2410;
+    --et-ger:#56C8CF;    --et-ger-bg:#0D2A2D;
+    --et-fin:#3FA37E;    --et-fin-bg:#0F2C21;
+  }
+
   /* ---- fila de aprovação ---- */
   .envelope{max-width:1180px}
   .barra-fila{display:flex;flex-wrap:wrap;gap:12px;align-items:center;
@@ -184,11 +206,11 @@
   /* O motivo da reprovação mora dentro da coluna da decisão, e é o texto mais
      longo da tabela — por isso ela é a coluna larga. Com 118px o motivo virava
      uma tira de uma palavra por linha e a altura da linha triplicava. */
-  table.hist{width:100%;border-collapse:collapse;table-layout:fixed;min-width:900px}
+  table.hist{width:100%;border-collapse:collapse;table-layout:fixed;min-width:1000px}
   table.hist col.h-num{width:140px}  table.hist col.h-quem{width:auto}
   table.hist col.h-cc{width:168px}   table.hist col.h-et{width:100px}
-  table.hist col.h-res{width:262px}  table.hist col.h-sit{width:172px}
-  table.hist col.h-data{width:104px}
+  table.hist col.h-res{width:250px}  table.hist col.h-sit{width:164px}
+  table.hist col.h-data{width:100px}
   table.hist th,table.hist td{padding:14px 12px;text-align:left;vertical-align:top;
     border-bottom:1px solid var(--borda)}
   table.hist thead th{background:var(--realce);color:var(--muted);font-size:12px;
@@ -208,6 +230,9 @@
     display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;
     overflow:hidden;word-break:break-word}
 
+  .ha-quanto{display:block;color:var(--muted);font-size:12.5px;margin-top:4px}
+  .ha-quanto.demorando{color:var(--demo);font-weight:600}
+
   .rolagem{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--borda);
     border-radius:var(--raio);background:var(--card)}
 
@@ -216,15 +241,15 @@
      para além da tela e levava a coluna da decisão junto — os botões ficavam
      fora do campo de visão, atrás da barra de rolagem. Quem abre a fila para
      decidir não deveria precisar rolar de lado para achar o botão de decidir. */
-  table.fila{width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed;min-width:1040px}
+  table.fila{width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed;min-width:1120px}
   table.fila col.c-sel   {width:44px}
   table.fila col.c-num   {width:136px}
   table.fila col.c-ass   {width:auto}   /* o assunto fica com a sobra: é por ele que se decide */
-  table.fila col.c-quem  {width:208px}
+  table.fila col.c-quem  {width:168px}
   table.fila col.c-itens {width:58px}
-  table.fila col.c-data  {width:106px}
+  table.fila col.c-data  {width:98px}
   table.fila col.c-etapa {width:112px}
-  table.fila col.c-dec   {width:198px}
+  table.fila col.c-dec   {width:214px}
   table.fila th,table.fila td{padding:16px 12px;border-bottom:1px solid var(--borda);
     text-align:left;vertical-align:middle}
   /* Duas linhas, e o resto vira reticências: a linha cresce um pouco, nunca
@@ -250,9 +275,13 @@
   .etapa{display:inline-block;padding:2px 9px;border-radius:var(--pilula);font-size:11px;
     font-weight:700;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;
     background:var(--realce);border:1px solid var(--borda);color:var(--muted)}
-  .etapa.lider{background:var(--verde-claro);border-color:var(--verde);color:var(--verde-mata)}
-  .etapa.gerencial{background:#EFEAF7;border-color:#C9B8E3;color:#4B3A6B}
-  .etapa.financeiro{background:var(--demo-bg);border-color:var(--demo-borda);color:var(--demo)}
+  /* As MESMAS cores da tela de acompanhamento. Quem pede e quem aprova falam do
+     mesmo pedido; se a etapa mudar de cor entre uma tela e outra, as duas param
+     de ser a mesma conversa. */
+  .etapa.lider{background:var(--et-lider-bg);border-color:var(--et-lider);color:var(--et-lider)}
+  .etapa.cotacao{background:var(--et-cot-bg);border-color:var(--et-cot);color:var(--et-cot)}
+  .etapa.gerencial{background:var(--et-ger-bg);border-color:var(--et-ger);color:var(--et-ger)}
+  .etapa.financeiro{background:var(--et-fin-bg);border-color:var(--et-fin);color:var(--et-fin)}
   .hoje{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:var(--pilula);
     background:var(--verde);color:#fff;font-size:10px;font-weight:700;text-transform:uppercase;
     letter-spacing:.04em}
@@ -357,7 +386,7 @@
       <table class="fila">
         <colgroup>
           <col class="c-sel"><col class="c-num"><col class="c-ass"><col class="c-quem">
-          <col class="c-itens"><col class="c-data"><col class="c-etapa"><col class="c-dec">
+          <col class="c-itens"><col class="c-data"><col class="c-data"><col class="c-etapa"><col class="c-dec">
         </colgroup>
         <thead>
           <tr>
@@ -366,6 +395,7 @@
             <th>Assunto</th>
             <th>Quem pediu</th>
             <th class="num">Itens</th>
+            <th>Aberta em</th>
             <th>Entrega até</th>
             <th>Etapa</th>
             <th style="text-align:right">Decisão</th>
@@ -389,7 +419,7 @@
         <table class="hist">
           <colgroup>
             <col class="h-num"><col class="h-quem"><col class="h-cc"><col class="h-et">
-            <col class="h-res"><col class="h-sit"><col class="h-data">
+            <col class="h-res"><col class="h-sit"><col class="h-data"><col class="h-data">
           </colgroup>
           <thead>
             <tr>
@@ -399,7 +429,8 @@
               <th>Etapa</th>
               <th>Sua decisão</th>
               <th>Onde está hoje</th>
-              <th>Quando</th>
+              <th>Aberta em</th>
+              <th>Decidida em</th>
             </tr>
           </thead>
           <tbody id="corpoHist"></tbody>
@@ -460,6 +491,15 @@ const dataBR = iso => {
   return isNaN(d) ? String(iso) : d.toLocaleDateString('pt-BR');
 };
 const ETAPA_NOME = { lider:'Liderança', gerencial:'Gerencial', financeiro:'Financeiro' };
+const DIA = 864e5;
+/* Quantos dias o pedido tem. Devolve o número junto do texto para quem chama
+   decidir se aquilo já virou atraso — a regra do que é "muito" é de quem usa. */
+function haQuanto(iso){
+  if(!iso) return null;
+  const dias = Math.floor((Date.now() - new Date(iso).getTime()) / DIA);
+  if(isNaN(dias) || dias < 0) return null;
+  return { dias, texto: dias === 0 ? 'hoje' : dias === 1 ? 'ontem' : 'há ' + dias + ' dias' };
+}
 const MOTIVO_MINIMO = 10;
 
 async function rpc(nome, corpo){
@@ -567,6 +607,22 @@ function desenhar(){
     tdQ.appendChild(nome); tdQ.appendChild(cc);
     tr.appendChild(tdQ);
     tr.appendChild(cel(String(s.total_itens == null ? '—' : s.total_itens), 'num'));
+
+    /* A data de abertura sozinha não diz nada; "há 6 dias" diz. Pedido parado é
+       a reclamação que chega depois, e ela começa aqui. */
+    const tdAb = document.createElement('td');
+    const dAb = document.createElement('span');
+    dAb.textContent = dataBR(s.aberto_em);
+    tdAb.appendChild(dAb);
+    const quanto = haQuanto(s.aberto_em);
+    if(quanto){
+      const q = document.createElement('span');
+      q.className = 'ha-quanto' + (quanto.dias >= 7 ? ' demorando' : '');
+      q.textContent = quanto.texto;
+      tdAb.appendChild(q);
+    }
+    tr.appendChild(tdAb);
+
     tr.appendChild(cel(dataBR(s.data_necessidade)));
 
     const tdE = document.createElement('td');
@@ -784,12 +840,14 @@ function desenharHist(){
       '<td class="num"><a href="' + link + '">' + esc(h.numero || '—') + '</a></td>' +
       '<td><span class="corta">' + esc(h.facilitador || '—') + '</span></td>' +
       '<td><span class="corta">' + esc(h.centro_custo_nome || '—') + '</span></td>' +
-      '<td>' + esc(ETAPA_NOME[h.etapa] || h.etapa || '—') + '</td>' +
+      '<td><span class="etapa ' + esc(h.etapa || '') + '">' +
+        esc(ETAPA_NOME[h.etapa] || h.etapa || '—') + '</span></td>' +
       '<td><span class="selo-res ' + (aprovou ? 'sim' : 'nao') + '">' +
         (aprovou ? 'Aprovada' : 'Reprovada') + '</span>' +
         (h.motivo ? '<div class="hist-motivo" title="' + esc(h.motivo) + '">' + esc(h.motivo) + '</div>' : '') +
       '</td>' +
       '<td><span class="corta">' + esc(h.situacao || '—') + '</span></td>' +
+      '<td class="quando">' + dataBR(h.aberto_em) + '</td>' +
       '<td class="quando">' + dataBR(h.decidido_em) + '</td>';
     corpo.appendChild(tr);
   });

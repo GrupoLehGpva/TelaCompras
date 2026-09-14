@@ -101,10 +101,10 @@
 
   .rolagem{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--borda);
     border-radius:var(--raio);background:var(--card)}
-  table.lista{width:100%;border-collapse:collapse;table-layout:fixed;min-width:880px}
+  table.lista{width:100%;border-collapse:collapse;table-layout:fixed;min-width:980px}
   table.lista col.c-num{width:148px}   table.lista col.c-ass{width:auto}
   table.lista col.c-cc{width:180px}    table.lista col.c-itens{width:64px}
-  table.lista col.c-data{width:112px}  table.lista col.c-onde{width:246px}
+  table.lista col.c-data{width:116px}  table.lista col.c-onde{width:250px}
   table.lista th,table.lista td{padding:15px 12px;text-align:left;vertical-align:top;
     border-bottom:1px solid var(--borda)}
   table.lista thead th{background:var(--realce);color:var(--muted);font-size:12px;
@@ -119,12 +119,67 @@
     overflow:hidden;word-break:break-word}
   .pequeno{color:var(--muted);font-size:13px;display:block;margin-top:4px}
 
-  .onde{display:inline-block;padding:4px 11px;border-radius:var(--pilula);
-    font-size:12.5px;font-weight:650;white-space:nowrap}
-  .onde.espera{background:var(--verde-claro);color:var(--verde-mata);border:1px solid var(--verde)}
-  .onde.cotacao{background:var(--realce);color:var(--texto);border:1px solid var(--linha-forte)}
-  .onde.ok{background:var(--ok-bg);color:var(--ok-txt);border:1px solid var(--ok-txt)}
-  .onde.nao{background:var(--erro-bg);color:var(--erro);border:1px solid var(--erro-borda)}
+  /* ---- uma cor por etapa ----
+     Quatro etapas, quatro cores, sempre as mesmas. A cor não é enfeite: é o que
+     deixa a pessoa achar o próprio pedido na lista sem ler linha por linha.
+     Todas saem do livro da marca, e cada uma tem par para o tema escuro. */
+  :root{
+    --et-lider:#003865;  --et-lider-bg:#E4ECF4;
+    --et-cot:#8A5A00;    --et-cot-bg:#FBF1DD;
+    --et-ger:#00727a;    --et-ger-bg:#E0F1F2;
+    --et-fin:#007A53;    --et-fin-bg:#E3F1EA;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --et-lider:#6FB3E8;  --et-lider-bg:#10283C;
+      --et-cot:#E0B860;    --et-cot-bg:#2C2410;
+      --et-ger:#56C8CF;    --et-ger-bg:#0D2A2D;
+      --et-fin:#3FA37E;    --et-fin-bg:#0F2C21;
+    }
+  }
+  :root[data-theme="dark"]{
+    --et-lider:#6FB3E8;  --et-lider-bg:#10283C;
+    --et-cot:#E0B860;    --et-cot-bg:#2C2410;
+    --et-ger:#56C8CF;    --et-ger-bg:#0D2A2D;
+    --et-fin:#3FA37E;    --et-fin-bg:#0F2C21;
+  }
+
+  /* ---- a trilha ----
+     Etiqueta solta diz "em cotação" e a pessoa ainda pergunta "falta muito?".
+     A trilha responde as duas de uma vez: onde está e quanto falta. */
+  .trilha{display:flex;gap:3px;margin-bottom:8px;width:138px;max-width:100%}
+  .trilha i{height:5px;flex:1;border-radius:3px;background:var(--borda);display:block}
+  /* Etapa vencida usa a cor da etapa apagada, e não um cinza qualquer: fica
+     claramente diferente do traço inerte do que ainda não aconteceu. */
+  .trilha i.feito{background:var(--cor-etapa);opacity:.34}
+  .trilha i.agora{background:var(--cor-etapa)}
+  .trilha.pronta i{background:var(--ok-txt);opacity:1}
+
+  /* A cor da etapa mora na CÉLULA, e a trilha e a etiqueta herdam dali. Estava
+     só na etiqueta, e por isso o traço da etapa atual nascia sem cor nenhuma. */
+  td.etapa-cel.lider{--cor-etapa:var(--et-lider);--cor-fundo:var(--et-lider-bg)}
+  td.etapa-cel.cotacao{--cor-etapa:var(--et-cot);--cor-fundo:var(--et-cot-bg)}
+  td.etapa-cel.gerencial{--cor-etapa:var(--et-ger);--cor-fundo:var(--et-ger-bg)}
+  td.etapa-cel.financeiro{--cor-etapa:var(--et-fin);--cor-fundo:var(--et-fin-bg)}
+  td.etapa-cel.ok{--cor-etapa:var(--ok-txt);--cor-fundo:var(--ok-bg)}
+  td.etapa-cel.nao{--cor-etapa:var(--erro);--cor-fundo:var(--erro-bg)}
+
+  .onde{display:inline-block;padding:5px 12px;border-radius:var(--pilula);
+    font-size:12.5px;font-weight:650;white-space:nowrap;
+    background:var(--cor-fundo);color:var(--cor-etapa);border:1px solid var(--cor-etapa)}
+
+  /* A faixa colorida na borda da linha: acha o pedido de longe, sem ler nada. */
+  table.lista td.num{border-left:3px solid var(--cor-etapa,transparent)}
+  table.lista td.num.lider{--cor-etapa:var(--et-lider)}
+  table.lista td.num.cotacao{--cor-etapa:var(--et-cot)}
+  table.lista td.num.gerencial{--cor-etapa:var(--et-ger)}
+  table.lista td.num.financeiro{--cor-etapa:var(--et-fin)}
+  table.lista td.num.ok{--cor-etapa:var(--ok-txt)}
+  table.lista td.num.nao{--cor-etapa:var(--erro)}
+
+  .ha-quanto{display:block;color:var(--muted);font-size:12.5px;margin-top:5px}
+  .ha-quanto.demorando{color:var(--demo);font-weight:600}
+
   .recusa{color:var(--muted);font-size:13px;margin-top:6px;line-height:1.45;
     display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 
@@ -174,12 +229,12 @@
       <table class="lista">
         <colgroup>
           <col class="c-num"><col class="c-ass"><col class="c-cc">
-          <col class="c-itens"><col class="c-data"><col class="c-onde">
+          <col class="c-itens"><col class="c-data"><col class="c-data"><col class="c-onde">
         </colgroup>
         <thead>
           <tr>
             <th>Solicitação</th><th>Assunto</th><th>Centro de custo</th>
-            <th class="n">Itens</th><th>Entrega até</th><th>Onde está</th>
+            <th class="n">Itens</th><th>Aberta em</th><th>Entrega até</th><th>Onde está</th>
           </tr>
         </thead>
         <tbody id="corpoAndamento"></tbody>
@@ -196,12 +251,12 @@
       <table class="lista">
         <colgroup>
           <col class="c-num"><col class="c-ass"><col class="c-cc">
-          <col class="c-itens"><col class="c-data"><col class="c-onde">
+          <col class="c-itens"><col class="c-data"><col class="c-data"><col class="c-onde">
         </colgroup>
         <thead>
           <tr>
             <th>Solicitação</th><th>Assunto</th><th>Centro de custo</th>
-            <th class="n">Itens</th><th>Entrega até</th><th>Desfecho</th>
+            <th class="n">Itens</th><th>Aberta em</th><th>Entrega até</th><th>Desfecho</th>
           </tr>
         </thead>
         <tbody id="corpoEncerradas"></tbody>
@@ -246,13 +301,48 @@ async function rpc(nome, corpo){
 let LISTA = [];
 let termo = '';
 
-/* A cor conta a mesma coisa que a palavra, nunca outra: verde é "andando",
-   cinza é "com o comprador", vermelho é "parou". */
+/* Uma cor por etapa, sempre a mesma, aqui e na tela de quem aprova. A cor
+   nunca contradiz a palavra ao lado — ela só deixa achar mais rápido. */
+const ETAPAS = ['lider', 'cotacao', 'gerencial', 'financeiro'];
+
 function classeDe(s){
   if(s.status === 'reprovado') return 'nao';
   if(s.status === 'aprovado')  return 'ok';
-  if(s.etapa_atual === 'cotacao') return 'cotacao';
-  return 'espera';
+  return ETAPAS.includes(s.etapa_atual) ? s.etapa_atual : 'lider';
+}
+
+/* A trilha responde "falta muito?", que a etiqueta sozinha não responde.
+   Quatro traços: o que já passou, onde está, e o que falta. */
+function trilha(s){
+  /* Reprovado não desenha trilha. A solicitação guarda o motivo, mas não em qual
+     etapa a recusa aconteceu — e trilha chutando a etapa é pior que trilha
+     nenhuma. A etiqueta e o motivo já contam o que houve. */
+  if(s.status === 'reprovado') return '';
+
+  const pronta = s.status === 'aprovado';
+  const atual  = ETAPAS.indexOf(s.etapa_atual);
+
+  let traços = '';
+  for(let i = 0; i < ETAPAS.length; i++){
+    const c = pronta ? '' : (i < atual ? 'feito' : (i === atual ? 'agora' : ''));
+    traços += '<i class="' + c + '"></i>';
+  }
+  return '<div class="trilha' + (pronta ? ' pronta' : '') + '">' + traços + '</div>';
+}
+
+/* Há quanto tempo o pedido existe. "Aberta há 6 dias, esperando a liderança"
+   responde a pergunta real de quem pediu, que nenhuma data sozinha responde. */
+const DIA = 864e5;
+function haQuanto(s){
+  if(!s.aberto_em) return '';
+  const dias = Math.floor((Date.now() - new Date(s.aberto_em).getTime()) / DIA);
+  if(isNaN(dias) || dias < 0) return '';
+  const txt = dias === 0 ? 'hoje'
+            : dias === 1 ? 'ontem'
+            : 'há ' + dias + ' dias';
+  /* Sete dias parados é reclamação a caminho. Marcar antes de virar cobrança. */
+  const demorando = !s.encerrada && dias >= 7;
+  return '<span class="ha-quanto' + (demorando ? ' demorando' : '') + '">' + txt + '</span>';
 }
 
 function visiveis(){
@@ -265,15 +355,17 @@ function visiveis(){
 function linha(s){
   const tr = document.createElement('tr');
   const link = 'pedido.html?id=' + encodeURIComponent(s.id);
+  const cls = classeDe(s);
 
   tr.innerHTML =
-    '<td class="num"><a href="' + link + '">' + esc(s.numero || '—') + '</a></td>' +
+    '<td class="num ' + cls + '"><a href="' + link + '">' + esc(s.numero || '—') + '</a></td>' +
     '<td><span class="corta">' + esc(s.assunto || '—') + '</span></td>' +
-    '<td><span class="corta">' + esc(s.centro_custo_nome || '—') + '</span>' +
-      '<span class="pequeno">aberta em ' + dataBR(s.aberto_em) + '</span></td>' +
+    '<td><span class="corta">' + esc(s.centro_custo_nome || '—') + '</span></td>' +
     '<td class="n">' + (s.total_itens == null ? '—' : s.total_itens) + '</td>' +
+    '<td>' + dataBR(s.aberto_em) + haQuanto(s) + '</td>' +
     '<td>' + dataBR(s.data_necessidade) + '</td>' +
-    '<td><span class="onde ' + classeDe(s) + '">' + esc(s.situacao || '—') + '</span>' +
+    '<td class="etapa-cel ' + cls + '">' + trilha(s) +
+      '<span class="onde">' + esc(s.situacao || '—') + '</span>' +
       (s.com_quem ? '<span class="pequeno">' + esc(s.com_quem) + '</span>' : '') +
       (s.motivo_recusa ? '<div class="recusa" title="' + esc(s.motivo_recusa) + '">' +
          esc(s.motivo_recusa) + '</div>' : '') +

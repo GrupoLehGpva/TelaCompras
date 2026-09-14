@@ -22,11 +22,13 @@ const FILA = [
 const QUEM = [{id:'brandao', nome:'Brandão', etapas:['lider','gerencial']}];
 const HIST = [
   {id:'h1', numero:'SC-2026-0901', etapa:'lider', resposta:'aprovado', motivo:null,
-   decidido_em:'2026-09-01T13:00:00Z', facilitador:'Maria de Souza',
+   decidido_em:'2026-09-01T13:00:00Z', aberto_em:'2026-08-25T09:00:00Z',
+   facilitador:'Maria de Souza',
    centro_custo_nome:'CONFINAMENTO DE BOVINOS', situacao:'em cotação'},
   {id:'h2', numero:'SC-2026-0902', etapa:'gerencial', resposta:'reprovado',
    motivo:'Já temos esse item em estoque na Granja 103.',
-   decidido_em:'2026-08-28T18:30:00Z', facilitador:'Ana Paula',
+   decidido_em:'2026-08-28T18:30:00Z', aberto_em:'2026-08-20T09:00:00Z',
+   facilitador:'Ana Paula',
    centro_custo_nome:'COMERCIAL', situacao:'reprovado'}
 ];
 
@@ -87,6 +89,15 @@ ok('2 aba marcada',       (await p.locator('#abaHist').getAttribute('aria-select
   ok('3 mostra o motivo',  /Granja 103/.test(linha2), 'o motivo da reprovação sumiu: ' + linha2);
   ok('3 mostra onde está', /em cotação/.test(linha1), 'não disse onde o pedido está hoje: ' + linha1);
   ok('3 etapa por extenso', /Liderança/.test(linha1) && /Gerencial/.test(linha2), 'etapa crua na tela');
+  // Pedido do Grupo Leh: a data em que o pedido foi FEITO, não só a da decisão.
+  // Sozinha, a data da decisão não diz quanto tempo aquilo ficou parado.
+  ok('3 mostra quando foi aberta', /25\/08\/2026/.test(linha1), 'a data de abertura não apareceu: ' + linha1);
+  ok('3 mostra quando foi decidida', /01\/09\/2026/.test(linha1), 'a data da decisão sumiu: ' + linha1);
+  ok('3 as duas datas, nesta ordem',
+     linha1.indexOf('25/08/2026') < linha1.indexOf('01/09/2026'),
+     'aberta precisa vir antes de decidida: ' + linha1);
+  ok('3 etapa ganhou cor', await p.locator('#corpoHist tr').nth(0).locator('.etapa.lider').count() === 1,
+     'a etapa do histórico ficou sem a cor da etapa');
   const href = await p.locator('#corpoHist tr').nth(0).locator('a').getAttribute('href');
   ok('3 abre o pedido',    /pedido\.html\?id=h1/.test(href || ''), 'link: ' + href);
   ok('3 leva o token',     /t=tk-brandao/.test(href || ''), 'link sem token, a barra de aprovação não aparece: ' + href); }

@@ -273,6 +273,54 @@ ok('18 texto do vazio', /Nada esperando por você/.test(await p.locator('#filaVa
 ok('18 sem erro', !(await p.locator('#erro').isVisible()), 'tratou fila vazia como erro');
 await p.close();
 
+/* 18.4 — os botões de decidir cabem na tabela.
+       Isto já quebrou duas vezes: largura automática empurrou a coluna da
+       decisão para fora, e depois uma coluna nova comeu o espaço dela. O
+       aprovador abre a fila para decidir; botão fora do campo de visão é a
+       tela inteira falhando. */
+p = await tela(b);
+{ const largura = await p.evaluate(() => {
+    const t = document.querySelector('table.fila');
+    const cels = [...document.querySelectorAll('#corpoFila td.acoes')];
+    const fora = cels.filter(td => {
+      const b = [...td.querySelectorAll('button')];
+      return b.some(x => x.getBoundingClientRect().right > t.getBoundingClientRect().right + 1);
+    }).length;
+    const semLargura = cels.filter(td => td.scrollWidth > td.clientWidth + 1).length;
+    return { fora, semLargura, linhas: cels.length };
+  });
+  ok('18.4 botão dentro da tabela', largura.fora === 0,
+     largura.fora + ' de ' + largura.linhas + ' linhas com botão passando da tabela');
+  ok('18.4 coluna da decisão comporta os dois', largura.semLargura === 0,
+     largura.semLargura + ' células de decisão com conteúdo maior que a coluna'); }
+await p.close();
+
+/* 18.5 — a data em que o pedido foi feito, e há quanto tempo ele espera */
+p = await tela(b);
+{ const l1 = await p.locator('#corpoFila tr').nth(0).textContent();   // aberta hoje
+  const l2 = await p.locator('#corpoFila tr').nth(1).textContent();   // aberta há 2 dias
+  const hj = new Date().toLocaleDateString('pt-BR');
+  ok('18.5 mostra a data de abertura', l1.includes(hj), 'não mostrou ' + hj + ': ' + l1);
+  ok('18.5 diz "hoje"',      /hoje/.test(l1), 'linha 1: ' + l1);
+  ok('18.5 conta os dias',   /há 2 dias/.test(l2), 'linha 2: ' + l2);
+  ok('18.5 cor por etapa',   await p.locator('#corpoFila tr').nth(0).locator('.etapa.lider').count() === 1
+                          && await p.locator('#corpoFila tr').nth(1).locator('.etapa.gerencial').count() === 1,
+     'as etapas não receberam a classe da cor');
+  // Sete dias parado é reclamação a caminho; a marca serve para ver antes.
+  const marcadas = await p.locator('#corpoFila .ha-quanto.demorando').count();
+  ok('18.5 nada marcado como atrasado ainda', marcadas === 0, 'marcou ' + marcadas + ' com 2 dias'); }
+await p.close();
+
+/* 18.6 — pedido velho aparece marcado */
+{ const velha = JSON.parse(JSON.stringify(FILA));
+  velha[0].aberto_em = new Date(Date.now() - 9*864e5).toISOString();
+  p = await tela(b, {fila: velha});
+  ok('18.6 marca o que está demorando', await p.locator('#corpoFila .ha-quanto.demorando').count() === 1,
+     'pedido de 9 dias não foi marcado');
+  ok('18.6 diz quantos dias', /há 9 dias/.test(await p.locator('#corpoFila tr').nth(0).textContent()||''),
+     'linha: ' + await p.locator('#corpoFila tr').nth(0).textContent());
+  await p.close(); }
+
 /* 19 — o que a tela mostra ENQUANTO o servidor não respondeu.
        Pedido do Grupo Leh: botão apagado sem explicação passa por tela travada,
        e tela que parece travada leva a clicar de novo. */
