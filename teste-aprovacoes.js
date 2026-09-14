@@ -293,6 +293,26 @@ p = await tela(b);
      largura.fora + ' de ' + largura.linhas + ' linhas com botão passando da tabela');
   ok('18.4 coluna da decisão comporta os dois', largura.semLargura === 0,
      largura.semLargura + ' células de decisão com conteúdo maior que a coluna'); }
+
+/* A mesma doença apareceu na coluna de data: "30/09/2026" saía como
+   "30/09/202…". Em vez de conferir coluna por coluna toda vez que uma nasce,
+   esta guarda mede TODAS as células e reprova qualquer conteúdo que não caiba
+   na sua coluna. Vale para as colunas que existirem depois desta. */
+{ const apertadas = await p.evaluate(() => {
+    const ruins = [];
+    for(const td of document.querySelectorAll('#corpoFila td, table.fila thead th')){
+      /* Célula com corte de duas linhas de propósito não conta: ali o corte é
+         a decisão de desenho, não um acidente de largura. */
+      if(td.querySelector('.corta, .quem-nome')) continue;
+      if(td.scrollWidth > td.clientWidth + 1){
+        ruins.push((td.textContent || '').trim().slice(0, 24) + ' (precisa de ' +
+                   td.scrollWidth + 'px, tem ' + td.clientWidth + 'px)');
+      }
+    }
+    return ruins;
+  });
+  apertadas.forEach(t => ok('18.4 conteúdo cabe na coluna', false, t));
+  ok('18.4 nenhuma coluna apertada', apertadas.length === 0, apertadas.length + ' célula(s)'); }
 await p.close();
 
 /* 18.5 — a data em que o pedido foi feito, e há quanto tempo ele espera */

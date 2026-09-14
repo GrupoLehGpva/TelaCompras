@@ -42,14 +42,27 @@ $function$;
 -- `situacao` é escrita para quem PEDIU, não para quem opera: a pessoa quer
 -- saber de quem o pedido está esperando, não o nome interno da etapa.
 -- ---------------------------------------------------------------------------
-create or replace function public.minhas_solicitacoes(p_token text, p_limite int default 80)
+-- Quem recusou, quando e em qual etapa vêm junto do motivo: o motivo sozinho não
+-- diz com quem a pessoa vai conversar. Precisa de DROP porque o tipo de retorno
+-- mudou; drop e create na mesma transação, para a função nunca faltar.
+drop function if exists public.minhas_solicitacoes(text, int);
+
+create function public.minhas_solicitacoes(p_token text, p_limite int default 80)
 returns table (
   id uuid, numero text, assunto text, centro_custo_nome text, total_itens bigint,
   aberto_em timestamptz, data_necessidade date, etapa_atual text, status text,
-  decidido_em timestamptz, situacao text, com_quem text, encerrada boolean, motivo_recusa text
+  decidido_em timestamptz, situacao text, com_quem text, encerrada boolean,
+  motivo_recusa text, recusado_por text, recusado_em timestamptz, etapa_recusa text
 )
 language sql security definer set search_path to 'public'
 as $function$
+  with recusa as (
+    select distinct on (d.solicitacao_id)
+           d.solicitacao_id, d.motivo, d.decidido_por, d.decidido_em, d.etapa
+      from public.decisoes d
+     where d.resposta = 'reprovado'
+     order by d.solicitacao_id, d.decidido_em desc
+  )
   select s.id, s.numero,
          coalesce(s.motivo, 'Solicitação de compra'),
          cc.nome,
@@ -72,13 +85,12 @@ as $function$
            else null
          end,
          (s.status in ('reprovado','aprovado') or s.etapa_atual is null),
-         (select d.motivo from public.decisoes d
-           where d.solicitacao_id = s.id and d.resposta = 'reprovado'
-           order by d.decidido_em desc limit 1)
+         r.motivo, r.decidido_por, r.decidido_em, r.etapa
     from public.solicitacoes s
     join public.facilitadores f
       on f.token = p_token and f.ativo and s.facilitador_id = f.id
     left join public.centros_custo cc on cc.codigo = s.centro_custo
+    left join recusa r on r.solicitacao_id = s.id
    where s.status <> 'encerrado (teste)'
    order by (s.status in ('reprovado','aprovado') or s.etapa_atual is null), s.aberto_em desc
    limit greatest(1, least(coalesce(p_limite, 80), 300));

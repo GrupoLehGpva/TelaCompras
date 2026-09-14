@@ -180,8 +180,34 @@
   .ha-quanto{display:block;color:var(--muted);font-size:12.5px;margin-top:5px}
   .ha-quanto.demorando{color:var(--demo);font-weight:600}
 
-  .recusa{color:var(--muted);font-size:13px;margin-top:6px;line-height:1.45;
-    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  /* O motivo da recusa não fica derramado na lista: vira um botão. A lista
+     continua respirável, e quem quer ler o motivo abre — é o que a pessoa faz
+     uma vez, não toda vez que abre a tela.
+
+     Este é o ÚNICO tipo de botão permitido nesta tela, e ele não muda nada:
+     abre e fecha uma janela de leitura. A bateria confere isso. */
+  .ver-motivo{margin-top:7px;padding:5px 12px;border-radius:var(--pilula);
+    border:1px solid var(--erro-borda);background:var(--erro-bg);color:var(--erro);
+    font:inherit;font-size:12.5px;font-weight:650;cursor:pointer;display:inline-flex;
+    align-items:center;gap:6px}
+  .ver-motivo:hover{border-color:var(--erro)}
+  .sem-motivo{display:block;color:var(--muted);font-size:12.5px;margin-top:7px;font-style:italic}
+
+  .fundo-modal{position:fixed;inset:0;background:rgba(0,20,32,.55);display:flex;
+    align-items:center;justify-content:center;padding:20px;z-index:50}
+  .fundo-modal[hidden]{display:none}
+  .modal{background:var(--card);border-radius:var(--raio);border:1px solid var(--borda);
+    max-width:560px;width:100%;padding:24px;box-shadow:0 18px 48px rgba(0,20,32,.28)}
+  .modal h2{margin:0 0 4px;font-size:19px;color:var(--erro)}
+  .modal .sub{margin:0 0 18px;color:var(--muted);font-size:13.5px;line-height:1.55}
+  .modal .texto-motivo{background:var(--realce);border:1px solid var(--borda);
+    border-radius:var(--raio);padding:16px 18px;font-size:15px;line-height:1.6;
+    white-space:pre-wrap;word-break:break-word}
+  .modal .rodape{display:flex;justify-content:flex-end;margin-top:20px}
+  .modal .rodape button{padding:10px 20px;border-radius:var(--pilula);font:inherit;
+    font-size:14px;font-weight:650;cursor:pointer;border:1px solid var(--linha-forte);
+    background:var(--card);color:var(--texto)}
+  .modal .rodape button:hover{border-color:var(--verde)}
 
   .vazio{background:var(--card);border:1px dashed var(--linha-forte);border-radius:var(--raio);
     padding:30px 22px;color:var(--muted);line-height:1.6}
@@ -263,6 +289,17 @@
       </table>
     </div>
   </main>
+</div>
+
+<div class="fundo-modal" id="fundoModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tituloModal">
+    <h2 id="tituloModal">Motivo da reprovação</h2>
+    <p class="sub" id="subModal"></p>
+    <div class="texto-motivo" id="textoMotivo"></div>
+    <div class="rodape">
+      <button type="button" class="so-leitura" id="btnFechar">Fechar</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -367,8 +404,15 @@ function linha(s){
     '<td class="etapa-cel ' + cls + '">' + trilha(s) +
       '<span class="onde">' + esc(s.situacao || '—') + '</span>' +
       (s.com_quem ? '<span class="pequeno">' + esc(s.com_quem) + '</span>' : '') +
-      (s.motivo_recusa ? '<div class="recusa" title="' + esc(s.motivo_recusa) + '">' +
-         esc(s.motivo_recusa) + '</div>' : '') +
+      (s.status === 'reprovado'
+        ? (s.motivo_recusa
+            ? '<button type="button" class="ver-motivo so-leitura" data-id="' + esc(s.id) + '">' +
+              'Ver motivo</button>'
+            /* Reprovado sem motivo gravado existe: são os pedidos recusados antes
+               de o rastro de decisões funcionar. Dizer isso é melhor que um botão
+               que abre uma janela vazia. */
+            : '<span class="sem-motivo">Motivo não registrado</span>')
+        : '') +
     '</td>';
   return tr;
 }
@@ -428,6 +472,38 @@ async function abrir(){
     falhar('Não consegui carregar as suas solicitações.', String(e.message).slice(0,220));
   }
 }
+
+/* ---- a janela do motivo ----
+   Abre, mostra e fecha. Não chama o servidor, não muda nada: o motivo já veio
+   junto da lista. Delegação no corpo da tabela, porque as linhas são
+   redesenhadas a cada filtro e ouvinte preso na linha morreria junto. */
+/* Concordam com "reprovada na aprovação ___": a liderança pede o artigo, as
+   outras duas são adjetivo. */
+const ETAPA_RECUSA = { lider:'da liderança imediata', gerencial:'gerencial', financeiro:'financeira' };
+
+function abrirMotivo(id){
+  const s = LISTA.find(x => x.id === id);
+  if(!s || !s.motivo_recusa) return;
+
+  const quem  = s.recusado_por ? ' por ' + s.recusado_por : '';
+  const etapa = ETAPA_RECUSA[s.etapa_recusa] ? ' na aprovação ' + ETAPA_RECUSA[s.etapa_recusa] : '';
+  const quando = s.recusado_em ? ' em ' + dataBR(s.recusado_em) : '';
+
+  $('subModal').textContent = (s.numero || '') + ' · reprovada' + etapa + quem + quando + '.';
+  $('textoMotivo').textContent = s.motivo_recusa;
+  $('fundoModal').hidden = false;
+  $('btnFechar').focus();
+}
+
+function fecharMotivo(){ $('fundoModal').hidden = true; }
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('.ver-motivo');
+  if(b) abrirMotivo(b.dataset.id);
+});
+$('btnFechar').addEventListener('click', fecharMotivo);
+$('fundoModal').addEventListener('click', e => { if(e.target === $('fundoModal')) fecharMotivo(); });
+document.addEventListener('keydown', e => { if(e.key === 'Escape' && !$('fundoModal').hidden) fecharMotivo(); });
 
 $('filtro').addEventListener('input', e => { termo = e.target.value; desenhar(); });
 

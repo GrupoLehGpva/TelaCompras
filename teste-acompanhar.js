@@ -37,7 +37,16 @@ const LISTA = [
     centro_custo_nome:'COMERCIAL', total_itens:1, aberto_em:hoje,
     data_necessidade:'2026-09-30', etapa_atual:null, status:'reprovado',
     decidido_em:hoje, situacao:'Reprovado', com_quem:null,
-    encerrada:true, motivo_recusa:'Já temos esse item em estoque na Granja 103.' }
+    encerrada:true, motivo_recusa:'Já temos esse item em estoque na Granja 103.',
+    recusado_por:'ALVARO BRANDAO FILHO', recusado_em:hoje, etapa_recusa:'lider' },
+  /* Reprovada SEM motivo gravado: existe de verdade na base, são as recusas
+     anteriores ao rastro de decisões. A tela não pode oferecer um botão que
+     abre janela vazia. */
+  { id:'s5', numero:'CP-0005', assunto:'Manutenção do telhado do galpão',
+    centro_custo_nome:'AÇOUGUE NORICUM', total_itens:1, aberto_em:hoje,
+    data_necessidade:'2026-09-30', etapa_atual:null, status:'reprovado',
+    decidido_em:hoje, situacao:'Reprovado', com_quem:null,
+    encerrada:true, motivo_recusa:null, recusado_por:null, recusado_em:null, etapa_recusa:null }
 ];
 
 async function tela(b, { token='fc-elisabeth', quem=EU, lista=LISTA, falhaRpc=false, viewport=null } = {}){
@@ -93,7 +102,7 @@ ok('4 título é pessoal', /Solicitações de ELISABETH/.test(await p.locator('#
    'título: ' + await p.locator('#tituloTopo').textContent());
 ok('4 duas em andamento', await conta(p,'#corpoAndamento tr') === 2,
    'linhas: ' + await conta(p,'#corpoAndamento tr'));
-ok('4 duas encerradas',   await conta(p,'#corpoEncerradas tr') === 2,
+ok('4 três encerradas',   await conta(p,'#corpoEncerradas tr') === 3,
    'linhas: ' + await conta(p,'#corpoEncerradas tr'));
 ok('4 conta só as abertas', /2 em andamento/.test(await p.locator('#seloTotal').textContent()||''),
    'selo: ' + await p.locator('#seloTotal').textContent());
@@ -107,21 +116,53 @@ ok('4 encerradas aparecem depois', await p.locator('#tituloEncerradas').isVisibl
   ok('5 diz onde está',   /Esperando a liderança/.test(l1), 'linha 1: ' + l1);
   ok('5 diz com quem',    /ALVARO BRANDAO FILHO/.test(l1), 'não disse de quem está esperando: ' + l1);
   ok('5 cotação é do comprador', /com o comprador/.test(l2), 'linha 2: ' + l2);
-  ok('5 mostra o motivo da recusa', /Granja 103/.test(l4), 'o motivo sumiu: ' + l4);
+  ok('5 oferece o motivo da recusa', /Ver motivo/.test(l4), 'não ofereceu o motivo: ' + l4);
   const href = await p.locator('#corpoAndamento tr').nth(0).locator('a').getAttribute('href');
   ok('5 abre o pedido',   /pedido\.html\?id=s1/.test(href||''), 'link: ' + href);
   ok('5 NÃO leva token de aprovador', !/[?&]t=/.test(href||''),
      'o link levou token e ia acender a barra de aprovação: ' + href); }
 
-/* 6 — a regra da tela: nada aqui muda nada */
-{ const botoes = await p.locator('button').count();
-  const inputs = await p.locator('input:not([type=search])').count();
-  const forms  = await p.locator('form').count();
-  ok('6 sem botão',   botoes === 0, 'apareceram ' + botoes + ' botões numa tela de leitura');
+/* 6 — a regra da tela: nada aqui muda nada.
+       Botão passou a ser permitido (o "Ver motivo"), mas TODO botão precisa
+       estar marcado como de leitura. É assim que um botão de ação acrescentado
+       no futuro reprova aqui em vez de passar despercebido. */
+{ const botoes   = await p.locator('button').count();
+  const leitura  = await p.locator('button.so-leitura').count();
+  const inputs   = await p.locator('input:not([type=search])').count();
+  const forms    = await p.locator('form').count();
+  ok('6 todo botão é de leitura', botoes === leitura,
+     (botoes - leitura) + ' botão(ões) sem a marca de leitura numa tela que não muda nada');
   ok('6 sem campo',   inputs === 0, 'apareceram ' + inputs + ' campos além do filtro');
   ok('6 sem formulário', forms === 0, 'apareceu formulário numa tela de leitura');
   const chamadas = p.__rpcs.filter(n => !/^facilitador_do_token|^minhas_solicitacoes/.test(n));
   ok('6 só lê', chamadas.length === 0, 'chamou além da leitura: ' + chamadas.join(',')); }
+
+/* 6.5 — a janela do motivo: abre, mostra o que precisa, e fecha */
+{ const antes = p.__rpcs.length;
+  await p.locator('#corpoEncerradas tr').nth(1).locator('.ver-motivo').click();
+  await p.waitForTimeout(250);
+  ok('6.5 janela abre',     await p.locator('#fundoModal').isVisible(), 'a janela não abriu');
+  ok('6.5 mostra o motivo', /Granja 103/.test(await p.locator('#textoMotivo').textContent()||''),
+     'texto: ' + await p.locator('#textoMotivo').textContent());
+  const sub = await p.locator('#subModal').textContent() || '';
+  ok('6.5 diz quem reprovou', /ALVARO BRANDAO FILHO/.test(sub), 'subtítulo: ' + sub);
+  ok('6.5 diz em qual etapa', /na aprovação da liderança imediata/.test(sub), 'subtítulo: ' + sub);
+  ok('6.5 diz o número',      /CP-0004/.test(sub), 'subtítulo: ' + sub);
+  ok('6.5 não chama o servidor', p.__rpcs.length === antes,
+     'abrir o motivo foi ao banco — ele já veio com a lista');
+  await p.click('#btnFechar'); await p.waitForTimeout(200);
+  ok('6.5 fecha no botão', !(await p.locator('#fundoModal').isVisible()), 'não fechou');
+  await p.locator('#corpoEncerradas tr').nth(1).locator('.ver-motivo').click();
+  await p.waitForTimeout(200);
+  await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+  ok('6.5 fecha no Esc', !(await p.locator('#fundoModal').isVisible()), 'Esc não fechou'); }
+
+/* 6.6 — reprovada sem motivo gravado não oferece botão que abre nada */
+{ const l5 = await p.locator('#corpoEncerradas tr').nth(2).textContent() || '';
+  ok('6.6 diz que não há motivo', /Motivo não registrado/.test(l5), 'linha: ' + l5);
+  ok('6.6 sem botão vazio',
+     await p.locator('#corpoEncerradas tr').nth(2).locator('.ver-motivo').count() === 0,
+     'ofereceu "Ver motivo" para um pedido que não tem motivo gravado'); }
 
 /* 7 — filtro */
 await p.fill('#filtro', 'correias');
