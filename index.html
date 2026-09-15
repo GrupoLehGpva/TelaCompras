@@ -1593,6 +1593,13 @@ function montarPacote(solicitacaoId, cabecalho, itens){
 
   return {
     solicitacao_id: solicitacaoId,
+    /* Em que coluna o card nasce. Quem decide é o banco, pelo papel de quem
+       pediu: liderança imediata para solicitante comum, e direto para a
+       cotação quando quem pede é a própria pessoa que aprovaria. A tela só
+       repassa — se ela decidisse aqui, seriam duas cópias da mesma regra. */
+    coluna_inicial: cabecalho.coluna_inicial || 'liderança imediata',
+    pulou_lideranca: !!cabecalho.pulou_lideranca,
+    motivo_do_pulo: cabecalho.motivo_do_pulo || null,
     numero:         cabecalho.numero,
     solicitante:       cabecalho.solicitante,
     solicitante_email: (estado.emailSolicitante || '').trim().toLowerCase(),
@@ -1749,6 +1756,9 @@ async function enviar(){
     /* O número chega agora, do banco, e é este que vale daqui para frente:
        o título do card, a confirmação na tela e o link do pedido. */
     cabecalho.numero = criada.numero;
+    cabecalho.coluna_inicial  = criada.coluna_inicial;
+    cabecalho.pulou_lideranca = criada.pulou_lideranca;
+    cabecalho.motivo_do_pulo  = criada.motivo_do_pulo;
     const pacote = montarPacote(criada.id, cabecalho, itens);
     const aviso  = await avisarWebhook(pacote);
     ultimoPacote = pacote;

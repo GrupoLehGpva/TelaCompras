@@ -1,4 +1,20 @@
 -- ============================================================================
+-- ATENÇÃO — ESTE ARQUIVO ESTÁ DESATUALIZADO A PARTIR DE 15/09/2026
+--
+-- `iniciar_solicitacao` e `entrou_em_etapa` mudaram no item 10: liderança,
+-- gerência e o financeiro passaram a poder abrir pedido, e para eles a
+-- primeira etapa não existe. Quem manda agora é `quem-pede-tambem-aprova.sql`.
+--
+-- **NÃO REAPLIQUE ESTE ARQUIVO.** Rodá-lo por cima devolve a versão que põe
+-- TODO pedido em `lider` — incluindo os do Brandão e do sr. Wienfried, que
+-- passariam a esperar aprovação deles mesmos. É a mesma armadilha que o
+-- `motor-de-estado.sql` já pregou uma vez: arquivo `.sql` no repositório
+-- envelhece, e envelhece calado.
+--
+-- Fica aqui pela história do porquê das decisões, não como algo para rodar.
+-- ============================================================================
+
+-- ============================================================================
 -- O PEDIDO ANDA SOZINHO
 --
 -- Até aqui o estado de uma solicitação vivia só na coluna do card no ClickUp.
