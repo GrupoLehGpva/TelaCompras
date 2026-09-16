@@ -1,9 +1,10 @@
 # A planilha de cotação comparativa
 
 `MODELO-Cotacao.xlsx` é o **template**. Ele fica no OneDrive, em
-`/Compras/Cotacoes/`, e o n8n copia um por solicitação, escrevendo só o
-cabeçalho e os itens. As fórmulas moram no template — não são escritas a cada
-pedido.
+**`/Compras/`** — junto do `MODELO-Fornecedor.xlsx`, porque ali é a pasta dos
+modelos; `/Compras/Cotacoes/` é a pasta dos arquivos gerados. O n8n copia um por
+solicitação, escrevendo só o cabeçalho e os itens. As fórmulas moram no template
+— não são escritas a cada pedido.
 
 ## Não edite o .xlsx à mão
 
@@ -27,6 +28,16 @@ python3 exemplo-comparativa.py              # gera um exemplo preenchido
 | Ocultas | P, Q, R — o total de cada fornecedor por item |
 | Resumo | a partir da linha **213**; os três fornecedores em **217 a 219** |
 | Frete | **G217, G218, G219** — o comprador preenche |
+
+## Código e descrição são texto, não número
+
+As colunas B e C têm formato `@` (Texto). Sem isso o Excel converte `'8210'` no
+número 8210 na hora em que o n8n escreve, e um código com zero à esquerda
+(`'0081'`) volta como 81 — perdido em silêncio. Os códigos do catálogo do GR são
+pura numeração, então não é hipótese.
+
+Foi descoberto **lendo a planilha de volta pela API** depois de escrever, não
+por dedução: a escrita retornou sucesso e só a leitura mostrou o tipo trocado.
 
 ## As três travas
 

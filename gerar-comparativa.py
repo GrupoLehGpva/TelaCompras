@@ -162,6 +162,17 @@ def montar(caminho):
         for c in list(range(C_F1, C_REF+1)) + [C_MENOR, C_PORKG, C_TOTAL]:
             ws.cell(r,c).number_format = 'R$ #,##0.00'
         ws.cell(r,4).number_format = '0.###'
+
+        # Código e descrição são TEXTO, não número. Sem isto o Excel converte
+        # '8210' em 8210 na hora em que o n8n escreve — e um código com zero à
+        # esquerda ('0081') volta como 81, perdido em silêncio. Os códigos do
+        # catálogo do GR são pura numeração, então isso não é hipótese.
+        # Descoberto lendo a planilha de volta pela API, não por dedução.
+        #
+        # A descrição entra junto pelo mesmo motivo: descrição só de dígitos
+        # vira número, e se for longa o Excel a mostra em notação científica.
+        ws.cell(r,2).number_format = '@'
+        ws.cell(r,3).number_format = '@'
     for i in range(FORN):
         ws.column_dimensions[L(C_OCULTA+i)].hidden = True
 
