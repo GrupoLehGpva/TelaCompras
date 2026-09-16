@@ -6,6 +6,12 @@ t-*.png
 # virar página na internet. Elas ficam só na pasta local.
 *.xlsx
 
+# O catálogo de itens do GR, pela mesma razão: é dado da empresa, são 7.084
+# linhas, e o que entra no git não sai mais — apagar o arquivo depois não
+# apaga o histórico. Ele mora no OneDrive, em /Compras/catalogo-itens.csv, que
+# é de onde o fluxo de importação lê. Ver `importar-catalogo.md`.
+catalogo-itens.csv
+
 # Pastas de trabalho, não fazem parte do site
 Claude outputs/
 demonstracao/

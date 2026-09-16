@@ -126,7 +126,7 @@ const b = await chromium.launch();
 
 // 9 — trocar de tipo depois de montar a lista
 { const p = await nova(b); await base(p,'lista');
-  await p.evaluate(()=>{ estado.itensLista=[{foraCatalogo:false,codigo:'LP-0220',familia:'LIM',descricao:'Sabonete',unidade:'Unidade',quantidade:5}];
+  await p.evaluate(()=>{ estado.itensLista=[{foraCatalogo:false,codigo:'7360',familia:'HL',descricao:'SABAO EM PO 1KG',unidade:'UNID',quantidade:5}];
     renderLista(); marcarRadio('tipo','servico'); $('escopoServico').value='Escopo com mais de vinte caracteres para passar'; $('escopoServico').dispatchEvent(new Event('input')); });
   const itens = await p.evaluate(()=> montarItens().length);
   const unidade = await p.evaluate(()=> montarItens()[0].unidade);
@@ -136,13 +136,13 @@ const b = await chromium.launch();
 // 10 — a família trava no primeiro item e destrava quando a lista esvazia
 { const p = await nova(b); await base(p,'lista');
   await p.evaluate(()=>{ passoAtual = sequencia().indexOf('item'); render();
-    estado.itensLista=[{foraCatalogo:false,codigo:'LP-0220',familia:'LIM',descricao:'Sabonete',unidade:'Unidade',quantidade:5}]; renderLista(); });
+    estado.itensLista=[{foraCatalogo:false,codigo:'7360',familia:'HL',descricao:'SABAO EM PO 1KG',unidade:'UNID',quantidade:5}]; renderLista(); });
   const travado = await p.evaluate(()=> ({ desabilitado: $('familiaLista').disabled,
     valor: $('familiaLista').value, avisoVisivel: !$('familiaTravada').hidden,
     aviso: $('familiaTravada').textContent }));
   ok('10 família trava no primeiro item',
-    travado.desabilitado && travado.valor==='LIM' && travado.avisoVisivel, JSON.stringify(travado));
-  ok('10 aviso diz o nome da família', /Material de limpeza/.test(travado.aviso), travado.aviso.slice(0,60));
+    travado.desabilitado && travado.valor==='HL' && travado.avisoVisivel, JSON.stringify(travado));
+  ok('10 aviso diz o nome da família', /Materiais de Higiene e Limpeza/.test(travado.aviso), travado.aviso.slice(0,60));
   await p.evaluate(()=> removerItem(0));
   const solto = await p.evaluate(()=> ({ desabilitado: $('familiaLista').disabled,
     valor: $('familiaLista').value, avisoVisivel: !$('familiaTravada').hidden }));
@@ -191,7 +191,7 @@ const b = await chromium.launch();
     body: JSON.stringify(mock.respostaDoFormulario(r.request().url(), {}))}));
   await p.goto(ARQ,{waitUntil:'load'}); await p.waitForTimeout(1200);
   await base(p,'lista');
-  await p.evaluate(()=>{ estado.itensLista=[{foraCatalogo:false,codigo:'LP-0220',familia:'LIM',
+  await p.evaluate(()=>{ estado.itensLista=[{foraCatalogo:false,codigo:'7360',familia:'HL',
     descricao:'Detergente neutro concentrado 5 litros com nome bem comprido para testar',unidade:'Litro',quantidade:20}];
     renderLista(); passoAtual = sequencia().indexOf('item'); render(); });
   const larg = await p.evaluate(()=> ({doc:document.documentElement.scrollWidth, win:window.innerWidth}));
@@ -240,20 +240,20 @@ const b = await chromium.launch();
 // 18 — item de outra família não entra na mesma solicitação
 { const p = await nova(b); await base(p,'lista');
   await p.evaluate(()=>{ passoAtual = sequencia().indexOf('item'); render(); });
-  await p.selectOption('#familiaLista','LIM');
+  await p.selectOption('#familiaLista','HL');
   await p.click('#buscaLista'); await p.waitForTimeout(250);
   await p.locator('#resultadosLista button').first().click();
   await p.fill('#qtdLista','3'); await p.click('#btnAddItem');
   const forcou = await p.evaluate(()=>{
     // tenta forçar um item de outra família por dentro, como se a trava não existisse
-    rascunho.item = CATALOGO_FALLBACK.find(i=>i.familia==='PNE');
+    rascunho.item = CATALOGO_FALLBACK.find(i=>i.familia==='MM');
     rascunho.quantidade = 2;
     adicionarItem();
     return estado.itensLista.map(i=>i.familia);
   });
   ok('18 item de outra família é recusado',
-    forcou.length===1 && forcou[0]==='LIM', JSON.stringify(forcou));
-  const buscaSoDaFamilia = await p.evaluate(()=> itensDe(rascunho.familia).every(i=>i.familia==='LIM'));
+    forcou.length===1 && forcou[0]==='HL', JSON.stringify(forcou));
+  const buscaSoDaFamilia = await p.evaluate(()=> itensDe(rascunho.familia).every(i=>i.familia==='HL'));
   ok('18 a busca fica presa na família do pedido', buscaSoDaFamilia);
   await p.close(); }
 
@@ -283,6 +283,58 @@ const b = await chromium.launch();
 { const p = await nova(b);
   const max = await p.getAttribute('#escopoServico','maxlength');
   ok('21 escopo limitado', max==='2000', 'maxlength='+max);
+  await p.close(); }
+
+// 22 — as unidades do GR são códigos e não levam plural de português
+//
+// Entrou junto com o catálogo real. Os 29 itens de demonstração tinham
+// unidades por extenso ('Unidade', 'Peça', 'Litro'), então a regra de plural
+// funcionava por acidente. Com UNID, KG, SC e CAB ela produzia "4 unids",
+// "10 kgs", "2 cabs" — e nada estourava: só ficava escrito errado no card que
+// o aprovador lê.
+{ const p = await nova(b);
+  const casos = [
+    ['UNID', 1, 'unidade'], ['UNID', 4, 'unidades'],
+    ['KG',   1, 'kg'],      ['KG',  10, 'kg'],
+    ['L',    2, 'L'],       ['ML',   3, 'mL'],
+    ['M',    5, 'm'],       ['SC',   1, 'saco'],   ['SC',  3, 'sacos'],
+    ['TON',  2, 'toneladas'], ['CAB', 1, 'cabeça'], ['CAB', 8, 'cabeças'],
+    ['DOSE', 2, 'doses'],   ['GRAMAS', 2, 'gramas'], ['BAG', 2, 'bags']
+  ];
+  const obtido = await p.evaluate(cs => cs.map(c => unidadePlural(c[0], c[1])), casos);
+  casos.forEach((c, i) => ok('22 ' + c[1] + ' ' + c[0] + ' se lê "' + c[2] + '"',
+    obtido[i] === c[2], 'saiu: ' + obtido[i]));
+
+  // Unidade que não está na tabela do GR não pode sumir nem estourar: cai na
+  // regra antiga e continua legível.
+  const desconhecida = await p.evaluate(()=> unidadePlural('Balde', 3));
+  ok('22 unidade fora da tabela ainda funciona', desconhecida === 'baldes', 'saiu: ' + desconhecida);
+  await p.close(); }
+
+// 23 — a busca enxerga o grupo do item, não só o nome e o código
+//
+// Decisão do Guilherme em 16/09: o "Novo Grupo" da planilha do GR vai para
+// `especificacao` e entra na busca, sem aparecer na tela. É o que faz alguém
+// digitar "milho" e achar CONC. CRESC. 1 SIL + GERMEN AG RH-201. Sem isto o
+// item existe no catálogo e é como se não existisse.
+{ const p = await nova(b);
+  const r = await p.evaluate(()=> {
+    const acha = t => (filtrar(CATALOGO_FALLBACK, t) || []).map(i => i.codigo);
+    return {
+      porNome:   acha('cimento'),
+      porCodigo: acha('7435'),
+      porGrupo:  acha('material de constru'),   // não está no nome do item
+      grupoNaTela: (() => {
+        const i = CATALOGO_FALLBACK.find(x => x.codigo === '7435');
+        return { descricao: i.descricao, temNoNome: /material/i.test(i.descricao) };
+      })()
+    };
+  });
+  ok('23 acha pelo nome', r.porNome.includes('7435'), JSON.stringify(r.porNome));
+  ok('23 acha pelo código', r.porCodigo.includes('7435'), JSON.stringify(r.porCodigo));
+  ok('23 acha pelo grupo, que não está no nome',
+    r.porGrupo.includes('7435') && r.grupoNaTela.temNoNome === false,
+    JSON.stringify(r.porGrupo) + ' · nome=' + r.grupoNaTela.descricao);
   await p.close(); }
 
 await b.close();

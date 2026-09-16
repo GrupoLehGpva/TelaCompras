@@ -638,14 +638,30 @@ const EXIGIR_FACILITADOR = false;
 const DADOS = {
   solicitante: { nome: 'João da Silva', cargo: 'Líder de Granja' },
 
+  /* As 20 famílias do GR, com os códigos que vêm na planilha de SKUs. Em ordem
+     alfabética pelo nome, não por volume: são 20 opções num select, e quem
+     procura lê a lista em vez de contar itens. */
   familias: [
-    { id:'PNE', nome:'Pneus' },
-    { id:'PEC', nome:'Peças e rolamentos' },
-    { id:'DEF', nome:'Defensivos' },
-    { id:'SEM', nome:'Sementes' },
-    { id:'LIM', nome:'Material de limpeza' },
-    { id:'CON', nome:'Material de construção' },
-    { id:'ALI', nome:'Alimentos e despensa' }
+    { id:'AA', nome:'Alimentação Animal' },
+    { id:'CL', nome:'Combustíveis, Lubrificantes, Óleos e Outros' },
+    { id:'CC', nome:'Copa e Cozinha' },
+    { id:'DA', nome:'Defensivos Agrícolas' },
+    { id:'SP', nome:'Equipamentos, Peças e Materiais para Operações' },
+    { id:'FE', nome:'Fertilizantes e Outros' },
+    { id:'GR', nome:'Grãos' },
+    { id:'IA', nome:'Insumos Alimentação Animal' },
+    { id:'MG', nome:'Manutenção Geral' },
+    { id:'MM', nome:'Manutenção de Máquinas e Equipamentos' },
+    { id:'HL', nome:'Materiais de Higiene e Limpeza' },
+    { id:'ME', nome:'Materiais e Equipamentos de Expediente' },
+    { id:'LD', nome:'Materiais para Desinfecção e Sanitização' },
+    { id:'MV', nome:'Medicamentos e Vacinas' },
+    { id:'MO', nome:'Máquinas, Implementos, Veículos e Outros' },
+    { id:'AN', nome:'Plantel de Animais' },
+    { id:'RC', nome:'Recicláveis' },
+    { id:'RR', nome:'Recursos Renováveis' },
+    { id:'ST', nome:'Segurança e Saúde do Trabalho' },
+    { id:'SE', nome:'Sementes' }
   ],
 
   // TODO: substituir pelos locais reais de entrega
@@ -688,11 +704,11 @@ const DADOS = {
 /* Rede de segurança: se o Supabase não responder no meio de uma apresentação,
    o formulário continua funcionando com este catálogo mínimo. */
 const CATALOGO_FALLBACK = [
-  { codigo:'MM3-0412', familia:'PNE', descricao:'Pneu 275/80 R22,5 borrachudo', unidade:'Unidade', especificacao:'Radial, uso em eixo de tração' },
-  { codigo:'MM2-1180', familia:'PEC', descricao:'Rolamento rígido de esferas 6204 2RS', unidade:'Peça', especificacao:'Diâmetro interno 20 mm' },
-  { codigo:'LP-0220',  familia:'LIM', descricao:'Sabonete em barra 90 g', unidade:'Unidade', especificacao:'Neutro, caixa com 12' },
-  { codigo:'LP-0304',  familia:'LIM', descricao:'Vassoura de piaçava nº 4', unidade:'Unidade', especificacao:'Cabo de madeira 120 cm' },
-  { codigo:'CN-0710',  familia:'CON', descricao:'Cimento CP II 50 kg', unidade:'Saco', especificacao:'Uso geral' }
+  { codigo:'5046', familia:'MM', descricao:'PNEU 275/80R22.5 ARMOR MAX MSD149/146', unidade:'UNID', especificacao:'PNEU' },
+  { codigo:'7360', familia:'HL', descricao:'SABAO EM PO 1KG',           unidade:'UNID', especificacao:'LIMPEZA' },
+  { codigo:'7430', familia:'HL', descricao:'DETERGENTE 500ML',          unidade:'UNID', especificacao:'LIMPEZA' },
+  { codigo:'7335', familia:'HL', descricao:'VASSOURA NYLON COM CABO',   unidade:'UNID', especificacao:'LIMPEZA' },
+  { codigo:'7435', familia:'MG', descricao:'CIMENTO 50KG',              unidade:'SC',   especificacao:'MATERIAL DE CONSTRUÇÃO' }
 ];
 let CATALOGO = [];
 
@@ -747,9 +763,38 @@ function pluralPalavra(entrada){
   return b + 's';
 }
 
+/* ----------------------------------------------------------------------------
+   AS UNIDADES DO GR SÃO CÓDIGOS, NÃO PALAVRAS
+
+   O catálogo real traz UNID, KG, SC, CAB, TON — abreviações. Passadas pela
+   regra de plural do português, viram "4 unids", "10 kgs", "2 cabs". Foi o
+   que a bateria de cliques acusou no minuto em que o catálogo de verdade
+   entrou no lugar dos 29 itens de demonstração.
+
+   Aqui cada código vira a palavra que uma pessoa diz, no singular e no plural.
+   O que fica GRAVADO no pedido continua sendo o código do GR (`UNID`), porque
+   é ele que vai para a planilha de cotação e um dia para o ERP — isto muda só
+   o que se lê na tela.
+---------------------------------------------------------------------------- */
+const UNIDADES_GR = {
+  unid:   ['unidade', 'unidades'],
+  kg:     ['kg', 'kg'],
+  l:      ['L', 'L'],
+  ml:     ['mL', 'mL'],
+  m:      ['m', 'm'],
+  sc:     ['saco', 'sacos'],
+  ton:    ['tonelada', 'toneladas'],
+  gramas: ['grama', 'gramas'],
+  cab:    ['cabeça', 'cabeças'],
+  dose:   ['dose', 'doses'],
+  bag:    ['bag', 'bags']
+};
+
 function unidadePlural(unidade, n){
   const u = String(unidade || '').trim().toLowerCase();
   if(!u) return '';
+  const doGR = UNIDADES_GR[u];
+  if(doGR) return Number(n) === 1 ? doGR[0] : doGR[1];
   if(Number(n) === 1) return u;
   if(UNIDADES_PLURAL[u]) return UNIDADES_PLURAL[u];
   return u.split(/\s+/).map(pluralPalavra).join(' ');
@@ -893,7 +938,9 @@ async function carregarCatalogo(){
     return;
   }
   try{
-    const dados = await apiGet('catalogo_itens?select=*&ativo=eq.true&order=descricao');
+    /* Colunas nomeadas, e não `*`: são 7.084 itens, e cada coluna a mais é
+       peso na mão de quem abre o formulário no celular, no meio da granja. */
+    const dados = await apiGet('catalogo_itens?select=codigo,familia,descricao,unidade,especificacao&ativo=eq.true&order=descricao');
     CATALOGO = dados.length ? dados : CATALOGO_FALLBACK;
     selo.textContent = contar(CATALOGO.length,'item','itens');
     selo.className = 'status on';
@@ -1231,7 +1278,13 @@ function filtrar(base, termo){
   const minimo = MODO_DEMO ? 0 : 3;
   if(t.length < minimo) return null;
   if(!t) return base;
-  return base.filter(i => i.descricao.toLowerCase().includes(t) || (i.codigo||'').toLowerCase().includes(t));
+  /* O grupo (`especificacao`, o "Novo Grupo" da planilha do GR) entra na busca
+     junto com nome e código. É ele que faz "milho" achar
+     CONC. CRESC. 1 SIL + GERMEN AG RH-201, cujo nome não tem a palavra milho.
+     Decisão do Guilherme em 16/09. Ele não aparece na tela — só procura. */
+  return base.filter(i => i.descricao.toLowerCase().includes(t)
+                       || (i.codigo||'').toLowerCase().includes(t)
+                       || (i.especificacao||'').toLowerCase().includes(t));
 }
 const TETO_RESULTADOS = 50;
 const timerFechar = {};
@@ -1604,11 +1657,13 @@ function preencherExemplo(){
       return c ? { foraCatalogo:false, codigo:c.codigo, descricao:c.descricao, unidade:c.unidade, quantidade:qtd }
                : { foraCatalogo:false, codigo:cod, descricao:desc, unidade:un, quantidade:qtd };
     };
+    /* Todos da mesma família (HL), porque o pedido trava na família do primeiro
+       item — um exemplo que mistura famílias monta um pedido que não envia. */
     estado.itensLista = [
-      pega('LP-0220',30,'Sabonete em barra 90 g','Unidade'),
-      pega('LP-0304',6,'Vassoura de piaçava nº 4','Unidade'),
-      pega('LP-0311',20,'Detergente neutro 5 L','Litro'),
-      pega('CN-0710',4,'Cimento CP II 50 kg','Saco')
+      pega('7360',30,'SABAO EM PO 1KG','UNID'),
+      pega('7335',6,'VASSOURA NYLON COM CABO','UNID'),
+      pega('7430',20,'DETERGENTE 500ML','UNID'),
+      pega('8443',4,'SABAO EM PASTA','UNID')
     ];
     renderLista();
     escolherCentroPorTermo('morador');
@@ -1617,7 +1672,7 @@ function preencherExemplo(){
     $('motivoCompra').value = 'Reposição mensal de material de limpeza da casa dos moradores da Granja 103';
   } else {
     marcarRadio('tipo','item');
-    const pneu = acharNoCatalogo('MM3-0412') || CATALOGO[0];
+    const pneu = acharNoCatalogo('5046') || CATALOGO[0];
     if(pneu){ $('familia').value = pneu.familia; $('familia').dispatchEvent(new Event('change')); escolherItem(pneu); }
     $('quantidade').value = 4; $('quantidade').dispatchEvent(new Event('input'));
     escolherCentroPorTermo('frota');

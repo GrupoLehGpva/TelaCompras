@@ -15,9 +15,9 @@ const SOL = {
   status:'solicitado'
 };
 const ITENS = [
-  {codigo:'LP-0220', descricao:'Sabonete em barra 90 g', unidade:'Unidade', quantidade:30},
-  {codigo:'LP-0304', descricao:'Vassoura de piaçava nº 4', unidade:'Unidade', quantidade:6},
-  {codigo:'LP-0311', descricao:'Detergente neutro 5 L', unidade:'Litro', quantidade:20}
+  {codigo:'7360', descricao:'SABAO EM PO 1KG', unidade:'UNID', quantidade:30},
+  {codigo:'7335', descricao:'VASSOURA NYLON COM CABO', unidade:'UNID', quantidade:6},
+  {codigo:'7430', descricao:'DETERGENTE 500ML', unidade:'UNID', quantidade:20}
 ];
 const SERVICO = [{codigo:null, descricao:'Manutenção do telhado do galpão de máquinas da Granja 103.', unidade:'Serviço', quantidade:1}];
 
