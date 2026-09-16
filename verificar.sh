@@ -25,6 +25,18 @@ for b in bateria-tela.js teste-centros.js teste-pedido.js teste-decisao.js \
 done
 
 echo
+echo "== teste-comparativa.py (planilha de cotacao) =="
+# Este e lento: recalcula a planilha no LibreOffice de verdade. Recalcular sem
+# erro so provaria que as formulas avaliam; o que ele confere e se as CONTAS
+# estao certas, com um cenario montado para ser verificavel a mao.
+if command -v soffice >/dev/null 2>&1; then
+  saida=$(python3 teste-comparativa.py 2>&1) || falhou=1
+  echo "$saida" | grep -E "FALHAS|^ x " | head -8
+else
+  echo "  (pulado: sem LibreOffice nesta maquina)"
+fi
+
+echo
 if [ "$falhou" = 0 ]; then
   echo "Tudo passou. Falta o contrato.html, no navegador, depois de publicar."
 else
