@@ -1,5 +1,4 @@
 const q = $('Normalizar o pedido de decisão').first().json.q || {};
-const origem = $('Normalizar o pedido de decisão').first().json.origem || 'slack';
 const t = $input.first().json || {};
 const TELA = 'https://grupolehgpva.github.io/TelaCompras/decisao.html';
 
@@ -32,12 +31,21 @@ const parar = (res, msg, numero) => [{ json: {
 } }];
 
 // ---------------------------------------------------------------------------
-// Quem está decidindo?
+// QUEM ESTÁ DECIDINDO? O BANCO RESPONDE. PARA TODOS OS CAMINHOS.
 //
-// O link do Slack é o segredo dele: quem tem o link é o dono da DM. A tela é
-// outra coisa — ela manda o token do aprovador, e token pode ser copiado,
-// reaproveitado, mandado para o pedido de outra pessoa. Por isso a decisão
-// vinda da tela passa pelo banco antes de encostar no card.
+// Esta conferência valia só para a tela. O caminho do botão do Slack passava
+// direto, com um argumento que fazia sentido na época: o link ia na DM daquela
+// pessoa, então ter o link era ser o dono dele.
+//
+// O argumento morreu. As DMs com botão de decisão foram substituídas pela
+// lista 2× ao dia, e os nós que montavam aqueles links foram removidos em
+// 16/09. Ninguém mais gera link de decisão por GET — e o que sobrou da isenção
+// não serve mais a ninguém legítimo, só a link antigo entregue em DM passada e
+// a quem montar a URL à mão.
+//
+// Então a regra passa a ser uma só: a decisão passa pelo banco antes de
+// encostar no card, venha de onde vier. Sem token válido, sem etapa que seja
+// dele, sem ser a vez dele: não passa.
 //
 // Falha na consulta nega. Um endpoint de aprovação que libera quando o
 // controle está fora do ar não é controle nenhum.
@@ -45,12 +53,10 @@ const parar = (res, msg, numero) => [{ json: {
 let permissao = null;
 try { permissao = $('Conferir quem está decidindo').first().json; } catch (e) { permissao = null; }
 
-if (origem === 'tela') {
-  if (!permissao || permissao.ok !== true) {
-    const motivoRecusa = (permissao && permissao.mensagem)
-      || 'não consegui confirmar quem está decidindo — tente de novo em um minuto';
-    return parar('erro', motivoRecusa);
-  }
+if (!permissao || permissao.ok !== true) {
+  const motivoRecusa = (permissao && permissao.mensagem)
+    || 'não consegui confirmar quem está decidindo — tente de novo em um minuto';
+  return parar('erro', motivoRecusa);
 }
 
 // O número está no começo do título do card: "C2609-00001 · motivo do pedido".
