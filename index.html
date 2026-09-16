@@ -116,6 +116,16 @@
 
   .demo-bar{background:var(--demo-bg);border-bottom:1px solid var(--demo-borda);padding:10px 16px}
   .demo-bar[hidden]{display:none}
+  /* Em produção a barra continua existindo, porque o seletor "Passo a passo /
+     Página única" mora dentro dela e NÃO é coisa de demonstração — é escolha
+     de quem preenche. O que sai é a tarja e o botão de exemplo. Esconder a
+     barra inteira levaria o seletor junto, sem ninguém notar. */
+  .demo-bar.producao{background:var(--card);border-bottom:1px solid var(--borda)}
+  .demo-bar.producao .aviso,
+  .demo-bar.producao .btn-exemplo{display:none}
+  .demo-bar.producao .segmento{border-color:var(--borda)}
+  .demo-bar.producao .segmento button{color:var(--muted)}
+  .demo-bar.producao .segmento button.ativo{background:var(--marca);color:var(--sobre-marca)}
   .demo-bar .interno{max-width:560px;margin:0 auto;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
   .demo-bar .aviso{font-size:11px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:var(--demo);flex:1 1 100%}
   .segmento{display:flex;border:1px solid var(--demo-borda);border-radius:8px;overflow:hidden;background:var(--card)}
@@ -623,7 +633,7 @@ const SUPABASE_KEY = 'sb_publishable_AR4D1JlHB-Z12--QbzwYWQ_URZzmVwl';
    só não avisa o ClickUp. */
 const WEBHOOK_URL  = 'https://grupoleh.app.n8n.cloud/webhook/nova-solicitacao';   // <<< COLE AQUI A URL DO WEBHOOK DO N8N
 
-const MODO_DEMO = true;    // false = produção, validação obrigatória volta a valer
+const MODO_DEMO = false;   // true volta a demonstração: tarja, exemplo e validação frouxa
 const CONECTADO = SUPABASE_KEY.trim().length > 20;
 
 /* Só facilitador abre pedido. Com isto em true, quem não estiver na tabela
@@ -921,7 +931,7 @@ async function iniciar(){
   $('dataLimite').min = hoje.toISOString().slice(0,10);
 
 
-  $('demoBar').hidden = !MODO_DEMO;
+  $('demoBar').classList.toggle('producao', !MODO_DEMO);
   ligarEventos();
   renderLista();
   render();

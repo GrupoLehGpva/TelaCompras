@@ -12,9 +12,14 @@ const motivo = String(q.m || '').trim().slice(0, 800);
 const formato = String(q.f || '').toLowerCase() === 'json' ? 'json' : 'redirect';
 
 const ESPERADO = { lider:'liderança imediata', gerencial:'aprovação gerencial', financeiro:'aprovação financeiro' };
+/* Para onde o card vai depois de cada decisão.
+   'financeiro|aprovado' ia para 'efetuar compra' e passou a ir para 'ordem de
+   compra' em 16/09, quando o Guilherme reorganizou o Kanban: a coluna 'lançar
+   no erp' virou 'ordem de compra' e passou a vir ANTES de 'efetuar compra'.
+   É a entrada nela que dispara a ida dos dados para o GR. */
 const DESTINO = {
   'lider|aprovado':'compras · cotação', 'gerencial|aprovado':'aprovação financeiro',
-  'financeiro|aprovado':'efetuar compra', 'lider|reprovado':'reprovado',
+  'financeiro|aprovado':'ordem de compra', 'lider|reprovado':'reprovado',
   'gerencial|reprovado':'reprovado', 'financeiro|reprovado':'reprovado' };
 const ROTULO = { lider:'liderança imediata', gerencial:'gerencial', financeiro:'financeira' };
 
@@ -111,7 +116,8 @@ const APROVOU = {
     + '5. Mover o card para *aprovação gerencial*\n\n'
     + 'Faltando qualquer um dos cinco, o card volta para cá com a lista do que falta.',
   gerencial: '✅ Aprovado na aprovação gerencial' + quem + ' em ' + agora + '. Segue para o financeiro.',
-  financeiro: '✅ Aprovado na aprovação financeira' + quem + ' em ' + agora + '. Liberado para efetuar a compra.'
+  financeiro: '✅ Aprovado na aprovação financeira' + quem + ' em ' + agora + '.\n\n'
+    + 'O card foi para *ordem de compra* — é a entrada nessa coluna que leva os dados para o GR.'
 };
 
 // O motivo está garantido pela trava acima: reprovação sem ele não chega aqui.

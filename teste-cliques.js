@@ -38,6 +38,14 @@ const visivel = p => p.locator('.passo:not([hidden])').first().getAttribute('dat
 const invalidos = p => p.locator('.campo.invalido').count();
 
 /* Escolhe na caixa de busca clicando no resultado, como a pessoa faz. */
+/* Preenche o pedido inteiro sem depender do botão de exemplo, que só existe
+   em modo demonstração. A função continua no código porque o MODO_DEMO pode
+   ser religado; o que não existe mais é o botão que a chamava. */
+async function preencher(p){
+  await p.evaluate(() => preencherExemplo());
+  await p.waitForTimeout(600);
+}
+
 async function buscarEClicar(p, campo, caixa, texto, alvo){
   await p.click(campo);
   await p.fill(campo, texto);
@@ -81,6 +89,28 @@ ok('1 abre no passo 1', (await visivel(p)) === 'solicitante', 'abriu em ' + awai
 ok('1 facilitador do cadastro', (await p.inputValue('#nomeSolicitante')) === 'Guilherme Pimpão', 'veio ' + await p.inputValue('#nomeSolicitante'));
 ok('1 voltar escondido no início', await p.locator('#btnVoltar').isHidden(), 'botão voltar aparece no passo 1');
 ok('1 progresso', /Passo 1 de \d/.test(await passo(p)), 'progresso: ' + await passo(p));
+
+/* O seletor de visualização tem que estar alcançável. Ele mora dentro da
+   barra que carrega a tarja de demonstração, e desligar o MODO_DEMO
+   escondendo a barra INTEIRA o leva junto — sem ninguém notar.
+   
+   Este é o único ponto da bateria que ESTOURA em vez de somar uma falha, e
+   é de propósito. O `ok()` guarda as falhas e só as imprime no fim; com o
+   seletor fora da tela, a execução morre num timeout de 30s lá no teste 5 e
+   o relatório nunca chega a ser impresso — o diagnóstico vira uma pilha de
+   "element is not visible" sobre um seletor CSS. Parando aqui, a primeira
+   linha da saída já diz o que aconteceu.
+   
+   Descoberto por teste de mutação: a bateria pegava o problema, mas de um
+   jeito que não se lê. */
+if (!(await p.locator('#verPagina').isVisible())) {
+  throw new Error(
+    'O seletor "Página única" não está visível na primeira tela.\n' +
+    '  Provável causa: a barra do topo (#demoBar) foi escondida inteira ao\n' +
+    '  desligar o MODO_DEMO. Ela carrega a tarja e o botão de exemplo, que\n' +
+    '  devem sumir — mas também o seletor de visualização, que não deve.\n' +
+    '  O jeito certo é a classe .producao, não o atributo hidden.');
+}
 
 await avancar(p);
 /* Depois de quem pede vem EMPRESA E CENTRO DE CUSTO, e so entao o pedido —
@@ -218,7 +248,7 @@ ok('3 barra lista vazia', (await visivel(p)) === 'item', 'passou com a lista vaz
 await p.selectOption('#familiaLista', 'HL');
 await p.waitForTimeout(200);
 if(await p.locator('#btnAddItem').isDisabled() === false)
-  notas.push('3 o botão "Adicionar à lista" fica habilitado antes de escolher item — efeito do MODO_DEMO ligado');
+  notas.push('3 o botão "Adicionar à lista" ficou habilitado antes de escolher item');
 await buscarEClicar(p, '#buscaLista', '#resultadosLista', 'sabao em po');
 await p.fill('#qtdLista', '30');
 ok('3 add habilitado', !(await p.locator('#btnAddItem').isDisabled()), 'botão continuou desabilitado');
@@ -287,16 +317,32 @@ ok('5 volta para passos', await p.locator('#progresso').isVisible(), 'não volto
 await p.close();
 
 /* ==========================================================================
-   6) BOTÃO DE EXEMPLO
+   6) A BARRA EM MODO PRODUÇÃO
+   Era "botão de exemplo". Com o MODO_DEMO desligado o botão não existe mais,
+   e o que precisa ser provado inverteu: que a tarja e o exemplo sumiram, e
+   que o seletor de visualização — que NÃO é de demonstração — continuou.
+   Esconder a barra inteira teria levado o seletor junto, calado.
    ========================================================================== */
 p = await tela(b);
-ok('6 barra de demo visível', await p.locator('#demoBar').isVisible(), 'a barra de demonstração não aparece');
-await p.click('#btnExemplo'); await p.waitForTimeout(600);
-ok('6 preencheu o motivo', (await p.inputValue('#motivoCompra')).length > 10, 'motivo vazio');
-ok('6 preencheu o centro', (await p.evaluate(()=>estado.centroCusto)).length > 0, 'centro não foi preenchido');
+ok('6 a barra continua na tela', await p.locator('#demoBar').isVisible(), 'a barra sumiu e levou o seletor junto');
+ok('6 marcada como produção', await p.locator('#demoBar').evaluate(el => el.classList.contains('producao')), 'ficou em modo demonstração');
+ok('6 a tarja amarela sumiu', !(await p.locator('#demoBar .aviso').isVisible()), 'ainda diz "Modo demonstração"');
+ok('6 o botão de exemplo sumiu', !(await p.locator('#btnExemplo').isVisible()), 'o atalho de demonstração continua clicável em produção');
+ok('6 o seletor de visualização ficou', await p.locator('#verPagina').isVisible(), 'o seletor foi junto com a tarja');
+await p.click('#verPagina');
+ok('6 e o seletor funciona', !(await p.locator('#progresso').isVisible()), 'clicou em Página única e nada mudou');
+await p.close();
+
+/* ==========================================================================
+   6b) PREENCHIDO À MÃO, COMO EM PRODUÇÃO, ENVIA
+   ========================================================================== */
+p = await tela(b);
+await preencher(p);
+ok('6b preencheu o motivo', (await p.inputValue('#motivoCompra')).length > 10, 'motivo vazio');
+ok('6b preencheu o centro', (await p.evaluate(()=>estado.centroCusto)).length > 0, 'centro não foi preenchido');
 await atéOFim(p);
 await p.waitForTimeout(600);
-ok('6 exemplo envia', (await visivel(p)) === 'confirmacao', 'o exemplo não conseguiu enviar, parou em ' + await visivel(p));
+ok('6b pedido preenchido envia', (await visivel(p)) === 'confirmacao', 'não conseguiu enviar, parou em ' + await visivel(p));
 await p.close();
 
 /* ==========================================================================
@@ -314,7 +360,7 @@ await p.close();
 
 // duplo clique no botão de enviar não pode gerar dois pedidos
 p = await tela(b);
-await p.click('#btnExemplo'); await p.waitForTimeout(600);
+await preencher(p);
 await atéOFim(p, 7);
 let posts = 0;
 p.on('request', r => { if(r.method() === 'POST' && /solicitacoes/.test(r.url())) posts++; });
@@ -335,7 +381,7 @@ await p.close();
    8) FALHA DO WEBHOOK PELO CAMINHO DE CLIQUE
    ========================================================================== */
 p = await tela(b, {webhook:500});
-await p.click('#btnExemplo'); await p.waitForTimeout(600);
+await preencher(p);
 await atéOFim(p);
 await p.waitForTimeout(1000);
 ok('8 avisa que não chegou', await p.locator('#okAviso').isVisible(), 'falha do webhook passou como sucesso');
