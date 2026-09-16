@@ -1279,9 +1279,15 @@ function filtrar(base, termo){
   if(t.length < minimo) return null;
   if(!t) return base;
   /* O grupo (`especificacao`, o "Novo Grupo" da planilha do GR) entra na busca
-     junto com nome e código. É ele que faz "milho" achar
-     CONC. CRESC. 1 SIL + GERMEN AG RH-201, cujo nome não tem a palavra milho.
-     Decisão do Guilherme em 16/09. Ele não aparece na tela — só procura. */
+     junto com nome e código. Decisão do Guilherme em 16/09. Ele não aparece na
+     tela — só procura.
+
+     Não é detalhe: em 6.419 dos 7.084 itens o grupo NÃO está escrito no nome.
+     É o que faz "herbicida" achar ACCENT, "EPI" achar AVENTAL DE RASPA e
+     "fungicida" achar ABACUS HC — nomes que não têm essas palavras, e que sem
+     isto existem no catálogo e é como se não existissem. Os números vieram de
+     contar no banco depois da importação; o exemplo que eu tinha escrito aqui
+     antes ("milho" achando o CONC. CRESC.) era invenção minha e estava errado. */
   return base.filter(i => i.descricao.toLowerCase().includes(t)
                        || (i.codigo||'').toLowerCase().includes(t)
                        || (i.especificacao||'').toLowerCase().includes(t));

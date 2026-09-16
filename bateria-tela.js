@@ -314,9 +314,11 @@ const b = await chromium.launch();
 // 23 — a busca enxerga o grupo do item, não só o nome e o código
 //
 // Decisão do Guilherme em 16/09: o "Novo Grupo" da planilha do GR vai para
-// `especificacao` e entra na busca, sem aparecer na tela. É o que faz alguém
-// digitar "milho" e achar CONC. CRESC. 1 SIL + GERMEN AG RH-201. Sem isto o
-// item existe no catálogo e é como se não existisse.
+// `especificacao` e entra na busca, sem aparecer na tela.
+//
+// Em 6.419 dos 7.084 itens o grupo não está escrito no nome. É o que faz
+// "herbicida" achar ACCENT e "EPI" achar AVENTAL DE RASPA — sem isto esses
+// itens existem no catálogo e é como se não existissem.
 { const p = await nova(b);
   const r = await p.evaluate(()=> {
     const acha = t => (filtrar(CATALOGO_FALLBACK, t) || []).map(i => i.codigo);

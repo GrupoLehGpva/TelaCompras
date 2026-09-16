@@ -26,9 +26,13 @@ dos quatro "CARNE DE FRANGO COM OSSO" é o certo.
 ## O "Novo Grupo" procura, mas não aparece
 
 Vai para `especificacao` e entra no filtro da busca junto com nome e código.
-É ele que faz alguém digitar **milho** e achar
-`CONC. CRESC. 1 SIL + GERMEN AG RH-201`, cujo nome não tem a palavra milho.
 Na tela continuam aparecendo só o nome, o código e a unidade.
+
+**Em 6.419 dos 7.084 itens o grupo não está escrito no nome** — contado no banco
+depois da importação. É o que faz `herbicida` achar **ACCENT**, `EPI` achar
+**AVENTAL DE RASPA**, `fungicida` achar **ABACUS HC** e `ferramenta` achar
+**CHAVE COMBINADA**. São nomes que não têm essas palavras, e é assim que a pessoa
+procura: ela sabe que precisa de um herbicida antes de saber a marca.
 
 ## Limpezas feitas no caminho
 
