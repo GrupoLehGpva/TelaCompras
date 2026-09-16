@@ -59,6 +59,7 @@ async function enviar(b, resposta){
     estado.emailSolicitante = 'quem.pede@leh.com.br';
     estado.tipo = 'item';
     estado.centroCusto = '3180';
+    estado.empresa = 'wienfried-pr'; estado.empresaNome = 'WIENFRIED MATTHIAS LEH - PR';
     estado.tipoCompra = 'normal';
     estado.definicaoFornecedor = 'cotacao';
     estado.dataLimite = '2026-12-31';

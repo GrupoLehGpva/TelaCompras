@@ -18,6 +18,10 @@ const base = async (p, tipo) => p.evaluate(t=>{
   $('nomeSolicitante').value='Guilherme Pimpão'; $('nomeSolicitante').dispatchEvent(new Event('input'));
   $('emailSolicitante').value='ia@leh.com.br'; $('emailSolicitante').dispatchEvent(new Event('input'));
   marcarRadio('tipo', t);
+  /* A empresa passou a ser obrigatoria. Pelo select, e nao por estado.empresa,
+     para o teste exercitar o widget de verdade. */
+  { const sel = $('empresa'); if(sel && sel.options.length > 1){
+      sel.value = sel.options[1].value; sel.dispatchEvent(new Event('change')); } }
   escolherCentroPorTermo('manuten');
   marcarRadio('tipoCompra','normal'); marcarRadio('definicaoFornecedor','cotacao');
   const d=new Date(); d.setDate(d.getDate()+10);
@@ -40,7 +44,21 @@ const b = await chromium.launch();
   ok('1 email sem domínio barra', await invalido(p,'emailSolicitante')===1);
   await p.fill('#nomeSolicitante','Guilherme'); await p.fill('#emailSolicitante','ia@leh.com.br');
   await p.click('#btnAvancar');
-  ok('1 passa com nome e email válidos', (await p.textContent('#progTitulo'))==='Item');
+  /* Depois de quem pede vem EMPRESA E CENTRO DE CUSTO, e so entao o pedido —
+     a mesma ordem da requisicao no GR. */
+  ok('1 passa com nome e email válidos',
+     (await p.textContent('#progTitulo'))==='Empresa e centro de custo',
+     'foi para: ' + await p.textContent('#progTitulo'));
+  await p.click('#btnAvancar');
+  ok('1 empresa vazia barra', await invalido(p,'empresa')===1);
+  ok('1 centro de custo vazio barra', await invalido(p,'centroCusto')===1);
+  await p.evaluate(()=>{ const sel=$('empresa'); sel.value=sel.options[1].value;
+                         sel.dispatchEvent(new Event('change'));
+                         escolherCentroPorTermo('manuten'); });
+  await p.click('#btnAvancar');
+  ok('1 com empresa e centro, segue para o item',
+     (await p.textContent('#progTitulo'))==='Item',
+     'foi para: ' + await p.textContent('#progTitulo'));
   await p.click('#btnAvancar');
   ok('1 tipo não escolhido barra', await invalido(p,'tipo')===1);
   await p.close(); }

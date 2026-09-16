@@ -65,11 +65,43 @@ const b = await chromium.launch();
 /* ==========================================================================
    1) ITEM ÚNICO — do começo ao fim, só clicando
    ========================================================================== */
+/* Sai do passo do facilitador, passa pela empresa e pelo centro de custo, e
+   para no item. A empresa e o centro subiram para logo depois de quem pede —
+   a mesma ordem da requisicao no GR — entao quem quer testar o pedido em si
+   atravessa esse passo primeiro. */
+async function ateOItem(p){
+  await avancar(p);                                   // solicitante -> entrega
+  await p.selectOption('#empresa', { index: 1 });
+  await buscarEClicar(p, '#buscaCentro', '#resultadosCentro', 'confinamento');
+  await avancar(p);                                   // entrega -> item
+}
+
 let p = await tela(b);
 ok('1 abre no passo 1', (await visivel(p)) === 'solicitante', 'abriu em ' + await visivel(p));
 ok('1 facilitador do cadastro', (await p.inputValue('#nomeSolicitante')) === 'Guilherme Pimpão', 'veio ' + await p.inputValue('#nomeSolicitante'));
 ok('1 voltar escondido no início', await p.locator('#btnVoltar').isHidden(), 'botão voltar aparece no passo 1');
 ok('1 progresso', /Passo 1 de \d/.test(await passo(p)), 'progresso: ' + await passo(p));
+
+await avancar(p);
+/* Depois de quem pede vem EMPRESA E CENTRO DE CUSTO, e so entao o pedido —
+   a mesma ordem da requisicao no GR. */
+ok('1 chegou na empresa e centro', (await visivel(p)) === 'entrega', 'foi para ' + await visivel(p));
+
+await avancar(p);
+ok('1 barra sem empresa e sem centro',
+   (await visivel(p)) === 'entrega' && (await invalidos(p)) > 0,
+   'passou sem escolher empresa nem centro de custo');
+
+await p.selectOption('#empresa', { index: 1 });
+await p.waitForTimeout(150);
+await avancar(p);
+ok('1 barra so com a empresa', (await visivel(p)) === 'entrega',
+   'passou sem o centro de custo');
+
+await buscarEClicar(p, '#buscaCentro', '#resultadosCentro', 'confinamento');
+ok('1 ficha do centro', await p.locator('#fichaCentro').isVisible(), 'ficha do centro não apareceu');
+ok('1 centro certo', (await p.locator('#cCodigo').textContent()) === '1994',
+   'código: ' + await p.locator('#cCodigo').textContent());
 
 await avancar(p);
 ok('1 chegou no item', (await visivel(p)) === 'item', 'foi para ' + await visivel(p));
@@ -103,14 +135,6 @@ await p.fill('#quantidade', '0'); await avancar(p);
 ok('1 barra quantidade zero', (await visivel(p)) === 'quantidade', 'passou com zero');
 await p.fill('#quantidade', '4');
 ok('1 unidade no plural', /Unidades/i.test(await p.locator('#unidadeMedida').textContent()), 'unidade: ' + await p.locator('#unidadeMedida').textContent());
-await avancar(p);
-
-ok('1 chegou no centro', (await visivel(p)) === 'entrega', 'foi para ' + await visivel(p));
-await avancar(p);
-ok('1 barra sem centro', (await visivel(p)) === 'entrega', 'passou sem centro de custo');
-await buscarEClicar(p, '#buscaCentro', '#resultadosCentro', 'confinamento');
-ok('1 ficha do centro', await p.locator('#fichaCentro').isVisible(), 'ficha do centro não apareceu');
-ok('1 centro certo', (await p.locator('#cCodigo').textContent()) === '1994', 'código: ' + await p.locator('#cCodigo').textContent());
 await avancar(p);
 
 ok('1 chegou na compra', (await visivel(p)) === 'compra', 'foi para ' + await visivel(p));
@@ -158,7 +182,7 @@ await p.close();
    2) VOLTAR preserva o que foi preenchido
    ========================================================================== */
 p = await tela(b);
-await avancar(p);
+await ateOItem(p);
 await p.locator('#tipoOpcoes label', {hasText:'Item'}).first().click();
 await p.selectOption('#familia', 'PNE');
 await buscarEClicar(p, '#buscaItem', '#resultados', 'pneu');
@@ -172,6 +196,9 @@ await voltar(p);
 ok('2 voltou para item', (await visivel(p)) === 'item', 'voltou para ' + await visivel(p));
 ok('2 item preservado', await p.locator('#ficha').isVisible(), 'perdeu o item ao voltar');
 await voltar(p);
+ok('2 voltou para empresa e centro', (await visivel(p)) === 'entrega', 'voltou para ' + await visivel(p));
+ok('2 empresa preservada ao voltar', (await p.inputValue('#empresa')) !== '', 'perdeu a empresa');
+await voltar(p);
 ok('2 voltou para o passo 1', (await visivel(p)) === 'solicitante', 'voltou para ' + await visivel(p));
 ok('2 voltar some de novo', await p.locator('#btnVoltar').isHidden(), 'botão voltar continua no passo 1');
 await p.close();
@@ -180,7 +207,7 @@ await p.close();
    3) LISTA DE ITENS — adicionar, remover, travar família
    ========================================================================== */
 p = await tela(b);
-await avancar(p);
+await ateOItem(p);
 await p.locator('#tipoOpcoes label', {hasText:'Lista'}).first().click();
 await p.waitForTimeout(200);
 ok('3 bloco da lista', await p.locator('#blocoLista').isVisible(), 'bloco da lista não apareceu');
@@ -227,7 +254,7 @@ await p.close();
    4) ESCOPO DE SERVIÇO
    ========================================================================== */
 p = await tela(b);
-await avancar(p);
+await ateOItem(p);
 await p.locator('#tipoOpcoes label', {hasText:'serviço'}).first().click();
 await p.waitForTimeout(250);
 ok('4 bloco do escopo', await p.locator('#blocoServico').isVisible(), 'bloco do escopo não apareceu');
@@ -239,7 +266,7 @@ await avancar(p);
 ok('4 barra escopo curto', (await visivel(p)) === 'item', 'passou com escopo de 5 letras');
 await p.fill('#escopoServico', 'Trocar as telhas quebradas do galpão de máquinas e limpar as calhas.');
 await avancar(p);
-ok('4 pula a quantidade', (await visivel(p)) === 'entrega', 'foi para ' + await visivel(p));
+ok('4 pula a quantidade', (await visivel(p)) === 'compra', 'foi para ' + await visivel(p));
 ok('4 são 5 passos', /de 5/.test(await passo(p)), 'progresso: ' + await passo(p));
 await p.close();
 
@@ -276,7 +303,7 @@ await p.close();
    7) TECLADO E DUPLO CLIQUE
    ========================================================================== */
 p = await tela(b);
-await avancar(p);
+await ateOItem(p);
 await p.locator('#tipoOpcoes label', {hasText:'Item'}).first().click();
 await p.selectOption('#familia', 'PNE');
 await p.click('#buscaItem'); await p.fill('#buscaItem', 'pneu');
@@ -319,7 +346,7 @@ await p.close();
    9) TROCA DE TIPO NO MEIO DO CAMINHO
    ========================================================================== */
 p = await tela(b);
-await avancar(p);
+await ateOItem(p);
 await p.locator('#tipoOpcoes label', {hasText:'Item'}).first().click();
 await p.selectOption('#familia', 'PNE');
 await buscarEClicar(p, '#buscaItem', '#resultados', 'pneu');

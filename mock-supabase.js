@@ -26,8 +26,20 @@ function respostaCriarSolicitacao({ id = 'sol-de-mentira-0001', numero = 'C2609-
 /* O que o Supabase devolve para CADA endereço que o formulário usa.
    Uma função só, para nenhuma bateria montar o seu próprio Supabase de araque
    e passar por engano. */
-function respostaDoFormulario(url, { catalogo = [], centros = [], facilitador = [], criada } = {}){
+/* As seis pessoas juridicas do Grupo Leh, com o espacamento EXATO do GR.
+   Nao arrumar: e por esse texto que o robo casa a opcao no ERP. */
+const EMPRESAS_EXEMPLO = [
+  { id:'elke-pi',      nome:'ELKE MONIKA ZUBER LEH-PI' },
+  { id:'elke-pr',      nome:'ELKE MONIKA ZUBER LEH - PR' },
+  { id:'rainer-pi',    nome:'RAINER MATHIAS LEH - PI' },
+  { id:'rainer-pr',    nome:'RAINER MATHIAS LEH - PR' },
+  { id:'wienfried-pi', nome:'WIENFRIED MATTHIAS LEH - PI' },
+  { id:'wienfried-pr', nome:'WIENFRIED MATTHIAS LEH - PR' }
+];
+
+function respostaDoFormulario(url, { catalogo = [], centros = [], facilitador = [], empresas, criada } = {}){
   if(url.includes('/rpc/criar_solicitacao'))    return criada || respostaCriarSolicitacao();
+  if(url.includes('empresas'))                  return empresas || EMPRESAS_EXEMPLO;
   if(url.includes('/rpc/facilitador_por_slack'))return facilitador;
   if(url.includes('catalogo_itens'))            return catalogo;
   if(url.includes('centros_custo'))             return centros;
@@ -85,4 +97,4 @@ function corpoPorUrl(url, { pedido = null, itens = [], centros = [], fila = [] }
 }
 
 module.exports = { instalar, respostaAbrirPedido, respostaDecisao, corpoPorUrl,
-                   respostaCriarSolicitacao, respostaDoFormulario };
+                   respostaCriarSolicitacao, respostaDoFormulario, EMPRESAS_EXEMPLO };

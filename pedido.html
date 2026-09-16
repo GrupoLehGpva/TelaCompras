@@ -515,6 +515,10 @@ function desenhar(s, itens){
     (s.solicitante_nome ? campo('Solicitante', s.solicitante_nome) : '') +
     campo('Aberto em', dataBR(s.aberto_em)) +
     campo('Tipo de compra', legivel(TIPOS_COMPRA, s.tipo_compra)) +
+    /* A empresa vem antes do centro de custo, como na requisição do GR. Pedidos
+       antigos não têm empresa — mostra travessão em vez de sumir com a linha,
+       senão a ficha muda de forma de um pedido para o outro. */
+    campo('Empresa', s.empresa_nome || '—') +
     campo('Centro de custo', CENTRO_NOME || legivel(CENTROS, s.centro_custo)) +
     campo('Entrega até', dataBR(s.data_necessidade)) +
     campo('Definição de fornecedor', legivel(DEF_FORNECEDOR, s.definicao_fornecedor)) +

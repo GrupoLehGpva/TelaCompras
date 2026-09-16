@@ -481,7 +481,16 @@
 
     <!-- ======================= 3 · ENTREGA E CUSTO ======================= -->
     <section class="passo" data-passo="entrega" hidden>
-      <h2>Centro de custo</h2>
+      <h2>Empresa e centro de custo</h2>
+
+      <div class="campo" data-campo="empresa">
+        <label for="empresa">Empresa</label>
+        <select id="empresa">
+          <option value="">Selecione a empresa…</option>
+        </select>
+        <span class="ajuda">A pessoa jurídica que compra. É a mesma lista do GR, e é ela
+          que vai no cabeçalho da ordem de compra.</span>
+      </div>
 
       <div class="campo" data-campo="centroCusto">
         <label for="buscaCentro">Busque o centro de custo pelo nome, pelo código ou pela unidade</label>
@@ -763,6 +772,7 @@ const estado = {
   observacao:'',
   tipo:'', familia:'', item:null,
   quantidade:'', itensLista:[],
+  empresa:'', empresaNome:'',
   centroCusto:'', centroCustoNome:'', centroCustoUnidade:'',
   tipoCompra:'', definicaoFornecedor:'', justificativaFornecedor:'',
   dataLimite:'', motivoCompra:'', anexos:[]
@@ -781,13 +791,17 @@ let SLACK_UID = '';        // id do usuário no Slack, vindo da query string (va
 
 const SEM_QUANTIDADE = ['lista','servico'];
 
+/* Empresa e centro de custo vêm logo depois de quem está pedindo, e só então
+   o pedido em si — a mesma ordem da requisição no GR. A seção fica escondida
+   até ser a vez dela, então a posição no HTML não importa; quem manda é esta
+   lista. */
 const sequencia = () => SEM_QUANTIDADE.includes(estado.tipo)
-  ? ['solicitante','item','entrega','compra','prazo']
-  : ['solicitante','item','quantidade','entrega','compra','prazo'];
+  ? ['solicitante','entrega','item','compra','prazo']
+  : ['solicitante','entrega','item','quantidade','compra','prazo'];
 
 const TITULOS = {
   solicitante:'Solicitante',
-  item:'Item', quantidade:'Quantidade', entrega:'Centro de custo',
+  item:'Item', quantidade:'Quantidade', entrega:'Empresa e centro de custo',
   compra:'Tipo de compra e fornecedor', prazo:'Prazo e motivo'
 };
 
@@ -866,7 +880,8 @@ async function iniciar(){
   ligarEventos();
   renderLista();
   render();
-  await Promise.all([carregarCatalogo(), carregarCentrosCusto(), carregarFacilitador(SLACK_UID)]);
+  await Promise.all([carregarCatalogo(), carregarCentrosCusto(), carregarEmpresas(),
+                     carregarFacilitador(SLACK_UID)]);
 }
 
 async function carregarCatalogo(){
@@ -958,6 +973,44 @@ function facilitadorLiberado(){
    travar, e o aviso aparece na tela para ninguém enviar pedido com centro errado.
    -------------------------------------------------------------------------- */
 let CENTROS_CUSTO = [];
+
+/* A lista de empresas vem do banco, nunca escrita na tela.
+   Os nomes são gravados com o espaçamento exato do GR ('LEH-PI' sem espaços,
+   'LEH - PR' com) porque é por esse texto que o robô vai casar a opção lá.
+   Reescrever aqui seria entregar ao robô uma string que não existe no ERP. */
+let EMPRESAS = [];
+
+async function carregarEmpresas(){
+  if(!CONECTADO){ EMPRESAS = []; montarEmpresas(); return; }
+  try{
+    EMPRESAS = await apiGet('empresas?select=id,nome&ativo=is.true&order=ordem');
+    if(!EMPRESAS.length)
+      mostrarAlerta('Conectado, mas a tabela <code>empresas</code> está vazia. Sem ela o pedido não sabe qual pessoa jurídica compra.');
+  }catch(e){
+    EMPRESAS = [];
+    mostrarAlerta('Não consegui ler a lista de empresas.<br><code>'+String(e.message).slice(0,200)+'</code>');
+  }
+  montarEmpresas();
+}
+
+function montarEmpresas(){
+  const sel = $('empresa');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">Selecione a empresa…</option>';
+  for(const e of EMPRESAS){
+    const o = document.createElement('option');
+    o.value = e.id; o.textContent = e.nome;
+    sel.appendChild(o);
+  }
+  /* Sem lista não há escolha possível: melhor a caixa desabilitada dizendo
+     isso do que uma caixa vazia que a pessoa clica sem entender. */
+  sel.disabled = !EMPRESAS.length;
+  sel.onchange = () => {
+    estado.empresa = sel.value;
+    estado.empresaNome = (EMPRESAS.find(e => e.id === sel.value) || {}).nome || '';
+    limparErro('empresa');
+  };
+}
 
 async function carregarCentrosCusto(){
   const local = DADOS.centrosCusto.map(c => ({ codigo:c.id, nome:c.nome, unidade:'', tipo:'' }));
@@ -1428,6 +1481,7 @@ function validar(passo){
     if(!estado.quantidade || Number(estado.quantidade) <= 0) falhar('quantidade','Informe uma quantidade maior que zero.');
   }
   if(passo === 'entrega'){
+    if(!estado.empresa)      falhar('empresa','Selecione a empresa.');
     if(!estado.centroCusto)  falhar('centroCusto','Selecione o centro de custo.');
   }
   if(passo === 'compra'){
@@ -1517,6 +1571,13 @@ function voltar(){ if(passoAtual>0){ passoAtual--; render(); } }
 function acharNoCatalogo(cod){ return CATALOGO.find(i=>i.codigo===cod); }
 
 function preencherExemplo(){
+  /* A empresa entrou no formulário e é obrigatória — sem ela o exemplo monta
+     um pedido que não consegue ser enviado, que é pior que não ter exemplo. */
+  { const sel = $('empresa');
+    if(sel && !sel.value && sel.options.length > 1){
+      sel.value = sel.options[sel.options.length - 1].value;
+      sel.dispatchEvent(new Event('change'));
+    } }
   if(!$('nomeSolicitante').value){
     $('nomeSolicitante').value = 'Maria de Souza';
     $('nomeSolicitante').dispatchEvent(new Event('input'));
@@ -1610,6 +1671,8 @@ function montarPacote(solicitacaoId, cabecalho, itens){
     slack_user_id:     SLACK_UID || '',
     aberto_em:      new Date().toISOString(),
 
+    empresa_id:                cabecalho.empresa_id,
+    empresa_nome:              estado.empresaNome || '',
     centro_custo:              cabecalho.centro_custo,
     centro_custo_nome:         centro,
     centro_custo_unidade:      estado.centroCustoUnidade || '',
@@ -1635,6 +1698,9 @@ function montarPacote(solicitacaoId, cabecalho, itens){
       (estado.solicitanteNome.trim() ? '**Solicitante:** ' + estado.solicitanteNome.trim() + '\n' : '') +
       '**Tipo de solicitação:** ' +
         (({ item:'Item único', lista:'Lista de itens', servico:'Escopo de serviço' })[estado.tipo] || '—') + '\n' +
+      /* A empresa vem ANTES do centro de custo, como no GR — e é a primeira
+         coisa que o comprador precisa saber para abrir a ordem de compra. */
+      '**Empresa:** ' + (estado.empresaNome || '—') + '\n' +
       '**Centro de custo:** ' + centro + ' (' + (cabecalho.centro_custo || '—') + ')' + '\n' +
       '**Tipo de compra:** ' + tipoCompra + '\n' +
       '**Definição de fornecedor:** ' + defForn +
@@ -1712,6 +1778,7 @@ async function enviar(){
     facilitador_email:        (estado.emailSolicitante || '').trim().toLowerCase() || null,
     solicitante_nome:         estado.solicitanteNome.trim() || null,
     observacao:               estado.observacao.trim() || null,
+    empresa_id:               estado.empresa || null,
     centro_custo:             estado.centroCusto || null,
     tipo_compra:              estado.tipoCompra || null,
     definicao_fornecedor:     estado.definicaoFornecedor || null,

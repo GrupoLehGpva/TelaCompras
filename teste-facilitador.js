@@ -13,6 +13,11 @@ async function abrir(b, qs, facilitadores){
       return r.fulfill({status:200,contentType:'application/json',
         body:JSON.stringify(facilitadores || [])});
     }
+    /* A lista de empresas precisa vir, senao o select nasce vazio e a
+       validacao barra o envio por um motivo que nao e o do teste. */
+    if(u.includes('empresas'))
+      return r.fulfill({status:200,contentType:'application/json',
+        body:JSON.stringify(require('./mock-supabase.js').EMPRESAS_EXEMPLO)});
     return r.fulfill({status:200,contentType:'application/json',body:'[]'});
   });
   await p.goto(url + (qs||''), {waitUntil:'load'});
@@ -35,6 +40,9 @@ async function abrirComTrava(b, qs, facilitadores){
     const u = r.request().url();
     if(u.includes('facilitador'))
       return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(facilitadores||[])});
+    if(u.includes('empresas'))
+      return r.fulfill({status:200,contentType:'application/json',
+        body:JSON.stringify(require('./mock-supabase.js').EMPRESAS_EXEMPLO)});
     return r.fulfill({status:200,contentType:'application/json',body:'[]'});
   });
   await p.goto(arquivoComTrava + (qs||''), {waitUntil:'load'});
@@ -45,7 +53,7 @@ const preencher = p => p.evaluate(()=>{
   marcarRadio('tipo','servico');
   $('escopoServico').value = 'Escopo de teste com tamanho mais do que suficiente para a trava.';
   $('escopoServico').dispatchEvent(new Event('input'));
-  escolherCentroPorTermo('manuten');
+  (()=>{const sel=$('empresa'); if(sel&&sel.options.length>1){sel.value=sel.options[1].value;sel.dispatchEvent(new Event('change'));}})(), escolherCentroPorTermo('manuten');
   marcarRadio('tipoCompra','normal'); marcarRadio('definicaoFornecedor','cotacao');
   const d = new Date(); d.setDate(d.getDate()+10);
   $('dataLimite').value = d.toISOString().slice(0,10); $('dataLimite').dispatchEvent(new Event('change'));

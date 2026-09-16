@@ -11,6 +11,7 @@ const SOL = {
   tipo_compra:'programada', definicao_fornecedor:'unico',
   justificativa_fornecedor:'Só a concessionária fornece esta medida.',
   data_necessidade:'2026-09-15', motivo:'Reposição mensal da casa dos moradores',
+  empresa_id:'wienfried-pr', empresa_nome:'WIENFRIED MATTHIAS LEH - PR',
   status:'solicitado'
 };
 const ITENS = [
@@ -36,6 +37,11 @@ const b = await chromium.launch();
   ok('1 título traz o número', (await p.textContent('#tituloTopo')).includes('C2609-00042'));
   const ficha = await p.textContent('#fichaCabecalho');
   ok('1 centro legível', /Casa dos moradores/.test(ficha));
+  /* A empresa é o cabeçalho da ordem de compra: quem aprova precisa saber qual
+     pessoa jurídica está comprando, e com o texto exato do GR. */
+  ok('1 empresa na ficha', /WIENFRIED MATTHIAS LEH - PR/.test(ficha), ficha.slice(0,200));
+  ok('1 empresa antes do centro de custo',
+     ficha.indexOf('Empresa') < ficha.indexOf('Centro de custo'), 'ordem trocada');
   ok('1 data em pt-BR', /15\/09\/2026/.test(ficha), ficha);
   ok('1 natureza lista', /Lista de itens/.test(ficha));
   ok('1 justificativa aparece', await p.locator('#cartaoJustificativa').isVisible());
