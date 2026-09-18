@@ -16,7 +16,7 @@ for b in bateria-tela.js teste-centros.js teste-pedido.js teste-decisao.js \
          teste-aprovacoes.js teste-historico.js teste-facilitador.js \
          teste-acompanhar.js teste-numeracao.js teste-quem-pede-aprova.js \
          teste-empresa.js teste-cotacao-completa.js teste-planilha.js \
-         teste-catalogo-paginado.js teste-titulo-card.js \
+         teste-catalogo-paginado.js teste-titulo-card.js teste-aviso-urgente.js \
          teste-cliques.js bateria-erros.js; do
   echo
   echo "== $b =="
