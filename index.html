@@ -158,9 +158,6 @@
   .campo:last-child{margin-bottom:0}
   .campo > label,.campo > .titulo{display:block;font-weight:600;font-size:15px;margin-bottom:8px}
   .ajuda{display:block;font-size:13px;color:var(--muted);margin-top:6px;line-height:1.45}
-  .familia-travada[hidden]{display:none}
-  .familia-travada{display:block;margin:12px 0 0;padding:12px 14px;border-radius:10px;
-    background:var(--verde-claro);color:var(--ok-txt);font-size:13px;line-height:1.45}
   .grupo-familia{margin-top:18px}
   .grupo-familia:first-child{margin-top:8px}
   .grupo-familia h3{margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:.6px;
@@ -394,18 +391,13 @@
       </div>
 
       <div id="blocoItem">
-        <div class="campo" data-campo="familia">
-          <label for="familia">Selecione a família</label>
-          <select id="familia"><option value="">— selecione —</option></select>
-        </div>
-
         <div class="campo" data-campo="item">
           <label for="buscaItem">Busque o item pelo nome ou pelo código</label>
           <div class="busca">
             <input type="text" id="buscaItem" autocomplete="off" placeholder="Digite o nome ou o código">
             <div class="resultados" id="resultados" hidden></div>
           </div>
-          <span class="ajuda">A busca traz os itens da família escolhida. Sem família, ela varre o catálogo inteiro.</span>
+          <span class="ajuda">A busca varre o catálogo inteiro. Digitando o código, o item exato vem primeiro.</span>
 
           <div class="ficha" id="ficha" hidden>
             <dl>
@@ -430,10 +422,6 @@
           <div class="montador" id="montador">
             <div id="addCatalogo">
               <div class="linha">
-                <label for="familiaLista">Família da solicitação</label>
-                <select id="familiaLista"><option value="">— selecione —</option></select>
-              </div>
-              <div class="linha">
                 <label for="buscaLista">Item</label>
                 <div class="busca">
                   <input type="text" id="buscaLista" autocomplete="off" placeholder="Digite o nome ou o código">
@@ -454,8 +442,6 @@
           <div class="excecao">
             <p class="aviso"><b>Item fora do catálogo?</b><br>Não achou o item? Ele ainda não está cadastrado. Procure o setor de Compras para incluí-lo no catálogo antes de abrir a solicitação — pedido com item improvisado atrasa a cotação.</p>
           </div>
-
-          <p class="familia-travada" id="familiaTravada" hidden></p>
 
           <ul class="itens-lista" id="itensLista"></ul>
           <div class="lista-vazia" id="listaVazia">Nenhum item adicionado ainda.</div>
@@ -861,18 +847,14 @@ function contar(n, singular, plural){
 const estado = {
   nomeSolicitante:'', emailSolicitante:'', solicitanteNome:'', escopoServico:'',
   observacao:'',
-  tipo:'', familia:'', item:null,
+  tipo:'', item:null,
   quantidade:'', itensLista:[],
   empresa:'', empresaNome:'',
   centroCusto:'', centroCustoNome:'', centroCustoUnidade:'',
   tipoCompra:'', definicaoFornecedor:'', justificativaFornecedor:'',
   dataLimite:'', motivoCompra:'', anexos:[]
 };
-const rascunho = { familia:'', item:null, quantidade:'', unidade:'' };
-
-/* Uma solicitação = uma família. Famílias diferentes costumam ter centro de
-   custo e local de entrega diferentes, e o pedido misturado esconde isso. */
-let familiaDoPedido = '';
+const rascunho = { item:null, quantidade:'', unidade:'' };
 
 const $ = id => document.getElementById(id);
 let passoAtual = 0;
@@ -959,10 +941,6 @@ async function iniciar(){
   montarOpcoes('tipoOpcoes','tipo',DADOS.tipos,aoTrocarTipo);
   montarOpcoes('tipoCompraOpcoes','tipoCompra',DADOS.tiposCompra);
   montarOpcoes('fornecedorOpcoes','definicaoFornecedor',DADOS.definicoesFornecedor, aoTrocarFornecedor);
-
-  const familias = DADOS.familias.map(f=>({v:f.id,t:f.nome}));
-  preencherSelect($('familia'), familias);
-  preencherSelect($('familiaLista'), familias);
 
   $('dataLimite').min = hoje.toISOString().slice(0,10);
 
@@ -1256,17 +1234,11 @@ function ligarEventos(){
     limparErro('escopoServico');
   });
 
-  $('familia').addEventListener('change', e=>{
-    estado.familia = e.target.value; estado.item = null;
-    $('ficha').hidden = true; $('buscaItem').value = '';
-
-    esconder('resultados'); limparErro('familia');
-  });
   $('buscaItem').addEventListener('focus', ()=>{
-    if(!$('buscaItem').value) abrirResultados('resultados', itensDe(estado.familia), escolherItem);
+    if(!$('buscaItem').value) abrirResultados('resultados', CATALOGO, escolherItem);
   });
   $('buscaItem').addEventListener('input', e=>{
-    const achados = filtrar(itensDe(estado.familia), e.target.value);
+    const achados = filtrar(CATALOGO, e.target.value);
     if(achados === null){ esconder('resultados'); return; }
     abrirResultados('resultados', achados, escolherItem);
   });
@@ -1281,18 +1253,12 @@ function ligarEventos(){
     limparErro('quantidade');
   });
 
-  $('familiaLista').addEventListener('change', e=>{
-    rascunho.familia = e.target.value; rascunho.item = null;
-    $('buscaLista').value = ''; rascunho.unidade = ''; atualizarUnidadeLista();
-
-    esconder('resultadosLista'); atualizarBotaoAdd();
-  });
   $('buscaLista').addEventListener('focus', ()=>{
-    if(!$('buscaLista').value) abrirResultados('resultadosLista', itensDe(rascunho.familia), escolherItemLista);
+    if(!$('buscaLista').value) abrirResultados('resultadosLista', CATALOGO, escolherItemLista);
   });
   $('buscaLista').addEventListener('input', e=>{
     rascunho.item = null; atualizarBotaoAdd();
-    const achados = filtrar(itensDe(rascunho.familia), e.target.value);
+    const achados = filtrar(CATALOGO, e.target.value);
     if(achados === null){ esconder('resultadosLista'); return; }
     abrirResultados('resultadosLista', achados, escolherItemLista);
   });
@@ -1349,10 +1315,6 @@ function aoTrocarFornecedor(valor){
 /* ============================================================================
    7) BUSCA
    ========================================================================== */
-function itensDe(familia){
-  if(!familia) return CATALOGO;          // família é filtro, não porteiro
-  return CATALOGO.filter(i => i.familia === familia);
-}
 function filtrar(base, termo){
   const t = (termo||'').trim().toLowerCase();
   const minimo = MODO_DEMO ? 0 : 3;
@@ -1486,8 +1448,7 @@ function atualizarUnidadeLista(){
 }
 
 function escolherItemLista(i){
-  rascunho.item = i; rascunho.familia = i.familia; rascunho.unidade = i.unidade;
-  $('familiaLista').value = i.familia;
+  rascunho.item = i; rascunho.unidade = i.unidade;
   $('buscaLista').value = i.descricao;
   atualizarUnidadeLista();
   esconder('resultadosLista'); atualizarBotaoAdd(); $('qtdLista').focus();
@@ -1504,7 +1465,6 @@ function adicionarItem(){
   const qtd = Number(rascunho.quantidade) > 0 ? Number(rascunho.quantidade) : 1;
   if(!rascunho.item) return;
   const i = rascunho.item;
-  if(familiaDoPedido && i.familia !== familiaDoPedido) return;
   const repetido = estado.itensLista.find(x => x.codigo === i.codigo);
   if(repetido){
     /* Mesmo item duas vezes vira uma linha só: duas linhas do mesmo código
@@ -1522,28 +1482,6 @@ function adicionarItem(){
   $('buscaLista').focus();
 }
 
-/* A família do pedido é a do primeiro item. Depois disso ela trava: item de
-   outra família vai em outra solicitação, porque o centro de custo e o local
-   de entrega podem ser outros. */
-function travarFamilia(){
-  const antes = familiaDoPedido;
-  familiaDoPedido = estado.itensLista.length ? (estado.itensLista[0].familia || '') : '';
-  if(familiaDoPedido){
-    rascunho.familia = familiaDoPedido;
-    $('familiaLista').value = familiaDoPedido;
-    $('familiaLista').disabled = true;
-    $('familiaTravada').innerHTML =
-      'Esta solicitação é da família <b>' + nomeFamilia(familiaDoPedido) + '</b>. ' +
-      'Item de outra família precisa de uma nova solicitação — o centro de custo e o ' +
-      'local de entrega costumam ser diferentes.';
-    $('familiaTravada').hidden = false;
-  } else {
-    $('familiaLista').disabled = false;
-    $('familiaTravada').hidden = true;
-    if(antes){ rascunho.familia=''; $('familiaLista').value=''; $('buscaLista').value=''; rascunho.item=null; }
-  }
-}
-
 function removerItem(i){ estado.itensLista.splice(i,1); renderLista(); }
 
 function nomeFamilia(id){
@@ -1556,7 +1494,13 @@ function renderLista(){
   const ul = $('itensLista'); ul.innerHTML = '';
 
   /* Agrupado por família, na ordem em que cada família entrou no pedido —
-     é assim que a pessoa monta e é assim que ela confere. */
+     é assim que a pessoa monta e é assim que ela confere.
+
+     Isto é ORGANIZAÇÃO, não regra. Até 18/09 uma solicitação só aceitava itens
+     da mesma família: o primeiro item travava o pedido e os outros eram
+     recusados — em silêncio, o que era o pior detalhe. A regra caiu porque
+     obrigava a abrir três solicitações para uma ida só ao fornecedor. O
+     agrupamento ficou, porque continua ajudando a conferir a lista. */
   const ordem = [];
   const grupos = {};
   estado.itensLista.forEach((it, idx)=>{
@@ -1591,7 +1535,6 @@ function renderLista(){
   $('totalItens').textContent = estado.itensLista.length;
   $('resumoTexto').textContent =
     estado.itensLista.length === 1 ? 'Item na lista' : 'Itens na lista';
-  travarFamilia();
 }
 
 function aoTrocarTipo(tipo){
@@ -1771,11 +1714,11 @@ function preencherExemplo(){
   } else if(estado.tipo === 'lista'){
     const pega = (cod, qtd, desc, un) => {
       const c = acharNoCatalogo(cod);
-      return c ? { foraCatalogo:false, codigo:c.codigo, descricao:c.descricao, unidade:c.unidade, quantidade:qtd }
+      return c ? { foraCatalogo:false, codigo:c.codigo, familia:c.familia, descricao:c.descricao, unidade:c.unidade, quantidade:qtd }
                : { foraCatalogo:false, codigo:cod, descricao:desc, unidade:un, quantidade:qtd };
     };
-    /* Todos da mesma família (HL), porque o pedido trava na família do primeiro
-       item — um exemplo que mistura famílias monta um pedido que não envia. */
+    /* A família vai junto para o exemplo mostrar o agrupamento como ele aparece
+       no uso real — sem isso a lista inteira cai em "Sem família". */
     estado.itensLista = [
       pega('7360',30,'SABAO EM PO 1KG','UNID'),
       pega('7335',6,'VASSOURA NYLON COM CABO','UNID'),
@@ -1790,7 +1733,7 @@ function preencherExemplo(){
   } else {
     marcarRadio('tipo','item');
     const pneu = acharNoCatalogo('5046') || CATALOGO[0];
-    if(pneu){ $('familia').value = pneu.familia; $('familia').dispatchEvent(new Event('change')); escolherItem(pneu); }
+    if(pneu) escolherItem(pneu);
     $('quantidade').value = 4; $('quantidade').dispatchEvent(new Event('input'));
     escolherCentroPorTermo('frota');
     marcarRadio('tipoCompra','urgente');

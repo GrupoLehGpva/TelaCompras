@@ -133,21 +133,48 @@ const b = await chromium.launch();
   ok('9 troca para serviço ignora a lista', itens===1 && unidade==='Serviço', 'itens='+itens+' unidade='+unidade);
   await p.close(); }
 
-// 10 — a família trava no primeiro item e destrava quando a lista esvazia
+/* 10 — MISTURAR FAMÍLIAS É PERMITIDO.
+   Até 18/09 este teste provava o contrário: a família travava no primeiro item
+   e o segundo, de outra família, era recusado — em silêncio, que era o pior.
+   A regra caiu porque obrigava a abrir três solicitações para uma ida só ao
+   fornecedor. O que ficou é o agrupamento por família na lista, que é leitura,
+   não porteiro. Este teste guarda as duas coisas. */
 { const p = await nova(b); await base(p,'lista');
-  await p.evaluate(()=>{ passoAtual = sequencia().indexOf('item'); render();
-    estado.itensLista=[{foraCatalogo:false,codigo:'7360',familia:'HL',descricao:'SABAO EM PO 1KG',unidade:'UNID',quantidade:5}]; renderLista(); });
-  const travado = await p.evaluate(()=> ({ desabilitado: $('familiaLista').disabled,
-    valor: $('familiaLista').value, avisoVisivel: !$('familiaTravada').hidden,
-    aviso: $('familiaTravada').textContent }));
-  ok('10 família trava no primeiro item',
-    travado.desabilitado && travado.valor==='HL' && travado.avisoVisivel, JSON.stringify(travado));
-  ok('10 aviso diz o nome da família', /Materiais de Higiene e Limpeza/.test(travado.aviso), travado.aviso.slice(0,60));
-  await p.evaluate(()=> removerItem(0));
-  const solto = await p.evaluate(()=> ({ desabilitado: $('familiaLista').disabled,
-    valor: $('familiaLista').value, avisoVisivel: !$('familiaTravada').hidden }));
-  ok('10 lista vazia destrava a família',
-    !solto.desabilitado && solto.valor==='' && !solto.avisoVisivel, JSON.stringify(solto));
+  await p.evaluate(()=>{ passoAtual = sequencia().indexOf('item'); render(); });
+
+  ok('10 sem campo de família na lista', (await p.locator('#familiaLista').count()) === 0,
+     'o select de família continua na tela');
+  ok('10 sem aviso de trava', (await p.locator('#familiaTravada').count()) === 0,
+     'o aviso de família travada continua na tela');
+
+  /* Dois itens de famílias diferentes, pelo caminho de verdade: escolhe no
+     resultado da busca e clica em adicionar. */
+  const juntar = async (termo) => {
+    await p.fill('#buscaLista', termo);
+    await p.waitForTimeout(250);
+    await p.locator('#resultadosLista [role="option"], #resultadosLista button, #resultadosLista .resultado').first().click();
+    await p.fill('#qtdLista', '3');
+    await p.locator('#qtdLista').dispatchEvent('input');
+    await p.waitForTimeout(120);
+    await p.click('#btnAddItem');
+    await p.waitForTimeout(150);
+  };
+  await juntar('SABAO EM PO');     // HL
+  await juntar('CIMENTO');         // MG
+
+  const lista = await p.evaluate(()=> estado.itensLista.map(i=>({cod:i.codigo, fam:i.familia})));
+  ok('10 aceitou item de outra família', lista.length === 2,
+     'a lista ficou com ' + lista.length + ' item(ns): ' + JSON.stringify(lista));
+  ok('10 as duas famílias entraram',
+     new Set(lista.map(i=>i.fam)).size === 2, JSON.stringify(lista));
+
+  /* O agrupamento continua: um bloco por família, cada um com o seu título. */
+  const grupos = await p.evaluate(()=>
+    [...document.querySelectorAll('#itensLista .grupo-familia h3')].map(h=>h.textContent));
+  ok('10 lista agrupa por família', grupos.length === 2,
+     'blocos: ' + JSON.stringify(grupos));
+  ok('10 título do grupo nomeia a família',
+     grupos.some(g=>/Higiene e Limpeza/i.test(g)), JSON.stringify(grupos));
   await p.close(); }
 
 // 11 — busca sem resultado
@@ -237,24 +264,24 @@ const b = await chromium.launch();
   ok('17 motivo tem limite', maxMotivo==='140', 'maxlength='+maxMotivo);
   await p.close(); }
 
-// 18 — item de outra família não entra na mesma solicitação
+/* 18 — nada recusa item por causa da família, nem por dentro.
+   O par deste teste é o 10: lá a mistura é provada pela tela, aqui pela função
+   que adiciona. A versão anterior provava o oposto e ainda conferia que a
+   busca ficava presa na família do pedido — as duas coisas acabaram em 18/09. */
 { const p = await nova(b); await base(p,'lista');
   await p.evaluate(()=>{ passoAtual = sequencia().indexOf('item'); render(); });
-  await p.selectOption('#familiaLista','HL');
-  await p.click('#buscaLista'); await p.waitForTimeout(250);
-  await p.locator('#resultadosLista button').first().click();
-  await p.fill('#qtdLista','3'); await p.click('#btnAddItem');
-  const forcou = await p.evaluate(()=>{
-    // tenta forçar um item de outra família por dentro, como se a trava não existisse
-    rascunho.item = CATALOGO_FALLBACK.find(i=>i.familia==='MM');
-    rascunho.quantidade = 2;
-    adicionarItem();
+  const familias = await p.evaluate(()=>{
+    const de = f => CATALOGO_FALLBACK.find(i => i.familia === f);
+    rascunho.item = de('HL'); rascunho.quantidade = 3; adicionarItem();
+    rascunho.item = de('MM'); rascunho.quantidade = 2; adicionarItem();
+    rascunho.item = de('MG'); rascunho.quantidade = 1; adicionarItem();
     return estado.itensLista.map(i=>i.familia);
   });
-  ok('18 item de outra família é recusado',
-    forcou.length===1 && forcou[0]==='HL', JSON.stringify(forcou));
-  const buscaSoDaFamilia = await p.evaluate(()=> itensDe(rascunho.familia).every(i=>i.familia==='HL'));
-  ok('18 a busca fica presa na família do pedido', buscaSoDaFamilia);
+  ok('18 três famílias no mesmo pedido',
+     familias.length === 3 && new Set(familias).size === 3, JSON.stringify(familias));
+  const buscaVarreTudo = await p.evaluate(()=> filtrar(CATALOGO, 'a') === null
+    || new Set(filtrar(CATALOGO, 'a').map(i=>i.familia)).size >= 1);
+  ok('18 a busca não fica presa em família nenhuma', buscaVarreTudo);
   await p.close(); }
 
 // 19 — voltar escondido no primeiro passo, e o número NÃO nasce na tela

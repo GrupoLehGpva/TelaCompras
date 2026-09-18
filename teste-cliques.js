@@ -145,8 +145,9 @@ await p.waitForTimeout(150);
 await avancar(p);
 ok('1 barra sem item', (await visivel(p)) === 'item', 'passou sem escolher o item');
 
-await p.selectOption('#familia', 'MM');
-await p.waitForTimeout(200);
+/* Sem passo de família desde 18/09: digita o nome e acha no catálogo inteiro. */
+ok('1 sem campo de família', (await p.locator('#familia').count()) === 0,
+   'o select de família continua na tela do item único');
 await buscarEClicar(p, '#buscaItem', '#resultados', 'pneu');
 ok('1 ficha do item', await p.locator('#ficha').isVisible(), 'ficha não apareceu');
 const cod1 = await p.locator('#fCodigo').textContent();
@@ -214,7 +215,6 @@ await p.close();
 p = await tela(b);
 await ateOItem(p);
 await p.locator('#tipoOpcoes label', {hasText:'Item'}).first().click();
-await p.selectOption('#familia', 'MM');
 await buscarEClicar(p, '#buscaItem', '#resultados', 'pneu');
 await avancar(p);
 await p.fill('#quantidade', '7');
@@ -245,7 +245,6 @@ ok('3 lista começa vazia', await p.locator('#listaVazia').isVisible(), 'não av
 await avancar(p);
 ok('3 barra lista vazia', (await visivel(p)) === 'item', 'passou com a lista vazia');
 
-await p.selectOption('#familiaLista', 'HL');
 await p.waitForTimeout(200);
 if(await p.locator('#btnAddItem').isDisabled() === false)
   notas.push('3 o botão "Adicionar à lista" ficou habilitado antes de escolher item');
@@ -254,8 +253,10 @@ await p.fill('#qtdLista', '30');
 ok('3 add habilitado', !(await p.locator('#btnAddItem').isDisabled()), 'botão continuou desabilitado');
 await p.click('#btnAddItem'); await p.waitForTimeout(250);
 ok('3 um item na lista', (await p.locator('#itensLista .item-linha').count()) === 1, 'itens: ' + await p.locator('#itensLista .item-linha').count());
-ok('3 família travada', await p.locator('#familiaTravada').isVisible(), 'não travou a família');
-ok('3 select da família bloqueado', await p.locator('#familiaLista').isDisabled(), 'dá para trocar a família com item na lista');
+ok('3 sem campo de família', (await p.locator('#familiaLista').count()) === 0,
+   'o select de família continua na tela da lista');
+ok('3 sem aviso de família travada', (await p.locator('#familiaTravada').count()) === 0,
+   'o aviso de família travada continua na tela');
 
 await buscarEClicar(p, '#buscaLista', '#resultadosLista', 'vassoura');
 await p.fill('#qtdLista', '6');
@@ -276,8 +277,8 @@ ok('3 quantidade somada', /10/.test(await p.locator('#itensLista').textContent()
 await p.locator('#itensLista .remover').first().click(); await p.waitForTimeout(250);
 ok('3 removeu', (await p.locator('#itensLista .item-linha').count()) === 1, 'não removeu');
 await p.locator('#itensLista .remover').first().click(); await p.waitForTimeout(250);
-ok('3 lista vazia destrava', !(await p.locator('#familiaLista').isDisabled()), 'família continuou travada com a lista vazia');
-ok('3 aviso da família some', !(await p.locator('#familiaTravada').isVisible()), 'aviso da família travada ficou na tela');
+ok('3 esvaziou', (await p.locator('#itensLista .item-linha').count()) === 0, 'sobrou item na lista');
+ok('3 volta o aviso de lista vazia', await p.locator('#listaVazia').isVisible(), 'não avisou que a lista ficou vazia');
 await p.close();
 
 /* ==========================================================================
@@ -351,7 +352,6 @@ await p.close();
 p = await tela(b);
 await ateOItem(p);
 await p.locator('#tipoOpcoes label', {hasText:'Item'}).first().click();
-await p.selectOption('#familia', 'MM');
 await p.click('#buscaItem'); await p.fill('#buscaItem', 'pneu');
 await p.keyboard.press('Enter'); await p.waitForTimeout(300);
 ok('7 Enter não envia', (await visivel(p)) === 'item', 'Enter na busca disparou o envio');
@@ -394,7 +394,6 @@ await p.close();
 p = await tela(b);
 await ateOItem(p);
 await p.locator('#tipoOpcoes label', {hasText:'Item'}).first().click();
-await p.selectOption('#familia', 'MM');
 await buscarEClicar(p, '#buscaItem', '#resultados', 'pneu');
 await p.locator('#tipoOpcoes label', {hasText:'Lista'}).first().click();
 await p.waitForTimeout(300);
