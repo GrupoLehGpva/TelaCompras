@@ -103,6 +103,32 @@ ok('6 os três tipos', JSON.stringify(tipos) === JSON.stringify(['normal','urgen
 const ajudaMensal = await p.evaluate(()=>(DADOS.tiposCompra.find(t=>t.id==='mensal')||{}).ajuda||'');
 ok('6 mensal explica que é programada', /programada/i.test(ajudaMensal) && /limpeza/i.test(ajudaMensal),
    'ajuda do mensal veio "' + ajudaMensal + '"');
+
+/* 6b — Mensal está na tela mas desligada (18/09). Três asserções porque há
+   três jeitos de isso furar: o radio aceitar clique, o CSS não avisar que
+   está desligada, e marcarRadio conseguir marcá-la por código — este último
+   é o perigoso, porque o pedido sairia com um tipo que a tela não oferece. */
+/* O passo do tipo de compra é o 'compra' — sem renderizá-lo, tudo ali dentro
+   conta como invisível e a asserção de visibilidade mentiria. */
+await p.evaluate(()=>{ passoAtual = sequencia().indexOf('compra'); render(); });
+const mensal = p.locator('#tipoCompraOpcoes label', {hasText:'Mensal'}).first();
+ok('6b mensal continua visível', await mensal.isVisible(), 'a opção Mensal sumiu da tela');
+ok('6b mensal não é clicável', await mensal.locator('input').isDisabled(),
+   'dá para escolher Mensal');
+ok('6b mensal avisa que está indisponível',
+   /indispon/i.test(await mensal.textContent() || ''),
+   'sem selo avisando: ' + (await mensal.textContent() || '').slice(0, 80));
+ok('6b normal e urgente seguem clicáveis',
+   !(await p.locator('#tipoCompraOpcoes label', {hasText:'Normal'}).first().locator('input').isDisabled()) &&
+   !(await p.locator('#tipoCompraOpcoes label', {hasText:'Urgente'}).first().locator('input').isDisabled()),
+   'desligou opção que devia continuar valendo');
+const forcou = await p.evaluate(()=>{
+  marcarRadio('tipoCompra','mensal');
+  return { estado: estado.tipoCompra,
+           marcado: !!document.querySelector('input[name="tipoCompra"][value="mensal"]:checked') };
+});
+ok('6b nem por código dá para marcar Mensal',
+   forcou.estado !== 'mensal' && !forcou.marcado, JSON.stringify(forcou));
 const rotulos = await p.evaluate(()=>[...document.querySelectorAll('#tipoCompraOpcoes label')].map(l=>l.textContent.trim().split('\n')[0]));
 ok('6 sem "Programada" na tela', !rotulos.some(r=>/Programada/.test(r)),
    'a tela ainda oferece Programada: ' + JSON.stringify(rotulos));

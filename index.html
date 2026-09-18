@@ -179,6 +179,14 @@
   .opcao b{display:block;font-weight:600;font-size:15px}
   .opcao em{display:block;font-style:normal;font-size:13px;color:var(--muted);margin-top:1px}
   .opcao.marcada{border-color:var(--verde);background:var(--verde-claro)}
+  /* Opção que existe mas ainda não pode ser escolhida. Fica visível de
+     propósito: quem procura por ela vê que está vindo, em vez de perguntar. */
+  .opcao.desligada{cursor:not-allowed;background:var(--fundo);border-style:dashed}
+  .opcao.desligada:hover{border-color:var(--borda)}
+  .opcao.desligada b,.opcao.desligada em{color:var(--muted)}
+  .opcao .selo{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:99px;
+    background:var(--borda);color:var(--muted);font-size:11px;font-weight:700;
+    letter-spacing:.4px;text-transform:uppercase;vertical-align:middle}
 
   .checkbox{display:flex;gap:11px;align-items:flex-start;cursor:pointer}
   .checkbox input{margin:2px 0 0;accent-color:var(--verde);width:18px;height:18px;flex:none}
@@ -692,7 +700,12 @@ const DADOS = {
   tiposCompra: [
     { id:'normal',  titulo:'Normal',  ajuda:'Necessidade corrente, nada parado' },
     { id:'urgente', titulo:'Urgente', ajuda:'Equipamento ou atividade parada. O comprador trata na frente dos demais' },
-    { id:'mensal',  titulo:'Mensal',  ajuda:'Compra programada, que se repete todo mês: material de limpeza, copa e cozinha, escritório. Entra na fila normal e permite cotação com calma' }
+    /* Desligada em 18/09 a pedido do Guilherme: a opção existe na tela para
+       quem procura por ela saber que está vindo, mas não dá para escolher
+       enquanto o processo da compra programada não estiver fechado. Religar é
+       apagar as duas linhas abaixo. */
+    { id:'mensal',  titulo:'Mensal',  ajuda:'Compra programada, que se repete todo mês: material de limpeza, copa e cozinha, escritório. Entra na fila normal e permite cotação com calma',
+      desabilitado:true, selo:'indisponível por enquanto' }
   ],
 
   definicoesFornecedor: [
@@ -1188,9 +1201,12 @@ function montarOpcoes(containerId, campo, lista, aoMudar){
   box.innerHTML = '';
   lista.forEach(op=>{
     const el = document.createElement('label');
-    el.className = 'opcao';
-    el.innerHTML = '<input type="radio" name="'+campo+'" value="'+op.id+'">' +
-      '<span><b>'+op.titulo+'</b>'+(op.ajuda?'<em>'+op.ajuda+'</em>':'')+'</span>';
+    el.className = 'opcao' + (op.desabilitado ? ' desligada' : '');
+    el.innerHTML = '<input type="radio" name="'+campo+'" value="'+op.id+'"' +
+        (op.desabilitado ? ' disabled' : '') + '>' +
+      '<span><b>'+op.titulo+
+        (op.selo ? '<span class="selo">'+op.selo+'</span>' : '')+'</b>'+
+        (op.ajuda?'<em>'+op.ajuda+'</em>':'')+'</span>';
     el.querySelector('input').addEventListener('change',()=>{
       estado[campo] = op.id;
       [...box.children].forEach(c=>c.classList.remove('marcada'));
@@ -1203,7 +1219,11 @@ function montarOpcoes(containerId, campo, lista, aoMudar){
 }
 function marcarRadio(campo, valor){
   const input = document.querySelector('input[name="'+campo+'"][value="'+valor+'"]');
-  if(input){ input.checked = true; input.dispatchEvent(new Event('change')); }
+  /* `input.checked = true` funciona mesmo num radio desabilitado — o navegador
+     só impede o CLIQUE. Sem esta guarda, o botão de exemplo e qualquer código
+     nosso conseguiriam marcar uma opção que a pessoa não consegue marcar, e o
+     pedido sairia com um tipo de compra que a tela não oferece. */
+  if(input && !input.disabled){ input.checked = true; input.dispatchEvent(new Event('change')); }
 }
 function preencherSelect(sel, opcoes){
   sel.innerHTML = '<option value="">— selecione —</option>';
@@ -1727,7 +1747,11 @@ function preencherExemplo(){
     ];
     renderLista();
     escolherCentroPorTermo('morador');
-    marcarRadio('tipoCompra','mensal');
+    /* Era 'mensal', que casava com o exemplo (reposição de limpeza) — mas a
+       opção está desligada e marcarRadio recusa, o que deixaria o exemplo sem
+       tipo de compra e sem passar na validação. Volta para 'mensal' quando a
+       opção for religada. */
+    marcarRadio('tipoCompra','normal');
     marcarRadio('definicaoFornecedor','cotacao');
     $('motivoCompra').value = 'Reposição mensal de material de limpeza da casa dos moradores da Granja 103';
   } else {
