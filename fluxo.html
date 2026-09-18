@@ -209,7 +209,7 @@
   <!-- 10 cotação -->
   <rect class="cx" x="720" y="990" width="320" height="66" rx="10"/>
   <text class="t" x="880" y="1014" text-anchor="middle">Compras · cotação</text>
-  <text class="s" x="880" y="1032" text-anchor="middle">o comprador põe 3 fornecedores e valores.</text>
+  <text class="s" x="880" y="1032" text-anchor="middle">o comprador anexa orçamento e põe valor.</text>
   <text class="s" x="880" y="1048" text-anchor="middle">Card sem valor volta para ele</text>
 
   <path class="fio" d="M880,1056 V1086" marker-end="url(#seta)"/>
@@ -224,7 +224,7 @@
 
   <!-- 12 fim -->
   <rect class="cx fim" x="760" y="1188" width="240" height="44" rx="10"/>
-  <text class="t" x="880" y="1216" text-anchor="middle">Aprovado · pode comprar</text>
+  <text class="t" x="880" y="1216" text-anchor="middle">Ordem de compra</text>
 </svg>
 <figcaption>
   O pedido nunca depende de alguém lembrar de empurrar: quem grava a decisão é o
@@ -243,23 +243,26 @@
   <li><b>A lista de aprovação sai 11h e 16h</b>, dias úteis, uma DM por aprovador — e só para quem tem pedido parado.</li>
   <li><b>A tela da fila</b> abre pelo link pessoal: aprova várias de uma vez, ou abre o pedido inteiro antes de decidir. Reprovar exige o motivo.</li>
   <li><b>Cinco travas antes de aceitar qualquer decisão.</b> Token, pedido, card, etapa e se o pedido ainda está aberto. Falhou uma, não passa.</li>
-  <li><b>A cotação segura o pedido</b>: card que anda sem valor preenchido volta para o comprador.</li>
+  <li><b>A cotação segura o pedido</b>: o card só passa com pelo menos um fornecedor completo — orçamento anexado E valor preenchido — mais o local da entrega. Fornecedor pela metade volta para o comprador com a lista do que falta.</li>
   <li><b>Gerencial e financeiro andam sozinhos</b> depois da liderança, pela mesma fila e a mesma tela.</li>
   <li><b>Reprovação avisa quem pediu e o facilitador</b>, com o motivo. Se quem reprovou foi o financeiro, o gerente também recebe.</li>
   <li><b>Nada de dado pessoal aberto.</b> As tabelas não são mais legíveis de fora; tudo passa por função, e cada tela só enxerga o pedido do link que ela recebeu.</li>
-  <li><b>23 testes rodando contra o banco de verdade</b> (<code>contrato.html</code>) e 8 baterias locais, todas no verde.</li>
+  <li><b>16 conferências contra o banco de verdade</b> (<code>contrato.html</code>) e <b>17 baterias locais</b>, todas no verde.</li>
+  <li><b>O catálogo do GR inteiro</b>: 7.084 itens, com código, família, unidade e especificação — os mesmos nomes que o GR usa.</li>
+  <li><b>Os aprovadores de verdade</b>: Brandão na liderança e no gerencial, sr. Wienfried no financeiro.</li>
+  <li><b>A planilha comparativa do Herisson</b> nasce sozinha quando o card entra em cotação, já com o cabeçalho e os itens do pedido.</li>
+  <li><b>Aprovado no financeiro, o card vai para <i>ordem de compra</i></b> — é a entrada nessa coluna que vai levar os dados para o GR.</li>
 </ul>
 </div>
 
 <h2>O que ainda falta — e é do seu lado</h2>
 <div class="cartao falta">
 <ul>
-  <li><b>Os 5 compradores no ClickUp.</b> Assim que entrarem, eu preencho os ids e o pedido cai direto na mão do comprador certo.</li>
-  <li><b>Slack dos 7 facilitadores</b>, mais Elton e José Junior — sem Slack cadastrado a pessoa some da lista de avisos.</li>
-  <li><b>O catálogo de verdade.</b> Hoje são 29 itens de demonstração.</li>
-  <li><b>Trocar o aprovador fictício pelas pessoas reais</b> (Brandão na liderança e no gerencial, sr. Wienfried no financeiro) — depois da reunião.</li>
-  <li><b>Subir o <code>aprovacoes.html</code> no GitHub</b>: é a correção dos botões que estavam saindo da tela.</li>
-  <li><b>Desligar o modo demonstração</b> quando for para valer.</li>
+  <li><b>Os 5 compradores no ClickUp.</b> O workspace ainda tem um usuário só. Enquanto for assim, quem anexa os orçamentos e move o card é quem tem acesso — e o pedido nasce sem responsável.</li>
+  <li><b>Slack do Elton e do José de Carvalho Junior.</b> Os dois aprovam, e sem o Slack cadastrado não entram na lista das 11h/16h nem conseguem pedir o link pelo <code>/compras aprovação</code>. Seis facilitadores dependem deles na primeira aprovação.</li>
+  <li><b>Slack de mais 9 facilitadores.</b> Sem ele a pessoa abre o pedido, mas não recebe nenhum aviso de como ele anda.</li>
+  <li><b>Subir o plano do ClickUp.</b> A cota de campos personalizados está esgotada, e é a mesma conversa do que o card precisa carregar para a ordem de compra.</li>
+  <li><b>A API do GR</b>, com o Sandro. É por ela que a ordem de compra vai sair sozinha quando o card entrar em <i>ordem de compra</i> — hoje esse passo ainda não existe.</li>
 </ul>
 <p class="nota">Adiado a seu pedido: a tela com <i>todas</i> as solicitações. Fica só a tela de quem aprova.</p>
 </div>

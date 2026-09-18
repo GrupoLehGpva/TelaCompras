@@ -1364,9 +1364,40 @@ function filtrar(base, termo){
      isto existem no catálogo e é como se não existissem. Os números vieram de
      contar no banco depois da importação; o exemplo que eu tinha escrito aqui
      antes ("milho" achando o CONC. CRESC.) era invenção minha e estava errado. */
-  return base.filter(i => i.descricao.toLowerCase().includes(t)
+  const achados = base.filter(i => i.descricao.toLowerCase().includes(t)
                        || (i.codigo||'').toLowerCase().includes(t)
                        || (i.especificacao||'').toLowerCase().includes(t));
+
+  /* --------------------------------------------------------------------------
+     QUEM DIGITA O CÓDIGO DO GR ESTÁ SENDO PRECISO. A BUSCA PRECISA RESPONDER
+     NA MESMA MOEDA.
+
+     Sem ordenar, os achados saíam em ordem alfabética de descrição, e o código
+     casava por "contém". Digitar `5046` — o pneu — devolvia, nesta ordem:
+
+         ENGRENAGEM SIMPLES REF 22504603 JAN    (1132)
+         FILTRO COMBUSTIVEL - P550463/...       (1946)
+         PALHETA ESQ. INT. INOX (24504602IN)    (4652)
+         PNEU 275/80R22.5 ARMOR MAX             (5046)  ← o que a pessoa quis
+
+     Com quatro resultados dá para procurar. Com um fragmento comum, não: são
+     7.084 itens e a lista corta em 50, então o item exato pode simplesmente
+     não aparecer — e aí a pessoa marca "fora do catálogo" e o pedido segue sem
+     o código do GR.
+
+     A ordem agora é: código exato, depois código que começa assim, depois
+     descrição que começa assim, e por fim o resto — alfabético dentro de cada
+     faixa, que é o que a pessoa espera quando busca por nome.
+     -------------------------------------------------------------------------- */
+  const peso = i => {
+    const cod = (i.codigo || '').toLowerCase();
+    if(cod === t)            return 0;
+    if(cod.startsWith(t))    return 1;
+    if(i.descricao.toLowerCase().startsWith(t)) return 2;
+    return 3;
+  };
+  return achados.sort((a,b) => peso(a) - peso(b) ||
+                               a.descricao.localeCompare(b.descricao, 'pt-BR'));
 }
 const TETO_RESULTADOS = 50;
 const timerFechar = {};

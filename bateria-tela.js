@@ -339,6 +339,36 @@ const b = await chromium.launch();
     JSON.stringify(r.porGrupo) + ' · nome=' + r.grupoNaTela.descricao);
   await p.close(); }
 
+/* --------------------------------------------------------------------------
+   O CÓDIGO EXATO VEM PRIMEIRO.
+   Achado no ar em 18/09: digitar `5046` (o pneu) devolvia, em ordem
+   alfabética, três itens cujo código apenas CONTÉM 5046 — 22504603, P550463,
+   24504602 — e o pneu em quarto. Com quatro resultados dá para procurar; com
+   um fragmento comum, a lista corta em 50 e o item exato pode não aparecer.
+   E quem não acha o item marca "fora do catálogo", que é o pedido seguindo
+   sem o código do GR.
+   -------------------------------------------------------------------------- */
+{ const p = await nova(b);
+  const r = await p.evaluate(()=>{
+    /* Catálogo de mentira montado para o caso ser exatamente o do pneu: o
+       código procurado aparece dentro de códigos maiores, e os nomes desses
+       vêm antes no alfabeto. */
+    const base = [
+      {codigo:'22504603', descricao:'ENGRENAGEM SIMPLES REF 22504603', unidade:'UNID', especificacao:'', familia:'MM'},
+      {codigo:'5046',     descricao:'PNEU 275/80R22.5 ARMOR MAX',      unidade:'UNID', especificacao:'', familia:'MM'},
+      {codigo:'504699',   descricao:'ZZZ COMECA COM O CODIGO',         unidade:'UNID', especificacao:'', familia:'MM'},
+      {codigo:'1946',     descricao:'FILTRO COMBUSTIVEL P550463',      unidade:'UNID', especificacao:'', familia:'MM'}
+    ];
+    const achados = filtrar(base, '5046') || [];
+    return { ordem: achados.map(i=>i.codigo), quantos: achados.length };
+  });
+  ok('23b código exato vem em primeiro', r.ordem[0] === '5046',
+     'a ordem veio ' + JSON.stringify(r.ordem));
+  ok('23b código que começa igual vem antes do resto', r.ordem[1] === '504699',
+     'a ordem veio ' + JSON.stringify(r.ordem));
+  ok('23b e ninguém some da lista', r.quantos === 4, 'vieram ' + r.quantos + ' de 4');
+  await p.close(); }
+
 await b.close();
 console.log('\n===== FALHAS (' + falhas.length + ') =====');
 falhas.forEach(f=>console.log(' ✗ ' + f));

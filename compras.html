@@ -322,7 +322,18 @@ async function carregarPedidos(){
 function renderPedidos(){
   const box = $('pedidos');
   if(!pedidos.length){
-    box.innerHTML = '<div class="vazio">Nenhuma solicitação ainda.<br>Abra o formulário e envie uma para ela aparecer aqui.</div>';
+    /* Esta tela dizia "Nenhuma solicitação ainda — abra o formulário e envie
+       uma para ela aparecer aqui". Virou mentira na correção de LGPD: a
+       leitura pública de `solicitacoes` foi fechada, então ela recebe uma
+       lista vazia sempre, com 0 e com 500 pedidos na base. Quem abrisse
+       concluiria que o sistema perdeu tudo.
+       Vazio por não ter e vazio por não poder ver são coisas diferentes, e a
+       tela precisa dizer qual dos dois é. */
+    box.innerHTML = '<div class="vazio"><b>Esta tela não lista mais as solicitações.</b><br>' +
+      'A leitura pública da base foi fechada para não expor dado de ninguém — ' +
+      'ela devolve vazio mesmo havendo pedidos.<br><br>' +
+      'Quem aprova usa a <b>fila de aprovação</b>; quem pede usa o <b>link de acompanhamento</b>; ' +
+      'e o andamento de todos está no <b>Kanban do ClickUp</b>.</div>';
     return;
   }
   box.innerHTML = '';
