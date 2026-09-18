@@ -203,22 +203,79 @@ ok('13 continua na fila', (await linhas(p)) === 3, 'sumiu da fila com o endpoint
 ok('13 avisa a falha', await p.locator('#avisoTopo.ruim').count() === 1, 'não avisou');
 await p.close();
 
-/* 14 — lote com uma recusa no meio */
+/* 14 — lote com uma recusa no meio
+ *
+ * O mock do `fila_de_aprovacao` agora responde como o banco responde de
+ * verdade: devolve só quem AINDA espera. Isso importa porque, depois de uma
+ * recusa, a tela passa a perguntar ao banco como a fila está — antes ela
+ * confiava na lista que tinha na mão, e era daí que vinha a contradição de
+ * 18/09 (aviso dizendo que a solicitação não esperava por ele, e a solicitação
+ * listada logo abaixo como se esperasse). */
 let n = 0;
+const jaAprovados = new Set();
 p = await b.newPage(); p.__posts = [];
-await p.route('**/rest/v1/rpc/**', r => r.fulfill({status:200,contentType:'application/json',
-  body: JSON.stringify(r.request().url().includes('aprovador_do_token') ? QUEM : FILA)}));
+await p.route('**/rest/v1/rpc/**', r => {
+  const u = r.request().url();
+  if(u.includes('aprovador_do_token'))
+    return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(QUEM)});
+  return r.fulfill({status:200,contentType:'application/json',
+    body: JSON.stringify(FILA.filter(s => !jaAprovados.has(s.id)))});
+});
 await p.route('**n8n.cloud/**', r => { n++;
   let corpo = {};
   try { corpo = JSON.parse(r.request().postData() || '{}'); } catch(e){ corpo = {}; }
   p.__posts.push(corpo);
+  const recusada = n === 2;
+  if(!recusada) jaAprovados.add(corpo.solicitacao_id);
   return r.fulfill({status:200,contentType:'application/json',
-    body: JSON.stringify(n === 2 ? {ok:false,mensagem:'card já saiu da coluna'} : {ok:true})}); });
+    body: JSON.stringify(recusada ? {ok:false,mensagem:'card já saiu da coluna'} : {ok:true})}); });
 await p.goto(base + '?t=tk-brandao', {waitUntil:'load'}); await p.waitForTimeout(600);
 await p.click('#marcarTodas'); await p.waitForTimeout(150);
-await p.click('#btnLote'); await p.waitForTimeout(1000);
+await p.click('#btnLote'); await p.waitForTimeout(1500);
 ok('14 só a recusada fica', (await linhas(p)) === 1, 'linhas: ' + await linhas(p));
 ok('14 avisa qual falhou', /card já saiu da coluna/.test(await p.locator('#avisoTopo').textContent()||''), 'aviso: ' + await p.locator('#avisoTopo').textContent());
+ok('14 releu a fila no servidor',
+   p.__posts.length === 3 && n === 3, 'posts: ' + p.__posts.length + ' · chamadas n8n: ' + n);
+ok('14 não manda "tente de novo"',
+   !/tente de novo/i.test(await p.locator('#avisoTopo').textContent()||''),
+   'o aviso ainda convida a repetir o que já foi recusado');
+await p.close();
+
+/* 14b — A CONTRADIÇÃO DE 18/09, reproduzida.
+ *
+ * A pessoa tem a fila aberta numa aba; noutra (ou num clique anterior) a
+ * decisão já foi registrada. Ela clica, o servidor recusa — e o banco, ao ser
+ * perguntado, diz que aquela solicitação não espera mais ninguém.
+ *
+ * A tela NÃO pode continuar listando a solicitação como "esperando você"
+ * embaixo de um aviso dizendo o contrário. */
+p = await b.newPage(); p.__posts = [];
+{ let recarregou = false;
+  await p.route('**/rest/v1/rpc/**', r => {
+    const u = r.request().url();
+    if(u.includes('aprovador_do_token'))
+      return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(QUEM)});
+    /* Na primeira leitura a fila tem as três. Na releitura — a que acontece
+       depois da recusa — o banco já não devolve a a1. */
+    const corpo = recarregou ? FILA.filter(s => s.id !== 'a1') : FILA;
+    recarregou = true;
+    return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(corpo)});
+  });
+  await p.route('**n8n.cloud/**', r => r.fulfill({status:200,contentType:'application/json',
+    body: JSON.stringify({ok:false, mensagem:'Esta solicitação não está esperando a sua aprovação.'})}));
+  await p.goto(base + '?t=tk-brandao', {waitUntil:'load'}); await p.waitForTimeout(600);
+  ok('14b começa com as três', (await linhas(p)) === 3, 'linhas: ' + await linhas(p));
+  await p.locator('#corpoFila tr[data-id="a1"] .btn-linha.sim').click();
+  await p.waitForTimeout(1500);
+
+  const aviso = await p.locator('#avisoTopo').textContent() || '';
+  ok('14b a recusada sai da fila',
+     await p.locator('#corpoFila tr[data-id="a1"]').count() === 0,
+     'a solicitação recusada continua listada como esperando — é a contradição de 18/09');
+  ok('14b sobram as outras duas', (await linhas(p)) === 2, 'linhas: ' + await linhas(p));
+  ok('14b explica que pode ter sido a própria pessoa',
+     /clique anterior|outra aba/i.test(aviso), 'aviso: ' + aviso);
+  ok('14b não manda tentar de novo', !/tente de novo/i.test(aviso), 'aviso: ' + aviso); }
 await p.close();
 
 /* 15 — duplo clique não manda duas vezes */

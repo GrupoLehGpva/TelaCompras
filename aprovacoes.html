@@ -723,6 +723,44 @@ async function decidir(itens, decisao, motivo){
 
   FILA = FILA.filter(s => !feitos.includes(s));
   if(feitos.length) HIST = null;   /* o que acabou de ser decidido precisa aparecer lá */
+
+  /* --------------------------------------------------------------------------
+     RECUSA RECARREGA A FILA. SEMPRE.
+
+     O que acontecia antes, e que o Brandão viu ao vivo em 18/09 às 14:05: ele
+     aprovou a C2609-00001, e um segundo pedido da mesma solicitação chegou ao
+     servidor 15 segundos depois — provavelmente de outra aba, com a fila
+     carregada mais cedo. O servidor barrou, como devia, e devolveu "Esta
+     solicitação não está esperando a sua aprovação".
+
+     A tela então mostrava, ao mesmo tempo:
+       · a faixa vermelha dizendo que a solicitação NÃO esperava por ele;
+       · a solicitação listada logo abaixo, em "Esperando você", com os botões
+         Aprovar e Reprovar do lado.
+     E o texto ainda mandava "tente de novo" — conselho que só podia falhar,
+     porque a decisão já estava registrada.
+
+     A tentação é ler a mensagem do servidor e adivinhar se a recusa foi
+     benigna. É frágil: depende do texto continuar igual. O certo é mais
+     simples — **perguntar ao banco como a fila está agora**. Ele é a fonte da
+     verdade, e quem não estiver mais esperando some sozinho.
+     -------------------------------------------------------------------------- */
+  let filaRecarregada = false;
+  if(recusados.length){
+    try{
+      FILA = await rpc('fila_de_aprovacao', { p_token: TOKEN });
+      /* Marcação de linha que não existe mais não pode ficar viva no Set: ela
+         voltaria a contar no "Aprovar N selecionadas" sem estar na tela. */
+      const vivos = new Set(FILA.map(s => s.id));
+      [...marcadas].forEach(id => { if(!vivos.has(id)) marcadas.delete(id); });
+      filaRecarregada = true;
+    }catch(e){
+      /* Sem rede não dá para recarregar. Aí a tela NÃO promete que a fila está
+         em dia — ela diz que não conseguiu, que é a única coisa honesta. */
+      filaRecarregada = false;
+    }
+  }
+
   enviando = false;
 
   if(feitos.length && !recusados.length){
@@ -730,9 +768,12 @@ async function decidir(itens, decisao, motivo){
       ? 'Solicitação ' + (decisao === 'aprovado' ? 'aprovada' : 'reprovada') + '.'
       : feitos.length + ' solicitações aprovadas.', 'ok');
   } else if(recusados.length){
-    avisar('Não consegui registrar ' + recusados.length +
-      (recusados.length === 1 ? ' decisão' : ' decisões') + ': ' + recusados.join(' · ') +
-      '. A fila continua como estava para essas — tente de novo ou abra o card.', 'ruim');
+    const quantas = recusados.length + (recusados.length === 1 ? ' decisão' : ' decisões');
+    avisar('Não consegui registrar ' + quantas + ': ' + recusados.join(' · ') +
+      (filaRecarregada
+        ? '. A fila acima já está atualizada. Se a solicitação sumiu dela, é porque a decisão já estava registrada — pode ter sido você, num clique anterior ou em outra aba.'
+        : '. E não consegui atualizar a fila agora — recarregue a página para ver como ela está de verdade.'),
+      'ruim');
   }
   desenhar();
 }
