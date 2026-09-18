@@ -158,14 +158,17 @@ ok('1 trocar item limpa', !(await p.locator('#ficha').isVisible()), 'ficha conti
 await buscarEClicar(p, '#buscaItem', '#resultados', 'pneu');
 ok('1 reescolheu', (await p.locator('#fCodigo').textContent()) === cod1, 'código diferente ao reescolher');
 
+/* A quantidade virou campo do passo do item em 18/09. Antes era um passo só
+   dela; agora quem barra é o mesmo Continuar que cobra o item. */
+ok('1 quantidade no passo do item', await p.locator('#blocoItem #quantidade').isVisible(),
+   'a quantidade não está dentro do bloco do item');
 await avancar(p);
-ok('1 chegou na quantidade', (await visivel(p)) === 'quantidade', 'foi para ' + await visivel(p));
-await avancar(p);
-ok('1 barra quantidade vazia', (await visivel(p)) === 'quantidade', 'passou sem quantidade');
+ok('1 barra quantidade vazia', (await visivel(p)) === 'item', 'passou sem quantidade');
 await p.fill('#quantidade', '0'); await avancar(p);
-ok('1 barra quantidade zero', (await visivel(p)) === 'quantidade', 'passou com zero');
+ok('1 barra quantidade zero', (await visivel(p)) === 'item', 'passou com zero');
 await p.fill('#quantidade', '4');
 ok('1 unidade no plural', /Unidades/i.test(await p.locator('#unidadeMedida').textContent()), 'unidade: ' + await p.locator('#unidadeMedida').textContent());
+ok('1 são 5 passos', /de 5/.test(await passo(p)), 'progresso: ' + await passo(p));
 await avancar(p);
 
 ok('1 chegou na compra', (await visivel(p)) === 'compra', 'foi para ' + await visivel(p));
@@ -202,8 +205,17 @@ ok('1 número na confirmação vem do banco',
    /C2609-00001/.test(await p.locator('#okNumero').textContent()),
    'veio: ' + await p.locator('#okNumero').textContent());
 
-// recomeçar
-await p.click('#btnRecomecar'); await p.waitForTimeout(400);
+/* Recomeçar é um location.reload(): a tela volta a ler a query string e a
+   repreencher o facilitador. Esperar 400 ms fixos dava falha intermitente
+   quando a máquina estava ocupada — não era corrida da tela, era o teste
+   perguntando cedo demais. Agora espera o sinal certo: o recarregamento
+   terminar e o campo voltar a ter valor. */
+await p.click('#btnRecomecar');
+await p.waitForLoadState('load');
+await p.waitForFunction(
+  () => (document.getElementById('nomeSolicitante') || {}).value,
+  null, { timeout: 15000 }
+).catch(()=>{});
 ok('1 recomeça no passo 1', (await visivel(p)) === 'solicitante', 'recomeçou em ' + await visivel(p));
 ok('1 recomeça limpo', (await p.inputValue('#motivoCompra')) === '', 'motivo sobrou: ' + await p.inputValue('#motivoCompra'));
 ok('1 facilitador continua', (await p.inputValue('#nomeSolicitante')) === 'Guilherme Pimpão', 'perdeu o facilitador ao recomeçar');
@@ -216,15 +228,12 @@ p = await tela(b);
 await ateOItem(p);
 await p.locator('#tipoOpcoes label', {hasText:'Item'}).first().click();
 await buscarEClicar(p, '#buscaItem', '#resultados', 'pneu');
-await avancar(p);
 await p.fill('#quantidade', '7');
 await avancar(p);
 await voltar(p);
-ok('2 voltou para quantidade', (await visivel(p)) === 'quantidade', 'voltou para ' + await visivel(p));
-ok('2 quantidade preservada', (await p.inputValue('#quantidade')) === '7', 'veio ' + await p.inputValue('#quantidade'));
-await voltar(p);
 ok('2 voltou para item', (await visivel(p)) === 'item', 'voltou para ' + await visivel(p));
 ok('2 item preservado', await p.locator('#ficha').isVisible(), 'perdeu o item ao voltar');
+ok('2 quantidade preservada', (await p.inputValue('#quantidade')) === '7', 'veio ' + await p.inputValue('#quantidade'));
 await voltar(p);
 ok('2 voltou para empresa e centro', (await visivel(p)) === 'entrega', 'voltou para ' + await visivel(p));
 ok('2 empresa preservada ao voltar', (await p.inputValue('#empresa')) !== '', 'perdeu a empresa');
@@ -297,8 +306,10 @@ await avancar(p);
 ok('4 barra escopo curto', (await visivel(p)) === 'item', 'passou com escopo de 5 letras');
 await p.fill('#escopoServico', 'Trocar as telhas quebradas do galpão de máquinas e limpar as calhas.');
 await avancar(p);
-ok('4 pula a quantidade', (await visivel(p)) === 'compra', 'foi para ' + await visivel(p));
+ok('4 do escopo vai direto para a compra', (await visivel(p)) === 'compra', 'foi para ' + await visivel(p));
 ok('4 são 5 passos', /de 5/.test(await passo(p)), 'progresso: ' + await passo(p));
+ok('4 serviço não pede quantidade', !(await p.locator('#quantidade').isVisible()),
+   'o campo de quantidade apareceu num escopo de serviço');
 await p.close();
 
 /* ==========================================================================

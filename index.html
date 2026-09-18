@@ -362,7 +362,7 @@
 
   <form id="form" novalidate>
 
-    <!-- ======================= 0 · SOLICITANTE ======================= -->
+    <!-- ================== 1 · SOLICITANTE ================== -->
     <section class="passo" data-passo="solicitante">
       <h2>Facilitador da compra</h2>
 
@@ -389,7 +389,39 @@
       </div>
     </section>
 
-    <!-- ======================= 1 · ITEM ======================= -->
+    <!-- ================== 2 · EMPRESA E CENTRO DE CUSTO ================== -->
+    <section class="passo" data-passo="entrega" hidden>
+      <h2>Empresa e centro de custo</h2>
+
+      <div class="campo" data-campo="empresa">
+        <label for="empresa">Empresa</label>
+        <select id="empresa">
+          <option value="">Selecione a empresa…</option>
+        </select>
+        <span class="ajuda">A pessoa jurídica que compra. É a mesma lista do GR, e é ela
+          que vai no cabeçalho da ordem de compra.</span>
+      </div>
+
+      <div class="campo" data-campo="centroCusto">
+        <label for="buscaCentro">Busque o centro de custo pelo nome, pelo código ou pela unidade</label>
+        <div class="busca">
+          <input type="text" id="buscaCentro" autocomplete="off" placeholder="Ex.: 3180, SOJA OLIMPO, FROTA">
+          <div class="resultados" id="resultadosCentro" hidden></div>
+        </div>
+        <span class="ajuda">Onde o valor do gasto será alocado depois que a fatura for paga.
+          São centenas de centros — escreva parte do nome que a lista estreita.</span>
+
+        <div class="ficha" id="fichaCentro" hidden>
+          <dl>
+            <dt>Código</dt><dd id="cCodigo"></dd>
+            <dt>Centro</dt><dd id="cNome"></dd>
+            <dt>Unidade</dt><dd id="cUnidade"></dd>
+          </dl>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================== 3 · ITEM (com a quantidade dentro) ================== -->
     <section class="passo" data-passo="item">
       <h2>Item</h2>
 
@@ -417,6 +449,20 @@
             <p class="rodape"><span>Somente leitura. Vem do cadastro.</span>
               <button type="button" id="trocarItem">Trocar item</button></p>
           </div>
+        </div>
+
+        <!-- A quantidade mora AQUI desde 18/09, e não num passo só dela: a
+             pergunta "quantos?" só existe depois de "qual item?", e a unidade
+             que aparece ao lado vem do item escolhido. Separadas, eram um
+             clique a mais para responder meia pergunta. Dentro do blocoItem,
+             ela some sozinha em lista e serviço, onde não faz sentido. -->
+        <div class="campo" data-campo="quantidade">
+          <label for="quantidade">Informe a quantidade</label>
+          <div class="qtd">
+            <input type="number" id="quantidade" min="1" step="1" inputmode="numeric">
+            <span class="unidade" id="unidadeMedida">—</span>
+          </div>
+          <span class="ajuda">A unidade de medida vem do cadastro do item e não é editável.</span>
         </div>
 
         <div class="excecao">
@@ -470,52 +516,7 @@
       </div>
     </section>
 
-    <!-- ======================= 2 · QUANTIDADE ======================= -->
-    <section class="passo" data-passo="quantidade" hidden>
-      <h2>Quantidade</h2>
-      <div class="campo" data-campo="quantidade">
-        <label for="quantidade">Informe a quantidade</label>
-        <div class="qtd">
-          <input type="number" id="quantidade" min="1" step="1" inputmode="numeric">
-          <span class="unidade" id="unidadeMedida">—</span>
-        </div>
-        <span class="ajuda">A unidade de medida vem do cadastro do item e não é editável.</span>
-      </div>
-    </section>
-
-    <!-- ======================= 3 · ENTREGA E CUSTO ======================= -->
-    <section class="passo" data-passo="entrega" hidden>
-      <h2>Empresa e centro de custo</h2>
-
-      <div class="campo" data-campo="empresa">
-        <label for="empresa">Empresa</label>
-        <select id="empresa">
-          <option value="">Selecione a empresa…</option>
-        </select>
-        <span class="ajuda">A pessoa jurídica que compra. É a mesma lista do GR, e é ela
-          que vai no cabeçalho da ordem de compra.</span>
-      </div>
-
-      <div class="campo" data-campo="centroCusto">
-        <label for="buscaCentro">Busque o centro de custo pelo nome, pelo código ou pela unidade</label>
-        <div class="busca">
-          <input type="text" id="buscaCentro" autocomplete="off" placeholder="Ex.: 3180, SOJA OLIMPO, FROTA">
-          <div class="resultados" id="resultadosCentro" hidden></div>
-        </div>
-        <span class="ajuda">Onde o valor do gasto será alocado depois que a fatura for paga.
-          São centenas de centros — escreva parte do nome que a lista estreita.</span>
-
-        <div class="ficha" id="fichaCentro" hidden>
-          <dl>
-            <dt>Código</dt><dd id="cCodigo"></dd>
-            <dt>Centro</dt><dd id="cNome"></dd>
-            <dt>Unidade</dt><dd id="cUnidade"></dd>
-          </dl>
-        </div>
-      </div>
-    </section>
-
-    <!-- ======================= 4 · TIPO E FORNECEDOR ======================= -->
+    <!-- ================== 4 · TIPO DE COMPRA E FORNECEDOR ================== -->
     <section class="passo" data-passo="compra" hidden>
       <h2>Tipo de compra e fornecedor</h2>
 
@@ -549,7 +550,7 @@
       </div>
     </section>
 
-    <!-- ======================= 5 · PRAZO E MOTIVO ======================= -->
+    <!-- ================== 5 · PRAZO E MOTIVO ================== -->
     <section class="passo" data-passo="prazo" hidden>
       <h2>Prazo e motivo</h2>
 
@@ -875,19 +876,23 @@ let modoVisual = 'passos';
 let ultimoPacote = null;   // o que foi enviado ao n8n
 let SLACK_UID = '';        // id do usuário no Slack, vindo da query string (vai só ao webhook)
 
-const SEM_QUANTIDADE = ['lista','servico'];
-
 /* Empresa e centro de custo vêm logo depois de quem está pedindo, e só então
    o pedido em si — a mesma ordem da requisição no GR. A seção fica escondida
    até ser a vez dela, então a posição no HTML não importa; quem manda é esta
-   lista. */
-const sequencia = () => SEM_QUANTIDADE.includes(estado.tipo)
-  ? ['solicitante','entrega','item','compra','prazo']
-  : ['solicitante','entrega','item','quantidade','compra','prazo'];
+   lista.
+
+   A quantidade tinha um passo só dela, e em 18/09 voltou para dentro do item.
+   São cinco passos para todo mundo agora — antes eram seis para item único e
+   cinco para lista e serviço, o que ainda exigia a lista SEM_QUANTIDADE só
+   para dizer quem pulava o passo.
+
+   TODA A NUMERAÇÃO SAI DAQUI: "Passo 3 de 5" e o "1., 2., 3." da página única
+   são calculados desta lista, então tirar um passo acerta os dois sozinho. */
+const sequencia = () => ['solicitante','entrega','item','compra','prazo'];
 
 const TITULOS = {
   solicitante:'Solicitante',
-  item:'Item', quantidade:'Quantidade', entrega:'Empresa e centro de custo',
+  item:'Item', entrega:'Empresa e centro de custo',
   compra:'Tipo de compra e fornecedor', prazo:'Prazo e motivo'
 };
 
@@ -1608,10 +1613,11 @@ function validar(passo){
       if(!estado.itensLista.length) falhar('itensLista','Adicione pelo menos um item à lista.');
     } else {
       if(!estado.item) falhar('item','Busque e selecione o item no catálogo.');
+      /* A quantidade é cobrada aqui desde 18/09, junto do item. Só para item
+         único: na lista cada linha traz a sua, e serviço não tem quantidade. */
+      if(!estado.quantidade || Number(estado.quantidade) <= 0)
+        falhar('quantidade','Informe uma quantidade maior que zero.');
     }
-  }
-  if(passo === 'quantidade'){
-    if(!estado.quantidade || Number(estado.quantidade) <= 0) falhar('quantidade','Informe uma quantidade maior que zero.');
   }
   if(passo === 'entrega'){
     if(!estado.empresa)      falhar('empresa','Selecione a empresa.');

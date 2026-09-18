@@ -72,14 +72,14 @@ const b = await chromium.launch();
 
 // 3 — quantidade zero, negativa e fracionada
 { const p = await nova(b); await base(p,'item');
-  await p.evaluate(()=>{ escolherItem(CATALOGO_FALLBACK[0]); passoAtual = sequencia().indexOf('quantidade'); render(); });
+  await p.evaluate(()=>{ escolherItem(CATALOGO_FALLBACK[0]); passoAtual = sequencia().indexOf('item'); render(); });
   for (const [v, esperado] of [['0',1],['-5',1],['2.5',0]]) {
     await p.fill('#quantidade', v); await p.dispatchEvent('#quantidade','input');
     await p.click('#btnAvancar');
     const barrou = await invalido(p,'quantidade');
     if(v==='2.5' && barrou===0) nota('3 quantidade fracionada (2,5) é aceita', 'confirmar se é desejado');
     ok('3 quantidade '+v+' tratada', barrou===esperado, 'barrou='+barrou);
-    await p.evaluate(()=>{ passoAtual = sequencia().indexOf('quantidade'); render(); });
+    await p.evaluate(()=>{ passoAtual = sequencia().indexOf('item'); render(); });
   }
   await p.close(); }
 
@@ -114,14 +114,44 @@ const b = await chromium.launch();
   ok('7 lista vazia barra', await invalido(p,'itensLista')===1);
   await p.close(); }
 
-// 8 — passos mudam com o tipo
+/* 8 — são CINCO passos, iguais para os três tipos.
+   Até 18/09 o item único tinha seis: a quantidade era um passo só dela, e
+   lista e serviço o pulavam. A quantidade voltou para dentro do item, então
+   não há mais tipo com contagem diferente — e a numeração das telas sai desta
+   mesma lista, então o que este teste guarda é o "Passo N de 5" e o
+   "1., 2., 3." da página única de uma vez só. */
 { const p = await nova(b); await base(p,'item');
   const nItem = await p.evaluate(()=> sequencia().length);
   const nLista = await p.evaluate(()=>{ marcarRadio('tipo','lista'); return sequencia().length; });
   const nServ = await p.evaluate(()=>{ marcarRadio('tipo','servico'); return sequencia().length; });
-  ok('8 item tem 6 passos', nItem===6, 'tem '+nItem);
+  ok('8 item tem 5 passos', nItem===5, 'tem '+nItem);
   ok('8 lista tem 5 passos', nLista===5, 'tem '+nLista);
   ok('8 serviço tem 5 passos', nServ===5, 'tem '+nServ);
+  ok('8 nenhum passo chamado quantidade',
+     !(await p.evaluate(()=> sequencia().includes('quantidade'))),
+     'a quantidade voltou a ser passo');
+
+  /* A quantidade tem que estar DENTRO do bloco do item único — é o que faz
+     ela sumir sozinha em lista e serviço. */
+  await p.evaluate(()=>{ marcarRadio('tipo','item'); passoAtual = sequencia().indexOf('item'); render(); });
+  ok('8 quantidade dentro do bloco do item',
+     await p.evaluate(()=> !!document.querySelector('#blocoItem #quantidade')),
+     'o campo de quantidade está fora do blocoItem');
+  ok('8 quantidade visível no item único', await p.locator('#quantidade').isVisible());
+  await p.evaluate(()=>{ marcarRadio('tipo','lista'); });
+  ok('8 quantidade some na lista', !(await p.locator('#quantidade').isVisible()),
+     'o campo de quantidade apareceu numa lista de itens');
+  await p.evaluate(()=>{ marcarRadio('tipo','servico'); });
+  ok('8 quantidade some no serviço', !(await p.locator('#quantidade').isVisible()),
+     'o campo de quantidade apareceu num escopo de serviço');
+
+  /* A numeração da página única: cinco seções, 1 a 5, sem buraco. */
+  await p.evaluate(()=>{ marcarRadio('tipo','item'); trocarVisual('pagina'); });
+  const numeros = await p.evaluate(()=>
+    [...document.querySelectorAll('.passo:not([hidden]) h2')].map(h=>h.textContent.trim()));
+  ok('8 página única numera 1 a 5',
+     numeros.length===5 && numeros.every((t,i)=> t.startsWith((i+1)+'. ')),
+     JSON.stringify(numeros));
   await p.close(); }
 
 // 9 — trocar de tipo depois de montar a lista
@@ -298,12 +328,24 @@ const b = await chromium.launch();
   ok('19 nenhum sorteio sobrou no formulário', !sorteia);
   await p.close(); }
 
-// 20 — página única mostra todos os passos do tipo escolhido
+/* 20 — a página única mostra os passos NA ORDEM DO FLUXO.
+   Esta asserção guardava a ordem errada e por isso não acusou nada: o HTML
+   trazia o item antes da empresa, mas os números saem da sequência, então a
+   tela lia "1. Solicitante, 3. Item, 2. Empresa e centro de custo". Os números
+   estavam certos; a ordem é que não. Corrigido em 18/09 movendo a seção no
+   HTML — e a asserção passou a comparar com a própria sequência, em vez de com
+   uma lista escrita à mão, que foi como o erro entrou aqui. */
 { const p = await nova(b); await base(p,'lista');
   await p.evaluate(()=> trocarVisual('pagina'));
   const visiveis = await p.evaluate(()=> [...document.querySelectorAll('.passo')].filter(s=>!s.hidden).map(s=>s.dataset.passo));
-  ok('20 página única mostra os 5 passos da lista',
-    JSON.stringify(visiveis)===JSON.stringify(['solicitante','item','entrega','compra','prazo']), JSON.stringify(visiveis));
+  const seq = await p.evaluate(()=> sequencia());
+  ok('20 página única na ordem do fluxo',
+    JSON.stringify(visiveis)===JSON.stringify(seq),
+    'tela: ' + JSON.stringify(visiveis) + ' · fluxo: ' + JSON.stringify(seq));
+  const titulos = await p.evaluate(()=>
+    [...document.querySelectorAll('.passo:not([hidden]) h2')].map(h=>h.textContent.trim()));
+  ok('20 numeração sem buraco nem repetição',
+    titulos.every((t,i)=> t.startsWith((i+1)+'. ')), JSON.stringify(titulos));
   await p.close(); }
 
 // 21 — escopo tem teto
