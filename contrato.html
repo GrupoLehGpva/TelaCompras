@@ -104,6 +104,10 @@
   .falha{background:var(--erro-bg);color:var(--erro)}
   .aviso{background:var(--demo-bg);color:var(--demo)}
   .indo{background:var(--realce);color:var(--muted)}
+  /* Cinza, de propósito: o que não pôde ser conferido não é bom nem ruim, e
+     não pode parecer nenhum dos dois. Verde aqui seria mentira; amarelo faria
+     a tela gritar num dia em que não há nada errado. */
+  .nota{background:var(--realce);color:var(--muted)}
   .titulo{font-weight:600}
   .detalhe{color:var(--muted);font-size:13px;margin-top:3px;
            font-family:var(--mono);overflow-wrap:anywhere}
@@ -136,6 +140,22 @@ const SUPABASE_KEY = 'sb_publishable_AR4D1JlHB-Z12--QbzwYWQ_URZzmVwl';
 const ENDPOINT_TELA = 'https://grupoleh.app.n8n.cloud/webhook/decisao-tela-5a31745968808aaf41ce';
 const TOKEN = (new URLSearchParams(location.search).get('t') || '').trim();
 
+/* Um pedido de verdade para conferir contra.
+ *
+ * Esta página usa a chave PÚBLICA, e a chave pública não lista a base — é
+ * justamente uma das coisas que ela prova, logo abaixo. Então ela não tem como
+ * descobrir sozinha o número de um pedido existente: quem sabe é quem abre a
+ * tela.
+ *
+ *   contrato.html?pedido=C2609-00001
+ *
+ * Sem isso, duas conferências ficam sem chão e são marcadas NÃO DEU em vez de
+ * PASSA. A anterior trazia `SC-TESTE-001` cravado no código — um número da
+ * numeração velha, de um card de demonstração apagado. Ela nunca mais teve o
+ * que ler. */
+const ALVO = (new URLSearchParams(location.search).get('pedido') || '').trim();
+let pedidoAlvo = null;   // preenchido pelo primeiro bloco, usado pelo da escrita
+
 const $ = id => document.getElementById(id);
 const esc = t => String(t==null?'':t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
@@ -151,7 +171,7 @@ function grupo(titulo, sub){
 
 function registrar(tipo, titulo, detalhe){
   contas[tipo] = (contas[tipo]||0) + 1;
-  const rot = { passa:'PASSA', falha:'FALHA', aviso:'ATENÇÃO' }[tipo];
+  const rot = { passa:'PASSA', falha:'FALHA', aviso:'ATENÇÃO', nota:'NÃO DEU' }[tipo];
   const l = document.createElement('div');
   l.className = 'linha';
   l.innerHTML = '<span class="selo ' + tipo + '">' + rot + '</span>' +
@@ -164,6 +184,11 @@ function registrar(tipo, titulo, detalhe){
 const passa = (t,d)=> registrar('passa',t,d);
 const falha = (t,d)=> registrar('falha',t,d);
 const aviso = (t,d)=> registrar('aviso',t,d);
+/* NÃO DEU: a conferência não pôde ser feita, e por isso não vale como feita.
+   Existe porque o contrário é pior: uma conferência que só sabe passar vira
+   um selo verde que não prova nada — foi assim que a trava de escrita ficou
+   meses parecendo testada sem nunca ter tido chance de falhar. */
+const nota  = (t,d)=> registrar('nota', t,d);
 const confere = (cond, titulo, detalhe)=> cond ? passa(titulo) : falha(titulo, detalhe);
 
 async function rpc(nome, corpo){
@@ -199,15 +224,23 @@ async function rodar(){
     confere(inexistente.corpo && inexistente.corpo.ok === false && inexistente.corpo.erro === 'nao_encontrada',
       'pedido que não existe responde nao_encontrada', JSON.stringify(inexistente.corpo));
 
-    const real = await rpc('abrir_pedido', { p_id:null, p_numero:'SC-TESTE-001' });
-    if(real.corpo && real.corpo.ok === true){
-      const ped = real.corpo.pedido || {};
-      confere(typeof ped.numero === 'string', 'pedido volta com número', JSON.stringify(ped).slice(0,160));
-      confere(Array.isArray(real.corpo.itens), 'itens vêm como lista', typeof real.corpo.itens);
-      confere('centro_custo_nome' in ped, 'centro de custo já vem com nome',
-        'a tela mostraria o código puro sem isto');
+    if(!ALVO){
+      nota('a leitura de um pedido que existe não foi conferida',
+        'abra esta tela com ?pedido=<número> — por exemplo contrato.html?pedido=C2609-00001');
     } else {
-      aviso('não achei SC-TESTE-001', 'sem os dados de teste este bloco não conclui: ' + JSON.stringify(real.corpo));
+      const real = await rpc('abrir_pedido', { p_id:null, p_numero:ALVO });
+      if(real.corpo && real.corpo.ok === true){
+        pedidoAlvo = real.corpo.pedido || {};
+        confere(typeof pedidoAlvo.numero === 'string', 'pedido volta com número',
+          JSON.stringify(pedidoAlvo).slice(0,160));
+        confere(Array.isArray(real.corpo.itens), 'itens vêm como lista', typeof real.corpo.itens);
+        confere('centro_custo_nome' in pedidoAlvo, 'centro de custo já vem com nome',
+          'a tela mostraria o código puro sem isto');
+      } else {
+        /* Falha, não aviso: alguém pediu ESTE número e ele não voltou. Ou o
+           número está errado, ou a função parou de achar pedido que existe. */
+        falha('pedi o ' + ALVO + ' e não veio', JSON.stringify(real.corpo));
+      }
     }
   }catch(e){ falha('o Supabase não respondeu', e.message); }
 
@@ -276,18 +309,39 @@ async function rodar(){
   }catch(e){ falha('não consegui testar a leitura da tabela', e.message); }
 
   grupo('Escrever sem permissão', 'Só o formulário grava, e só criando. Alterar e apagar não.');
-  try{
-    const r = await fetch(SUPABASE_URL + '/rest/v1/solicitacoes?numero=eq.SC-TESTE-001', {
-      method:'PATCH',
-      headers:{ apikey:SUPABASE_KEY, Authorization:'Bearer ' + SUPABASE_KEY,
-                'Content-Type':'application/json', Prefer:'return=representation' },
-      body: JSON.stringify({ motivo:'teste de contrato — não deveria gravar' })
-    });
-    const corpo = await r.json().catch(()=>null);
-    const mexeu = Array.isArray(corpo) && corpo.length > 0;
-    confere(!mexeu, 'alterar um pedido não muda nada',
-      mexeu ? 'ALTEROU ' + corpo.length + ' linha(s) — a política de escrita está aberta' : 'HTTP ' + r.status);
-  }catch(e){ passa('alterar nem chega a sair', e.message); }
+  /* ---------------------------------------------------------------------
+     ESTA CONFERÊNCIA PASSAVA SEM NUNCA TER TIDO CHANCE DE FALHAR.
+     Ela mirava `numero=eq.SC-TESTE-001` — um pedido de demonstração apagado.
+     PATCH que não casa com linha nenhuma devolve `[]` tanto com a política
+     fechada quanto com ela escancarada. Ou seja: selo verde permanente,
+     provando nada. É a mesma armadilha da bateria que conferia o texto do
+     intervalo e não a quantidade de linhas.
+     Agora só roda mirando um pedido que existe — e, sem ele, diz que não deu.
+     --------------------------------------------------------------------- */
+  if(!pedidoAlvo || !pedidoAlvo.numero || !('motivo' in pedidoAlvo)){
+    nota('a trava contra alterar pedido não foi conferida',
+      'ela só prova alguma coisa mirando um pedido que existe. Use ?pedido=<número>.');
+  } else {
+    try{
+      /* O PATCH devolve ao campo o MESMO valor que ele já tem. Se a política
+         estiver aberta e a escrita passar, nada muda de verdade — e o teste
+         acusa do mesmo jeito, porque quem denuncia é a linha voltar, não o
+         que veio dentro dela. Teste de trava não pode estragar o dado que a
+         trava protege. */
+      const r = await fetch(SUPABASE_URL + '/rest/v1/solicitacoes?numero=eq.' +
+                            encodeURIComponent(pedidoAlvo.numero), {
+        method:'PATCH',
+        headers:{ apikey:SUPABASE_KEY, Authorization:'Bearer ' + SUPABASE_KEY,
+                  'Content-Type':'application/json', Prefer:'return=representation' },
+        body: JSON.stringify({ motivo: pedidoAlvo.motivo })
+      });
+      const corpo = await r.json().catch(()=>null);
+      const mexeu = Array.isArray(corpo) && corpo.length > 0;
+      confere(!mexeu, 'alterar um pedido não muda nada',
+        mexeu ? 'ALTEROU ' + corpo.length + ' linha(s) — a política de escrita está aberta'
+              : 'HTTP ' + r.status + ' · mirou o ' + pedidoAlvo.numero + ', que existe');
+    }catch(e){ passa('alterar nem chega a sair', e.message); }
+  }
 
   /* 3 — o endpoint da decisão */
   grupo('Endpoint da decisão', 'A porta que a fila usa. Testada com token inválido: não move nada.');
@@ -333,7 +387,11 @@ async function rodar(){
           confere(!!s.etapa_atual, 'cada linha traz a etapa', JSON.stringify(s).slice(0,140));
           confere(!!s.id, 'cada linha traz o id da solicitação');
         } else {
-          aviso('a fila está vazia', 'nada esperando este aprovador agora');
+          /* Fila vazia não é defeito: é o estado normal de quem está em dia,
+             e o estado de todo mundo no começo do dia. Amarelo aqui ensina a
+             ignorar amarelo. */
+          nota('a fila está vazia — nada a conferir dentro dela',
+            'nada esperando este aprovador agora');
         }
       }
     }

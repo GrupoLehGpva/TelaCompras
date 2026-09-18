@@ -74,6 +74,52 @@ for(const trecho of TRECHOS){
   problemas.push('!! ' + trecho.nome + ' está em ' + grupos.length + ' versões diferentes:\n' + linhas.join('\n'));
 }
 
+/* ============================================================================
+   TODA LEITURA DE TABELA PRECISA DIZER ATÉ ONDE VAI
+
+   Em 18/09, de manhã, o catálogo do formulário estava carregando 1.000 dos
+   7.084 itens. Ninguém tinha mexido nele; a consulta simplesmente não pedia
+   `limit`, e o PostgREST corta em 1.000 sem dizer nada — HTTP 200, lista
+   curta, selo verde escrito "1000 itens". A busca parava em "BRACO
+   PARALELO..."; de C a Z não existia nada. E quem não acha o item marca "fora
+   do catálogo", então o pedido seguia sem o código do GR.
+
+   Os centros de custo pediam `limit=2000` desde sempre e por isso estavam
+   inteiros. A diferença era essa, e só essa.
+
+   Esta conferência é estática de propósito: ela não precisa de rede, roda em
+   milissegundos, e pega o erro no arquivo — antes de virar um dia de
+   demonstração com metade do catálogo faltando.
+   ========================================================================== */
+const semTeto = [];
+for(const tela of TELAS.concat(['compras.html', 'cotacao.html'])){
+  const p = path.join(__dirname, tela);
+  if(!fs.existsSync(p)) continue;
+  const txt = fs.readFileSync(p, 'utf8');
+  /* Só leitura de TABELA: `/rpc/` é função, devolve o que a função mandar. */
+  const re = /apiGet\(\s*'([a-z_]+\?select=[^']*)'/g;
+  let m;
+  while((m = re.exec(txt)) !== null){
+    const consulta = m[1];
+
+    /* Tem teto: serve tanto `limit=2000` cravado quanto `limit=' + TETO`, que
+       termina a string ali e continua em concatenação. */
+    if(/[?&]limit=/.test(consulta)) continue;
+
+    /* Busca de UMA linha por chave: a string termina em `<coluna>=eq.` porque
+       o valor entra concatenado. Uma linha não tem como ser cortada em mil. */
+    if(/[?&](codigo|id|numero|token|card_id)=eq\.$/.test(consulta)) continue;
+
+    semTeto.push(tela + ' → ' + consulta.slice(0, 90));
+  }
+}
+if(semTeto.length === 0){
+  resumo.push('ok teto nas leituras: toda consulta de tabela pede limit');
+} else {
+  problemas.push('!! consulta de tabela sem `limit` (o PostgREST corta em 1.000 calado):\n     ' +
+                 semTeto.join('\n     '));
+}
+
 console.log(resumo.join('\n'));
 if(problemas.length){
   console.log('\n===== TRECHOS QUE ANDARAM SOZINHOS (' + problemas.length + ') =====');

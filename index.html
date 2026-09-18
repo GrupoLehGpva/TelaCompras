@@ -950,12 +950,32 @@ async function carregarCatalogo(){
   try{
     /* Colunas nomeadas, e não `*`: são 7.084 itens, e cada coluna a mais é
        peso na mão de quem abre o formulário no celular, no meio da granja. */
-    const dados = await apiGet('catalogo_itens?select=codigo,familia,descricao,unidade,especificacao&ativo=eq.true&order=descricao');
+
+    /* ---------------------------------------------------------------------
+       O `limit` NÃO É ENFEITE. Sem ele o PostgREST devolve no máximo 1.000
+       linhas e não avisa: HTTP 200, lista curta, nada errado à vista.
+       Descoberto em 18/09, na conferência da manhã do dia da virada: o selo
+       verde dizia "1000 itens" e o catálogo parava em "BRACO PARALELO..." —
+       6.084 itens, de C a Z, simplesmente não existiam na busca. Sabão,
+       vassoura, pneu, ração, óleo, EPI: nada disso aparecia.
+       E o efeito no fluxo é pior que o sumiço: quem não acha o item marca
+       "fora do catálogo", e aí o pedido segue sem o código do GR.
+       Os centros de custo já pediam `limit=2000` desde sempre. O catálogo
+       não pedia, e por isso era o único truncado.
+       --------------------------------------------------------------------- */
+    const TETO = 20000;
+    const dados = await apiGet('catalogo_itens?select=codigo,familia,descricao,unidade,especificacao&ativo=eq.true&order=descricao&limit=' + TETO);
     CATALOGO = dados.length ? dados : CATALOGO_FALLBACK;
     selo.textContent = contar(CATALOGO.length,'item','itens');
     selo.className = 'status on';
     if(!WEBHOOK_URL.trim()) selo.title = 'Webhook do ClickUp ainda não configurado';
     if(!dados.length) mostrarAlerta('Conectado, mas a tabela <code>catalogo_itens</code> está vazia.');
+    /* A trava contra o mesmo erro voltar calado: bater no teto exato é sinal
+       de corte, não de coincidência. */
+    if(dados.length >= TETO)
+      mostrarAlerta('<b>O catálogo veio cortado.</b> Vieram exatamente ' + TETO +
+        ' itens, que é o teto desta consulta — provavelmente há mais no banco e eles ' +
+        '<b>não vão aparecer na busca</b>. Avise o setor de compras antes de seguir.');
   }catch(e){
     CATALOGO = CATALOGO_FALLBACK;
     selo.textContent = 'offline'; selo.className = 'status off';
@@ -1040,7 +1060,10 @@ let EMPRESAS = [];
 async function carregarEmpresas(){
   if(!CONECTADO){ EMPRESAS = []; montarEmpresas(); return; }
   try{
-    EMPRESAS = await apiGet('empresas?select=id,nome&ativo=is.true&order=ordem');
+    /* `limit` explícito pela mesma razão do catálogo: sem ele são 1.000 no
+       máximo, em silêncio. São 6 empresas hoje, então não morde — mas a
+       consulta sem teto é a armadilha, não a quantidade de hoje. */
+    EMPRESAS = await apiGet('empresas?select=id,nome&ativo=is.true&order=ordem&limit=500');
     if(!EMPRESAS.length)
       mostrarAlerta('Conectado, mas a tabela <code>empresas</code> está vazia. Sem ela o pedido não sabe qual pessoa jurídica compra.');
   }catch(e){

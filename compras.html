@@ -305,7 +305,11 @@ async function carregarPedidos(){
     return;
   }
   try{
-    pedidos = await apiGet('solicitacoes?select=*&order=aberto_em.desc');
+    /* `limit` explícito: sem ele o PostgREST para em 1.000 e não avisa. Esta
+       tela está parada (a leitura pública de `solicitacoes` foi fechada na
+       correção de LGPD, então hoje ela volta vazia), mas consulta sem teto é
+       armadilha guardada para quando alguém religar a tela. */
+    pedidos = await apiGet('solicitacoes?select=*&order=aberto_em.desc&limit=2000');
     selo.textContent = contar(pedidos.length,'pedido','pedidos'); selo.className='status on';
     renderPedidos();
   }catch(e){
