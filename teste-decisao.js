@@ -69,7 +69,13 @@ await p.close();
 p = await abrir(b, '?d=reprovado&e=gerencial&sc=C2609-00001');
 ok('4 título', (await p.locator('#titulo').textContent()) === 'Reprovado', 'veio ' + await p.locator('#titulo').textContent());
 ok('4 classe', await p.locator('#veredito.v-nao').count() === 1, 'sem a classe de reprovado');
-ok('4 orienta comentar', /comente no card/.test(await p.locator('#passo').textContent()), 'não orienta o motivo');
+/* Era `/comente no card/`: a tela pedia que o aprovador fosse comentar o
+   motivo. Isso ficou para trás quando reprovar sem motivo deixou de existir —
+   o motivo é obrigatório, já foi escrito antes do clique e já está comentado.
+   O teste seguia cobrando a orientação velha; quem foi ajustado foi ele. */
+ok('4 diz que o motivo já está registrado',
+   /já está no card/.test(await p.locator('#passo').textContent()),
+   'veio: ' + (await p.locator('#passo').textContent()));
 await p.close();
 
 // 5 — já decidido (clique duplo)
@@ -82,12 +88,29 @@ await p.close();
 p = await abrir(b, '?d=erro');
 ok('6 título', /Não consegui registrar/.test(await p.locator('#titulo').textContent()), 'veio ' + await p.locator('#titulo').textContent());
 ok('6 sem resumo', !(await p.locator('#cartaoPedido').isVisible()), 'mostrou resumo num erro');
+/* A tela dizia, em cima, "não consegui registrar, mova a coluna na mão" — e no
+   rodapé, fixo, "a decisão já está registrada no card". Duas frases opostas na
+   mesma tela, e a tranquilizadora era a falsa: quem lesse a segunda fechava a
+   janela achando que tinha aprovado. Este par de conferências é o que impede
+   o rodapé de voltar a ser fixo. */
+{ const rod = await p.locator('#rodapeNota').textContent();
+  ok('6 rodapé não promete registro', !/já está registrada/.test(rod), 'rodapé mente no erro: ' + rod);
+  ok('6 rodapé diz que nada foi registrado', /Nada foi registrado/.test(rod), 'veio: ' + rod); }
 await p.close();
 
 // 7 — sem parâmetro nenhum não pode parecer sucesso
 p = await abrir(b, '');
 ok('7 cai no erro', await p.locator('#veredito.v-erro').count() === 1, 'link vazio não caiu no erro');
 ok('7 sem botões', (await p.locator('.acoes a').count()) === 0, 'apareceu botão sem dados');
+ok('7 rodapé também não promete registro',
+   !/já está registrada/.test(await p.locator('#rodapeNota').textContent()), 'link vazio promete registro');
+await p.close();
+
+// 7b — e nos desfechos bons o rodapé continua dizendo que registrou
+p = await abrir(b, '?d=aprovado&e=lider&sc=C2609-00001');
+ok('7b rodapé confirma no aprovado',
+   /já está registrada/.test(await p.locator('#rodapeNota').textContent()),
+   'perdeu a confirmação no caminho bom');
 await p.close();
 
 // 8 — etapa desconhecida não quebra

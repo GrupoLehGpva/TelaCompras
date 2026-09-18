@@ -87,6 +87,12 @@ for(const trecho of TRECHOS){
    Os centros de custo pediam `limit=2000` desde sempre e por isso estavam
    inteiros. A diferença era essa, e só essa.
 
+   Só que `limit` também não vence sozinho: o teto de 1.000 é do SERVIDOR, e
+   pedir 20.000 devolve 1.000 do mesmo jeito, calado. Quem passa disso vai por
+   `apiGetTudo`, que pagina até uma página vir menor que a pedida — e por isso
+   esta conferência olha só as chamadas a `apiGet`, a versão de uma resposta
+   só. `apiGetTudo` é justamente a saída correta para o que não cabe.
+
    Esta conferência é estática de propósito: ela não precisa de rede, roda em
    milissegundos, e pega o erro no arquivo — antes de virar um dia de
    demonstração com metade do catálogo faltando.

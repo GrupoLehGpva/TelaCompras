@@ -734,6 +734,38 @@ async function apiGet(caminho){
   if(!r.ok) throw new Error(await r.text());
   return r.json();
 }
+/* ----------------------------------------------------------------------------
+   LEITURA QUE NÃO CABE NUMA RESPOSTA SÓ
+
+   O PostgREST tem um teto de linhas por resposta, e no nosso projeto ele é
+   1.000. Pedir `limit=20000` não adianta: o servidor corta em 1.000 do mesmo
+   jeito, devolve HTTP 200 e não diz nada. Foi assim que o catálogo passou a
+   ter 1.000 dos 7.084 itens sem ninguém perceber — a busca parava em "BRACO
+   PARALELO..." e de C a Z não existia nada.
+
+   Então a leitura grande vai em páginas, e só para quando uma página vem
+   menor que o pedido — que é a única prova de que acabou.
+
+   `ordem` precisa desempatar de verdade. Ordenar só por `descricao` com itens
+   de descrição repetida faria o banco devolver empates em ordem arbitrária a
+   cada página: item duplicado numa, sumido na outra. Por isso o código entra
+   como segundo critério — ele é único.
+   -------------------------------------------------------------------------- */
+async function apiGetTudo(caminho, ordem, tamPagina){
+  const passo = tamPagina || 1000;
+  let todos = [], desde = 0;
+  /* Teto duro de voltas: se algum dia a condição de parada falhar, isto vira
+     um erro visível em vez de um laço infinito no celular de alguém. */
+  for(let volta = 0; volta < 50; volta++){
+    const pedaco = await apiGet(caminho + '&order=' + ordem +
+                                '&offset=' + desde + '&limit=' + passo);
+    todos = todos.concat(pedaco);
+    if(pedaco.length < passo) return { linhas: todos, completo: true };
+    desde += passo;
+  }
+  return { linhas: todos, completo: false };
+}
+
 async function apiRpc(nome, corpo){
   const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + nome, {
     method:'POST', headers: cabecalhos(), body: JSON.stringify(corpo)
@@ -952,30 +984,36 @@ async function carregarCatalogo(){
        peso na mão de quem abre o formulário no celular, no meio da granja. */
 
     /* ---------------------------------------------------------------------
-       O `limit` NÃO É ENFEITE. Sem ele o PostgREST devolve no máximo 1.000
-       linhas e não avisa: HTTP 200, lista curta, nada errado à vista.
-       Descoberto em 18/09, na conferência da manhã do dia da virada: o selo
-       verde dizia "1000 itens" e o catálogo parava em "BRACO PARALELO..." —
-       6.084 itens, de C a Z, simplesmente não existiam na busca. Sabão,
-       vassoura, pneu, ração, óleo, EPI: nada disso aparecia.
-       E o efeito no fluxo é pior que o sumiço: quem não acha o item marca
-       "fora do catálogo", e aí o pedido segue sem o código do GR.
-       Os centros de custo já pediam `limit=2000` desde sempre. O catálogo
-       não pedia, e por isso era o único truncado.
+       O CATÁLOGO NÃO CABE NUMA RESPOSTA. Descoberto em 18/09, na conferência
+       da manhã do dia da virada: o selo verde dizia "1000 itens", o catálogo
+       parava em "BRACO PARALELO..." e de C a Z não existia nada — sabão,
+       vassoura, pneu, ração, óleo, EPI, nenhum deles aparecia na busca.
+
+       A primeira tentativa foi pedir `limit=20000`. Não resolveu: o teto é do
+       SERVIDOR, não da consulta, e ele corta em 1.000 sem dizer nada. Por isso
+       vai paginado.
+
+       E o efeito no fluxo é pior que o item sumir: quem não acha marca "fora
+       do catálogo", e aí o pedido segue sem o código do GR — exatamente o que
+       a importação do catálogo real existiu para evitar.
        --------------------------------------------------------------------- */
-    const TETO = 20000;
-    const dados = await apiGet('catalogo_itens?select=codigo,familia,descricao,unidade,especificacao&ativo=eq.true&order=descricao&limit=' + TETO);
+    const r = await apiGetTudo(
+      'catalogo_itens?select=codigo,familia,descricao,unidade,especificacao&ativo=eq.true',
+      'descricao,codigo');
+    const dados = r.linhas;
     CATALOGO = dados.length ? dados : CATALOGO_FALLBACK;
     selo.textContent = contar(CATALOGO.length,'item','itens');
     selo.className = 'status on';
     if(!WEBHOOK_URL.trim()) selo.title = 'Webhook do ClickUp ainda não configurado';
     if(!dados.length) mostrarAlerta('Conectado, mas a tabela <code>catalogo_itens</code> está vazia.');
-    /* A trava contra o mesmo erro voltar calado: bater no teto exato é sinal
-       de corte, não de coincidência. */
-    if(dados.length >= TETO)
-      mostrarAlerta('<b>O catálogo veio cortado.</b> Vieram exatamente ' + TETO +
-        ' itens, que é o teto desta consulta — provavelmente há mais no banco e eles ' +
-        '<b>não vão aparecer na busca</b>. Avise o setor de compras antes de seguir.');
+    /* A trava contra o erro voltar calado: só sai daqui dizendo que terminou
+       quem viu uma página vir menor que a pedida. */
+    if(!r.completo){
+      selo.className = 'status off';
+      mostrarAlerta('<b>O catálogo veio incompleto.</b> Parei de buscar depois de ' +
+        dados.length + ' itens e ainda havia mais — os que faltam <b>não vão aparecer ' +
+        'na busca</b>. Avise o setor de compras antes de abrir o pedido.');
+    }
   }catch(e){
     CATALOGO = CATALOGO_FALLBACK;
     selo.textContent = 'offline'; selo.className = 'status off';
@@ -1096,9 +1134,14 @@ async function carregarCentrosCusto(){
   const local = DADOS.centrosCusto.map(c => ({ codigo:c.id, nome:c.nome, unidade:'', tipo:'' }));
   if(!CONECTADO){ CENTROS_CUSTO = local; return; }
   try{
-    const dados = await apiGet('centros_custo?select=codigo,nome,unidade,tipo&ativo=is.true&order=nome&limit=2000');
+    /* Paginado pela mesma razão do catálogo: `limit=2000` não vencia o teto de
+       1.000 do servidor. São 90 centros hoje, então nunca mordeu — mas a
+       consulta que confia no `limit` é a armadilha, não a quantidade de hoje. */
+    const r = await apiGetTudo('centros_custo?select=codigo,nome,unidade,tipo&ativo=is.true', 'nome,codigo');
+    const dados = r.linhas;
     CENTROS_CUSTO = dados.length ? dados : local;
     if(!dados.length) mostrarAlerta('Conectado, mas a tabela <code>centros_custo</code> está vazia. Usando a lista curta local.');
+    if(!r.completo) mostrarAlerta('A lista de centros de custo veio incompleta — alguns não vão aparecer na busca.');
   }catch(e){
     CENTROS_CUSTO = local;
     mostrarAlerta('Não consegui ler os centros de custo no Supabase. Usando a lista curta local.<br><code>'+String(e.message).slice(0,200)+'</code>');

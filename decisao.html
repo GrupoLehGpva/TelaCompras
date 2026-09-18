@@ -222,10 +222,9 @@
 
   <div class="acoes" id="acoes"></div>
 
-  <p class="rodape-nota">
-    Pode fechar esta janela. A decisão já está registrada no card —
-    esta página apenas mostra o que aconteceu.
-  </p>
+  <!-- O texto é escrito pelo script, por desfecho. Fixo, ele mentia: ver o
+       comentário em RODAPE, lá embaixo. -->
+  <p class="rodape-nota" id="rodapeNota"></p>
 </div>
 
 <script>
@@ -269,6 +268,28 @@ const SEGUE = {
   financeiro: 'A compra está liberada. O card foi para <b>ordem de compra</b> — é a entrada nessa coluna que leva os dados para o GR.'
 };
 
+/* ----------------------------------------------------------------------------
+   RODAPÉ — UM POR DESFECHO
+   Ele era fixo: "Pode fechar esta janela. A decisão já está registrada no card."
+   Nas duas telas boas isso é verdade. Na tela de ERRO era mentira, e mentira
+   tranquilizadora: em cima dizia "não consegui registrar, mova a coluna na
+   mão", e logo abaixo garantia que já estava registrado. Quem lê a segunda
+   frase fecha a janela e vai embora achando que aprovou — e o pedido fica
+   parado sem ninguém saber.
+   Achado em 18/09, na varredura das telas antes da virada.
+   -------------------------------------------------------------------------- */
+const RODAPE = {
+  aprovado:  'Pode fechar esta janela. A decisão já está registrada no card — ' +
+             'esta página apenas mostra o que aconteceu.',
+  reprovado: 'Pode fechar esta janela. A decisão já está registrada no card — ' +
+             'esta página apenas mostra o que aconteceu.',
+  ja:        'Pode fechar esta janela. Nada foi alterado agora: esta etapa já ' +
+             'tinha sido decidida antes.',
+  erro:      '<b>Nada foi registrado.</b> A solicitação continua esperando esta ' +
+             'decisão — ela não andou e não foi reprovada. Tente de novo pelo ' +
+             'link da sua fila, ou fale com o setor de compras.'
+};
+
 function desfecho(){
   const etapa = ETAPA_NOME[eta] || 'Aprovação';
   if(dec === 'aprovado') return {
@@ -277,8 +298,13 @@ function desfecho(){
   };
   if(dec === 'reprovado') return {
     classe:'v-nao', icone:'✕', titulo:'Reprovado',
+    /* O texto antigo pedia "se quiser, comente o motivo no card". Isso ficou
+       para trás quando reprovar sem motivo deixou de existir: o motivo é
+       obrigatório, já foi escrito antes do clique, já está comentado no card e
+       já saiu na DM de quem pediu. Pedir de novo faz a pessoa achar que faltou
+       alguma coisa. */
     passo: etapa + '. A solicitação foi encerrada e o card foi para <b>reprovado</b>. ' +
-           'Se quiser registrar o motivo, comente no card — é o que o solicitante vai ler.'
+           'O motivo que você escreveu já está no card e já foi avisado a quem pediu.'
   };
   if(dec === 'ja') return {
     classe:'v-ja', icone:'!', titulo:'Esta solicitação já tinha sido decidida',
@@ -306,6 +332,11 @@ function desenharVeredito(){
   // Número vem da URL: cortado no tamanho de um SC real, senão um parâmetro
   // gigante estica o cabeçalho e a página inteira ganha rolagem lateral.
   if(sc){ $('seloNumero').textContent = sc.slice(0, 24); $('seloNumero').hidden = false; }
+
+  /* `dec` só vale quando é um dos quatro conhecidos; qualquer outra coisa
+     (link torto, parâmetro em branco) cai no texto de erro, que é o único
+     seguro para o que não se sabe. */
+  $('rodapeNota').innerHTML = RODAPE[dec] || RODAPE.erro;
 }
 
 function desenharAcoes(){
