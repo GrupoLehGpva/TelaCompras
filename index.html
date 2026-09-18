@@ -699,10 +699,14 @@ const DADOS = {
     { id:'servico', titulo:'Escopo de serviço', ajuda:'Mão de obra contratada, descrita em texto. Sem itens de catálogo' }
   ],
 
+  /* Em 18/09 'Programada' virou 'Mensal'. O nome antigo dizia o quê (foi
+     planejada) e o novo diz quando (todo mês) — que é o que a pessoa sabe
+     responder na hora de pedir. O id mudou junto; os pedidos antigos continuam
+     com 'programada' no banco e as telas seguem sabendo traduzir esse rótulo. */
   tiposCompra: [
-    { id:'programada', titulo:'Programada', ajuda:'Planejada com antecedência. Entra na fila normal e permite cotação com calma' },
-    { id:'normal',     titulo:'Normal',     ajuda:'Necessidade corrente, nada parado' },
-    { id:'urgente',    titulo:'Urgente',    ajuda:'Equipamento ou atividade parada. O comprador trata na frente dos demais' }
+    { id:'normal',  titulo:'Normal',  ajuda:'Necessidade corrente, nada parado' },
+    { id:'urgente', titulo:'Urgente', ajuda:'Equipamento ou atividade parada. O comprador trata na frente dos demais' },
+    { id:'mensal',  titulo:'Mensal',  ajuda:'Compra programada, que se repete todo mês: material de limpeza, copa e cozinha, escritório. Entra na fila normal e permite cotação com calma' }
   ],
 
   definicoesFornecedor: [
@@ -1780,7 +1784,7 @@ function preencherExemplo(){
     ];
     renderLista();
     escolherCentroPorTermo('morador');
-    marcarRadio('tipoCompra','programada');
+    marcarRadio('tipoCompra','mensal');
     marcarRadio('definicaoFornecedor','cotacao');
     $('motivoCompra').value = 'Reposição mensal de material de limpeza da casa dos moradores da Granja 103';
   } else {
@@ -1859,8 +1863,22 @@ function montarPacote(solicitacaoId, cabecalho, itens){
     })),
 
     /* prontos para usar no card, sem o n8n precisar montar nada */
-    titulo_card: cabecalho.numero + ' · ' + (cabecalho.motivo || 'Solicitação de compra'),
+
+    /* O TÍTULO É O QUE SE LÊ NO KANBAN SEM ABRIR O CARD.
+       Até 18/09 era "C2609-00001 · motivo": o código ocupava a frente e o
+       comprador tinha que abrir cada card para saber de que centro de custo
+       era a despesa. Passou a ser centro (código) · facilitador — as duas
+       coisas por onde o comprador agrupa e cobra.
+
+       O CÓDIGO NÃO SE PERDEU: foi para a primeira linha da descrição, logo
+       abaixo, e continua no banco, que é de onde as telas e o n8n o leem. */
+    titulo_card:
+      (centro ? centro + (cabecalho.centro_custo ? ' (' + cabecalho.centro_custo + ')' : '')
+              : 'Sem centro de custo')
+      + ' · ' + (cabecalho.solicitante || 'Sem facilitador'),
     descricao_card:
+      '**Solicitação:** ' + cabecalho.numero + '\n' +
+      '**Motivo:** ' + (cabecalho.motivo || '—') + '\n' +
       '**Facilitador:** ' + cabecalho.solicitante +
         (estado.emailSolicitante ? ' · ' + estado.emailSolicitante.trim().toLowerCase() : '') + '\n' +
       (estado.solicitanteNome.trim() ? '**Solicitante:** ' + estado.solicitanteNome.trim() + '\n' : '') +

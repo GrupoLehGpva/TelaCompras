@@ -356,7 +356,8 @@ const CENTROS = {
   'CC-AGRI':'Agricultura', 'CC-ADM':'Administrativo', 'CC-RH':'RH',
   'CC-PI-AGRI':'Piauí · Agricultura', 'CC-PI-COZ':'Piauí · Cozinha e despensa'
 };
-const TIPOS_COMPRA = { programada:'Programada', normal:'Normal', urgente:'Urgente' };
+/* 'programada' fica aqui para sempre: rótulo dos pedidos abertos antes de 18/09. */
+const TIPOS_COMPRA = { normal:'Normal', urgente:'Urgente', mensal:'Mensal', programada:'Programada' };
 const DEF_FORNECEDOR = { cotacao:'Cotação', unico:'Fornecedor único' };
 
 const legivel = (mapa, cod) => cod ? (mapa[cod] || cod) : '—';

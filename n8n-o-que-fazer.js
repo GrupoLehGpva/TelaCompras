@@ -64,20 +64,19 @@ if (!permissao || permissao.ok !== true) {
   return parar('erro', motivoRecusa);
 }
 
-// O número está no começo do título do card: "C2609-00001 · motivo do pedido".
-// Ler por POSIÇÃO e não por formato é o que evita ter que voltar aqui toda vez
-// que a numeração mudar — a versão anterior procurava /SC-.../ e teria voltado
-// vazia no dia em que o SC saiu de cena.
+// O NÚMERO VEM DO BANCO. SÓ DO BANCO.
 //
-// O teste do dígito é o que impede um título sem número — "AR-CONDICIONADO ·
-// trocar" — de ser lido como código. Custa um caso: rótulos de demonstração
-// como SC-DEMO-C não passam, e caem no número vindo do banco, que é a fonte
-// certa de qualquer jeito.
-const doTitulo = String(t.name || '').split('·')[0].trim();
-const pareceNumero = /^[A-Z0-9][A-Z0-9-]{2,23}$/.test(doTitulo)
-  && /\d/.test(doTitulo) && doTitulo.includes('-');
-const numero = (pareceNumero ? doTitulo : '')
-  || (permissao && permissao.numero) || String(q.sc || '');
+// Até 18/09 ele era lido do começo do título do card ("C2609-00001 · motivo"),
+// com o banco apenas como reserva. Naquele dia o título passou a ser
+// "CENTRO DE CUSTO (código) · FACILITADOR" e ler pelo título deixou de fazer
+// sentido — e virou risco: um centro chamado "CC-3238" passaria no teste de
+// formato e seria lido como número da solicitação, sem erro nenhum aparecer.
+//
+// `decisao_permitida` já devolve o número da solicitação que aquele token tem
+// direito de decidir. Essa é a fonte certa: não depende de como o card foi
+// nomeado, nem de alguém ter renomeado depois. O `q.sc` fica só para o caso
+// remoto de a consulta voltar sem o número.
+const numero = (permissao && permissao.numero) || String(q.sc || '');
 
 // Link torto, card que não existe, etapa desconhecida: não encosta em nada.
 if (!decisao || !ESPERADO[etapa] || !t.id) {

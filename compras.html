@@ -58,7 +58,8 @@
   .pedido span{display:block;font-size:13px;color:var(--muted);margin-top:2px}
   .tag{flex:none;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
     padding:5px 10px;border-radius:99px;white-space:nowrap}
-  .tag.programada{background:#e9eef6;color:#2c4a75}
+  .tag.mensal{background:#e9eef6;color:#2c4a75}
+  .tag.programada{background:#e9eef6;color:#2c4a75}   /* rótulo antigo de 'mensal' */
   .tag.normal{background:#eef0ee;color:var(--muted)}
   .tag.urgente{background:#fdecea;color:var(--erro)}
   .tag.unico{background:var(--ouro-bg);color:var(--ouro)}
@@ -217,7 +218,9 @@ const SUPABASE_KEY = 'sb_publishable_AR4D1JlHB-Z12--QbzwYWQ_URZzmVwl';   // <<< 
 const CONECTADO = SUPABASE_KEY.trim().length > 20;
 const $ = id => document.getElementById(id);
 
-const TIPO_COMPRA = { programada:'Programada', normal:'Normal', urgente:'Urgente' };
+/* 'programada' fica aqui para sempre: é o que está gravado nos pedidos
+   abertos antes de 18/09, e sem ele a tela mostraria o id cru. */
+const TIPO_COMPRA = { normal:'Normal', urgente:'Urgente', mensal:'Mensal', programada:'Programada' };
 const DEF_FORN    = { cotacao:'Cotação (2 ou mais)', unico:'Fornecedor único' };
 const LOCAIS = {
   'ALM-GPVA':'Almoxarifado · Guarapuava', 'ESC-GPVA':'Escritório · Guarapuava',
