@@ -46,8 +46,24 @@ ok('1 marca que é urgente', /urgente/i.test(msg.texto || ''), msg.texto);
 ok('2 link com o token do aprovador',
    (msg.texto || '').includes('aprovacoes.html?t=ap-2405bfac1bf8566dc2d81a7b'), msg.texto);
 ok('2 avisa para não repassar', /não repasse/.test(msg.texto || ''), msg.texto);
-ok('2 explica por que chegou na hora',
-   /urgente/.test(msg.texto || '') && /11h e das 16h/.test(msg.texto || ''), msg.texto);
+ok('2 explica por que chegou na hora', /urgente/.test(msg.texto || ''), msg.texto);
+
+/* 2b — O RODAPÉ TEM QUE DIZER O HORÁRIO DA ETAPA DE QUEM LÊ.
+   Ele dizia "às 11h e às 16h" para todo mundo e ficou errado para o
+   financeiro no mesmo dia em que o horário virou por etapa (18/09) — e esta
+   mensagem vai para o Slack de gente de verdade, então o texto errado chega
+   à pessoa. Aqui a asserção cobra cada etapa com o seu horário. */
+const HORARIO_ESPERADO = {
+  lider:      '8h, 11h, 14h e 16h',
+  gerencial:  '8h, 11h, 14h e 16h',
+  financeiro: '9h, 11h, 14h30 e 16h30'
+};
+for(const [etapa, horario] of Object.entries(HORARIO_ESPERADO)){
+  const t = (rodar(Object.assign({}, URGENTE_ESPERANDO, { etapa }))[0] || {}).json.texto || '';
+  ok('2b rodapé da etapa ' + etapa, t.includes(horario), t.split('\n').pop());
+  ok('2b etapa ' + etapa + ' sem o horário antigo',
+     !/às 11h e às 16h/.test(t) && !/lista das 11h/.test(t), t.split('\n').pop());
+}
 
 // 3 — NÃO urgente não vira aviso. Esta é a que segura o desenho de pé.
 for(const tipo of ['normal', 'programada', 'mensal', '', null]){

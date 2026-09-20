@@ -100,7 +100,7 @@
 
 <figure>
 <svg class="dg" viewBox="0 0 1080 1240" role="img"
-     aria-label="Fluxo da solicitação de compra em três faixas: as pessoas abrem e decidem, as telas recebem os dados, e o motor (Supabase, n8n e ClickUp) grava, cria o card, escolhe o aprovador e avisa no Slack às 11h e às 16h. Da decisão saem dois caminhos: reprovado avisa quem pediu com o motivo; aprovado segue para cotação, gerencial, financeiro e encerramento.">
+     aria-label="Fluxo da solicitação de compra em três faixas: as pessoas abrem e decidem, as telas recebem os dados, e o motor (Supabase, n8n e ClickUp) grava, cria o card, escolhe o aprovador e avisa no Slack quatro vezes por dia, em horários próprios de cada etapa. Da decisão saem dois caminhos: reprovado avisa quem pediu com o motivo; aprovado segue para cotação, gerencial, financeiro e encerramento.">
   <defs>
     <marker id="seta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
@@ -161,7 +161,7 @@
 
   <!-- 6 lista -->
   <rect class="cx" x="720" y="574" width="320" height="66" rx="10"/>
-  <text class="t" x="880" y="598" text-anchor="middle">11h e 16h, dias úteis</text>
+  <text class="t" x="880" y="598" text-anchor="middle">4× ao dia, dias úteis</text>
   <text class="s" x="880" y="616" text-anchor="middle">uma DM por aprovador que tem pedido parado.</text>
   <text class="s" x="880" y="632" text-anchor="middle">Quem não tem nada não recebe nada</text>
 
@@ -240,7 +240,8 @@
   <li><b>O formulário.</b> Item único, vários itens, produto ou serviço, fornecedor único com justificativa, prioridade, centro de custo vindo do ERP. Grava em <b>uma chamada só</b> — não existe mais pedido pela metade.</li>
   <li><b>O card no ClickUp</b> nasce junto, com número, solicitante, centro de custo e a lista de itens.</li>
   <li><b>O pedido entra sozinho na fila da liderança imediata</b>, usando o superior da tabela de lideranças. Ninguém escolhe aprovador na mão.</li>
-  <li><b>A lista de aprovação sai 11h e 16h</b>, dias úteis, uma DM por aprovador — e só para quem tem pedido parado.</li>
+  <li><b>A lista de aprovação sai 4× ao dia</b>, dias úteis, com horário próprio de cada etapa: liderança e gerencial às <b>8h, 11h, 14h e 16h</b>; financeira às <b>9h, 11h, 14h30 e 16h30</b>. Uma DM por aprovador, e só para quem tem pedido parado.</li>
+  <li><b>Compra urgente não espera a lista.</b> Quando um pedido urgente cai na fila de alguém, o aprovador recebe a DM na hora. Compra normal continua só na lista.</li>
   <li><b>A tela da fila</b> abre pelo link pessoal: aprova várias de uma vez, ou abre o pedido inteiro antes de decidir. Reprovar exige o motivo.</li>
   <li><b>Cinco travas antes de aceitar qualquer decisão.</b> Token, pedido, card, etapa e se o pedido ainda está aberto. Falhou uma, não passa.</li>
   <li><b>A cotação segura o pedido</b>: o card só passa com pelo menos um fornecedor completo — orçamento anexado E valor preenchido — mais o local da entrega. Fornecedor pela metade volta para o comprador com a lista do que falta.</li>
@@ -259,7 +260,7 @@
 <div class="cartao falta">
 <ul>
   <li><b>Os 5 compradores no ClickUp.</b> O workspace ainda tem um usuário só. Enquanto for assim, quem anexa os orçamentos e move o card é quem tem acesso — e o pedido nasce sem responsável.</li>
-  <li><b>Slack do Elton e do José de Carvalho Junior.</b> Os dois aprovam, e sem o Slack cadastrado não entram na lista das 11h/16h nem conseguem pedir o link pelo <code>/compras aprovação</code>. Seis facilitadores dependem deles na primeira aprovação.</li>
+  <li><b>Slack do Elton e do José de Carvalho Junior.</b> Os dois aprovam, e sem o Slack cadastrado não entram na lista de aprovação nem conseguem pedir o link pelo <code>/compras aprovação</code>. Seis facilitadores dependem deles na primeira aprovação.</li>
   <li><b>Slack de mais 9 facilitadores.</b> Sem ele a pessoa abre o pedido, mas não recebe nenhum aviso de como ele anda.</li>
   <li><b>Subir o plano do ClickUp.</b> A cota de campos personalizados está esgotada, e é a mesma conversa do que o card precisa carregar para a ordem de compra.</li>
   <li><b>A API do GR</b>, com o Sandro. É por ela que a ordem de compra vai sair sozinha quando o card entrar em <i>ordem de compra</i> — hoje esse passo ainda não existe.</li>

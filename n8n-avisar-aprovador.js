@@ -31,7 +31,7 @@ const r = (linhas && linhas[0]) || {};
 /* Três portas, nesta ordem, e cada uma por um motivo diferente:
    - achou:  o card não tem ninguém esperando decisão (está em cotação, já foi
              decidido, ou a trava o devolveu enquanto esperávamos).
-   - urgente: é o combinado — o resto chega na lista das 11h/16h.
+   - urgente: é o combinado — o resto chega na lista, 4× ao dia.
    - slack:  aprovador sem Slack cadastrado. Não dá para avisar, e inventar um
              canal seria pior. */
 if (r.achou !== true)   return [];
@@ -41,6 +41,16 @@ if (!r.slack)           return [];
 const FILA  = 'https://grupolehgpva.github.io/TelaCompras/aprovacoes.html?t=';
 const ETAPA = { lider: 'da liderança imediata', gerencial: 'gerencial', financeiro: 'financeira' };
 
+/* O horário da lista virou POR ETAPA em 18/09. Esta mensagem dizia "as outras
+   chegam na lista das 11h e das 16h" para todo mundo, o que ficou errado para
+   o financeiro no mesmo dia em que o horário mudou. O texto passa a sair da
+   etapa de quem vai ler — mesmo mapa que o nó da lista diária usa. */
+const HORARIO = {
+  lider:      '8h, 11h, 14h e 16h',
+  gerencial:  '8h, 11h, 14h e 16h',
+  financeiro: '9h, 11h, 14h30 e 16h30'
+};
+
 const texto =
   '🔴 *Compra urgente esperando você*\n' +
   '*' + r.numero + '* — ' + (r.motivo || 'sem motivo escrito') + '\n' +
@@ -48,6 +58,7 @@ const texto =
     ' · aprovação ' + (ETAPA[r.etapa] || r.etapa || '—') + '\n\n' +
   '👉 Decidir: ' + FILA + encodeURIComponent(r.token) + '\n\n' +
   '_Este link é seu. Quem abrir decide no seu nome — não repasse._\n' +
-  '_Você recebe este aviso na hora porque a compra é urgente. As outras chegam na lista das 11h e das 16h._';
+  '_Você recebe este aviso na hora porque a compra é urgente. As outras chegam na sua lista, às ' +
+    (HORARIO[r.etapa] || 'horas combinadas') + '._';
 
 return [{ json: { slack: r.slack, numero: r.numero, texto } }];
