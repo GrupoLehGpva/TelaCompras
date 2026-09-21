@@ -6,9 +6,9 @@
  * título. Dois pontos acoplados, zero teste entre eles.
  *
  * O que se prova aqui:
- *   1. O título é CENTRO DE CUSTO (código) · FACILITADOR.
- *   2. O número da solicitação NÃO está mais no título.
- *   3. O número não se perdeu: é a primeira linha da descrição.
+ *   1. O título é NÚMERO · CENTRO DE CUSTO (código) · FACILITADOR.
+ *   2. O número vem NA FRENTE — é o único lugar que o quadro nunca corta.
+ *   3. O número também é a primeira linha da descrição.
  *   4. O motivo, que só existia no título, virou linha da descrição.
  *   5. Título sem centro ou sem facilitador não sai quebrado nem vazio.
  *   6. "Mensal" existe, "Programada" não, e o rótulo antigo continua legível
@@ -64,11 +64,33 @@ ok('1 título tem o facilitador', /ALISSON RICARDO KRASSUSKI/.test(pac.titulo_ca
 ok('1 separador entre os dois', /\s·\s/.test(pac.titulo_card||''),
    'título veio "' + pac.titulo_card + '"');
 
-// 2 — o número saiu do título. Esta é a asserção que protege o n8n:
-//     enquanto ela passar, ninguém volta a pôr o código no nome do card sem
-//     perceber que o "O que fazer com o clique" não o lê mais de lá.
-ok('2 número não está no título', !/C2609-00042/.test(pac.titulo_card||''),
-   'o número voltou para o título: "' + pac.titulo_card + '"');
+/* 2 — O NÚMERO ABRE O TÍTULO.
+   Até 21/09 esta asserção exigia o contrário ("o número não está no título").
+   Voltou a pedido do Guilherme: quem faz o orçamento precisa ver o código no
+   quadro, e é por ele que cotação, planilha e GR se amarram.
+
+   Não basta o número estar no título — ele tem que estar NO COMEÇO. No quadro
+   o nome quebra em duas linhas e o fim é cortado; um número no final existiria
+   no título e seria invisível para quem olha o Kanban, que era o problema. */
+ok('2 número abre o título', (pac.titulo_card||'').startsWith('C2609-00042 · '),
+   'o título não começa pelo número: "' + pac.titulo_card + '"');
+ok('2 número aparece uma vez só', ((pac.titulo_card||'').match(/C2609-00042/g)||[]).length === 1,
+   'número repetido: "' + pac.titulo_card + '"');
+
+/* 2b — ordem: número, depois centro, depois facilitador. */
+{
+  const t = pac.titulo_card || '';
+  const iNum = t.indexOf('C2609-00042'), iCen = t.indexOf(centroNome), iFac = t.indexOf('ALISSON');
+  ok('2b ordem número · centro · facilitador', iNum === 0 && iNum < iCen && iCen < iFac,
+     'título: "' + t + '"');
+}
+
+/* 2c — pedido sem número (não deveria acontecer: quem numera é o banco) não
+   pode deixar um " · " solto na frente do título. */
+pac = await pacoteCom(p, { numero: '' });
+ok('2c sem número não deixa separador solto', !/^\s*·/.test(pac.titulo_card||''),
+   'título: "' + pac.titulo_card + '"');
+pac = await pacoteCom(p, { centro_custo: centroCod });
 
 // 3 — mas o número continua no card, na primeira linha da descrição
 const primeiraLinha = String(pac.descricao_card||'').split('\n')[0];
@@ -91,7 +113,7 @@ ok('5 sem facilitador ainda tem o centro', (pac.titulo_card||'').includes(centro
 
 await p.evaluate(()=>{ estado.centroCusto=''; estado.centroCustoNome=''; });
 pac = await pacoteCom(p, { centro_custo:'' });
-ok('5 sem centro não quebra', /^Sem centro de custo · ALISSON/.test(pac.titulo_card||''),
+ok('5 sem centro não quebra', /^C2609-00042 · Sem centro de custo · ALISSON/.test(pac.titulo_card||''),
    'título veio "' + pac.titulo_card + '"');
 ok('5 sem centro não deixa parêntese vazio', !/\(\)/.test(pac.titulo_card||''),
    'título veio "' + pac.titulo_card + '"');

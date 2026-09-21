@@ -1838,16 +1838,27 @@ function montarPacote(solicitacaoId, cabecalho, itens){
     /* prontos para usar no card, sem o n8n precisar montar nada */
 
     /* O TÍTULO É O QUE SE LÊ NO KANBAN SEM ABRIR O CARD.
-       Até 18/09 era "C2609-00001 · motivo": o código ocupava a frente e o
-       comprador tinha que abrir cada card para saber de que centro de custo
-       era a despesa. Passou a ser centro (código) · facilitador — as duas
-       coisas por onde o comprador agrupa e cobra.
 
-       O CÓDIGO NÃO SE PERDEU: foi para a primeira linha da descrição, logo
-       abaixo, e continua no banco, que é de onde as telas e o n8n o leem. */
+       Três versões, e cada uma resolveu a reclamação da anterior:
+         até 18/09   "C2609-00001 · motivo"
+                     — o comprador não via de que centro era a despesa.
+         18 a 21/09  "CENTRO (código) · FACILITADOR"
+                     — quem faz o orçamento não via o código do pedido, e é por
+                       ele que a cotação, a planilha e o GR se amarram.
+         desde 21/09 "C2609-00001 · CENTRO (código) · FACILITADOR"
+
+       O CÓDIGO VAI NA FRENTE DE PROPÓSITO. No quadro o nome quebra em duas
+       linhas e o fim é cortado ("ALISSON RICARDO…"): no começo é o único lugar
+       em que ele aparece sempre. O facilitador, que é o pedaço que pode sumir
+       no corte, é o menos importante dos três para quem está cotando.
+
+       O título é só para GENTE LER. Nada lê o número daqui — o n8n parou de
+       fazer isso em 18/09 e busca no banco (decisao_permitida). Mudar a ordem
+       destas partes não quebra nenhum fluxo. */
     titulo_card:
-      (centro ? centro + (cabecalho.centro_custo ? ' (' + cabecalho.centro_custo + ')' : '')
-              : 'Sem centro de custo')
+      (cabecalho.numero ? cabecalho.numero + ' · ' : '')
+      + (centro ? centro + (cabecalho.centro_custo ? ' (' + cabecalho.centro_custo + ')' : '')
+                : 'Sem centro de custo')
       + ' · ' + (cabecalho.solicitante || 'Sem facilitador'),
     descricao_card:
       '**Solicitação:** ' + cabecalho.numero + '\n' +
