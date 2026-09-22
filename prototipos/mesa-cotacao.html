@@ -354,14 +354,14 @@ kbd{font-family:var(--f-mono);font-size:11.5px;border:1px solid var(--line-2);bo
     <div class="who">
       <label for="sel-comprador">Vendo como</label>
       <select id="sel-comprador" class="ctl">
-        <option value="COMPRADOR DA FÁBRICA">Comprador da fábrica</option>
+        <option value="HERISSON LUCAS LAPCZAK">Herisson Lucas Lapczak · comprador</option>
         <option value="OUTRO">Outro comprador (sem solicitações)</option>
         <option value="SEMACESSO">Requisitante (sem acesso à mesa)</option>
       </select>
     </div>
   </header>
 
-  <div class="sample"><span><b>Protótipo.</b> As solicitações C2609-00001 a 00004 vêm do banco (foto de 22/09), com os nomes das pessoas trocados pelo papel. As marcadas <b>EXEMPLO</b>, os nomes de fornecedores sugeridos e os preços são fictícios. Nada aqui grava no banco.</span></div>
+  <div class="sample"><span><b>Protótipo.</b> As solicitações C2609-00001 a 00004 vêm do banco (foto de 22/09), com os nomes reais de quem pediu, aprovou e vai cotar. As marcadas <b>EXEMPLO</b>, os nomes de fornecedores sugeridos e os preços são fictícios. Nada aqui grava no banco.</span></div>
 
   <main id="view"></main>
 </div>
@@ -436,9 +436,9 @@ const ETAPAS = [
 /* =====================================================================
    DADOS — foto do banco de compras em 22/09/2026 + exemplos marcados
    ===================================================================== */
-const H = 'COMPRADOR DA FÁBRICA';
+const H = 'HERISSON LUCAS LAPCZAK';
 const REAL = { empresa:'WIENFRIED MATTHIAS LEH - PR', cc:'3238', ccNome:'COORD. FÁBRICA DE RAÇÃO', setor:'Fábrica de Ração',
-  solicitante:'FACILITADOR DA FÁBRICA', comprador:H, local:null, lider:'LÍDER IMEDIATO' };
+  solicitante:'ALISSON RICARDO KRASSUSKI', comprador:H, local:null, lider:'ALVARO BRANDAO FILHO' };
 const agoraMenos = h => new Date(Date.now() - h*36e5);
 const diaMais = d => { const x = new Date(); x.setHours(12,0,0,0); x.setDate(x.getDate()+d); return x; };
 
