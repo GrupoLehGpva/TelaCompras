@@ -160,86 +160,92 @@ td.r,th.r{text-align:right}
 .ftab.bad{border-color:var(--crit)}
 .map-h{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin:4px 0 8px}
 .map-h h2{font-size:18px;font-weight:600}
-.map-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;margin-bottom:18px}
-.map{min-width:960px;table-layout:fixed}
-.map col.c-item{width:26%}
-.map col.c-qtd{width:82px}
-.map th,.map td{padding:7px 10px;vertical-align:top}
-.map thead th{background:var(--surface-2);text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink);vertical-align:bottom}
-.map thead th{min-width:196px}
-.map.unico{min-width:720px}
-.map.unico thead .inp{max-width:420px}
-.map.unico .cell .inp.money,.map.unico .affix{max-width:230px}
-.map thead .fl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:600;display:block;margin-bottom:4px}
-.map .sticky{position:sticky;left:0;z-index:1;background:var(--surface);border-right:1px solid var(--line)}
-.map thead .sticky{background:var(--surface-2);z-index:2}
-.map tfoot .sticky{background:var(--surface-2)}
-.it-d{font-weight:600;font-size:13.5px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
-.it-d.open{-webkit-line-clamp:unset;display:block}
-.it-m{font-size:12px;color:var(--ink-3);margin-top:3px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.more{border:0;background:none;color:var(--accent);cursor:pointer;padding:0;font-size:12px}
-.inp{width:100%;background:var(--surface);border:1px solid var(--line-2);border-radius:5px;padding:6px 9px;min-height:34px;font-size:14px}
-.inp:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px var(--accent-soft)}
-.inp.money{font-family:var(--f-mono);text-align:right;font-variant-numeric:tabular-nums;font-size:14.5px;font-weight:500}
-.inp.bad,.ctl.bad{border-color:var(--crit);background:var(--crit-soft)}
-.inp:disabled,select.inp:disabled{background:var(--surface-2);color:var(--ink-2);border-color:var(--line)}
-.cell{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;align-items:center}
-.cell .lt{grid-column:1/-1;font-size:11.5px;color:var(--ink-3);display:flex;justify-content:space-between;gap:6px;min-height:18px;font-variant-numeric:tabular-nums}
-.map tbody td,.map tfoot td{border-right:1px solid var(--line)}
-.map tbody td:last-child,.map tfoot td:last-child{border-right:0}
-td.chosen{background:var(--accent-soft)}
-td.chosen .lt{color:var(--accent);font-weight:600}
-.pick{width:30px;height:30px;border-radius:50%;border:2px solid var(--line-2);background:var(--surface);cursor:pointer;display:grid;place-items:center;flex:none}
+
+/* ---------- planilha de cotação ---------- */
+.map-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line-2);border-radius:8px;margin-bottom:18px;position:relative}
+.map col.c-item{width:280px}
+.map col.c-qtd{width:86px}
+.map{min-width:1040px;border-collapse:separate;border-spacing:0;width:100%;font-size:13px;line-height:1.35}
+.map th,.map td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:0 8px;height:34px;vertical-align:middle;text-align:left;font-weight:400;color:var(--ink)}
+.map th:last-child,.map td:last-child{border-right:0}
+.map tr:last-child td,.map tr:last-child th{border-bottom:0}
+/* cabeçalhos */
+.map thead th{background:var(--surface-2);position:sticky;top:0;z-index:3;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:700}
+.map thead tr:first-child th{height:auto;padding:8px;vertical-align:bottom}
+.map thead tr:nth-child(2) th{height:26px;z-index:2}
+.map thead tr:nth-child(2) th.u,.map thead tr:nth-child(2) th.t{text-align:right}
+.map thead tr:nth-child(2) th.k{text-align:center;padding:0 4px}
+.map th.sticky,.map td.sticky{position:sticky;left:0;background:var(--surface);z-index:2}
+.map thead th.sticky{background:var(--surface-2);z-index:5}
+.map tfoot th.sticky{background:var(--surface-2)}
+.map colgroup .cf-alt{background:color-mix(in srgb,var(--surface-2) 38%,transparent)}
+/* cabeçalho do fornecedor */
+.fh{display:flex;flex-direction:column;gap:5px;min-width:0}
+.fh-top{display:flex;align-items:baseline;gap:8px;justify-content:space-between}
+.fh-rot{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:700;background:none;border:0;padding:0;cursor:pointer}
+.fh-rot:hover{color:var(--accent);text-decoration:underline}
+.fh-tot{font-family:var(--f-mono);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink-3);text-transform:none;letter-spacing:0}
+.fh-tot.win{color:var(--accent)}
+.fh-st{font-size:11px;font-weight:600;min-height:14px;color:var(--ink-3);text-transform:none;letter-spacing:0}
+.fh-st.ok{color:var(--ok)} .fh-st.falta{color:var(--warn)} .fh-st.venc{color:var(--accent)}
+.fh .inp{font-size:13px}
+/* células */
+.map td.sticky .it-d{font-weight:600;font-size:13px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.map td.sticky .it-d.open{-webkit-line-clamp:unset;display:block}
+.it-m{font-size:11px;color:var(--ink-3);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.more{border:0;background:none;color:var(--accent);cursor:pointer;padding:0;font-size:11px}
+td.it{padding:6px 8px;height:auto}
+td.qt{text-align:right;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--ink-2);white-space:nowrap}
+td.u{padding:0}
+td.u input{width:100%;height:33px;border:0;background:transparent;padding:0 8px;text-align:right;font-family:var(--f-mono);font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink)}
+td.u input:focus{outline:0;background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
+td.u input::placeholder{color:var(--ink-3);font-family:var(--f-body);font-size:12px}
+td.t{text-align:right;font-family:var(--f-mono);font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink-2);white-space:nowrap}
+td.t .menor{font-family:var(--f-body);font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--ok);font-weight:700;margin-right:5px;vertical-align:1px}
+td.k{text-align:center;padding:0 4px;cursor:pointer}
+.pick{width:20px;height:20px;border-radius:4px;border:1.5px solid var(--line-2);background:var(--surface);cursor:pointer;display:inline-grid;place-items:center;vertical-align:middle}
 .pick:hover:not(:disabled){border-color:var(--accent)}
 .pick[aria-pressed="true"]{border-color:var(--accent);background:var(--accent)}
-.pick[aria-pressed="true"]::after{content:"";width:6px;height:11px;border:solid var(--accent-ink);border-width:0 2.5px 2.5px 0;transform:rotate(42deg) translate(-1px,-1px)}
-.pick:disabled{opacity:.35;cursor:not-allowed}
-.tag-menor{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ok)}
+.pick[aria-pressed="true"]::after{content:"";width:5px;height:9px;border:solid var(--accent-ink);border-width:0 2px 2px 0;transform:rotate(42deg) translate(-1px,-1px)}
+.pick:disabled{opacity:.3;cursor:not-allowed}
+td.ganha{background:var(--accent-soft)}
+td.ganha.t{color:var(--accent);font-weight:600}
+td.t.temmenor{color:var(--ok)}
 tr.bad-row td.sticky{box-shadow:inset 3px 0 0 var(--crit)}
-.err{color:var(--crit);font-size:12px;margin-top:4px;font-weight:500}
-.map tfoot td,.map tfoot th{background:var(--surface-2);border-bottom:1px solid var(--line)}
-.map tfoot th{font-size:12px;text-transform:none;letter-spacing:0;color:var(--ink-2);font-weight:600;vertical-align:middle}
-.map tfoot .hint{display:block;font-weight:400;font-size:11.5px;color:var(--ink-3)}
-.affix{display:grid;grid-template-columns:20px minmax(0,1fr) 32px;align-items:center;gap:5px}
-.affix .pre{text-align:right}.affix .suf{text-align:left}
-.affix span{font-size:12px;color:var(--ink-3);white-space:nowrap}
-.tot{display:flex;flex-direction:column;gap:2px;font-variant-numeric:tabular-nums}
-.tot .big{font-family:var(--f-mono);font-weight:600;font-size:15px}
-.tot .sm{font-size:12px;color:var(--ink-2)}
-.tr-total td,.tr-total th{background:var(--surface)!important;border-top:2px solid var(--line-2)}
-.tr-total .sticky{background:var(--surface)!important}
-.win{color:var(--accent)}
-
-
-/* ---- colunas de fornecedor como objeto ---- */
-.map thead th{position:sticky;top:0;z-index:3;box-shadow:inset 0 -1px 0 var(--line-2)}
-.map thead th.sticky{z-index:4}
-.map col.cf{background:var(--surface)}
-.map col.cf-alt{background:color-mix(in srgb,var(--surface-2) 45%,transparent)}
-.fh{display:flex;flex-direction:column;gap:6px}
-.fh-top{display:flex;align-items:center;gap:8px;justify-content:space-between}
-.fh-rot{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:700;background:none;border:0;padding:0;cursor:pointer}
-.fh-rot:hover{color:var(--accent);text-decoration:underline}
-.fh-tot{font-family:var(--f-mono);font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink-3)}
-.fh-tot.win{color:var(--accent)}
-.fh-st{font-size:11.5px;font-weight:600;display:flex;align-items:center;gap:5px;min-height:16px;color:var(--ink-3)}
-.fh-st.ok{color:var(--ok)} .fh-st.falta{color:var(--warn)} .fh-st.venc{color:var(--accent)}
-.map tfoot tr.cond-h th{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);font-weight:700;background:var(--surface-2);padding-top:12px}
-.map tfoot tr.cond-h td{background:var(--surface-2)}
-/* modo foco: destaca a coluna de um fornecedor */
-.map.foco tbody td:not(.col-on),.map.foco tfoot td:not(.col-on),.map.foco thead th:not(.col-on):not(.sticky){opacity:.38}
-.map.foco td.col-on,.map.foco th.col-on{box-shadow:inset 2px 0 0 var(--accent),inset -2px 0 0 var(--accent)}
-.foco-sai{border:0;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:600;cursor:pointer;min-height:32px}
+tr.item-row:hover td:not(.sticky){background:color-mix(in srgb,var(--accent-soft) 35%,transparent)}
+/* rodapé de condições */
+.map tfoot th{background:var(--surface-2);font-size:12px;color:var(--ink-2);font-weight:600;text-transform:none;letter-spacing:0}
+.map tfoot th .hint{display:block;font-weight:400;font-size:11px;color:var(--ink-3)}
+.map tfoot td{padding:0 6px}
+.map tfoot tr.cond-h th,.map tfoot tr.cond-h td{height:28px;background:var(--surface-2);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:700}
+.map tfoot .campo{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+.map tfoot .campo .un{font-size:11.5px;color:var(--ink-3);white-space:nowrap;min-width:26px}
+.map tfoot .campo .un.pre{text-align:right;min-width:18px}
+.map tfoot input,.map tfoot select{height:26px;border:1px solid var(--line-2);border-radius:4px;background:var(--surface);font-size:12.5px;padding:0 6px;max-width:150px;width:100%}
+.map tfoot input.money{font-family:var(--f-mono);text-align:right;font-variant-numeric:tabular-nums}
+.map tfoot input:focus,.map tfoot select:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.map tfoot tr.tr-total th,.map tfoot tr.tr-total td{height:40px;border-top:2px solid var(--line-2);background:var(--surface)}
+.map tfoot tr.tr-total th{font-size:12.5px;color:var(--ink);font-weight:700;text-transform:none;letter-spacing:0}
+.tot{display:flex;flex-direction:column;align-items:flex-end;gap:1px;padding:4px 2px}
+.tot .big{font-family:var(--f-mono);font-weight:700;font-size:14px;font-variant-numeric:tabular-nums}
+.tot .big.win{color:var(--accent)}
+.tot .sm{font-size:10.5px;color:var(--ink-3);white-space:nowrap}
+.err{color:var(--crit);font-size:11px;font-weight:500;padding:0 8px 4px;text-transform:none;letter-spacing:0}
+.inp.bad,input.bad,select.bad{border-color:var(--crit)!important;background:var(--crit-soft)!important}
+/* modo foco */
+.map.foco tbody td:not(.col-on):not(.sticky),.map.foco tfoot td:not(.col-on),.map.foco thead th:not(.col-on):not(.sticky){opacity:.35}
+.map.foco td.col-on.u input{background:var(--surface)}
 /* passos do preenchimento */
 .passos{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
-.passo{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px;color:var(--ink-2)}
+.passo{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:12.5px;color:var(--ink-2)}
 .passo b{font-weight:600;color:var(--ink)}
-.passo .n{width:19px;height:19px;border-radius:50%;background:var(--surface-2);color:var(--ink-2);font-size:11.5px;font-weight:700;display:grid;place-items:center;flex:none}
-.passo.feito{border-color:color-mix(in srgb,var(--ok) 45%,var(--line));background:var(--ok-soft)}
+.passo .n{width:18px;height:18px;border-radius:50%;background:var(--surface-2);color:var(--ink-2);font-size:11px;font-weight:700;display:grid;place-items:center;flex:none}
+.passo.feito{border-color:color-mix(in srgb,var(--ok) 45%,var(--line));background:var(--ok-soft);color:var(--ok)}
 .passo.feito .n{background:var(--ok);color:var(--surface)}
-.passo.feito b,.passo.feito{color:var(--ok)}
+.passo.feito b{color:var(--ok)}
 .passo.agora{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
 .passo.agora .n{background:var(--accent);color:var(--accent-ink)}
+.foco-sai{border:0;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:600;cursor:pointer;min-height:30px}
 
 /* resumo */
 .resumo h2{font-size:18px;font-weight:600;margin-bottom:8px}
@@ -884,42 +890,49 @@ function pintarTabela(){
   const J = colunas(s);
   const rotulo = j => s.defForn === 'unico' ? 'Fornecedor único' : 'Fornecedor ' + (j+1);
   const errDiv = id => `<div class="err" id="e-${id}" hidden></div>`;
-  const cabec = J.map(j => `<th class="cj-${j}"><div class="fh">
+  const f = j => F.forn[j];
+
+  /* cabeçalho: nome do fornecedor + o que falta nele, por cima das colunas Unitário / Total / ✓ */
+  const cab1 = J.map(j => `<th colspan="3" class="cj-${j}"><div class="fh">
       <span class="fh-top">
         <button type="button" class="fh-rot" data-foco="${j}" title="Preencher só este fornecedor">${rotulo(j)}</button>
         <span class="fh-tot" id="hd-${k}-${j}"></span>
       </span>
       <input class="inp" id="n-${k}-${j}" data-k="nome" data-j="${j}" list="dl-forn" autocomplete="off" placeholder="Buscar fornecedor pelo nome" value="${esc(F.forn[j].nome)}" ${ro}>
       <span class="fh-st" id="st-${k}-${j}"></span>${errDiv(`n-${k}-${j}`)}</div></th>`).join('');
+  const cab2 = J.map(j => `<th class="u cj-${j}">Unitário</th><th class="t cj-${j}">Total</th><th class="k cj-${j}" title="Quem vai fornecer este item">✓</th>`).join('');
+
   const linhas = itens.map(it => {
     const longo = it.desc.length > 110;
-    return `<tr id="row-${k}-${it.id}">
-      <td class="sticky"><div class="it-d" id="dd-${it.id}" title="${esc(it.desc)}">${esc(it.desc)}</div>
-        <div class="it-m">${it.cod ? `<span class="mono">${esc(it.cod)}</span>` : ''}${it.fora ? '<span class="pill neutral">fora do catálogo</span>' : ''}${longo ? `<button class="more" type="button" data-more="${it.id}">ver descrição toda</button>` : ''}</div>
+    return `<tr class="item-row" id="row-${k}-${it.id}">
+      <td class="sticky it"><div class="it-d" id="dd-${it.id}" title="${esc(it.desc)}">${esc(it.desc)}</div>
+        <div class="it-m">${it.cod ? `<span class="mono">${esc(it.cod)}</span>` : ''}${it.fora ? '<span>fora do catálogo</span>' : ''}${longo ? `<button class="more" type="button" data-more="${it.id}">ver tudo</button>` : ''}</div>
         ${errDiv(`row-${k}-${it.id}`)}</td>
-      <td class="r num">${qtd(it.qtd)}<br><span class="muted">${esc(it.un)}</span></td>
-      ${J.map(j => `<td class="cj-${j}" id="td-${k}-${it.id}-${j}"><div class="cell">
-          <input class="inp money" id="p-${k}-${it.id}-${j}" data-k="preco" data-i="${it.id}" data-j="${j}" inputmode="decimal" autocomplete="off" placeholder="R$ unitário" value="${esc(F.precos[it.id][j])}" aria-label="Preço unitário — ${rotulo(j)} — item ${esc(it.desc.slice(0,60))}" ${ro}>
-          <button class="pick" type="button" id="k-${k}-${it.id}-${j}" data-pick data-i="${it.id}" data-j="${j}" aria-pressed="false" aria-label="Escolher ${rotulo(j)} para este item" ${ro}></button>
-          <div class="lt"><span class="tag-menor" hidden>menor preço</span><span class="ltv"></span></div>
-        </div>${errDiv(`p-${k}-${it.id}-${j}`)}</td>`).join('')}
+      <td class="qt">${qtd(it.qtd)} ${esc(it.un)}</td>
+      ${J.map(j => `<td class="u cj-${j}" id="td-${k}-${it.id}-${j}"><input class="money" id="p-${k}-${it.id}-${j}" data-k="preco" data-i="${it.id}" data-j="${j}" inputmode="decimal" autocomplete="off" placeholder="0,00" value="${esc(F.precos[it.id][j])}" aria-label="Preço unitário — ${rotulo(j)} — ${esc(it.desc.slice(0,60))}" ${ro}>${errDiv(`p-${k}-${it.id}-${j}`)}</td>
+        <td class="t cj-${j}" id="tl-${k}-${it.id}-${j}"></td>
+        <td class="k cj-${j}"><button class="pick" type="button" id="k-${k}-${it.id}-${j}" data-pick data-i="${it.id}" data-j="${j}" aria-pressed="false" aria-label="Escolher ${rotulo(j)} para ${esc(it.desc.slice(0,40))}" ${ro}></button></td>`).join('')}
     </tr>`;
   }).join('');
-  const nomeVazio = j => !F.forn[j].nome.trim();
-  const linhaForn = (rot, dica, fn) => `<tr><th class="sticky" colspan="2">${rot}${dica ? `<span class="hint">${dica}</span>` : ''}</th>${J.map(j => fn(j).replace('<td>', `<td class="cj-${j}">`)).join('')}</tr>`;
-  const f = j => F.forn[j];
+
+  const linhaCond = (rot, dica, fn) => `<tr><th class="sticky" colspan="2">${rot}${dica ? `<span class="hint">${dica}</span>` : ''}</th>${J.map(j => `<td colspan="3" class="cj-${j}">${fn(j)}</td>`).join('')}</tr>`;
   const pe = [
-    `<tr class="cond-h"><th class="sticky" colspan="2">Condições de cada fornecedor</th>${J.map(j => `<td class="cj-${j}"></td>`).join('')}</tr>`,
-    linhaForn('Desconto', 'sobre os itens escolhidos', j => `<td><div class="affix"><span class="pre"></span><input class="inp money" id="d-${k}-${j}" data-k="desc" data-j="${j}" inputmode="decimal" placeholder="0" value="${esc(f(j).desc)}" aria-label="Desconto de ${rotulo(j)} em %" ${ro}><span class="suf">%</span></div>${errDiv(`d-${k}-${j}`)}</td>`),
-    linhaForn('Frete', '0 se incluso no preço', j => `<td><div class="affix"><span class="pre">R$</span><input class="inp money" id="f-${k}-${j}" data-k="frete" data-j="${j}" inputmode="decimal" placeholder="0,00" value="${esc(f(j).frete)}" aria-label="Frete de ${rotulo(j)}" ${ro}><span class="suf"></span></div>${errDiv(`f-${k}-${j}`)}</td>`),
-    linhaForn('Prazo de entrega', 'dias após o pedido', j => `<td><div class="affix"><span class="pre"></span><input class="inp money" id="z-${k}-${j}" data-k="prazo" data-j="${j}" inputmode="numeric" placeholder="—" value="${esc(f(j).prazo)}" aria-label="Prazo de entrega de ${rotulo(j)} em dias" ${ro}><span class="suf">dias</span></div>${errDiv(`z-${k}-${j}`)}</td>`),
-    linhaForn('Condição de pagamento', '', j => `<td><select class="inp" id="c-${k}-${j}" data-k="cond" data-j="${j}" aria-label="Condição de pagamento de ${rotulo(j)}" ${ro}>
-        <option value="">Escolher…</option>${COND_PAG.map(o => `<option ${f(j).cond === o ? 'selected' : ''}>${o}</option>`).join('')}</select>${errDiv(`c-${k}-${j}`)}
-        <input class="inp" id="l-${k}-${j}" data-k="condLivre" data-j="${j}" placeholder="Descreva a condição" value="${esc(f(j).condLivre)}" style="margin-top:6px" ${f(j).cond === 'Outra' ? '' : 'hidden'} ${ro}>${errDiv(`l-${k}-${j}`)}</td>`),
-    `<tr class="tr-total"><th class="sticky" colspan="2">Total do fornecedor<span class="hint">itens escolhidos − desconto + frete</span></th>${J.map(j => `<td class="cj-${j}"><div class="tot"><span class="big" id="tt-${k}-${j}">—</span><span class="sm" id="ts-${k}-${j}"></span><span class="sm muted" id="tu-${k}-${j}"></span></div></td>`).join('')}</tr>`,
+    `<tr class="cond-h"><th class="sticky" colspan="2">Condições de cada fornecedor</th>${J.map(j => `<td colspan="3" class="cj-${j}"></td>`).join('')}</tr>`,
+    linhaCond('Desconto', 'sobre os itens escolhidos', j => `<div class="campo"><span class="un pre"></span><input class="money" id="d-${k}-${j}" data-k="desc" data-j="${j}" inputmode="decimal" placeholder="0" value="${esc(f(j).desc)}" aria-label="Desconto de ${rotulo(j)} em %" ${ro}><span class="un">%</span></div>${errDiv(`d-${k}-${j}`)}`),
+    linhaCond('Frete', '0 se incluso no preço', j => `<div class="campo"><span class="un pre">R$</span><input class="money" id="f-${k}-${j}" data-k="frete" data-j="${j}" inputmode="decimal" placeholder="0,00" value="${esc(f(j).frete)}" aria-label="Frete de ${rotulo(j)}" ${ro}><span class="un"></span></div>${errDiv(`f-${k}-${j}`)}`),
+    linhaCond('Prazo de entrega', 'dias após o pedido', j => `<div class="campo"><span class="un pre"></span><input class="money" id="z-${k}-${j}" data-k="prazo" data-j="${j}" inputmode="numeric" placeholder="—" value="${esc(f(j).prazo)}" aria-label="Prazo de entrega de ${rotulo(j)} em dias" ${ro}><span class="un">dias</span></div>${errDiv(`z-${k}-${j}`)}`),
+    linhaCond('Condição de pagamento', '', j => `<div class="campo"><select id="c-${k}-${j}" data-k="cond" data-j="${j}" aria-label="Condição de pagamento de ${rotulo(j)}" ${ro}>
+        <option value="">Escolher…</option>${COND_PAG.map(o => `<option ${f(j).cond === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div>${errDiv(`c-${k}-${j}`)}
+        <div class="campo" style="margin-top:4px"><input id="l-${k}-${j}" data-k="condLivre" data-j="${j}" placeholder="Descreva a condição" value="${esc(f(j).condLivre)}" ${f(j).cond === 'Outra' ? '' : 'hidden'} ${ro}></div>${errDiv(`l-${k}-${j}`)}`),
+    `<tr class="tr-total"><th class="sticky" colspan="2">Total do fornecedor<span class="hint">itens escolhidos − desconto + frete</span></th>${J.map(j => `<td colspan="3" class="cj-${j}"><div class="tot"><span class="big" id="tt-${k}-${j}">—</span><span class="sm" id="ts-${k}-${j}"></span><span class="sm" id="tu-${k}-${j}"></span></div></td>`).join('')}</tr>`,
   ].join('');
-  $('map-wrap').innerHTML = `<table class="map ${s.defForn === 'unico' ? 'unico' : ''}"><colgroup><col class="c-item"><col class="c-qtd">${J.map((j,i) => `<col class="cf ${i % 2 ? 'cf-alt' : ''}">`).join('')}</colgroup>
-    <thead><tr><th class="sticky">Item</th><th class="r">Qtd.</th>${cabec}</tr></thead>
+
+  $('map-wrap').innerHTML = `<table class="map ${s.defForn === 'unico' ? 'unico' : ''}">
+    <colgroup><col class="c-item"><col class="c-qtd">${J.map((j,i) => `<col class="${i % 2 ? 'cf-alt' : ''}"><col class="${i % 2 ? 'cf-alt' : ''}"><col class="${i % 2 ? 'cf-alt' : ''}">`).join('')}</colgroup>
+    <thead>
+      <tr><th class="sticky" rowspan="2">Item</th><th rowspan="2" style="text-align:right">Qtd.</th>${cab1}</tr>
+      <tr>${cab2}</tr>
+    </thead>
     <tbody>${linhas}</tbody><tfoot>${pe}</tfoot></table>`;
 }
 
@@ -927,24 +940,27 @@ function pintarTabela(){
 function refresh(){
   const s = sol(S.solId), ro = soLeitura(s);
   const V = validar(s), C = V.C, fc = C.fams.find(f => f.k === S.fam);
-  // células
+  // células: preço, total da linha, marca de menor preço e escolha
   fc.linhas.forEach(l => colunas(s).forEach(j => {
-    const td = $(`td-${S.fam}-${l.it.id}-${j}`); if (!td) return;
-    const pick = $(`k-${S.fam}-${l.it.id}-${j}`);
+    const td = $(`td-${S.fam}-${l.it.id}-${j}`), tl = $(`tl-${S.fam}-${l.it.id}-${j}`), pick = $(`k-${S.fam}-${l.it.id}-${j}`);
+    if (!td || !tl || !pick) return;
     const escolhido = l.esc === j;
-    td.classList.toggle('chosen', escolhido);
+    tl.innerHTML = l.valido[j]
+      ? (l.menor[j] ? '<span class="menor">menor</span>' : '') + brl(l.p[j] * l.it.qtd)
+      : '';
+    tl.classList.toggle('temmenor', !!l.menor[j] && l.esc !== j);
+    [td, tl, pick.parentElement].forEach(e => e.classList.toggle('ganha', escolhido));
     pick.setAttribute('aria-pressed', String(escolhido));
     pick.disabled = ro || (!l.valido[j] && !escolhido);
-    td.querySelector('.tag-menor').hidden = !l.menor[j];
-    td.querySelector('.ltv').textContent = l.valido[j] ? '= ' + brl(l.p[j] * l.it.qtd) : '';
   }));
   // rodapé por fornecedor
   fc.forn.filter(x => colunas(s).includes(x.j)).forEach(x => {
     const n = fc.F.forn[x.j].nome.trim();
-    $(`tt-${S.fam}-${x.j}`).textContent = x.n ? brl(x.total) : '—';
-    $(`tt-${S.fam}-${x.j}`).classList.toggle('win', x.n > 0);
+    const tt = $(`tt-${S.fam}-${x.j}`);
+    tt.textContent = x.n ? brl(x.total) : '—';
+    tt.classList.toggle('win', x.n > 0);
     $(`ts-${S.fam}-${x.j}`).textContent = x.n ? plural(x.n,'item escolhido','itens escolhidos') + (x.desc ? ` · −${n2(x.desc)}%` : '') + (x.frete ? ` · frete ${brl(x.frete)}` : '') : (n ? 'nenhum item escolhido' : '');
-    $(`tu-${S.fam}-${x.j}`).textContent = x.tudo !== null && fc.linhas.length > 1 ? 'Se levasse tudo: ' + brl(x.tudo) : '';
+    $(`tu-${S.fam}-${x.j}`).textContent = x.tudo !== null && fc.linhas.length > 1 ? 'se levasse tudo: ' + brl(x.tudo) : '';
   });
   // cabeçalho de cada fornecedor: total corrente e o que falta nele
   colunas(s).forEach(j => {
@@ -1124,6 +1140,8 @@ $('view').addEventListener('click', e => {
     }
     return;
   }
+  const cel = e.target.closest('td.k');
+  if (cel && !e.target.closest('[data-pick]')){ const bt = cel.querySelector('[data-pick]'); if (bt && !bt.disabled) bt.click(); return; }
   const b = e.target.closest('[data-pick],[data-more]'); if (!b || S.view !== 'mapa') return;
   if (b.dataset.more){
     const d = $('dd-' + b.dataset.more), aberto = d.classList.toggle('open');
