@@ -245,6 +245,14 @@ tr.item-row:hover td:not(.sticky){background:color-mix(in srgb,var(--accent-soft
 .map.foco tbody td:not(.col-on):not(.sticky),.map.foco tfoot td:not(.col-on),.map.foco thead th:not(.col-on):not(.sticky){opacity:.35}
 .map.foco td.col-on.u input{background:var(--surface)}
 /* passos do preenchimento */
+/* busca de fornecedor no cadastro */
+.busca-cx{position:relative}
+.sug{position:absolute;z-index:40;left:0;right:0;top:calc(100% + 2px);background:var(--surface);border:1px solid var(--line-2);border-radius:8px;box-shadow:var(--shadow);max-height:260px;overflow:auto;min-width:280px}
+.sug button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:7px 10px;cursor:pointer;font-size:13px;line-height:1.3;color:var(--ink);text-transform:none;letter-spacing:0}
+.sug button:hover,.sug button[aria-selected="true"]{background:var(--accent-soft)}
+.sug .cid{display:block;font-size:11px;color:var(--ink-2);text-transform:none;letter-spacing:0}
+.sug .aviso{padding:8px 10px;font-size:12px;color:var(--ink-2);text-transform:none;letter-spacing:0}
+.fonte-forn{font-size:11px;color:var(--ink-2);text-transform:none;letter-spacing:0}
 .passos{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
 .passo{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:12.5px;color:var(--ink-2)}
 .passo b{font-weight:600;color:var(--ink)}
@@ -904,7 +912,7 @@ function renderMapa(){
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         ${ro ? '' : `<button class="btn" type="button" id="bt-menores">${s.defForn === 'unico' ? 'Marcar todos os itens' : 'Escolher os menores preços'}</button>`}
       </div></div>
-    <p class="muted" style="margin:0 0 8px;font-size:12.5px">${ro ? '' : (s.defForn === 'unico' ? 'Digite o preço unitário do fornecedor único e marque ✓ em cada item. <kbd>Enter</kbd> desce para o próximo item.' : 'Digite o preço unitário de cada fornecedor e marque ✓ em quem vai fornecer o item. <kbd>Enter</kbd> desce para o próximo item do mesmo fornecedor.')}</p>
+    <p class="muted" style="margin:0 0 8px;font-size:12.5px"><span class="fonte-forn">${CADASTRO.online ? `Fornecedores: busca nos ${CADASTRO.total ? CADASTRO.total.toLocaleString('pt-BR') : ''} cadastros ativos do banco.` : 'Fornecedores: sem conexão com o banco agora — vale a amostra de 120 nomes guardada na página.'}</span><br>${ro ? '' : (s.defForn === 'unico' ? 'Digite o preço unitário do fornecedor único e marque ✓ em cada item. <kbd>Enter</kbd> desce para o próximo item.' : 'Digite o preço unitário de cada fornecedor e marque ✓ em quem vai fornecer o item. <kbd>Enter</kbd> desce para o próximo item do mesmo fornecedor.')}</p>
     <div class="map-wrap" id="map-wrap"></div>
     <section class="resumo" aria-labelledby="res-h"><h2 id="res-h">Resumo que vai para o aprovador</h2><div id="resumo"></div></section>`;
 
@@ -933,7 +941,7 @@ function pintarTabela(){
         <button type="button" class="fh-rot" data-foco="${j}" title="Preencher só este fornecedor">${rotulo(j)}</button>
         <span class="fh-tot" id="hd-${k}-${j}"></span>
       </span>
-      <input class="inp" id="n-${k}-${j}" data-k="nome" data-j="${j}" list="dl-forn" autocomplete="off" placeholder="Buscar fornecedor pelo nome" value="${esc(F.forn[j].nome)}" ${ro}>
+      <span class="busca-cx"><input class="inp" id="n-${k}-${j}" data-k="nome" data-j="${j}" data-busca="1" list="${CADASTRO.online ? '' : 'dl-forn'}" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" placeholder="Digite 2 letras do fornecedor" value="${esc(F.forn[j].nome)}" ${ro}></span>
       <span class="fh-st" id="st-${k}-${j}"></span>${errDiv(`n-${k}-${j}`)}</div></th>`).join('');
   const cab2 = J.map(j => `<th class="u cj-${j}">Unitário</th><th class="t cj-${j}">Total</th><th class="k cj-${j}" title="Quem vai fornecer este item">✓</th>`).join('');
 
@@ -1127,6 +1135,106 @@ function irPara(e){
 </script>
 <script>
 /* =====================================================================
+   BUSCA DE FORNECEDOR NO CADASTRO (tabela `fornecedores` do banco)
+   Com conector do Supabase, procura nos 3.568 cadastros ativos.
+   Sem conector (ex.: aberto pelo GitHub Pages), cai na amostra local.
+   ===================================================================== */
+// Mesma chave pública das outras telas do sistema (index.html, compras.html).
+// Ela só dá acesso ao que o banco liberou: aqui, as funções buscar_fornecedor e
+// fornecedores_ativos, que devolvem nome, razão social e cidade — nunca CNPJ,
+// CPF, telefone ou e-mail, e no máximo 20 achados por busca.
+const SUPABASE_URL = 'https://mbwaqnlmscxbacmxdopr.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_AR4D1JlHB-Z12--QbzwYWQ_URZzmVwl';
+const CADASTRO = { mcp:null, modo:null, online:false, total:null, cache:new Map(), aberto:null, idx:-1, timer:null };
+const sqlTxt = t => String(t).replace(/'/g, "''");
+
+async function rpc(fn, corpo){
+  const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + fn, {
+    method:'POST',
+    headers:{ apikey:SUPABASE_KEY, Authorization:'Bearer ' + SUPABASE_KEY, 'Content-Type':'application/json' },
+    body: JSON.stringify(corpo || {}) });
+  if (!r.ok) throw { code:'http_' + r.status, message:'HTTP ' + r.status };
+  return r.json();
+}
+async function ligarCadastro(){
+  // 1) aberto pelo Claude: usa o conector do Supabase de quem abriu
+  try { CADASTRO.mcp = window.claude && window.claude.use ? await window.claude.use('mcp') : null; } catch (e) { CADASTRO.mcp = null; }
+  if (CADASTRO.mcp){
+    try {
+      const r = await consultar('select count(*)::int as n from fornecedores where ativo;');
+      CADASTRO.total = r[0].n; CADASTRO.modo = 'mcp'; CADASTRO.online = true;
+      return atualizarFonte();
+    } catch (e) { CADASTRO.mcp = null; }
+  }
+  // 2) aberto direto no navegador (GitHub Pages): fala com o banco pela chave pública
+  try {
+    const n = await rpc('fornecedores_ativos');
+    CADASTRO.total = typeof n === 'number' ? n : (n && n[0]) || null;
+    CADASTRO.modo = 'rest'; CADASTRO.online = true;
+    return atualizarFonte();
+  } catch (e) { CADASTRO.modo = null; CADASTRO.online = false; atualizarFonte(); }
+}
+function atualizarFonte(){ if (S.view === 'mapa'){ pintarTabela(); refresh(); } }
+async function consultar(query){
+  const r = await CADASTRO.mcp.callTool('Supabase', 'execute_sql', { project_id:'mbwaqnlmscxbacmxdopr', query }, { cache:{ staleTime:60000 } });
+  let p = r && (r.payload !== undefined ? r.payload : r);
+  if (p && typeof p === 'object' && !Array.isArray(p) && typeof p.result === 'string') p = p.result;
+  if (typeof p === 'string'){
+    const fecha = p.lastIndexOf('</untrusted-data');
+    if (fecha !== -1){
+      const re = /<untrusted-data-[^>]*>/g; let m, ini = -1;
+      while ((m = re.exec(p)) && m.index < fecha) ini = m.index + m[0].length;
+      if (ini !== -1) p = JSON.parse(p.slice(ini, fecha).trim());
+    } else { const a = p.search(/[\[{]/); p = JSON.parse(a > 0 ? p.slice(a) : p); }
+  }
+  return Array.isArray(p) ? p : [];
+}
+async function buscarFornecedores(termo){
+  const t = termo.trim().toLowerCase();
+  if (CADASTRO.cache.has(t)) return CADASTRO.cache.get(t);
+  let linhas;
+  if (CADASTRO.modo === 'rest'){
+    linhas = await rpc('buscar_fornecedor', { termo: t });
+  } else {
+    linhas = await consultar(`select coalesce(nullif(nome_curto,''), razao_social) as nome, razao_social, coalesce(cidade,'') as cidade, coalesce(uf,'') as uf
+      from fornecedores where ativo and (nome_curto ilike '%${sqlTxt(t)}%' or razao_social ilike '%${sqlTxt(t)}%')
+      order by length(coalesce(nome_curto, razao_social)), nome limit 20;`);
+  }
+  linhas = Array.isArray(linhas) ? linhas : [];
+  CADASTRO.cache.set(t, linhas);
+  return linhas;
+}
+function fecharSug(){
+  if (!CADASTRO.aberto) return;
+  const cx = CADASTRO.aberto.closest('.busca-cx');
+  if (cx){ const l = cx.querySelector('.sug'); if (l) l.remove(); }
+  CADASTRO.aberto.setAttribute('aria-expanded','false');
+  CADASTRO.aberto = null; CADASTRO.idx = -1;
+}
+function mostrarSug(input, html){
+  const cx = input.closest('.busca-cx'); if (!cx) return;
+  let l = cx.querySelector('.sug');
+  if (!l){ l = document.createElement('div'); l.className = 'sug'; l.setAttribute('role','listbox'); cx.appendChild(l); }
+  l.innerHTML = html;
+  input.setAttribute('aria-expanded','true');
+  CADASTRO.aberto = input; CADASTRO.idx = -1;
+}
+async function buscarNoCampo(input){
+  const termo = input.value.trim();
+  if (!CADASTRO.online || termo.length < 2){ fecharSug(); return; }
+  mostrarSug(input, '<div class="aviso">Procurando no cadastro…</div>');
+  try {
+    const achados = await buscarFornecedores(termo);
+    if (document.activeElement !== input) return;
+    if (!achados.length){ mostrarSug(input, `<div class="aviso">Nenhum fornecedor com “${esc(termo)}” no cadastro. Pode digitar o nome mesmo assim.</div>`); return; }
+    mostrarSug(input, achados.map((a,i) => `<button type="button" role="option" aria-selected="false" data-sug="${i}" data-nome="${esc(a.nome)}">${esc(a.nome)}
+        <span class="cid">${esc(a.razao_social !== a.nome ? a.razao_social + ' · ' : '')}${esc([a.cidade, a.uf].filter(Boolean).join('/'))}</span></button>`).join(''));
+  } catch (e) {
+    mostrarSug(input, `<div class="aviso">Não consegui consultar o cadastro agora (${esc((e && e.code) || 'erro')}). Digite o nome do fornecedor.</div>`);
+  }
+}
+
+/* =====================================================================
    INTERAÇÕES DO MAPA
    ===================================================================== */
 function marcarSalvo(){ const c = sol(S.solId).cot; c.iniciada = true; c.salvoEm = new Date(); const el = $('saved'); if (el) el.textContent = 'Rascunho salvo às ' + hm(c.salvoEm); }
@@ -1137,8 +1245,11 @@ function aoDigitar(e){
   const F = s.cot.fams[S.fam], j = +t.dataset.j;
   if (k === 'preco') F.precos[t.dataset.i][j] = t.value; else F.forn[j][k] = t.value;
   marcarSalvo(); refresh();
+  if (k === 'nome'){ clearTimeout(CADASTRO.timer); CADASTRO.timer = setTimeout(() => buscarNoCampo(t), 280); }
 }
 $('view').addEventListener('input', aoDigitar);
+$('view').addEventListener('focusin', e => { if (e.target.dataset && e.target.dataset.busca) buscarNoCampo(e.target); else if (!e.target.closest('.sug')) fecharSug(); });
+document.addEventListener('click', e => { if (!e.target.closest('.busca-cx')) fecharSug(); });
 $('view').addEventListener('focusout', e => {
   const t = e.target, k = t.dataset && t.dataset.k;
   if (S.view !== 'mapa' || !(k === 'preco' || k === 'frete')) return;
@@ -1150,6 +1261,18 @@ $('view').addEventListener('focusout', e => {
 });
 $('view').addEventListener('keydown', e => {
   const t = e.target;
+  if (t.dataset && t.dataset.busca && CADASTRO.aberto === t){
+    const itens = [...t.closest('.busca-cx').querySelectorAll('[data-sug]')];
+    if (itens.length && ['ArrowDown','ArrowUp','Enter','Escape'].includes(e.key)){
+      if (e.key === 'Escape'){ fecharSug(); return; }
+      if (e.key === 'Enter'){ e.preventDefault(); (itens[CADASTRO.idx] || itens[0]).click(); return; }
+      e.preventDefault();
+      CADASTRO.idx = e.key === 'ArrowDown' ? Math.min(CADASTRO.idx + 1, itens.length - 1) : Math.max(CADASTRO.idx - 1, 0);
+      itens.forEach((b,i) => b.setAttribute('aria-selected', String(i === CADASTRO.idx)));
+      itens[CADASTRO.idx].scrollIntoView({ block:'nearest' });
+      return;
+    }
+  }
   if (e.key !== 'Enter' || !t.dataset || !['preco','desc','frete','prazo'].includes(t.dataset.k)) return;
   e.preventDefault();
   const s = sol(S.solId), j = t.dataset.j;
@@ -1162,6 +1285,16 @@ $('view').addEventListener('keydown', e => {
   if (prox){ prox.focus(); if (prox.select) prox.select(); }
 });
 $('view').addEventListener('click', e => {
+  const sug = e.target.closest('[data-sug]');
+  if (sug){
+    const input = CADASTRO.aberto;
+    if (input){
+      input.value = sug.dataset.nome;
+      const F = sol(S.solId).cot.fams[S.fam]; F.forn[+input.dataset.j].nome = sug.dataset.nome;
+      fecharSug(); marcarSalvo(); refresh(); input.focus();
+    }
+    return;
+  }
   const fc = e.target.closest('[data-foco]');
   if (fc && S.view === 'mapa'){
     const j = +fc.dataset.foco;
@@ -1300,6 +1433,7 @@ $('dl-cond').innerHTML = COND_PAG.map(n => `<option value="${esc(n)}"></option>`
 
 render();
 setTimeout(() => { S.carregado = true; render(); }, 450);
+ligarCadastro();
 </script>
 
 </body>

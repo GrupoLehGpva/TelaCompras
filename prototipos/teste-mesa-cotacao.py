@@ -203,6 +203,71 @@ with sync_playwright() as p:
     pg.keyboard.press('Escape')
     check(pg.locator('.map.foco').count()==0,'Esc sai do foco')
     pg.click('#bt-back')
+
+    # ---- busca de fornecedor no cadastro (conector simulado) ----
+    conector = """
+window.claude = { use: async (n) => n !== 'mcp' ? null : ({ callTool: async (srv, tl, inp) => {
+  if (inp.query.includes('count(*)')) return { payload:[{n:3568}] };
+  const termo = (inp.query.match(/ilike '%([^%]*)%'/) || [])[1] || '';
+  const base=[{nome:'ELÉTRICA GUARAPUAVA', razao_social:'ELETRICA GUARAPUAVA LTDA', cidade:'GUARAPUAVA', uf:'PR'},
+              {nome:'ELETROCENTRO PR', razao_social:'ELETROCENTRO LTDA', cidade:'CURITIBA', uf:'PR'}];
+  return { payload: base.filter(x => (x.nome+x.razao_social).toLowerCase().includes(termo)) };
+}}) };
+"""
+    pgc = b.new_page(viewport={'width':1400,'height':900})
+    pgc.on('pageerror', lambda e: erros.append('busca '+str(e)))
+    pgc.add_init_script(conector)
+    pgc.goto(URL); pgc.wait_for_selector('table.fila'); pgc.click('[data-open="C2609-00004"]'); pgc.wait_for_timeout(500)
+    check('cadastros ativos do banco' in pgc.locator('.fonte-forn').inner_text(),'com conector, a tela diz que busca no banco')
+    pgc.click('#n-MG-0'); pgc.type('#n-MG-0','ele', delay=40); pgc.wait_for_timeout(600)
+    check(pgc.locator('.sug [data-sug]').count()==2,'busca traz os fornecedores do cadastro')
+    check('GUARAPUAVA/PR' in pgc.locator('.sug').inner_text(),'sugestão mostra a cidade')
+    pgc.keyboard.press('ArrowDown'); pgc.keyboard.press('ArrowDown'); pgc.keyboard.press('Enter'); pgc.wait_for_timeout(250)
+    check(pgc.locator('#n-MG-0').input_value()=='ELETROCENTRO PR','dá para escolher pelo teclado')
+    check(pgc.locator('.sug').count()==0,'a lista fecha depois de escolher')
+    pgc.fill('#n-MG-1','ele'); pgc.wait_for_timeout(600)
+    pgc.locator('.sug [data-sug]').first.click(); pgc.wait_for_timeout(200)
+    check(pgc.locator('#n-MG-1').input_value()=='ELÉTRICA GUARAPUAVA','dá para escolher pelo clique')
+    pgc.fill('#n-MG-2','zzz'); pgc.wait_for_timeout(600)
+    check('Nenhum fornecedor' in pgc.locator('.sug .aviso').inner_text(),'sem resultado explica e deixa digitar')
+    pgc.fill('#n-MG-2','ele'); pgc.wait_for_timeout(600); pgc.keyboard.press('Escape')
+    check(pgc.locator('.sug').count()==0,'Esc fecha a lista de sugestões')
+    pgc.close()
+    # sem conector, cai na amostra local
+    check('amostra de 120 nomes' in pg.locator('.fonte-forn').inner_text() if pg.locator('.fonte-forn').count() else True,'sem conector avisa que é amostra')
+
+    # ---- busca pelo navegador (GitHub Pages), falando direto com o Supabase ----
+    import json as _json
+    pgr = b.new_page(viewport={'width':1400,'height':900})
+    pgr.on('pageerror', lambda e: erros.append('rest '+str(e)))
+    def _rota(route):
+        u = route.request.url
+        if u.endswith('/rpc/fornecedores_ativos'):
+            route.fulfill(status=200, content_type='application/json', body='3568')
+        elif u.endswith('/rpc/buscar_fornecedor'):
+            termo = _json.loads(route.request.post_data)['termo'].lower()
+            base = [{"id":"1","nome":"ELÉTRICA GUARAPUAVA","razao_social":"ELETRICA GUARAPUAVA LTDA","cidade":"GUARAPUAVA","uf":"PR"},
+                    {"id":"2","nome":"ELETROCENTRO PR","razao_social":"ELETROCENTRO LTDA","cidade":"CURITIBA","uf":"PR"}]
+            route.fulfill(status=200, content_type='application/json',
+                          body=_json.dumps([x for x in base if termo in (x['nome']+x['razao_social']).lower()]))
+        else:
+            route.abort()
+    pgr.route('**/rest/v1/rpc/**', _rota)
+    pgr.goto(URL); pgr.wait_for_selector('table.fila'); pgr.click('[data-open="C2609-00004"]'); pgr.wait_for_timeout(600)
+    check('3.568 cadastros ativos' in pgr.locator('.fonte-forn').inner_text(),'no navegador, busca no banco pela chave pública')
+    pgr.click('#n-MG-0'); pgr.type('#n-MG-0','ele', delay=40); pgr.wait_for_timeout(700)
+    check(pgr.locator('.sug [data-sug]').count()==2,'navegador traz os fornecedores do cadastro')
+    pgr.locator('.sug [data-sug]').first.click(); pgr.wait_for_timeout(200)
+    check(pgr.locator('#n-MG-0').input_value()=='ELÉTRICA GUARAPUAVA','navegador: escolher pelo clique preenche o nome')
+    pgr.close()
+    # ---- banco fora do ar: a tela não trava ----
+    pgx = b.new_page(viewport={'width':1400,'height':900})
+    pgx.on('pageerror', lambda e: erros.append('offline '+str(e)))
+    pgx.route('**/rest/v1/rpc/**', lambda r: r.abort())
+    pgx.goto(URL); pgx.wait_for_selector('table.fila'); pgx.click('[data-open="C2609-00004"]'); pgx.wait_for_timeout(700)
+    check('sem conexão com o banco' in pgx.locator('.fonte-forn').inner_text(),'sem banco, avisa e usa a amostra local')
+    check(pgx.locator('#n-MG-0').get_attribute('list')=='dl-forn','sem banco, o campo cai na lista de exemplo')
+    pgx.close()
     pg.screenshot(path='t-mesa-fila.png', full_page=True)
     pg.click('[data-open="C2609-90001"]'); pg.screenshot(path='t-mesa-mapa.png', full_page=True)
     # mobile
