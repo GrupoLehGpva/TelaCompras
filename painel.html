@@ -61,7 +61,7 @@
 body{margin:0}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45}
-.wrap{max-width:1440px;margin:0 auto;padding:20px 20px 48px}
+.wrap{max-width:none;margin:0;padding:20px 24px 48px}
 body{margin:0}
 @media (max-width:600px){.wrap{padding:14px 16px 40px}}
 h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0}
@@ -80,7 +80,7 @@ h1{font-size:28px;font-weight:700;letter-spacing:-.01em;margin-top:2px}
 
 /* ============ FILTERS ============ */
 .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:18px}
-.field{display:flex;flex-direction:column;gap:3px}
+.field{display:flex;flex-direction:column;gap:3px;min-width:160px}
 .field label{font-size:11px;color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase;font-weight:600}
 .ctl{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 10px;min-height:36px}
 input.ctl{min-width:220px}
@@ -112,7 +112,7 @@ button.kpi:hover{border-color:var(--accent)}
 .sec-h .hint{font-size:12.5px;color:var(--ink-3)}
 /* ============ BOARD ============ */
 .board-scroll{overflow-x:auto;padding-bottom:8px;margin-bottom:28px}
-.board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(264px,1fr);gap:12px;min-width:min-content}
+.board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(230px,1fr);gap:12px;min-width:100%}
 .col{background:var(--surface-2);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:160px}
 .col-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:2px 4px 4px}
 .col-h h3{font-size:14px;font-weight:600}
@@ -252,9 +252,16 @@ td.r,th.r{text-align:right}
     <div class="field grow"><label for="f-q">Buscar</label><input id="f-q" class="ctl" type="search" placeholder="Nº, item, solicitante, centro de custo…"></div>
     <div class="field"><label for="f-per">Período</label><select id="f-per" class="ctl"><option value="all">Todo o período</option></select></div>
     <div class="field"><label for="f-emp">Empresa</label><select id="f-emp" class="ctl"><option value="">Todas</option></select></div>
+    <div class="field"><label for="f-und">Unidade de negócio</label><select id="f-und" class="ctl"><option value="">Todas</option></select></div>
+    <div class="field"><label for="f-cc">Centro de custo</label><select id="f-cc" class="ctl"><option value="">Todos</option></select></div>
     <div class="field"><label for="f-cat">Família</label><select id="f-cat" class="ctl"><option value="">Todas</option></select></div>
-    <div class="field"><label for="f-urg">Urgência</label>
-      <select id="f-urg" class="ctl"><option value="">Todas</option><option>Normal</option><option>Urgente</option></select></div>
+    <div class="field"><label for="f-tipo">Tipo de compra</label>
+      <select id="f-tipo" class="ctl">
+        <option value="">Todos</option>
+        <option value="normal">Normal</option>
+        <option value="urgente">Urgente</option>
+        <option value="mensal" disabled>Mensal (em breve)</option>
+      </select></div>
     <button class="btn ghost align-end" id="f-clear" type="button">Limpar filtros</button>
   </section>
 
@@ -307,9 +314,12 @@ const ETAPAS = [
   { id:'ger', nome:'Aprovação gerencial',  curto:'Gerencial',  sla:2 },
   { id:'fin', nome:'Aprovação financeiro', curto:'Financeiro', sla:2 },
   { id:'oc',  nome:'Ordem de compra',      curto:'OC',         sla:1 },
-  { id:'efe', nome:'Efetuar compra',       curto:'Compra',     sla:5 },
-  { id:'com', nome:'Complete',             curto:'Complete',   sla:null },
 ];
+/* "Efetuar compra" e "Complete" saíram do quadro a pedido da diretoria: o que
+   está em ordem de compra já saiu do fluxo de aprovação. Pedido que o banco
+   marca como no GR ou concluído continua aparecendo em Ordem de compra — some
+   da tela nenhum. */
+const TIPOS_COMPRA = { normal:'Normal', programada:'Programada', urgente:'Urgente', mensal:'Mensal' };
 const NOME_ETAPA_DECISAO = { lider:'liderança imediata', compras:'compras', gerencial:'aprovação gerencial', financeiro:'aprovação financeiro' };
 const ETAPA_DB = { lider:'lid', cotacao:'cot', compras:'cot', gerencial:'ger', financeiro:'fin' };
 
@@ -323,7 +333,7 @@ function etapaDaLinha(r){
   if (r.status === 'reprovado' || r.decisoes.some(d => d.resp === 'reprovado')) return 'rep';
   if (r.etapa_atual && ETAPA_DB[r.etapa_atual]) return ETAPA_DB[r.etapa_atual];
   const oc = r.ordens.filter(o => o.situacao !== 'cancelada').slice(-1)[0];
-  if (oc) return oc.situacao === 'no gr' ? 'efe' : 'oc';
+  if (oc) return 'oc';
   if (r.status === 'aprovado') return 'oc';
   if (r.status === 'em cotacao') return 'cot';
   return 'lid';
@@ -367,7 +377,10 @@ function normalizar(r){
     solicitante: r.solicitante_nome || r.facilitador || '—', facilitador: r.facilitador,
     comprador: r.comprador_nome, aprovador: r.aprovador_atual_nome,
     urgencia: (r.tipo_compra === 'urgente' || r.prioridade === 'urgente') ? 'Urgente' : 'Normal',
-    tipoCompra: r.tipo_compra, familias, itens: r.itens, anexos: r.anexos || [],
+    tipoCompra: String(r.tipo_compra || '').toLowerCase(),
+    tipoCompraNome: TIPOS_COMPRA[String(r.tipo_compra || '').toLowerCase()] || (r.tipo_compra || '—'),
+    unidadeNegocio: r.cc_unidade || r.unidade || '—',
+    familias, itens: r.itens, anexos: r.anexos || [],
     valor: val.v, valorFonte: val.fonte,
     fornecedor: ultimaOC?.forn || null,
     cotacoes: r.cotacoes, motivo: r.motivo, observacao: r.observacao,
@@ -444,7 +457,7 @@ let SOLICITACOES = [];
 let AGORA = new Date();
 const etapa = id => ETAPAS.find(e => e.id === id);
 const diasNaEtapa = s => (AGORA - s.entradaEtapa) / 864e5;
-const aberta = s => !['com','rep'].includes(s.status);
+const aberta = s => s.status !== 'rep';
 function prazo(s){
   if (!aberta(s)) return null;
   const sla = etapa(s.status).sla, d = diasNaEtapa(s);
@@ -459,7 +472,6 @@ function comQuem(s){
     case 'ger': return s.aprovador ? s.aprovador + ' (aprovação gerencial)' : 'Aprovação gerencial';
     case 'fin': return s.aprovador ? s.aprovador + ' (financeiro)' : 'Financeiro';
     case 'oc':  return 'Lançamento da ordem no GR';
-    case 'efe': return s.comprador ? 'Comprador ' + s.comprador : 'Compras';
     default: return '—';
   }
 }
@@ -482,7 +494,7 @@ const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 /* =====================================================================
    ESTADO + FILTROS
    ===================================================================== */
-const state = { q:'', per:'all', emp:'', cat:'', urg:'', modalList:[], modalIdx:-1, carregou:false };
+const state = { q:'', per:'all', emp:'', und:'', cc:'', cat:'', tipo:'', modalList:[], modalIdx:-1, carregou:false };
 const $ = id => document.getElementById(id);
 
 function initFiltros(){
@@ -490,7 +502,9 @@ function initFiltros(){
   $('f-per').addEventListener('change', e => { state.per = e.target.value; render(); });
   $('f-emp').addEventListener('change', e => { state.emp = e.target.value; render(); });
   $('f-cat').addEventListener('change', e => { state.cat = e.target.value; render(); });
-  $('f-urg').addEventListener('change', e => { state.urg = e.target.value; render(); });
+  $('f-und').addEventListener('change', e => { state.und = e.target.value; render(); });
+  $('f-cc').addEventListener('change', e => { state.cc = e.target.value; render(); });
+  $('f-tipo').addEventListener('change', e => { state.tipo = e.target.value; render(); });
   $('f-clear').addEventListener('click', limparFiltros);
   $('btn-refresh').addEventListener('click', () => carregar(true));
 }
@@ -506,12 +520,17 @@ function montarOpcoes(){
   state.per = $('f-per').value;
   opcoes($('f-emp'), [...new Set(SOLICITACOES.map(s => s.empresa))].sort(), x => x, { v:'', t:'Todas' });
   state.emp = $('f-emp').value;
+  opcoes($('f-und'), [...new Set(SOLICITACOES.map(s => s.unidadeNegocio))].filter(x => x && x !== '—').sort(), x => x, { v:'', t:'Todas' });
+  state.und = $('f-und').value;
+  opcoes($('f-cc'), [...new Set(SOLICITACOES.map(s => s.ccNome))].filter(x => x && x !== '—').sort(), x => x, { v:'', t:'Todos' });
+  state.cc = $('f-cc').value;
   opcoes($('f-cat'), [...new Set(SOLICITACOES.flatMap(s => s.familias))].sort(), x => x, { v:'', t:'Todas' });
   state.cat = $('f-cat').value;
 }
 function limparFiltros(){
-  Object.assign(state, { q:'', per:'all', emp:'', cat:'', urg:'' });
-  $('f-q').value=''; $('f-per').value='all'; $('f-emp').value=''; $('f-cat').value=''; $('f-urg').value='';
+  Object.assign(state, { q:'', per:'all', emp:'', und:'', cc:'', cat:'', tipo:'' });
+  $('f-q').value=''; $('f-per').value='all'; $('f-emp').value=''; $('f-und').value='';
+  $('f-cc').value=''; $('f-cat').value=''; $('f-tipo').value='';
   render(); toast('Filtros limpos');
 }
 function filtradas(){
@@ -519,7 +538,9 @@ function filtradas(){
     if (state.per !== 'all' && chaveMes(s.criada) !== state.per) return false;
     if (state.emp && s.empresa !== state.emp) return false;
     if (state.cat && !s.familias.includes(state.cat)) return false;
-    if (state.urg && s.urgencia !== state.urg) return false;
+    if (state.und && s.unidadeNegocio !== state.und) return false;
+    if (state.cc && s.ccNome !== state.cc) return false;
+    if (state.tipo && s.tipoCompra !== state.tipo) return false;
     if (state.q){
       const hay = [s.id, s.titulo, s.solicitante, s.facilitador, s.comprador, s.cc, s.empresa, s.motivo, s.fornecedor, ...s.itens.map(i => i.desc + ' ' + (i.cod || ''))].join(' ').toLowerCase();
       if (!hay.includes(state.q)) return false;
@@ -600,7 +621,7 @@ function cardHTML(s){
   const p = prazo(s);
   const urg = s.urgencia === 'Urgente' ? '<span class="pill warn">Urgente</span>' : '';
   const tempo = p ? `<span class="pill ${p.cls}" title="Há ${dias(p.d)} nesta etapa · prazo ${p.sla} dias"><span class="dot"></span>${dias(p.d)}</span>`
-                  : s.status === 'com' ? `<span class="pill ok">Concluída ${dt(s.entradaEtapa).slice(0,5)}</span>` : '';
+                  : '';
   return `<button class="card" type="button" data-id="${esc(s.id)}" aria-label="Abrir ${esc(s.id)}">
     <span class="r1"><span class="id">${esc(s.id)}</span>${urg}</span>
     <span class="ttl">${esc(s.titulo)}</span>
@@ -680,13 +701,12 @@ function pintarModal(){
 
   let holder;
   if (rep) holder = `<div class="holder crit"><strong>Reprovada</strong><span>em ${esc(NOME_ETAPA_DECISAO[s.etapaRep] || s.etapaRep || '—')} · ${dt(s.entradaEtapa)}</span>${s.motivoRep ? `<span>Motivo: ${esc(s.motivoRep)}</span>` : ''}</div>`;
-  else if (s.status === 'com') holder = `<div class="holder ok"><strong>Complete</strong><span>Concluída em ${dt(s.entradaEtapa)}</span></div>`;
   else holder = `<div class="holder ${p.cls}"><strong>${etapa(s.status).nome}</strong><span>com ${esc(comQuem(s))}</span><span>há <strong>${dias(p.d)}</strong> (prazo da etapa: ${p.sla} ${p.sla === 1 ? 'dia' : 'dias'})</span><span class="pill ${p.cls}"><span class="dot"></span>${p.txt}</span></div>`;
 
   const steps = ETAPAS.map((e,i) => {
     let cls = '';
-    if (i < idxAtual || (s.status === 'com' && i <= idxAtual)) cls = 'done';
-    if (i === idxAtual && !rep && s.status !== 'com') cls = 'cur';
+    if (i < idxAtual) cls = 'done';
+    if (i === idxAtual && !rep) cls = 'cur';
     if (i === idxAtual && rep) cls = 'stop';
     return `<div class="step ${cls}"><span class="ln"></span>${e.curto}</div>`;
   }).join('');
