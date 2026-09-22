@@ -19,6 +19,19 @@ O `compras.html` já tem a lista de solicitações e a grade com Fornecedor 1, 2
 - **resumo para o aprovador** e botão **Enviar para aprovação gerencial**;
 - abas Para cotar / Devolvidas / Enviadas, com o caminho de devolução e reenvio.
 
+## Fornecedor único
+
+Quando o solicitante marca fornecedor único, o mapa abre com **uma coluna só**,
+com a justificativa dele em destaque no topo. Nesse caso não existe aviso de
+"menos de 3 cotações" nem comparação de menor preço — só o preço daquele
+fornecedor. É a mesma regra que o `compras.html` já aplica.
+
+## Tipo de compra
+
+A fila filtra por **Normal** e **Urgente**. **Mensal** aparece marcada como
+"em breve" e não filtra: a compra mensal segue outro fluxo e ainda não passa
+pela mesa do comprador.
+
 ## Fluxo de telas
 
 Fila → clique na linha abre o modal de detalhe (mesmo do `painel.html`) →
@@ -43,8 +56,10 @@ do pedido num painel recolhível no topo.
 ## Falta para ligar no banco
 
 - **Nome das famílias**: o catálogo só tem o código (IA, MG, MM…).
-- A lista de fornecedores tem que vir da tabela `fornecedores`. No protótipo os
-  nomes sugeridos são fictícios.
+- A lista de fornecedores do protótipo é uma amostra de 120 nomes reais do
+  cadastro do GR, só para o campo de busca. Em produção a tela lê a tabela
+  `fornecedores`, que recebeu 3.568 cadastros ativos (categorias FORNECEDOR e
+  PRESTAÇÃO DE SERVIÇOS) importados da planilha do GR em 22/09/2026.
 - Campos para o item escolhido e para desconto, frete, prazo e condição por
   fornecedor. `cotacoes` já tem `prazo_entrega` e `custo_entrega`, e
   `cotacao_pagamentos.ajuste_percentual` serve para o desconto. Falta onde

@@ -15,3 +15,7 @@ catalogo-itens.csv
 # Pastas de trabalho, não fazem parte do site
 Claude outputs/
 demonstracao/
+
+# Importação de fornecedores: tem CNPJ, CPF, telefone e e-mail de gente de
+# verdade. O repositório é PÚBLICO. Rodar no Supabase e manter só local.
+fornecedores-import.sql
