@@ -786,6 +786,9 @@ async function apiRpc(nome, corpo){
    Anexo que falha NUNCA derruba o envio: o pedido já está gravado e numerado;
    a tela diz o que não subiu, para a pessoa reenviar ou avisar o Compras. */
 const ANEXO_MAX_BYTES = 10 * 1024 * 1024;   // mesmo limite do bucket
+/* Avisa o card de que chegou anexo. Quem comenta é o n8n, que tem a credencial
+   do ClickUp — a tela não fala com o ClickUp. */
+const AVISO_ANEXO_URL = 'https://grupoleh.app.n8n.cloud/webhook/anexo-registrado';
 const ANEXO_TIPOS = ['image/jpeg','image/png','image/webp','image/heic','image/gif','application/pdf'];
 
 function anexoRecusado(f){
@@ -830,6 +833,14 @@ async function subirAnexos(solicitacaoId){
     try{
       const reg = await apiRpc('registrar_anexos', { p_solicitacao_id: solicitacaoId, p_anexos: metadados });
       if(!reg || reg.ok !== true) throw new Error((reg && reg.mensagem) || 'o banco recusou o registro');
+      /* O card precisa saber que existe anexo: o comprador trabalha no quadro,
+         não nesta tela. O fluxo do n8n comenta no card a lista com os links.
+         Isto é aviso, não gravação — falhar aqui não tira o anexo do pedido,
+         então nem entra na lista de falhas que a pessoa vê. */
+      fetch(AVISO_ANEXO_URL, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ solicitacao_id: solicitacaoId })
+      }).catch(()=>{});
     }catch(e){
       falhas.push('os arquivos subiram mas não ficaram ligados ao pedido — avise o setor de compras');
     }

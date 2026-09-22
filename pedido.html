@@ -98,6 +98,7 @@
   .anexos .tipo{flex:none;font-size:11px;font-weight:700;letter-spacing:.6px;
     padding:3px 9px;border-radius:999px;background:var(--realce);color:var(--muted)}
   .anexos .peso{flex:none;margin-left:auto;color:var(--muted);font-weight:400;font-size:13px}
+  .anexos .campo-do-card{display:block;font-weight:400;font-size:12.5px;color:var(--muted);margin-top:2px}
   .ficha{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px 22px;margin:0}
   .ficha dt{font-size:11px;letter-spacing:.7px;text-transform:uppercase;color:var(--muted)}
   .ficha dd{margin:3px 0 0;font-size:15px;font-weight:600;line-height:1.4;word-break:break-word}
@@ -264,6 +265,14 @@
     <section class="cartao" id="cartaoAnexos" hidden>
       <h2>Anexos</h2>
       <ul class="anexos" id="listaAnexos"></ul>
+    </section>
+
+    <!-- Orçamentos e demais arquivos que estão nos campos do card do ClickUp.
+         Quem aprova não tem ClickUp: sem isto, decidir "com base no orçamento"
+         significava pedir o PDF para alguém por mensagem. -->
+    <section class="cartao" id="cartaoAnexosCard" hidden>
+      <h2>Orçamentos anexados pelo comprador</h2>
+      <ul class="anexos" id="listaAnexosCard"></ul>
     </section>
 
     <section class="cartao" id="cartaoItens">
@@ -528,6 +537,29 @@ const pesoBR = b => !b ? '' : (b >= 1048576 ? (b/1048576).toFixed(1).replace('.'
                                             : Math.max(1, Math.round(b/1024)) + ' KB');
 const tipoCurto = m => /pdf/i.test(m||'') ? 'PDF' : (/^image\//i.test(m||'') ? 'FOTO' : 'ARQUIVO');
 
+/* Os arquivos que moram nos campos do card. Vêm pelo fluxo do n8n, que lê o
+   card com a credencial do ClickUp — a tela não fala com o ClickUp. */
+const ANEXOS_DO_CARD_URL = 'https://grupoleh.app.n8n.cloud/webhook/anexos-do-card?pedido=';
+
+async function carregarAnexosDoCard(idDoPedido){
+  if(!idDoPedido) return;
+  try{
+    const r = await fetch(ANEXOS_DO_CARD_URL + encodeURIComponent(idDoPedido));
+    if(!r.ok) return;                       // sem card, sem arquivos: a tela segue igual
+    const j = await r.json();
+    const lista = (j && j.arquivos) || [];
+    if(!lista.length) return;
+    $('listaAnexosCard').innerHTML = lista.map(a =>
+      '<li><a href="' + esc(a.url) + '" target="_blank" rel="noopener">' +
+        '<span class="tipo">' + tipoCurto(a.mime) + '</span>' +
+        '<span class="nome">' + esc(a.nome || 'arquivo') +
+          (a.campo ? '<span class="campo-do-card">' + esc(a.campo) + '</span>' : '') + '</span>' +
+        '<span class="peso">' + pesoBR(a.tamanho) + '</span>' +
+      '</a></li>').join('');
+    $('cartaoAnexosCard').hidden = false;
+  }catch(e){ /* arquivo do card é complemento: falhar aqui não tira o pedido do ar */ }
+}
+
 function desenharAnexos(anexos){
   const lista = Array.isArray(anexos) ? anexos : [];
   if(!lista.length){ $('cartaoAnexos').hidden = true; return; }
@@ -579,6 +611,7 @@ function desenhar(s, itens){
     $('cartaoJustificativa').hidden = false;
   }
   desenharAnexos(ANEXOS);
+  carregarAnexosDoCard(s.id);
 
   if(ehServico){
     $('escopoTexto').textContent = itens[0].descricao;
@@ -589,7 +622,7 @@ function desenhar(s, itens){
   }
 
   $('rodape').textContent =
-    'Somente leitura. Os preços não aparecem aqui — são apurados pelo setor de compras depois da primeira aprovação. ' +
+    'Somente leitura. O preço é o da cotação do setor de compras; o detalhe por fornecedor fica nos orçamentos anexados. ' +
     'Lido do banco em ' + new Date().toLocaleString('pt-BR') + '.';
   $('carregando').hidden = true;
   $('conteudo').hidden = false;

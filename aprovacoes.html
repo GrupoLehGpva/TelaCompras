@@ -172,7 +172,11 @@
   }
 
   /* ---- fila de aprovação ---- */
-  .envelope{max-width:1180px}
+  /* Era 1180. A coluna do valor cotado entrou em 22/09 e, com a largura antiga,
+     o motivo — que é por onde se decide — ficava espremido e os botões de
+     decisão saíam da tela. Fila é tabela de trabalho: pode ser mais larga que
+     uma página de leitura. */
+  .envelope{max-width:1300px}
   .barra-fila{display:flex;flex-wrap:wrap;gap:12px;align-items:center;
     justify-content:space-between;margin-bottom:14px}
   .barra-fila .esq{display:flex;gap:10px;align-items:center;flex-wrap:wrap;min-width:0}
@@ -241,16 +245,16 @@
      para além da tela e levava a coluna da decisão junto — os botões ficavam
      fora do campo de visão, atrás da barra de rolagem. Quem abre a fila para
      decidir não deveria precisar rolar de lado para achar o botão de decidir. */
-  table.fila{width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed;min-width:1140px}
+  table.fila{width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed;min-width:1256px}
   table.fila col.c-sel   {width:44px}
-  table.fila col.c-num   {width:136px}
-  table.fila col.c-ass   {width:auto}   /* o assunto fica com a sobra: é por ele que se decide */
-  table.fila col.c-quem  {width:152px}
+  table.fila col.c-num   {width:128px}
+  table.fila col.c-ass   {width:auto;min-width:190px}   /* o assunto fica com a sobra: é por ele que se decide */
+  table.fila col.c-quem  {width:146px}
   table.fila col.c-itens {width:58px}
-  table.fila col.c-valor {width:132px}
+  table.fila col.c-valor {width:124px}
   table.fila col.c-data  {width:116px}  /* comporta 'DD/MM/AAAA' sem cortar */
-  table.fila col.c-etapa {width:112px}
-  table.fila col.c-dec   {width:214px}
+  table.fila col.c-etapa {width:104px}
+  table.fila col.c-dec   {width:224px}
   table.fila th,table.fila td{padding:16px 12px;border-bottom:1px solid var(--borda);
     text-align:left;vertical-align:middle}
   /* Duas linhas, e o resto vira reticências: a linha cresce um pouco, nunca

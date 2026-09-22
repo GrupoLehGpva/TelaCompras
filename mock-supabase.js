@@ -74,6 +74,14 @@ async function instalar(p, {
 
   if(decisao !== null || aoDecidir){
     await p.route('**n8n.cloud/**', async r => {
+      /* A tela do pedido também pergunta ao n8n quais arquivos estão nos campos
+         do card. Isso é leitura, não decisão — sem esta saída, a pergunta dos
+         anexos entrava na contagem de cliques de aprovação e a bateria acusava
+         decisão que ninguém tomou. */
+      if(r.request().url().includes('anexos-do-card')){
+        return r.fulfill({ status:200, contentType:'application/json',
+                           body: JSON.stringify({ ok:true, arquivos: [] }) });
+      }
       /* A tela manda POST com JSON. Se um dia mandar outra coisa, o teste
          precisa enxergar — por isso o corpo é entregue a quem chamou. */
       let corpo = {};

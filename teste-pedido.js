@@ -177,6 +177,13 @@ async function comFila(b, {fila, decisao={ok:true}, token='tk-brandao', id=SOL.i
      mandar por query string, estes testes param de ver o que precisam ver e
      falham — que é o comportamento certo. */
   await p.route('**n8n.cloud/**', r => {
+    /* A tela também pergunta ao n8n quais arquivos estão nos campos do card.
+       É leitura: não pode entrar na contagem de decisões, senão um pedido
+       aberto vira "decidido" sem ninguém clicar. */
+    if(r.request().url().includes('anexos-do-card')){
+      return r.fulfill({ status:200, contentType:'application/json',
+                         body: JSON.stringify({ ok:true, arquivos: [] }) });
+    }
     let corpo = {};
     try { corpo = JSON.parse(r.request().postData() || '{}'); } catch(e){ corpo = { __sem_corpo: r.request().url() }; }
     p.__chamadas.push(corpo);

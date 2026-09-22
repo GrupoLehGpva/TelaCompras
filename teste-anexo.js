@@ -69,7 +69,16 @@ async function abrir(b, { aoSubir = null, aoRegistrar = null } = {}){
         { centros: CENTROS, criada: respostaCriarSolicitacao({ id: ID_DO_BANCO, numero:'C2609-00042' }) })) });
   });
 
+  p.__avisosDoCard = [];
   await p.route('**n8n.cloud/**', r => {
+    const u = r.request().url();
+    if(u.includes('anexo-registrado')){
+      let corpo = {};
+      try { corpo = JSON.parse(r.request().postData() || '{}'); } catch(e){ corpo = {}; }
+      p.__avisosDoCard.push(corpo);
+      p.__ordem.push('avisar-card');
+      return r.fulfill({ status:200, contentType:'application/json', body:'{"ok":true}' });
+    }
     p.__ordem.push('card');
     return r.fulfill({ status:200, contentType:'application/json', body:'{"ok":true}' });
   });
@@ -111,6 +120,8 @@ const b = await chromium.launch();
   const conf = await p.textContent('#okNumero');
   ok('1 confirmação normal', /C2609-00042/.test(conf), 'veio: ' + conf);
   ok('1 sem aviso de erro', await p.locator('#okAviso').isHidden(), 'avisou erro sem ter erro');
+  ok('1 sem anexo não avisa o card', p.__avisosDoCard.length === 0,
+     'avisou o card sem ter anexo: ' + JSON.stringify(p.__avisosDoCard));
   await p.close(); }
 
 /* 2 — escolher o arquivo NÃO envia. O envio é do pedido, não do campo. */
@@ -167,6 +178,14 @@ const b = await chromium.launch();
   ok('3 registra depois de subir',
      p.__ordem.lastIndexOf('upload') < p.__ordem.indexOf('registrar'), JSON.stringify(p.__ordem));
   ok('3 sem aviso de erro', await p.locator('#okAviso').isHidden(), 'avisou erro com tudo certo');
+
+  /* O comprador trabalha no quadro, não nesta tela: o card precisa saber que
+     chegou anexo. Um aviso por envio, com o id do pedido. */
+  ok('3 avisa o card uma vez', p.__avisosDoCard.length === 1, 'avisos: ' + p.__avisosDoCard.length);
+  ok('3 o aviso leva o id do pedido',
+     (p.__avisosDoCard[0] || {}).solicitacao_id === ID_DO_BANCO, JSON.stringify(p.__avisosDoCard));
+  ok('3 avisa depois de registrar',
+     p.__ordem.indexOf('registrar') < p.__ordem.indexOf('avisar-card'), JSON.stringify(p.__ordem));
   await p.close(); }
 
 /* 4 — o que a tela recusa antes de subir */
@@ -228,6 +247,7 @@ const b = await chromium.launch();
   ok('5.2 avisa o arquivo que faltou', /foto\.png/.test(await p.textContent('#okAviso') || ''),
      'aviso sem o nome do arquivo');
   ok('5.2 não registra nada', p.__registros.length === 0, 'registrou arquivo que não subiu');
+  ok('5.2 não avisa o card à toa', p.__avisosDoCard.length === 0, 'avisou card sem anexo nenhum');
   await p.close(); }
 
 /* 6 — a tela do pedido mostra os anexos */
@@ -241,9 +261,21 @@ const SOL = { id:'11111111-1111-1111-1111-111111111111', numero:'C2609-00008',
   data_necessidade:'2026-09-29', motivo:'Leitura do nível de óleo', status:'solicitado' };
 const ITENS = [{ codigo:null, descricao:'Correção do suporte da vareta', unidade:'Serviço', quantidade:1 }];
 
-async function pedido(b, anexos){
+const ARQUIVOS_DO_CARD = { ok:true, numero:'C2609-00008', arquivos:[
+  { id:'cu-1', nome:'BEX3J29.pdf', mime:'application/pdf', tamanho: 278074,
+    campo:'Fornecedor 1 (melhor orçamento)', url:'https://clickup-attachments.example/BEX3J29.pdf' },
+  { id:'cu-2', nome:'COSTAVET.pdf', mime:'application/pdf', tamanho: 23291,
+    campo:'Fornecedor 2', url:'https://clickup-attachments.example/COSTAVET.pdf' }
+]};
+
+async function pedido(b, anexos, doCard = ARQUIVOS_DO_CARD){
   const p = await b.newPage({ viewport:{ width:1000, height:1000 } });
   p.on('pageerror', e => falhas.push('ERRO DE PÁGINA: ' + e.message));
+  await p.route('**/webhook/anexos-do-card**', r => {
+    if(doCard === 'cai') return r.abort();
+    return r.fulfill({ status: doCard === 500 ? 500 : 200, contentType:'application/json',
+                       body: JSON.stringify(doCard === 500 ? {} : doCard) });
+  });
   await mock.instalar(p, { pedido: SOL, itens: ITENS, anexos });
   await p.goto(telaPedido + '?id=' + SOL.id, { waitUntil:'load' });
   await p.waitForTimeout(600);
@@ -261,6 +293,40 @@ async function pedido(b, anexos){
   /* Esta tela é de leitura: o anexo não pode virar botão que muda coisa. */
   ok('6 nenhum botão novo', await p.locator('#cartaoAnexos button').count() === 0, 'apareceu botão no cartão');
   await p.screenshot({ path:'t-anexo-pedido.png', fullPage:true });
+  await p.close(); }
+
+/* 7 — os orçamentos que o comprador anexou no card, para quem aprova ver
+       sem abrir o ClickUp (ele nem tem acesso ao ClickUp). */
+{ const p = await pedido(b, ANEXOS);
+  await p.waitForTimeout(400);
+  ok('7 cartão dos orçamentos aparece', await p.locator('#cartaoAnexosCard').isVisible(), 'não apareceu');
+  ok('7 lista os dois orçamentos', await p.locator('#listaAnexosCard li').count() === 2,
+     'linhas: ' + await p.locator('#listaAnexosCard li').count());
+  const txt = await p.textContent('#listaAnexosCard') || '';
+  ok('7 mostra o nome do arquivo', /BEX3J29\.pdf/.test(txt), txt);
+  ok('7 diz de qual campo veio', /Fornecedor 1 \(melhor orçamento\)/.test(txt), txt);
+  ok('7 mostra o tamanho', /272 KB|0,3 MB|23 KB/.test(txt), txt);
+  const href = await p.locator('#listaAnexosCard a').first().getAttribute('href');
+  ok('7 link abre o arquivo do card', /BEX3J29\.pdf$/.test(href || ''), 'link: ' + href);
+  ok('7 abre em outra aba',
+     await p.locator('#listaAnexosCard a').first().getAttribute('target') === '_blank', 'sem target');
+  ok('7 não vira botão numa tela de leitura',
+     await p.locator('#cartaoAnexosCard button').count() === 0, 'apareceu botão');
+  await p.screenshot({ path:'t-anexo-do-card.png', fullPage:true });
+  await p.close(); }
+
+/* 7.1 — card sem arquivo nenhum não mostra cartão vazio */
+{ const p = await pedido(b, [], { ok:true, arquivos:[] });
+  await p.waitForTimeout(400);
+  ok('7.1 sem arquivo no card, sem cartão', await p.locator('#cartaoAnexosCard').isHidden(), 'mostrou vazio');
+  await p.close(); }
+
+/* 7.2 — o fluxo do card fora do ar não pode derrubar a tela do pedido */
+{ const p = await pedido(b, ANEXOS, 'cai');
+  await p.waitForTimeout(500);
+  ok('7.2 pedido continua de pé', await p.locator('#conteudo').isVisible(), 'a tela sumiu');
+  ok('7.2 anexos do solicitante continuam', await p.locator('#cartaoAnexos').isVisible(), 'perdeu os anexos');
+  ok('7.2 e o cartão do card fica escondido', await p.locator('#cartaoAnexosCard').isHidden(), 'mostrou cartão');
   await p.close(); }
 
 /* 6.1 — pedido sem anexo não mostra cartão vazio */
