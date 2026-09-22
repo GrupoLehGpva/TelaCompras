@@ -40,6 +40,11 @@ const b = await chromium.launch();
   /* A empresa é o cabeçalho da ordem de compra: quem aprova precisa saber qual
      pessoa jurídica está comprando, e com o texto exato do GR. */
   ok('1 empresa na ficha', /WIENFRIED MATTHIAS LEH - PR/.test(ficha), ficha.slice(0,200));
+  /* O preço da cotação na ficha: é aqui que o gerente confere antes de decidir.
+     Sem cotação, a linha diz isso em vez de sumir — quem aprova precisa saber
+     que está decidindo sem preço. */
+  ok('1 ficha tem o valor cotado', /Valor cotado/.test(ficha), ficha.slice(0,300));
+  ok('1 sem cotação diz "ainda não cotado"', /ainda não cotado/.test(ficha), ficha.slice(0,300));
   ok('1 empresa antes do centro de custo',
      ficha.indexOf('Empresa') < ficha.indexOf('Centro de custo'), 'ordem trocada');
   ok('1 data em pt-BR', /15\/09\/2026/.test(ficha), ficha);
@@ -295,6 +300,14 @@ for(const modo of ['esc','cancelar']){
   await p.waitForTimeout(900);
   ok('pedido abre mesmo sem a fila', await p.locator('#conteudo').isVisible(), 'a tela do pedido quebrou');
   ok('sem fila, sem barra', !(await p.locator('#barraAprova').isVisible()), 'mostrou barra sem conseguir conferir a fila');
+  await p.close(); }
+
+/* ---- a ficha com a cotação pronta ---- */
+{ const p = await abrir(b, { sol: { ...SOL, valor_cotado: '11590.00', fornecedor_cotado: 'VETQUEST' } });
+  const ficha = await p.textContent('#fichaCabecalho') || '';
+  ok('cotação mostra o valor em real', /R\$\s?11\.590,00/.test(ficha), ficha.slice(0,300));
+  ok('cotação mostra o fornecedor escolhido', /VETQUEST/.test(ficha), ficha.slice(0,300));
+  ok('cotação não repete "ainda não cotado"', !/ainda não cotado/.test(ficha), ficha.slice(0,300));
   await p.close(); }
 
 await b.close();

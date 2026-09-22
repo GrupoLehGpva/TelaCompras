@@ -513,6 +513,8 @@ function baixarCSV(){
 /* ============================================================================
    DESENHO DO CABEÇALHO
    ========================================================================== */
+const dinheiroBR = v => Number(v || 0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+
 function campo(rotulo, valor, solto){
   return '<div><dt>' + rotulo + '</dt><dd' + (solto ? ' class="solto"' : '') + '>' + esc(valor || '—') + '</dd></div>';
 }
@@ -560,7 +562,12 @@ function desenhar(s, itens){
     campo('Centro de custo', CENTRO_NOME || legivel(CENTROS, s.centro_custo)) +
     campo('Entrega até', dataBR(s.data_necessidade)) +
     campo('Definição de fornecedor', legivel(DEF_FORNECEDOR, s.definicao_fornecedor)) +
-    campo('Natureza', ehServico ? 'Escopo de serviço' : (itens.length > 1 ? 'Lista de itens' : 'Item único'));
+    campo('Natureza', ehServico ? 'Escopo de serviço' : (itens.length > 1 ? 'Lista de itens' : 'Item único')) +
+    /* O preço só existe depois da cotação. Antes dela, dizer "ainda não cotado"
+       é melhor que sumir com a linha: quem aprova a necessidade precisa saber
+       que está decidindo sem preço, e não achar que esqueceram de mostrar. */
+    campo('Valor cotado', s.valor_cotado > 0 ? dinheiroBR(s.valor_cotado) : 'ainda não cotado') +
+    (s.fornecedor_cotado ? campo('Fornecedor escolhido', s.fornecedor_cotado) : '');
 
   if(s.motivo){ $('motivoTexto').textContent = s.motivo; $('cartaoMotivo').hidden = false; }
   if(s.observacao){

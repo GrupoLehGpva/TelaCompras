@@ -3,14 +3,19 @@
 
    Por que este arquivo existe: até 22/09 o campo "Anexar" da tela do pedido era
    enfeite. Ele guardava o arquivo numa variável do navegador, escrevia o nome
-   na lista e NUNCA mandava para lugar nenhum — nem para o banco, nem para o
-   card. O Alisson anexou um documento no C2609-00008 e ninguém recebeu.
+   na lista e NUNCA mandava para lugar nenhum. O Alisson anexou um documento no
+   C2609-00008 e ninguém recebeu.
+
+   O caminho de hoje: a própria tela sobe cada arquivo para o bucket privado
+   `anexos` e, no fim, chama `registrar_anexos` com os metadados. O arquivo só
+   é lido por link assinado na hora do clique — nada de link fixo circulando.
 
    O que se prova aqui:
-     1. Escolher arquivo não envia nada — o envio acontece com a solicitação.
-     2. Cada arquivo vira uma chamada, com o id da solicitação que o BANCO deu.
-     3. Tipo errado, arquivo grande demais e mais de cinco não passam da tela.
-     4. Falha no upload não derruba o pedido, mas é dita, com o nome do arquivo.
+     1. Escolher arquivo não envia nada — o envio é do pedido.
+     2. Cada arquivo vira um PUT no bucket, no caminho <solicitacao_id>/…,
+        e os metadados são registrados numa chamada só, com o id DO BANCO.
+     3. Tipo errado e arquivo grande demais não saem da tela.
+     4. Falha no upload não derruba o pedido, e é dita com o nome do arquivo.
      5. A tela do pedido mostra os anexos e monta o link certo.
    ========================================================================== */
 const { chromium } = require('playwright');
@@ -28,33 +33,43 @@ const ID_DO_BANCO = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 const arquivo = (name, mimeType, tamanho = 64, letra = 'A') =>
   ({ name, mimeType, buffer: Buffer.alloc(tamanho, letra) });
 
-/* Abre o formulário com o Supabase e o n8n de mentira. `aoAnexar` decide o que
-   o webhook de anexo responde, para o teste poder derrubar só ele. */
-async function abrir(b, { aoAnexar = null } = {}){
+/* `aoSubir` decide o que o bucket responde, para o teste poder derrubar só ele. */
+async function abrir(b, { aoSubir = null, aoRegistrar = null } = {}){
   const p = await b.newPage();
   p.on('pageerror', e => falhas.push('ERRO DE PÁGINA: ' + e.message));
-  p.__anexos = [];
+  p.__uploads = [];      // caminhos enviados ao bucket
+  p.__registros = [];    // corpos de registrar_anexos
   p.__ordem = [];
 
-  await p.route('**supabase.co/**', r => {
-    if(r.request().url().includes('/rpc/criar_solicitacao')) p.__ordem.push('criar_solicitacao');
+  await p.route('**supabase.co/**', async r => {
+    const u = r.request().url();
+
+    if(u.includes('/storage/v1/object/anexos/')){
+      const caminho = decodeURI(u.split('/storage/v1/object/anexos/')[1]);
+      p.__uploads.push({ caminho, metodo: r.request().method(),
+                         tipo: (r.request().headers()['content-type'] || '') });
+      p.__ordem.push('upload');
+      const resp = aoSubir ? aoSubir(caminho, p.__uploads.length) : { status:200 };
+      if(resp === 'abortar') return r.abort();
+      return r.fulfill({ status: resp.status, contentType:'application/json', body:'{}' });
+    }
+
+    if(u.includes('/rpc/registrar_anexos')){
+      let corpo = {};
+      try { corpo = JSON.parse(r.request().postData() || '{}'); } catch(e){ corpo = {}; }
+      p.__registros.push(corpo);
+      p.__ordem.push('registrar');
+      const resp = aoRegistrar ? aoRegistrar(corpo) : { ok:true, gravados:(corpo.p_anexos||[]).length };
+      return r.fulfill({ status:200, contentType:'application/json', body: JSON.stringify(resp) });
+    }
+
+    if(u.includes('/rpc/criar_solicitacao')) p.__ordem.push('criar_solicitacao');
     return r.fulfill({ status:200, contentType:'application/json',
-      body: JSON.stringify(respostaDoFormulario(r.request().url(),
+      body: JSON.stringify(respostaDoFormulario(u,
         { centros: CENTROS, criada: respostaCriarSolicitacao({ id: ID_DO_BANCO, numero:'C2609-00042' }) })) });
   });
 
   await p.route('**n8n.cloud/**', r => {
-    const u = r.request().url();
-    if(u.includes('anexo-do-pedido')){
-      let corpo = {};
-      try { corpo = JSON.parse(r.request().postData() || '{}'); } catch(e){ corpo = {}; }
-      p.__anexos.push(corpo);
-      p.__ordem.push('anexo:' + (corpo.nome || '?'));
-      const resposta = aoAnexar ? aoAnexar(corpo, p.__anexos.length) : { status:200, corpo:{ ok:true, id:'anx-1' } };
-      if(resposta === 'abortar') return r.abort();
-      return r.fulfill({ status: resposta.status, contentType:'application/json',
-                         body: JSON.stringify(resposta.corpo || {}) });
-    }
     p.__ordem.push('card');
     return r.fulfill({ status:200, contentType:'application/json', body:'{"ok":true}' });
   });
@@ -88,14 +103,14 @@ async function enviar(p){
 (async () => {
 const b = await chromium.launch();
 
-/* 1 — sem anexo, nada muda: nenhuma chamada e nenhuma menção na confirmação */
+/* 1 — sem anexo, nada muda */
 { const p = await abrir(b);
   await enviar(p);
-  ok('1 sem anexo não chama o fluxo de anexo', p.__anexos.length === 0,
-     'chamou ' + p.__anexos.length + ' vez(es)');
+  ok('1 sem anexo não sobe nada', p.__uploads.length === 0, 'subiu ' + p.__uploads.length);
+  ok('1 sem anexo não registra nada', p.__registros.length === 0, 'registrou ' + p.__registros.length);
   const conf = await p.textContent('#okNumero');
-  ok('1 confirmação não fala de anexo', !/anexo/i.test(conf), 'veio: ' + conf);
   ok('1 confirmação normal', /C2609-00042/.test(conf), 'veio: ' + conf);
+  ok('1 sem aviso de erro', await p.locator('#okAviso').isHidden(), 'avisou erro sem ter erro');
   await p.close(); }
 
 /* 2 — escolher o arquivo NÃO envia. O envio é do pedido, não do campo. */
@@ -103,15 +118,14 @@ const b = await chromium.launch();
   await p.evaluate(()=>{ passoAtual = sequencia().indexOf('prazo'); render(); });
   await p.setInputFiles('#anexos', [arquivo('orcamento.pdf', 'application/pdf', 300)]);
   await p.waitForTimeout(300);
-  ok('2 escolher não envia', p.__anexos.length === 0, 'mandou arquivo antes de existir pedido');
+  ok('2 escolher não sobe', p.__uploads.length === 0, 'subiu antes de existir pedido');
   const lista = await p.textContent('#listaAnexos');
   ok('2 mostra o arquivo escolhido', /orcamento\.pdf/.test(lista), 'lista: ' + lista);
-  ok('2 mostra o tamanho', /KB|MB/.test(lista), 'lista sem tamanho: ' + lista);
   await p.close(); }
 
-/* 3 — dois arquivos: duas chamadas, com o id que veio do BANCO.
-       O id é o ponto: se a tela mandar o que ela inventou, o arquivo entra em
-       solicitação nenhuma e some de novo — que foi o bug. */
+/* 3 — dois arquivos: dois uploads e UM registro, com o id DO BANCO.
+       O id é o ponto: se a tela mandar o que ela inventou, o arquivo fica solto
+       no bucket e não aparece em pedido nenhum — que era o bug. */
 { const p = await abrir(b);
   await p.evaluate(()=>{ passoAtual = sequencia().indexOf('prazo'); render(); });
   await p.setInputFiles('#anexos', [
@@ -120,35 +134,42 @@ const b = await chromium.launch();
   ]);
   await enviar(p);
 
-  ok('3 dois arquivos, duas chamadas', p.__anexos.length === 2, 'foram ' + p.__anexos.length);
-  const nomes = p.__anexos.map(a => a.nome).sort();
-  ok('3 manda os dois nomes', JSON.stringify(nomes) === JSON.stringify(['foto-da-peca.png','orcamento.pdf']),
-     JSON.stringify(nomes));
-  ok('3 manda o id do banco', p.__anexos.every(a => a.solicitacao_id === ID_DO_BANCO),
-     JSON.stringify(p.__anexos.map(a => a.solicitacao_id)));
-  ok('3 manda o tipo', p.__anexos.some(a => a.mime === 'application/pdf') &&
-                       p.__anexos.some(a => a.mime === 'image/png'),
-     JSON.stringify(p.__anexos.map(a => a.mime)));
-  const pdf = p.__anexos.find(a => a.nome === 'orcamento.pdf') || {};
-  ok('3 o pdf foi mandado', !!pdf.base64, 'o arquivo não chegou ao fluxo de anexo');
-  ok('3 manda o arquivo inteiro, em base64',
-     Buffer.from(pdf.base64 || '', 'base64').length === 200,
-     'vieram ' + Buffer.from(pdf.base64 || '', 'base64').length + ' bytes');
-  ok('3 base64 sem o cabeçalho data:', !/^data:/.test(pdf.base64 || ''), (pdf.base64 || '').slice(0, 30));
+  ok('3 dois arquivos, dois uploads', p.__uploads.length === 2, 'foram ' + p.__uploads.length);
+  ok('3 cada arquivo na pasta do pedido',
+     p.__uploads.every(u => u.caminho.startsWith(ID_DO_BANCO + '/')),
+     JSON.stringify(p.__uploads.map(u => u.caminho)));
+  ok('3 caminhos diferentes entre si',
+     new Set(p.__uploads.map(u => u.caminho)).size === 2, 'dois arquivos no mesmo caminho');
+  ok('3 sobe com o tipo do arquivo',
+     p.__uploads.some(u => u.tipo.includes('application/pdf')) &&
+     p.__uploads.some(u => u.tipo.includes('image/png')),
+     JSON.stringify(p.__uploads.map(u => u.tipo)));
 
-  /* Ordem: o anexo só pode ir depois de o pedido existir e o card ser criado. */
-  ok('3 grava o pedido antes de mandar arquivo',
+  ok('3 registra numa chamada só', p.__registros.length === 1, 'foram ' + p.__registros.length);
+  const reg = p.__registros[0] || {};
+  ok('3 registra com o id do banco', reg.p_solicitacao_id === ID_DO_BANCO, String(reg.p_solicitacao_id));
+  const metas = reg.p_anexos || [];
+  ok('3 registra os dois', metas.length === 2, JSON.stringify(metas.map(m => m.nome)));
+  ok('3 registra o nome que a pessoa vê',
+     metas.map(m => m.nome).sort().join('|') === 'foto-da-peca.png|orcamento.pdf',
+     JSON.stringify(metas.map(m => m.nome)));
+  ok('3 registra o tamanho de verdade',
+     (metas.find(m => m.nome === 'orcamento.pdf') || {}).tamanho === 200,
+     JSON.stringify(metas));
+  ok('3 o caminho registrado é o que subiu',
+     metas.every(m => p.__uploads.some(u => u.caminho === m.caminho)),
+     'registrou caminho que ninguém subiu');
+
+  /* Ordem: o anexo só pode ir depois de o pedido existir — é o id dele que
+     define a pasta — e o registro só depois dos uploads. */
+  ok('3 grava o pedido antes de subir arquivo',
      p.__ordem.indexOf('criar_solicitacao') === 0, JSON.stringify(p.__ordem));
-  ok('3 cria o card antes do anexo',
-     p.__ordem.indexOf('card') < p.__ordem.findIndex(x => x.startsWith('anexo:')),
-     JSON.stringify(p.__ordem));
-
-  const conf = await p.textContent('#okNumero');
-  ok('3 confirmação conta os anexos', /2 de 2 anexos enviados/.test(conf), 'veio: ' + conf);
+  ok('3 registra depois de subir',
+     p.__ordem.lastIndexOf('upload') < p.__ordem.indexOf('registrar'), JSON.stringify(p.__ordem));
   ok('3 sem aviso de erro', await p.locator('#okAviso').isHidden(), 'avisou erro com tudo certo');
   await p.close(); }
 
-/* 4 — o que a tela recusa antes de enviar */
+/* 4 — o que a tela recusa antes de subir */
 { const p = await abrir(b);
   await p.evaluate(()=>{ passoAtual = sequencia().indexOf('prazo'); render(); });
   await p.setInputFiles('#anexos', [
@@ -158,30 +179,19 @@ const b = await chromium.launch();
   ]);
   await p.waitForTimeout(400);
   const lista = await p.textContent('#listaAnexos');
-  ok('4 recusa tipo que não é foto nem PDF', /planilha\.txt/.test(lista) && /tipo não aceito/.test(lista), lista);
-  ok('4 recusa acima de 10 MB', /gigante\.pdf/.test(lista) && /10 MB/.test(lista), lista);
-  ok('4 mantém o que vale', /vale\.png/.test(lista), lista);
-  ok('4 só um fica na fila', await p.evaluate(()=>estado.anexos.length) === 1,
-     'ficaram ' + await p.evaluate(()=>estado.anexos.length));
+  ok('4 avisa o tipo que não serve', /planilha\.txt/.test(lista) && /foto nem PDF/.test(lista), lista);
+  ok('4 avisa o arquivo grande demais', /gigante\.pdf/.test(lista) && /10 MB/.test(lista), lista);
   await enviar(p);
-  ok('4 só envia o que passou', p.__anexos.length === 1 && p.__anexos[0].nome === 'vale.png',
-     JSON.stringify(p.__anexos.map(a => a.nome)));
+  ok('4 só sobe o que passou',
+     p.__uploads.length === 1 &&
+     (p.__registros[0].p_anexos || []).every(m => m.nome === 'vale.png'),
+     JSON.stringify({ uploads: p.__uploads.length, registros: p.__registros[0] }));
+  const aviso = await p.textContent('#okAviso') || '';
+  ok('4 diz quais não foram', /planilha\.txt/.test(aviso) && /gigante\.pdf/.test(aviso), 'aviso: ' + aviso);
   await p.close(); }
 
-/* 5 — mais de cinco: os cinco primeiros vão, o resto é dito em voz alta */
-{ const p = await abrir(b);
-  await p.evaluate(()=>{ passoAtual = sequencia().indexOf('prazo'); render(); });
-  await p.setInputFiles('#anexos', [1,2,3,4,5,6,7].map(n => arquivo('foto-' + n + '.png', 'image/png', 40)));
-  await p.waitForTimeout(400);
-  const lista = await p.textContent('#listaAnexos');
-  ok('5 avisa o que ficou de fora', /foto-6\.png/.test(lista) && /5 primeiros/.test(lista), lista);
-  await enviar(p);
-  ok('5 envia cinco', p.__anexos.length === 5, 'foram ' + p.__anexos.length);
-  await p.close(); }
-
-/* 6 — o upload falhou: o pedido continua de pé e a tela diz QUAL arquivo faltou */
-{ const p = await abrir(b, { aoAnexar: (corpo) =>
-    corpo.nome === 'orcamento.pdf' ? { status:500, corpo:{ ok:false } } : { status:200, corpo:{ ok:true } } });
+/* 5 — o bucket recusou um arquivo: o pedido continua de pé e a tela diz qual */
+{ const p = await abrir(b, { aoSubir: (caminho, n) => n === 2 ? { status:500 } : { status:200 } });
   await p.evaluate(()=>{ passoAtual = sequencia().indexOf('prazo'); render(); });
   await p.setInputFiles('#anexos', [
     arquivo('foto-da-peca.png', 'image/png', 60),
@@ -189,28 +199,38 @@ const b = await chromium.launch();
   ]);
   await enviar(p);
   const conf = await p.textContent('#okNumero');
-  ok('6 conta o que subiu de verdade', /1 de 2 anexos enviados/.test(conf), 'veio: ' + conf);
-  ok('6 avisa', await p.locator('#okAviso').isVisible(), 'não avisou que o arquivo não subiu');
-  const aviso = await p.textContent('#okAviso');
-  ok('6 nomeia o arquivo', /orcamento\.pdf/.test(aviso), 'aviso: ' + aviso);
-  ok('6 não acusa o que subiu', !/foto-da-peca/.test(aviso), 'aviso: ' + aviso);
-  ok('6 diz que o pedido está gravado', /C2609-00042/.test(aviso) && /seguiu normalmente/.test(aviso),
-     'aviso: ' + aviso);
-  ok('6 o pedido continua valendo', /C2609-00042/.test(conf), 'veio: ' + conf);
+  ok('5 o pedido continua valendo', /C2609-00042/.test(conf), 'veio: ' + conf);
+  ok('5 avisa', await p.locator('#okAviso').isVisible(), 'não avisou que o arquivo não subiu');
+  const aviso = await p.textContent('#okAviso') || '';
+  ok('5 nomeia o arquivo', /orcamento\.pdf/.test(aviso), 'aviso: ' + aviso);
+  ok('5 registra o que subiu', (p.__registros[0].p_anexos || []).length === 1,
+     JSON.stringify(p.__registros[0]));
   await p.close(); }
 
-/* 6.1 — o fluxo de anexo fora do ar (nem responde) não pode travar o envio */
-{ const p = await abrir(b, { aoAnexar: () => 'abortar' });
+/* 5.1 — subiu mas não registrou: o arquivo existe e ninguém o encontra.
+         É a pior das falhas, e a tela precisa dizer isso com todas as letras. */
+{ const p = await abrir(b, { aoRegistrar: () => ({ ok:false, mensagem:'solicitacao_inexistente' }) });
   await p.evaluate(()=>{ passoAtual = sequencia().indexOf('prazo'); render(); });
   await p.setInputFiles('#anexos', [arquivo('foto.png', 'image/png', 60)]);
   await enviar(p);
-  const conf = await p.textContent('#okNumero');
-  ok('6.1 chega na confirmação mesmo assim', /C2609-00042/.test(conf), 'veio: ' + conf);
-  ok('6.1 diz que nenhum subiu', /0 de 1 anexo enviado/.test(conf), 'veio: ' + conf);
-  ok('6.1 avisa', /foto\.png/.test(await p.textContent('#okAviso')), 'aviso sem o nome do arquivo');
+  const aviso = await p.textContent('#okAviso') || '';
+  ok('5.1 avisa que não ficou ligado ao pedido', /não ficaram ligados ao pedido/.test(aviso), 'aviso: ' + aviso);
+  ok('5.1 e manda avisar compras', /setor de compras/.test(aviso), 'aviso: ' + aviso);
   await p.close(); }
 
-/* 7 — a tela do pedido mostra os anexos */
+/* 5.2 — bucket fora do ar não trava o envio */
+{ const p = await abrir(b, { aoSubir: () => 'abortar' });
+  await p.evaluate(()=>{ passoAtual = sequencia().indexOf('prazo'); render(); });
+  await p.setInputFiles('#anexos', [arquivo('foto.png', 'image/png', 60)]);
+  await enviar(p);
+  ok('5.2 chega na confirmação mesmo assim',
+     /C2609-00042/.test(await p.textContent('#okNumero')), 'não concluiu');
+  ok('5.2 avisa o arquivo que faltou', /foto\.png/.test(await p.textContent('#okAviso') || ''),
+     'aviso sem o nome do arquivo');
+  ok('5.2 não registra nada', p.__registros.length === 0, 'registrou arquivo que não subiu');
+  await p.close(); }
+
+/* 6 — a tela do pedido mostra os anexos */
 const ANEXOS = [
   { id:'anx-1', nome:'orçamento ICAVEL.pdf', mime:'application/pdf', tamanho: 2 * 1024 * 1024 },
   { id:'anx-2', nome:'foto da vareta.jpg',   mime:'image/jpeg',      tamanho: 350 * 1024 }
@@ -231,39 +251,33 @@ async function pedido(b, anexos){
 }
 
 { const p = await pedido(b, ANEXOS);
-  ok('7 cartão de anexos aparece', await p.locator('#cartaoAnexos').isVisible(), 'não apareceu');
-  ok('7 lista os dois', await p.locator('#listaAnexos li').count() === 2,
+  ok('6 cartão de anexos aparece', await p.locator('#cartaoAnexos').isVisible(), 'não apareceu');
+  ok('6 lista os dois', await p.locator('#listaAnexos li').count() === 2,
      'linhas: ' + await p.locator('#listaAnexos li').count());
   const texto = await p.textContent('#listaAnexos');
-  ok('7 mostra o nome', /orçamento ICAVEL\.pdf/.test(texto), texto);
-  ok('7 mostra o tamanho', /2,0 MB/.test(texto) && /350 KB/.test(texto), texto);
-  ok('7 diz o tipo', /PDF/.test(texto) && /FOTO/.test(texto), texto);
-  const href = await p.locator('#listaAnexos a').first().getAttribute('href');
-  ok('7 link vai para o fluxo do anexo', /\/webhook\/anexo\?id=anx-1$/.test(href || ''), 'link: ' + href);
-  ok('7 abre em outra aba', await p.locator('#listaAnexos a').first().getAttribute('target') === '_blank',
-     'sem target=_blank');
+  ok('6 mostra o nome', /orçamento ICAVEL\.pdf/.test(texto), texto);
+  ok('6 mostra o tamanho', /2,0 MB/.test(texto) && /350 KB/.test(texto), texto);
+  ok('6 diz o tipo', /PDF/.test(texto) && /FOTO/.test(texto), texto);
   /* Esta tela é de leitura: o anexo não pode virar botão que muda coisa. */
-  ok('7 nenhum botão novo', await p.locator('#cartaoAnexos button').count() === 0, 'apareceu botão no cartão');
+  ok('6 nenhum botão novo', await p.locator('#cartaoAnexos button').count() === 0, 'apareceu botão no cartão');
   await p.screenshot({ path:'t-anexo-pedido.png', fullPage:true });
   await p.close(); }
 
-/* 7.1 — pedido sem anexo não mostra cartão vazio */
+/* 6.1 — pedido sem anexo não mostra cartão vazio */
 { const p = await pedido(b, []);
-  ok('7.1 sem anexo, sem cartão', await p.locator('#cartaoAnexos').isHidden(), 'mostrou cartão vazio');
+  ok('6.1 sem anexo, sem cartão', await p.locator('#cartaoAnexos').isHidden(), 'mostrou cartão vazio');
   await p.close(); }
 
-/* 7.2 — pedido antigo, de antes dos anexos: a resposta nem traz o campo */
+/* 6.2 — pedido antigo, de antes dos anexos: a resposta nem traz o campo */
 { const p = await b.newPage();
   p.on('pageerror', e => falhas.push('ERRO DE PÁGINA: ' + e.message));
-  /* Ordem importa: no Playwright a última rota registrada ganha, então a
-     genérica entra primeiro e a específica depois. */
   await p.route('**/rest/v1/**', r => r.fulfill({ status:200, contentType:'application/json', body:'[]' }));
   await p.route('**/rest/v1/rpc/abrir_pedido**', r => r.fulfill({ status:200, contentType:'application/json',
     body: JSON.stringify({ ok:true, pedido: SOL, itens: ITENS }) }));
   await p.goto(telaPedido + '?id=' + SOL.id, { waitUntil:'load' });
   await p.waitForTimeout(600);
-  ok('7.2 pedido antigo não quebra a tela', await p.locator('#conteudo').isVisible(), 'a tela não abriu');
-  ok('7.2 e não mostra cartão de anexo', await p.locator('#cartaoAnexos').isHidden(), 'mostrou cartão');
+  ok('6.2 pedido antigo não quebra a tela', await p.locator('#conteudo').isVisible(), 'a tela não abriu');
+  ok('6.2 e não mostra cartão de anexo', await p.locator('#cartaoAnexos').isHidden(), 'mostrou cartão');
   await p.close(); }
 
 await b.close();

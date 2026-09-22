@@ -150,7 +150,7 @@ ok('4 encerradas aparecem depois', await p.locator('#tituloEncerradas').isVisibl
      (botoes - leitura) + ' botão(ões) sem a marca de leitura numa tela que não muda nada');
   ok('6 sem campo',   inputs === 0, 'apareceram ' + inputs + ' campos além do filtro');
   ok('6 sem formulário', forms === 0, 'apareceu formulário numa tela de leitura');
-  const chamadas = p.__rpcs.filter(n => !/^facilitador_do_token|^minhas_solicitacoes|^itens_das_minhas_solicitacoes/.test(n));
+  const chamadas = p.__rpcs.filter(n => !/^facilitador_do_token|^minhas_solicitacoes|^itens_das_minhas_solicitacoes|^anexos_da_solicitacao/.test(n));
   ok('6 só lê', chamadas.length === 0, 'chamou além da leitura: ' + chamadas.join(',')); }
 
 /* 6.5 — a janela do motivo: abre, mostra o que precisa, e fecha */
@@ -282,7 +282,7 @@ p = await tela(b);
   // regra da tela continua valendo com a caixa aberta
   ok('11 todo botão segue de leitura', await p.locator('button').count() === await p.locator('button.so-leitura').count(),
      'botão sem marca de leitura');
-  ok('11 só lê', p.__rpcs.every(n => /^facilitador_do_token|^minhas_solicitacoes|^itens_das_minhas_solicitacoes/.test(n)),
+  ok('11 só lê', p.__rpcs.every(n => /^facilitador_do_token|^minhas_solicitacoes|^itens_das_minhas_solicitacoes|^anexos_da_solicitacao/.test(n)),
      'chamou: ' + p.__rpcs.join(','));
   await p.screenshot({path:'t-acompanhar-itens.png', fullPage:true});
 }

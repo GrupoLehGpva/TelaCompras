@@ -39,10 +39,22 @@ async function abrir(b, criada){
     const mostrado = (await p.textContent('#autoNumero')).trim();
     ok('1 o resumo não mostra número inventado', mostrado === 'gerado ao enviar', 'mostrou: ' + mostrado);
 
-    const codigo = await p.content();
-    ok('1 nenhum Math.random sobrou no formulário',
-       !/Math\.random/.test(codigo.replace(/<!--[\s\S]*?-->/g, '')),
-       'ainda existe Math.random no index.html');
+    /* A regra é sobre NUMERAR pedido, não sobre sorteio em geral: desde 22/09 o
+       caminho do anexo no bucket usa um sufixo aleatório quando o navegador não
+       tem crypto.randomUUID, e isso é legítimo. O que não pode voltar é sorteio
+       perto do número da solicitação — era dali que vinham os números repetidos. */
+    const codigo = (await p.content()).replace(/<!--[\s\S]*?-->/g, '');
+    const linhas = codigo.split('\n');
+    const foraDoLugar = linhas
+      .map((l, i) => ({ l, vizinhanca: linhas.slice(Math.max(0, i - 4), i + 3).join(' ') }))
+      .filter(x => /Math\.random/.test(x.l))
+      .filter(x => !/caminho|anexo|unico|uuid|randomUUID/i.test(x.vizinhanca));
+    ok('1 nenhum sorteio perto do número da solicitação',
+       foraDoLugar.length === 0,
+       'Math.random fora do caminho do anexo: ' + foraDoLugar.map(x => x.l.trim()).join(' | ').slice(0, 200));
+    ok('1 a tela não monta número nenhum',
+       !/numero[^\n]{0,40}Math\.random|Math\.random[^\n]{0,40}numero/i.test(codigo),
+       'voltou a inventar número no navegador');
 
     // duas aberturas seguidas não podem produzir dois números diferentes,
     // porque não podem produzir número nenhum

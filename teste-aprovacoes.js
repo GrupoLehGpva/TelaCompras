@@ -18,7 +18,9 @@ const FILA = [
    facilitador:'Maria de Souza', solicitante_nome:null,
    centro_custo:'1994', centro_custo_nome:'CONFINAMENTO DE BOVINOS', tipo_compra:'normal',
    data_necessidade:'2026-11-10', motivo:'Reposição de sal mineral',
-   observacao:null, aberto_em:ontem, total_itens:5},
+   observacao:null, aberto_em:ontem, total_itens:5,
+   /* Cotação pronta: é o que o gerente precisa ver para decidir. */
+   valor_cotado:'11590.00', fornecedor_cotado:'VETQUEST', orcamentos_anexados:2},
   {id:'a3', numero:'C2609-01003', card_id:'c3', etapa_atual:'lider',
    facilitador:'Ana Paula', solicitante_nome:null,
    centro_custo:'3176', centro_custo_nome:'COMERCIAL', tipo_compra:'programada',
@@ -430,6 +432,30 @@ ok('20 volta a poder clicar', await p.locator('#corpoFila tr').first().locator('
 ok('20 explica a falha', /Não consegui registrar/.test(await p.locator('#avisoTopo').textContent()||''),
    'texto: ' + await p.locator('#avisoTopo').textContent());
 await p.close();
+
+/* ---- o preço cotado na fila ----
+   Até 22/09 o valor existia só no campo do card do ClickUp: quem aprovava pela
+   tela decidia sem ver preço nenhum. Agora ele vem do banco, gravado quando o
+   comprador termina a cotação. */
+{ const p = await tela(b);
+  const linhaGer = p.locator('#corpoFila tr', {hasText:'C2609-01002'}).first();
+  const txtGer = await linhaGer.textContent() || '';
+  ok('valor 1 mostra o preço cotado', /R\$\s?11\.590,00/.test(txtGer), 'linha: ' + txtGer);
+  ok('valor 1 mostra o fornecedor', /VETQUEST/.test(txtGer), 'linha: ' + txtGer);
+  ok('valor 1 tem coluna própria', /Valor cotado/.test(await p.textContent('thead') || ''),
+     'cabeçalho sem a coluna');
+
+  /* Pedido que ainda não passou pela cotação não pode mostrar zero: na etapa da
+     liderança o que se aprova é a necessidade, não o preço. */
+  const linhaLid = p.locator('#corpoFila tr', {hasText:'C2609-01001'}).first();
+  const txtLid = await linhaLid.textContent() || '';
+  ok('valor 2 sem cotação não inventa zero', !/R\$\s?0,00/.test(txtLid), 'linha: ' + txtLid);
+  ok('valor 2 sem cotação mostra travessão',
+     (await linhaLid.locator('.sem-valor').count()) === 1, 'não marcou como sem valor');
+  ok('valor 2 explica por que não tem',
+     /aprova a necessidade/.test(await linhaLid.locator('.sem-valor').getAttribute('title') || ''),
+     'sem explicação no título');
+  await p.close(); }
 
 await b.close();
 console.log('\n===== FALHAS (' + falhas.length + ') =====');
