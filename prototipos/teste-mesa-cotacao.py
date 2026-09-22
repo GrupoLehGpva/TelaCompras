@@ -171,8 +171,10 @@ with sync_playwright() as p:
     # ---- campos de valor ----
     pg.click('[data-open="C2609-00002"]')
     cx = pg.locator('#p-IA-i0-0').bounding_box()
-    check(cx['height']>=42,f"campo de preço com altura boa ({round(cx['height'])}px)")
-    check(cx['width']>=120,f"campo de preço com largura boa ({round(cx['width'])}px)")
+    check(32 <= cx['height'] <= 38, f"campo de preço no tamanho de planilha ({round(cx['height'])}px)")
+    check(cx['width']>=110, f"campo de preço com largura boa ({round(cx['width'])}px)")
+    pk = pg.locator('#k-IA-i0-0').bounding_box()
+    check(pk['height']>=28, f"alvo do ✓ ainda clicável ({round(pk['height'])}px)")
     alt = [pg.locator(i).bounding_box()['x'] for i in ['#d-IA-0','#f-IA-0','#z-IA-0']]
     check(max(alt)-min(alt) < 1,'desconto, frete e prazo alinhados na mesma coluna')
     check(pg.locator('#dl-forn option').count()>=100,'lista de fornecedores reais carregada')

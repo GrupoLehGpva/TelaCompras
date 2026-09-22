@@ -32,6 +32,23 @@ A fila filtra por **Normal** e **Urgente**. **Mensal** aparece marcada como
 "em breve" e não filtra: a compra mensal segue outro fluxo e ainda não passa
 pela mesa do comprador.
 
+## O campo de fornecedor não pode listar tudo
+
+O cadastro tem 3.568 fornecedores ativos. A API do Supabase devolve no máximo
+**1.000 linhas por consulta** — foi o que cortou o catálogo de itens em 1.000
+(commit "Catalogo vinha cortado em 1.000 itens"). Então o campo de fornecedor
+**não** deve carregar a tabela inteira. O certo é buscar no servidor:
+
+```sql
+select id, nome_curto, razao_social, cidade, uf
+from fornecedores
+where ativo and (nome_curto ilike '%'||:busca||'%' or razao_social ilike '%'||:busca||'%')
+order by nome_curto limit 20;
+```
+
+Dispara a partir de 2 ou 3 letras digitadas. Assim nenhuma tela precisa de
+paginação, e o comprador acha o fornecedor digitando o começo do nome.
+
 ## Fluxo de telas
 
 Fila → clique na linha abre o modal de detalhe (mesmo do `painel.html`) →

@@ -161,15 +161,15 @@ td.r,th.r{text-align:right}
 .map-h{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin:4px 0 8px}
 .map-h h2{font-size:18px;font-weight:600}
 .map-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;margin-bottom:18px}
-.map{min-width:1020px;table-layout:fixed}
+.map{min-width:960px;table-layout:fixed}
 .map col.c-item{width:26%}
 .map col.c-qtd{width:82px}
-.map th,.map td{padding:10px 12px;vertical-align:top}
+.map th,.map td{padding:7px 10px;vertical-align:top}
 .map thead th{background:var(--surface-2);text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink);vertical-align:bottom}
-.map thead th{min-width:215px}
+.map thead th{min-width:196px}
 .map.unico{min-width:720px}
 .map.unico thead .inp{max-width:420px}
-.map.unico .cell .inp.money,.map.unico .affix{max-width:260px}
+.map.unico .cell .inp.money,.map.unico .affix{max-width:230px}
 .map thead .fl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:600;display:block;margin-bottom:4px}
 .map .sticky{position:sticky;left:0;z-index:1;background:var(--surface);border-right:1px solid var(--line)}
 .map thead .sticky{background:var(--surface-2);z-index:2}
@@ -178,19 +178,21 @@ td.r,th.r{text-align:right}
 .it-d.open{-webkit-line-clamp:unset;display:block}
 .it-m{font-size:12px;color:var(--ink-3);margin-top:3px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .more{border:0;background:none;color:var(--accent);cursor:pointer;padding:0;font-size:12px}
-.inp{width:100%;background:var(--surface);border:1px solid var(--line-2);border-radius:7px;padding:10px 12px;min-height:44px;font-size:15px}
+.inp{width:100%;background:var(--surface);border:1px solid var(--line-2);border-radius:5px;padding:6px 9px;min-height:34px;font-size:14px}
 .inp:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px var(--accent-soft)}
-.inp.money{font-family:var(--f-mono);text-align:right;font-variant-numeric:tabular-nums;font-size:16px;font-weight:500;letter-spacing:.01em}
+.inp.money{font-family:var(--f-mono);text-align:right;font-variant-numeric:tabular-nums;font-size:14.5px;font-weight:500}
 .inp.bad,.ctl.bad{border-color:var(--crit);background:var(--crit-soft)}
 .inp:disabled,select.inp:disabled{background:var(--surface-2);color:var(--ink-2);border-color:var(--line)}
-.cell{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
-.cell .lt{grid-column:1/-1;font-size:12px;color:var(--ink-3);display:flex;justify-content:space-between;gap:6px;min-height:18px;font-variant-numeric:tabular-nums}
+.cell{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;align-items:center}
+.cell .lt{grid-column:1/-1;font-size:11.5px;color:var(--ink-3);display:flex;justify-content:space-between;gap:6px;min-height:18px;font-variant-numeric:tabular-nums}
+.map tbody td,.map tfoot td{border-right:1px solid var(--line)}
+.map tbody td:last-child,.map tfoot td:last-child{border-right:0}
 td.chosen{background:var(--accent-soft)}
 td.chosen .lt{color:var(--accent);font-weight:600}
-.pick{width:44px;height:44px;border-radius:50%;border:2px solid var(--line-2);background:var(--surface);cursor:pointer;display:grid;place-items:center;flex:none}
+.pick{width:30px;height:30px;border-radius:50%;border:2px solid var(--line-2);background:var(--surface);cursor:pointer;display:grid;place-items:center;flex:none}
 .pick:hover:not(:disabled){border-color:var(--accent)}
 .pick[aria-pressed="true"]{border-color:var(--accent);background:var(--accent)}
-.pick[aria-pressed="true"]::after{content:"";width:9px;height:16px;border:solid var(--accent-ink);border-width:0 3px 3px 0;transform:rotate(42deg) translate(-1px,-2px)}
+.pick[aria-pressed="true"]::after{content:"";width:6px;height:11px;border:solid var(--accent-ink);border-width:0 2.5px 2.5px 0;transform:rotate(42deg) translate(-1px,-1px)}
 .pick:disabled{opacity:.35;cursor:not-allowed}
 .tag-menor{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ok)}
 tr.bad-row td.sticky{box-shadow:inset 3px 0 0 var(--crit)}
@@ -198,7 +200,7 @@ tr.bad-row td.sticky{box-shadow:inset 3px 0 0 var(--crit)}
 .map tfoot td,.map tfoot th{background:var(--surface-2);border-bottom:1px solid var(--line)}
 .map tfoot th{font-size:12px;text-transform:none;letter-spacing:0;color:var(--ink-2);font-weight:600;vertical-align:middle}
 .map tfoot .hint{display:block;font-weight:400;font-size:11.5px;color:var(--ink-3)}
-.affix{display:grid;grid-template-columns:24px minmax(0,1fr) 36px;align-items:center;gap:6px}
+.affix{display:grid;grid-template-columns:20px minmax(0,1fr) 32px;align-items:center;gap:5px}
 .affix .pre{text-align:right}.affix .suf{text-align:left}
 .affix span{font-size:12px;color:var(--ink-3);white-space:nowrap}
 .tot{display:flex;flex-direction:column;gap:2px;font-variant-numeric:tabular-nums}
