@@ -103,7 +103,7 @@
     border-radius:var(--raio);background:var(--card)}
   table.lista{width:100%;border-collapse:collapse;table-layout:fixed;min-width:980px}
   table.lista col.c-num{width:148px}   table.lista col.c-ass{width:auto}
-  table.lista col.c-cc{width:180px}    table.lista col.c-itens{width:64px}
+  table.lista col.c-cc{width:180px}    table.lista col.c-itens{width:84px}
   table.lista col.c-data{width:116px}  table.lista col.c-onde{width:250px}
   table.lista th,table.lista td{padding:15px 12px;text-align:left;vertical-align:top;
     border-bottom:1px solid var(--borda)}
@@ -191,6 +191,37 @@
     font:inherit;font-size:12.5px;font-weight:650;cursor:pointer;display:inline-flex;
     align-items:center;gap:6px}
   .ver-motivo:hover{border-color:var(--erro)}
+  /* ---- os itens, num clique ----
+     A lista responde "onde está"; o que foi pedido ficava só dentro do pedido.
+     Um clique na linha (ou no número de itens) abre os itens logo embaixo, sem
+     sair da tela. Como o botão do motivo, este não muda nada: abre e fecha. */
+  .ver-itens{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;
+    border-radius:var(--pilula);border:1px solid var(--borda);background:var(--card);
+    color:var(--texto);font:inherit;font-size:14px;font-weight:650;cursor:pointer;
+    font-variant-numeric:tabular-nums}
+  .ver-itens:hover,.ver-itens[aria-expanded="true"]{border-color:var(--verde);color:var(--verde)}
+  .ver-itens .seta{display:inline-block;font-size:10px;transition:transform .15s}
+  .ver-itens[aria-expanded="true"] .seta{transform:rotate(180deg)}
+  table.lista tr.linha-pedido{cursor:pointer}
+  table.lista tr.linha-pedido:hover td{background:var(--realce)}
+  table.lista tr.linha-pedido.aberta td{border-bottom-color:transparent;background:var(--realce)}
+  table.lista tr.itens-do-pedido td{background:var(--realce);padding:0 12px 16px 24px}
+  table.lista tr.itens-do-pedido[hidden]{display:none}
+  .caixa-itens{background:var(--card);border:1px solid var(--borda);border-radius:var(--raio);
+    padding:6px 16px}
+  .caixa-itens ul{list-style:none;margin:0;padding:0}
+  .caixa-itens li{display:flex;gap:14px;align-items:baseline;padding:9px 0;
+    border-bottom:1px solid var(--borda)}
+  .caixa-itens li:last-child{border-bottom:0}
+  .caixa-itens .qtd{flex:none;min-width:92px;font-weight:700;font-variant-numeric:tabular-nums}
+  .caixa-itens .desc{flex:1;min-width:0;word-break:break-word}
+  .caixa-itens .cod{flex:none;color:var(--muted);font-family:var(--mono);font-size:12.5px}
+  .caixa-itens .fora{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:var(--pilula);
+    background:var(--et-cot-bg);color:var(--et-cot);font-size:11.5px;font-weight:650}
+  .caixa-itens .aviso-itens{padding:10px 0;color:var(--muted);font-size:13.5px}
+  .caixa-itens .rodape-itens{padding:8px 0 4px;font-size:13px}
+  .caixa-itens .rodape-itens a{color:var(--verde);font-weight:650;text-decoration:none}
+  .caixa-itens .rodape-itens a:hover{text-decoration:underline}
   .sem-motivo{display:block;color:var(--muted);font-size:12.5px;margin-top:7px;font-style:italic}
 
   .fundo-modal{position:fixed;inset:0;background:rgba(0,20,32,.55);display:flex;
@@ -215,7 +246,7 @@
   .vazio[hidden]{display:none}
 
   @media (max-width:520px){ .envelope{padding:14px 10px 48px} .filtro{min-width:0;width:100%} }
-  @media print{ .barra,.aviso-leitura{display:none} .rolagem{overflow:visible;border:0} body{background:#fff} }
+  @media print{ .barra,.aviso-leitura{display:none} .ver-itens .seta{display:none} .rolagem{overflow:visible;border:0} body{background:#fff} }
 </style>
 </head>
 <body>
@@ -338,6 +369,30 @@ async function rpc(nome, corpo){
 let LISTA = [];
 let termo = '';
 
+/* Os itens chegam numa segunda consulta, depois da lista: se ela falhar, a
+   lista continua de pé e só a caixa de itens avisa. `abertas` guarda quais
+   linhas estão abertas, para o filtro redesenhar sem fechar nada. */
+let ITENS = null;          // { solicitacao_id: [itens] } quando carregou
+let cargaItens = null;     // a promessa da consulta, para quem clicar antes de chegar
+let falhaItens = false;
+const abertas = new Set();
+
+function carregarItens(){
+  if(cargaItens) return cargaItens;
+  cargaItens = rpc('itens_das_minhas_solicitacoes', { p_token: TOKEN })
+    .then(linhas => {
+      ITENS = {};
+      (linhas || []).forEach(i => (ITENS[i.solicitacao_id] = ITENS[i.solicitacao_id] || []).push(i));
+      falhaItens = false;
+    })
+    .catch(() => { falhaItens = true; cargaItens = null; })
+    .then(() => abertas.forEach(id => preencherItens(id)));
+  return cargaItens;
+}
+
+const qtdBR = q => q == null || q === '' ? '—'
+  : (isNaN(Number(q)) ? String(q) : Number(q).toLocaleString('pt-BR', { maximumFractionDigits: 3 }));
+
 /* Uma cor por etapa, sempre a mesma, aqui e na tela de quem aprova. A cor
    nunca contradiz a palavra ao lado — ela só deixa achar mais rápido. */
 const ETAPAS = ['lider', 'cotacao', 'gerencial', 'financeiro'];
@@ -391,6 +446,8 @@ function visiveis(){
 
 function linha(s){
   const tr = document.createElement('tr');
+  tr.className = 'linha-pedido' + (abertas.has(s.id) ? ' aberta' : '');
+  tr.dataset.id = s.id;
   const link = 'pedido.html?id=' + encodeURIComponent(s.id);
   const cls = classeDe(s);
 
@@ -398,7 +455,11 @@ function linha(s){
     '<td class="num ' + cls + '"><a href="' + link + '">' + esc(s.numero || '—') + '</a></td>' +
     '<td><span class="corta">' + esc(s.assunto || '—') + '</span></td>' +
     '<td><span class="corta">' + esc(s.centro_custo_nome || '—') + '</span></td>' +
-    '<td class="n">' + (s.total_itens == null ? '—' : s.total_itens) + '</td>' +
+    '<td class="n">' + (s.total_itens == null ? '—'
+      : '<button type="button" class="ver-itens so-leitura" data-id="' + esc(s.id) + '"' +
+        ' aria-expanded="' + abertas.has(s.id) + '" aria-controls="itens-' + esc(s.id) + '"' +
+        ' title="Ver os itens pedidos">' + s.total_itens + '<span class="seta" aria-hidden="true">▾</span></button>') +
+    '</td>' +
     '<td>' + dataBR(s.aberto_em) + haQuanto(s) + '</td>' +
     '<td>' + dataBR(s.data_necessidade) + '</td>' +
     '<td class="etapa-cel ' + cls + '">' + trilha(s) +
@@ -414,7 +475,57 @@ function linha(s){
             : '<span class="sem-motivo">Motivo não registrado</span>')
         : '') +
     '</td>';
-  return tr;
+
+  /* A linha dos itens nasce junto, escondida, logo abaixo da do pedido. */
+  const det = document.createElement('tr');
+  det.className = 'itens-do-pedido';
+  det.id = 'itens-' + s.id;
+  det.hidden = !abertas.has(s.id);
+  det.innerHTML = '<td colspan="7"><div class="caixa-itens"></div></td>';
+  return [tr, det];
+}
+
+function preencherItens(id){
+  const det = document.getElementById('itens-' + id);
+  if(!det) return;
+  const caixa = det.querySelector('.caixa-itens');
+  const s = LISTA.find(x => x.id === id) || {};
+  const link = 'pedido.html?id=' + encodeURIComponent(id);
+  const rodape = '<div class="rodape-itens"><a href="' + link + '">Abrir a solicitação completa →</a></div>';
+
+  if(falhaItens){
+    caixa.innerHTML = '<div class="aviso-itens">Não consegui carregar os itens agora. ' +
+      'Feche e abra de novo, ou abra a solicitação completa.</div>' + rodape;
+    return;
+  }
+  if(!ITENS){
+    caixa.innerHTML = '<div class="aviso-itens">Carregando os itens…</div>';
+    return;
+  }
+  const itens = ITENS[id] || [];
+  if(!itens.length){
+    caixa.innerHTML = '<div class="aviso-itens">Esta solicitação não tem itens registrados.</div>' + rodape;
+    return;
+  }
+  caixa.innerHTML = '<ul>' + itens.map(i =>
+    '<li><span class="qtd">' + qtdBR(i.quantidade) + ' ' + esc(i.unidade || '') + '</span>' +
+    '<span class="desc">' + esc(i.descricao || '—') +
+      (i.fora_catalogo ? '<span class="fora">fora do catálogo</span>' : '') + '</span>' +
+    (i.codigo ? '<span class="cod">cód. ' + esc(i.codigo) + '</span>' : '') +
+    '</li>').join('') + '</ul>' + rodape;
+}
+
+function alternarItens(id){
+  const det = document.getElementById('itens-' + id);
+  if(!det) return;
+  const abrir = det.hidden;
+  if(abrir) abertas.add(id); else abertas.delete(id);
+  det.hidden = !abrir;
+  const tr = document.querySelector('tr.linha-pedido[data-id="' + CSS.escape(id) + '"]');
+  if(tr) tr.classList.toggle('aberta', abrir);
+  const b = tr && tr.querySelector('.ver-itens');
+  if(b) b.setAttribute('aria-expanded', String(abrir));
+  if(abrir){ preencherItens(id); if(!ITENS && !cargaItens) carregarItens(); }
 }
 
 function desenhar(){
@@ -423,16 +534,18 @@ function desenhar(){
   const encerradas = lista.filter(s => s.encerrada);
 
   const corpoA = $('corpoAndamento'); corpoA.innerHTML = '';
-  andamento.forEach(s => corpoA.appendChild(linha(s)));
+  andamento.forEach(s => linha(s).forEach(t => corpoA.appendChild(t)));
   $('rolagemAndamento').hidden = andamento.length === 0;
   $('vazioAndamento').hidden   = andamento.length > 0;
   $('vazioAndamento').querySelector('b').textContent =
     LISTA.some(s => !s.encerrada) ? 'Nada com esse filtro.' : 'Nenhuma solicitação em andamento.';
 
   const corpoE = $('corpoEncerradas'); corpoE.innerHTML = '';
-  encerradas.forEach(s => corpoE.appendChild(linha(s)));
+  encerradas.forEach(s => linha(s).forEach(t => corpoE.appendChild(t)));
   $('tituloEncerradas').hidden  = encerradas.length === 0;
   $('rolagemEncerradas').hidden = encerradas.length === 0;
+
+  abertas.forEach(id => preencherItens(id));
 
   const emAberto = LISTA.filter(s => !s.encerrada).length;
   $('seloTotal').textContent = emAberto + (emAberto === 1 ? ' em andamento' : ' em andamento');
@@ -468,6 +581,7 @@ async function abrir(){
     $('carregando').hidden = true;
     $('conteudo').hidden = false;
     desenhar();
+    carregarItens();
   }catch(e){
     falhar('Não consegui carregar as suas solicitações.', String(e.message).slice(0,220));
   }
@@ -499,7 +613,16 @@ function fecharMotivo(){ $('fundoModal').hidden = true; }
 
 document.addEventListener('click', e => {
   const b = e.target.closest('.ver-motivo');
-  if(b) abrirMotivo(b.dataset.id);
+  if(b) return abrirMotivo(b.dataset.id);
+
+  const v = e.target.closest('.ver-itens');
+  if(v) return alternarItens(v.dataset.id);
+
+  /* Clicar em qualquer ponto da linha também abre os itens — menos no número
+     (que abre o pedido) e em outro botão. Quem seleciona texto para copiar
+     não quer a linha abrindo e fechando. */
+  const tr = e.target.closest('tr.linha-pedido');
+  if(tr && !e.target.closest('a,button') && !String(window.getSelection() || '')) alternarItens(tr.dataset.id);
 });
 $('btnFechar').addEventListener('click', fecharMotivo);
 $('fundoModal').addEventListener('click', e => { if(e.target === $('fundoModal')) fecharMotivo(); });
