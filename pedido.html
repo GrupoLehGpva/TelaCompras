@@ -89,6 +89,15 @@
     padding:18px 20px;margin-bottom:16px}
   .cartao h2{margin:0 0 14px;font-size:13px;font-weight:700;letter-spacing:.7px;
     text-transform:uppercase;color:var(--muted)}
+  .anexos{list-style:none;margin:0;padding:0}
+  .anexos li{border-bottom:1px solid var(--borda)}
+  .anexos li:last-child{border-bottom:0}
+  .anexos a{display:flex;align-items:center;gap:12px;padding:11px 2px;
+    color:var(--texto);text-decoration:none;font-weight:600;word-break:break-word}
+  .anexos a:hover{color:var(--verde)}
+  .anexos .tipo{flex:none;font-size:11px;font-weight:700;letter-spacing:.6px;
+    padding:3px 9px;border-radius:999px;background:var(--realce);color:var(--muted)}
+  .anexos .peso{flex:none;margin-left:auto;color:var(--muted);font-weight:400;font-size:13px}
   .ficha{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px 22px;margin:0}
   .ficha dt{font-size:11px;letter-spacing:.7px;text-transform:uppercase;color:var(--muted)}
   .ficha dd{margin:3px 0 0;font-size:15px;font-weight:600;line-height:1.4;word-break:break-word}
@@ -248,6 +257,13 @@
     <section class="cartao" id="cartaoEscopo" hidden>
       <h2>Escopo do serviço</h2>
       <p class="escopo" id="escopoTexto"></p>
+    </section>
+
+    <!-- Anexos: foto ou documento que quem pediu mandou junto. Só leitura —
+         o arquivo abre numa aba nova, servido pelo fluxo do n8n. -->
+    <section class="cartao" id="cartaoAnexos" hidden>
+      <h2>Anexos</h2>
+      <ul class="anexos" id="listaAnexos"></ul>
     </section>
 
     <section class="cartao" id="cartaoItens">
@@ -501,6 +517,27 @@ function campo(rotulo, valor, solto){
   return '<div><dt>' + rotulo + '</dt><dd' + (solto ? ' class="solto"' : '') + '>' + esc(valor || '—') + '</dd></div>';
 }
 
+/* O arquivo não sai do banco: quem entrega é o fluxo do n8n, que lê o bucket
+   privado com a chave de serviço. A tela só monta o link. */
+const ANEXO_URL = 'https://grupoleh.app.n8n.cloud/webhook/anexo';
+let ANEXOS = [];
+
+const pesoBR = b => !b ? '' : (b >= 1048576 ? (b/1048576).toFixed(1).replace('.',',') + ' MB'
+                                            : Math.max(1, Math.round(b/1024)) + ' KB');
+const tipoCurto = m => /pdf/i.test(m||'') ? 'PDF' : (/^image\//i.test(m||'') ? 'FOTO' : 'ARQUIVO');
+
+function desenharAnexos(anexos){
+  const lista = Array.isArray(anexos) ? anexos : [];
+  if(!lista.length){ $('cartaoAnexos').hidden = true; return; }
+  $('listaAnexos').innerHTML = lista.map(a =>
+    '<li><a href="' + ANEXO_URL + '?id=' + encodeURIComponent(a.id) + '" target="_blank" rel="noopener">' +
+      '<span class="tipo">' + tipoCurto(a.mime) + '</span>' +
+      '<span class="nome">' + esc(a.nome || 'arquivo') + '</span>' +
+      '<span class="peso">' + pesoBR(a.tamanho) + '</span>' +
+    '</a></li>').join('');
+  $('cartaoAnexos').hidden = false;
+}
+
 function desenhar(s, itens){
   ITENS = itens;
   const numero = s.numero || '—';
@@ -534,6 +571,8 @@ function desenhar(s, itens){
     $('justificativaTexto').textContent = s.justificativa_fornecedor;
     $('cartaoJustificativa').hidden = false;
   }
+  desenharAnexos(ANEXOS);
+
   if(ehServico){
     $('escopoTexto').textContent = itens[0].descricao;
     $('cartaoEscopo').hidden = false;
@@ -581,6 +620,7 @@ async function abrir(){
     }
     const s = resposta.pedido;
     const itens = resposta.itens || [];
+    ANEXOS = resposta.anexos || [];
     CENTRO_NOME = s.centro_custo_nome || await nomeDoCentro(s.centro_custo);
     SOLICITACAO = s;
     desenhar(s, itens);

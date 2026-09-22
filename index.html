@@ -777,6 +777,65 @@ async function apiRpc(nome, corpo){
   if(!r.ok) throw new Error(await r.text());
   return r.json();
 }
+
+/* ----------------------------------------------------------------------------
+   ANEXO — foto ou PDF que o solicitante manda junto
+   O arquivo sobe para o bucket privado "anexos", em <solicitacao_id>/<uuid>.<ext>,
+   e registrar_anexos guarda o metadado. As telas de detalhe pedem um link
+   assinado na hora de abrir, então o arquivo nunca fica exposto por link fixo.
+   Anexo que falha NUNCA derruba o envio: o pedido já está gravado e numerado;
+   a tela diz o que não subiu, para a pessoa reenviar ou avisar o Compras. */
+const ANEXO_MAX_BYTES = 10 * 1024 * 1024;   // mesmo limite do bucket
+const ANEXO_TIPOS = ['image/jpeg','image/png','image/webp','image/heic','image/gif','application/pdf'];
+
+function anexoRecusado(f){
+  if(f.size > ANEXO_MAX_BYTES) return 'passa de 10 MB';
+  if(f.type && !ANEXO_TIPOS.includes(f.type)) return 'não é foto nem PDF';
+  return null;
+}
+function tamanhoLegivel(b){
+  if(b < 1024) return b + ' B';
+  if(b < 1024*1024) return (b/1024).toFixed(0) + ' KB';
+  return (b/1024/1024).toFixed(1).replace('.', ',') + ' MB';
+}
+function caminhoDoAnexo(solicitacaoId, arquivo){
+  const ext  = (String(arquivo.name).match(/\.[A-Za-z0-9]+$/) || [''])[0].toLowerCase();
+  const unico = (self.crypto && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  return solicitacaoId + '/' + unico + ext;
+}
+async function subirAnexos(solicitacaoId){
+  const arquivos = estado.anexos || [];
+  if(!arquivos.length) return { enviados:0, falhas:[] };
+  const metadados = [], falhas = [];
+  for(const f of arquivos){
+    const recusa = anexoRecusado(f);
+    if(recusa){ falhas.push(f.name + ' — ' + recusa); continue; }
+    const caminho = caminhoDoAnexo(solicitacaoId, f);
+    try{
+      const r = await fetch(SUPABASE_URL + '/storage/v1/object/anexos/' + encodeURI(caminho), {
+        method:'POST',
+        headers:{ 'apikey':SUPABASE_KEY, 'Authorization':'Bearer ' + SUPABASE_KEY,
+                  'Content-Type': f.type || 'application/octet-stream', 'x-upsert':'false' },
+        body: f
+      });
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      metadados.push({ nome:f.name, caminho:caminho, mime:f.type || 'application/octet-stream', tamanho:f.size });
+    }catch(e){
+      falhas.push(f.name + ' — ' + String(e.message).slice(0,60));
+    }
+  }
+  if(metadados.length){
+    try{
+      const reg = await apiRpc('registrar_anexos', { p_solicitacao_id: solicitacaoId, p_anexos: metadados });
+      if(!reg || reg.ok !== true) throw new Error((reg && reg.mensagem) || 'o banco recusou o registro');
+    }catch(e){
+      falhas.push('os arquivos subiram mas não ficaram ligados ao pedido — avise o setor de compras');
+    }
+  }
+  return { enviados: metadados.length, falhas: falhas };
+}
 /* Não existe mais escrita direta em tabela a partir desta página.
    Ficava aqui um apiPost com `Prefer: return=representation`; ele foi embora
    junto com o bug que causou: RETURNING passa pela política de leitura, e
@@ -1316,7 +1375,13 @@ function ligarEventos(){
 
   $('anexos').addEventListener('change', e=>{
     estado.anexos = [...e.target.files];
-    $('listaAnexos').innerHTML = estado.anexos.map(f=>'<li>📄 '+f.name+'</li>').join('');
+    $('listaAnexos').innerHTML = estado.anexos.map(f=>{
+      const recusa = anexoRecusado(f);
+      return '<li>' + (recusa ? '⚠️ ' : '📄 ') + f.name +
+             ' <span style="opacity:.7">(' + tamanhoLegivel(f.size) + ')</span>' +
+             (recusa ? '<span style="color:var(--erro);font-weight:600"> — ' + recusa +
+                       ', esse não vai subir</span>' : '') + '</li>';
+    }).join('');
   });
 
   $('btnAvancar').addEventListener('click', avancar);
@@ -1787,7 +1852,7 @@ function nomeDe(lista, id){
   return achado ? achado.nome : (id || '');
 }
 
-function montarPacote(solicitacaoId, cabecalho, itens){
+function montarPacote(solicitacaoId, cabecalho, itens, anexosEnviados){
   const centro     = estado.centroCustoNome || nomeDe(DADOS.centrosCusto, cabecalho.centro_custo);
   const tipoCompra = (DADOS.tiposCompra.find(t=>t.id===cabecalho.tipo_compra)||{}).titulo || '';
   const defForn    = (DADOS.definicoesFornecedor.find(f=>f.id===cabecalho.definicao_fornecedor)||{}).titulo || '';
@@ -1876,7 +1941,9 @@ function montarPacote(solicitacaoId, cabecalho, itens){
       '**Definição de fornecedor:** ' + defForn +
         (cabecalho.justificativa_fornecedor ? ' — ' + cabecalho.justificativa_fornecedor : '') + '\n' +
       '**Entrega até:** ' + (cabecalho.data_necessidade || '—') + '\n' +
-      (estado.observacao.trim() ? '**Observação:** ' + estado.observacao.trim() + '\n' : '') + '\n' +
+      (estado.observacao.trim() ? '**Observação:** ' + estado.observacao.trim() + '\n' : '') +
+      (anexosEnviados ? '**Anexos:** ' + contar(anexosEnviados, 'arquivo', 'arquivos') +
+                        ' — abra o pedido para ver\n' : '') + '\n' +
       (estado.tipo === 'servico'
         ? '**Escopo do serviço**\n' + estado.escopoServico.trim()
         : '**Itens (' + itens.length + ')**\n' + linhas)
@@ -1996,10 +2063,12 @@ async function enviar(){
     cabecalho.coluna_inicial  = criada.coluna_inicial;
     cabecalho.pulou_lideranca = criada.pulou_lideranca;
     cabecalho.motivo_do_pulo  = criada.motivo_do_pulo;
-    const pacote = montarPacote(criada.id, cabecalho, itens);
+    /* Os anexos sobem agora: o pedido já existe e tem id, que é a pasta deles. */
+    const anexos = await subirAnexos(criada.id);
+    const pacote = montarPacote(criada.id, cabecalho, itens, anexos.enviados);
     const aviso  = await avisarWebhook(pacote);
     ultimoPacote = pacote;
-    concluir(cabecalho, itens, 'Gravado no Supabase · ' + aviso.nota, aviso.ok);
+    concluir(cabecalho, itens, 'Gravado no Supabase · ' + aviso.nota, aviso.ok, anexos);
   }catch(e){
     botao.disabled = false; botao.textContent = 'Enviar solicitação';
     mostrarAlerta('<b>Não consegui gravar no Supabase.</b><br><code>'+String(e.message).slice(0,300)+'</code>' +
@@ -2008,7 +2077,7 @@ async function enviar(){
   }
 }
 
-function concluir(cabecalho, itens, nota, cardCriado){
+function concluir(cabecalho, itens, nota, cardCriado, anexos){
   $('okNumero').textContent = cabecalho.numero + ' · ' + nota;
 
   const falhou = cardCriado === false;
@@ -2022,6 +2091,14 @@ function concluir(cabecalho, itens, nota, cardCriado){
       cabecalho.numero + ', mas o card não foi criado no ClickUp — então nenhuma ' +
       'aprovação vai começar sozinha.<br><br>' +
       'Avise o setor de compras com esse número, ou envie de novo daqui a alguns minutos.';
+  }
+  if(anexos && anexos.falhas.length){
+    $('okAviso').hidden = false;
+    $('okAviso').innerHTML = ($('okAviso').innerHTML ? $('okAviso').innerHTML + '<br><br>' : '') +
+      '<b>' + contar(anexos.falhas.length, 'anexo não subiu', 'anexos não subiram') + '.</b> ' +
+      'O pedido ' + cabecalho.numero + ' foi gravado do mesmo jeito.<br>' +
+      anexos.falhas.map(f => '• ' + f).join('<br>') +
+      '<br><br>Mande o arquivo ao setor de compras com esse número.';
   }
   $('okPayload').textContent = JSON.stringify(
     ultimoPacote || { solicitacao: cabecalho, itens: itens }, null, 2);

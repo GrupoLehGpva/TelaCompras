@@ -1,88 +1,119 @@
-/* A regra de quando o card pode sair de "compras · cotação".
+/* A conferência da cotação — que desde 22/09 NÃO TRAVA MAIS NADA.
  *
- * Era: os três orçamentos E os três valores. Cotação de fornecedor único
- * existe e é legítima — o próprio formulário pergunta se é cotação ou
- * fornecedor único, com justificativa — e a regra antiga devolvia esses cards
- * para sempre.
+ * História curta: a regra antiga exigia orçamento e valor de cada fornecedor e
+ * DEVOLVIA o card para "compras · cotação" quando algo faltava. Em 22/09 os
+ * campos do quadro mudaram — saíram "Valor Fornecedor 1/2/3", "Local da
+ * entrega" e "Valor Total"; ficaram três anexos de orçamento, "Fornecedor com
+ * melhor valor" e "Melhor Valor". A conferência continuou lendo os ids velhos,
+ * achou tudo vazio e passou a devolver todo card dizendo que faltava "o Valor
+ * Fornecedor 2". Foi assim que o quadro travou.
  *
- * Passou a ser: pelo menos UM fornecedor completo. O que continua barrado é
- * fornecedor pela metade (PDF sem valor, ou valor sem PDF), porque isso não é
- * escolha de ninguém, é engano — e engano que passa vira aprovação em cima de
- * número que ninguém consegue conferir.
+ * A decisão do Guilherme foi tirar a trava inteira: o card anda, e o que
+ * faltar vira aviso no comentário. Esta bateria protege as duas metades —
+ * que os campos lidos são os de hoje, e que NADA aqui barra card nenhum.
  *
- * Esta bateria roda a MESMA lógica do nó do n8n, copiada aqui. Não é o nó de
- * verdade: o gatilho dele é mudança de card no ClickUp e não dá para disparar
- * sem criar card de mentira. O que ela protege é a regra.
+ * Roda a mesma lógica do nó "Conferir a cotação" do fluxo Fou7AbMfas1ZU7Qc,
+ * copiada aqui: o gatilho dele é mudança de card no ClickUp e não dá para
+ * disparar sem mexer no quadro de verdade.
  */
 const falhas = [];
 const ok = (n, c, d) => c ? null : falhas.push(n + ' — ' + (d || ''));
 
-/* --- a lógica, igual à do nó "Conferir a cotação" --- */
-function conferir({ pdfs, valores, local }) {
-  const faltas = [];
-  for (let i = 0; i < 3; i++) {
-    if (pdfs[i] && !valores[i]) faltas.push('o Valor Fornecedor ' + (i+1) + ' (tem orçamento anexado, falta o valor)');
-    if (!pdfs[i] && valores[i]) faltas.push('o orçamento do Fornecedor ' + (i+1) + ' (tem valor preenchido, falta o anexo)');
-  }
-  const completos = [0,1,2].filter(i => pdfs[i] && valores[i] > 0);
-  if (completos.length === 0)
-    faltas.push('pelo menos um fornecedor completo — orçamento anexado e Valor Fornecedor preenchido');
-  if (!local) faltas.push('o Local da entrega');
+/* Os ids dos campos de hoje, conferidos no card C2609-00001 em 22/09. */
+const F = {
+  orc1:       '4fae1d94-f195-4d6e-aca2-eb7ad4b8a088',
+  orc2:       '0186c77b-0f0c-4793-8459-f56ab065a0c7',
+  orc3:       'c5d354b3-cf64-460c-a00c-b91bcebbbc3a',
+  fornecedor: '447da5e5-99a6-4124-afe7-7c7882e85b6c',
+  valor:      'f86c15a1-9d4a-4297-8936-e51dc5bc2be4'
+};
 
-  const escolhido = completos.length ? valores[completos[0]] : 0;
-  const positivos = completos.map(i => valores[i]);
-  const menor = positivos.length ? Math.min(...positivos) : 0;
+/* --- a lógica, igual à do nó "Conferir a cotação" --- */
+function conferir(camposDoCard) {
+  const campo = {};
+  for (const c of (camposDoCard || [])) campo[c.id] = c.value;
+
+  const temArquivo = v => Array.isArray(v) ? v.length > 0 : !!v;
+  const num = v => { const n = Number(String(v == null ? '' : v).replace(',', '.')); return isNaN(n) ? 0 : n; };
+  const brl = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+  const orcamentos = [F.orc1, F.orc2, F.orc3].filter(id => temArquivo(campo[id])).length;
+  const valor = num(campo[F.valor]);
+  const fornecedor = String(campo[F.fornecedor] == null ? '' : campo[F.fornecedor]).trim();
+
+  const faltando = [];
+  if (!valor)      faltando.push('o *Melhor Valor*');
+  if (!fornecedor) faltando.push('o *Fornecedor com melhor valor*');
+  if (!orcamentos) faltando.push('o orçamento anexado');
+
+  const resumo = valor
+    ? brl(valor) + (fornecedor ? ' — ' + fornecedor : '')
+    : (fornecedor ? fornecedor + ' (sem valor preenchido)' : 'sem valor preenchido');
+
   return {
-    completo: faltas.length === 0,
-    faltasTexto: faltas.join(', '),
-    fornecedoresCotados: completos.length,
-    valorEscolhido: escolhido,
-    foraDaRegra: completos.length > 1 && escolhido > menor
+    valor, fornecedor, orcamentos, resumo,
+    avisoFaltas: faltando.length
+      ? '\n\n:warning: Ficou faltando ' + faltando.join(', ') + '. O card seguiu assim mesmo.'
+      : ''
   };
 }
 
-const LOCAL = 'Fazenda Noricum';
+const anexo = () => [{ id:'x.pdf', title:'orcamento.pdf' }];
+const cardCompleto = [
+  { id: F.orc1, value: anexo() },
+  { id: F.orc2, value: anexo() },
+  { id: F.fornecedor, value: 'VETQUEST' },
+  { id: F.valor, value: '11590' }
+];
 
-// 1 — fornecedor único: passa
-{ const r = conferir({ pdfs:[true,false,false], valores:[1200,0,0], local:LOCAL });
-  ok('1 um fornecedor completo basta', r.completo, r.faltasTexto);
-  ok('1 conta um cotado', r.fornecedoresCotados === 1, String(r.fornecedoresCotados));
-  ok('1 o valor é o dele', r.valorEscolhido === 1200, String(r.valorEscolhido));
-  ok('1 sem alarme de "não é o mais barato"', !r.foraDaRegra, 'alarmou com um fornecedor só'); }
+/* 1 — o card do dia 22/09, do jeito que o Herisson preencheu */
+{ const r = conferir(cardCompleto);
+  ok('1 lê o valor do campo de hoje', r.valor === 11590, String(r.valor));
+  ok('1 lê o fornecedor', r.fornecedor === 'VETQUEST', r.fornecedor);
+  ok('1 conta os orçamentos anexados', r.orcamentos === 2, String(r.orcamentos));
+  ok('1 resumo em real', /R\$\s?11\.590,00/.test(r.resumo), r.resumo);
+  ok('1 resumo diz o fornecedor', /VETQUEST/.test(r.resumo), r.resumo);
+  ok('1 sem aviso quando está tudo lá', r.avisoFaltas === '', r.avisoFaltas); }
 
-// 2 — os três: continua passando
-{ const r = conferir({ pdfs:[true,true,true], valores:[1000,1100,1200], local:LOCAL });
-  ok('2 três completos passam', r.completo, r.faltasTexto);
-  ok('2 conta três', r.fornecedoresCotados === 3);
-  ok('2 sem alarme, o 1 é o mais barato', !r.foraDaRegra); }
+/* 2 — ESTE É O TESTE QUE IMPORTA: nada aqui devolve card.
+       Nem sem valor, nem sem fornecedor, nem sem orçamento nenhum. */
+{ const vazio = conferir([]);
+  ok('2 card vazio não produz devolução',
+     !/[Dd]evolv/.test(JSON.stringify(vazio)), JSON.stringify(vazio));
+  ok('2 card vazio não produz "completo"',
+     !('completo' in vazio), 'voltou a existir um campo que decide se o card passa');
+  ok('2 card vazio só avisa', /Ficou faltando/.test(vazio.avisoFaltas), vazio.avisoFaltas);
+  ok('2 o aviso diz que o card seguiu', /seguiu assim mesmo/.test(vazio.avisoFaltas), vazio.avisoFaltas);
+  ok('2 e o resumo não mente', /sem valor preenchido/.test(vazio.resumo), vazio.resumo); }
 
-// 3 — o 1 não é o mais barato: avisa
-{ const r = conferir({ pdfs:[true,true,false], valores:[1500,900,0], local:LOCAL });
-  ok('3 passa', r.completo, r.faltasTexto);
-  ok('3 avisa que o Fornecedor 1 não é o mais barato', r.foraDaRegra); }
+/* 3 — orçamento anexado e valor em branco: era o caso que travava o quadro */
+{ const r = conferir([{ id: F.orc1, value: anexo() }, { id: F.orc2, value: anexo() }]);
+  ok('3 avisa o valor que falta', /Melhor Valor/.test(r.avisoFaltas), r.avisoFaltas);
+  ok('3 não fala mais em "Valor Fornecedor 2"',
+     !/Valor Fornecedor/.test(r.avisoFaltas), r.avisoFaltas);
+  ok('3 nem em Local da entrega', !/Local da entrega/.test(r.avisoFaltas), r.avisoFaltas);
+  ok('3 conta os dois orçamentos assim mesmo', r.orcamentos === 2, String(r.orcamentos)); }
 
-// 4 — fornecedor pela metade: barrado nos dois sentidos
-{ const r = conferir({ pdfs:[true,true,false], valores:[1000,0,0], local:LOCAL });
-  ok('4 PDF sem valor barra', !r.completo);
-  ok('4 e diz qual', /Valor Fornecedor 2/.test(r.faltasTexto), r.faltasTexto); }
-{ const r = conferir({ pdfs:[true,false,false], valores:[1000,800,0], local:LOCAL });
-  ok('4 valor sem PDF barra', !r.completo);
-  ok('4 e diz qual', /orçamento do Fornecedor 2/.test(r.faltasTexto), r.faltasTexto); }
+/* 4 — valor preenchido e nenhum orçamento: passa, com aviso */
+{ const r = conferir([{ id: F.valor, value: '900' }, { id: F.fornecedor, value: 'COSTAVET' }]);
+  ok('4 aceita valor sem anexo', r.valor === 900 && r.orcamentos === 0, JSON.stringify(r));
+  ok('4 avisa o orçamento que falta', /orçamento anexado/.test(r.avisoFaltas), r.avisoFaltas); }
 
-// 5 — nada preenchido
-{ const r = conferir({ pdfs:[false,false,false], valores:[0,0,0], local:LOCAL });
-  ok('5 card vazio não passa', !r.completo);
-  ok('5 pede um fornecedor completo',
-     /pelo menos um fornecedor completo/.test(r.faltasTexto), r.faltasTexto); }
+/* 5 — valor com vírgula, como o ClickUp às vezes devolve */
+{ const r = conferir([{ id: F.valor, value: '1234,56' }, { id: F.fornecedor, value: 'X' }, { id: F.orc1, value: anexo() }]);
+  ok('5 vírgula vira número', r.valor === 1234.56, String(r.valor)); }
 
-// 6 — o local da entrega continua obrigatório
-{ const r = conferir({ pdfs:[true,false,false], valores:[1200,0,0], local:'' });
-  ok('6 sem local não passa', !r.completo);
-  ok('6 e diz que falta o local', /Local da entrega/.test(r.faltasTexto), r.faltasTexto); }
+/* 6 — campo de anexo vazio é lista vazia, não "tem anexo" */
+{ const r = conferir([{ id: F.orc1, value: [] }, { id: F.valor, value: '10' }, { id: F.fornecedor, value: 'Y' }]);
+  ok('6 lista vazia não conta como orçamento', r.orcamentos === 0, String(r.orcamentos)); }
 
-// 7 — valor zero não conta como cotado
-{ const r = conferir({ pdfs:[true,false,false], valores:[0,0,0], local:LOCAL });
-  ok('7 zero não é proposta', !r.completo, r.faltasTexto); }
+/* 7 — os ids velhos não podem voltar ao código do nó */
+{ const velhos = ['260cd03e-0989-40f9-b537-69c8d146b94d',   // Valor Fornecedor 2
+                  'f8bc2544-d859-4f7e-a3bc-60b7b4d5173d',   // Valor Fornecedor 3
+                  '37268329-340c-4ebd-89ce-9fc3ea75098d'];  // Valor Total
+  const meu = require('fs').readFileSync(__filename, 'utf8');
+  ok('7 sem ids de campos que não existem mais',
+     velhos.every(id => !meu.includes('id: \'' + id)), 'um id morto voltou ao código'); }
 
 console.log('\n===== FALHAS (' + falhas.length + ') =====');
 falhas.forEach(f => console.log(' ✗ ' + f));

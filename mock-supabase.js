@@ -10,10 +10,11 @@
  * é exatamente o que a gente quer que aconteça.
  */
 
-/* Como a função abrir_pedido responde de verdade (ver abrir-pedido.sql). */
-function respostaAbrirPedido(pedido, itens){
+/* Como a função abrir_pedido responde de verdade (ver abrir-pedido.sql).
+   Desde 22/09 ela também devolve os anexos — só os dados, nunca o arquivo. */
+function respostaAbrirPedido(pedido, itens, anexos){
   if(!pedido) return { ok:false, erro:'nao_encontrada' };
-  return { ok:true, pedido, itens: itens || [] };
+  return { ok:true, pedido, itens: itens || [], anexos: anexos || [] };
 }
 
 /* Como a função criar_solicitacao responde de verdade (ver criar-solicitacao.sql).
@@ -58,7 +59,7 @@ function respostaDecisao({ ok=true, resultado='aprovado', mensagem='aprovada', n
  * Ordem importa: no Playwright a rota registrada por ÚLTIMO ganha. Por isso as
  * rotas específicas (rpc/abrir_pedido) entram depois das genéricas (rpc/**). */
 async function instalar(p, {
-  pedido = null, itens = [], fila = null, centros = [], decisao = null,
+  pedido = null, itens = [], anexos = [], fila = null, centros = [], decisao = null,
   aoDecidir = null
 } = {}){
   const json = corpo => ({ status:200, contentType:'application/json', body: JSON.stringify(corpo) });
@@ -69,7 +70,7 @@ async function instalar(p, {
     await p.route('**/rest/v1/rpc/**', r => r.fulfill(json(fila)));
   }
 
-  await p.route('**/rest/v1/rpc/abrir_pedido**', r => r.fulfill(json(respostaAbrirPedido(pedido, itens))));
+  await p.route('**/rest/v1/rpc/abrir_pedido**', r => r.fulfill(json(respostaAbrirPedido(pedido, itens, anexos))));
 
   if(decisao !== null || aoDecidir){
     await p.route('**n8n.cloud/**', async r => {
@@ -86,8 +87,8 @@ async function instalar(p, {
 
 /* Para as baterias que despacham na mão por URL: um lugar só que sabe qual
    resposta cada endereço devolve. */
-function corpoPorUrl(url, { pedido = null, itens = [], centros = [], fila = [] } = {}){
-  if(url.includes('/rpc/abrir_pedido'))     return respostaAbrirPedido(pedido, itens);
+function corpoPorUrl(url, { pedido = null, itens = [], anexos = [], centros = [], fila = [] } = {}){
+  if(url.includes('/rpc/abrir_pedido'))     return respostaAbrirPedido(pedido, itens, anexos);
   if(url.includes('/rpc/fila_de_aprovacao'))return fila;
   if(url.includes('/rpc/'))                 return fila;
   if(url.includes('solicitacao_itens'))     return itens;

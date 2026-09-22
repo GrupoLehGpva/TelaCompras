@@ -210,6 +210,37 @@ tr.bad-row td.sticky{box-shadow:inset 3px 0 0 var(--crit)}
 .tr-total .sticky{background:var(--surface)!important}
 .win{color:var(--accent)}
 
+
+/* ---- colunas de fornecedor como objeto ---- */
+.map thead th{position:sticky;top:0;z-index:3;box-shadow:inset 0 -1px 0 var(--line-2)}
+.map thead th.sticky{z-index:4}
+.map col.cf{background:var(--surface)}
+.map col.cf-alt{background:color-mix(in srgb,var(--surface-2) 45%,transparent)}
+.fh{display:flex;flex-direction:column;gap:6px}
+.fh-top{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.fh-rot{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:700;background:none;border:0;padding:0;cursor:pointer}
+.fh-rot:hover{color:var(--accent);text-decoration:underline}
+.fh-tot{font-family:var(--f-mono);font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink-3)}
+.fh-tot.win{color:var(--accent)}
+.fh-st{font-size:11.5px;font-weight:600;display:flex;align-items:center;gap:5px;min-height:16px;color:var(--ink-3)}
+.fh-st.ok{color:var(--ok)} .fh-st.falta{color:var(--warn)} .fh-st.venc{color:var(--accent)}
+.map tfoot tr.cond-h th{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);font-weight:700;background:var(--surface-2);padding-top:12px}
+.map tfoot tr.cond-h td{background:var(--surface-2)}
+/* modo foco: destaca a coluna de um fornecedor */
+.map.foco tbody td:not(.col-on),.map.foco tfoot td:not(.col-on),.map.foco thead th:not(.col-on):not(.sticky){opacity:.38}
+.map.foco td.col-on,.map.foco th.col-on{box-shadow:inset 2px 0 0 var(--accent),inset -2px 0 0 var(--accent)}
+.foco-sai{border:0;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:600;cursor:pointer;min-height:32px}
+/* passos do preenchimento */
+.passos{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.passo{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px;color:var(--ink-2)}
+.passo b{font-weight:600;color:var(--ink)}
+.passo .n{width:19px;height:19px;border-radius:50%;background:var(--surface-2);color:var(--ink-2);font-size:11.5px;font-weight:700;display:grid;place-items:center;flex:none}
+.passo.feito{border-color:color-mix(in srgb,var(--ok) 45%,var(--line));background:var(--ok-soft)}
+.passo.feito .n{background:var(--ok);color:var(--surface)}
+.passo.feito b,.passo.feito{color:var(--ok)}
+.passo.agora{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.passo.agora .n{background:var(--accent);color:var(--accent-ink)}
+
 /* resumo */
 .resumo h2{font-size:18px;font-weight:600;margin-bottom:8px}
 .resumo table{min-width:820px}
@@ -581,7 +612,7 @@ const plural = (n, a, b) => n + ' ' + (n === 1 ? a : b);
 /* =====================================================================
    ESTADO DA TELA
    ===================================================================== */
-const S = { view:'fila', tab:'cotar', q:'', tipo:'', comprador:H, carregado:false, solId:null, fam:null, mostrarErros:false,
+const S = { view:'fila', tab:'cotar', q:'', tipo:'', foco:null, comprador:H, carregado:false, solId:null, fam:null, mostrarErros:false,
             modalList:[], modalIdx:-1, flash:null };
 const sol = id => SOLS.find(s => s.id === id);
 const etapa = id => ETAPAS.find(e => e.id === id);
@@ -792,7 +823,7 @@ function navegar(d){ const n = S.modalIdx + d; if (n < 0 || n >= S.modalList.len
 function abrirMapa(id){
   const s = sol(id); if (!s) return;
   cotDe(s);
-  S.view = 'mapa'; S.solId = id; S.mostrarErros = false;
+  S.view = 'mapa'; S.solId = id; S.mostrarErros = false; S.foco = null;
   S.fam = familiasDe(s)[0];
   render(); window.scrollTo(0,0);
 }
@@ -827,6 +858,7 @@ function renderMapa(){
       <div class="fact wide"><div class="k">Motivo</div><div class="v">${esc(s.motivo)}</div></div>
     </div>
     <div class="ftabs" role="tablist" id="ftabs" aria-label="Famílias"></div>
+    <div class="passos" id="passos" aria-label="Como preencher"></div>
     <div class="map-h"><h2 id="map-title"></h2>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         ${ro ? '' : `<button class="btn" type="button" id="bt-menores">${s.defForn === 'unico' ? 'Marcar todos os itens' : 'Escolher os menores preços'}</button>`}
@@ -852,8 +884,13 @@ function pintarTabela(){
   const J = colunas(s);
   const rotulo = j => s.defForn === 'unico' ? 'Fornecedor único' : 'Fornecedor ' + (j+1);
   const errDiv = id => `<div class="err" id="e-${id}" hidden></div>`;
-  const cabec = J.map(j => `<th><span class="fl">${rotulo(j)}</span>
-      <input class="inp" id="n-${k}-${j}" data-k="nome" data-j="${j}" list="dl-forn" autocomplete="off" placeholder="Nome do fornecedor" value="${esc(F.forn[j].nome)}" ${ro}>${errDiv(`n-${k}-${j}`)}</th>`).join('');
+  const cabec = J.map(j => `<th class="cj-${j}"><div class="fh">
+      <span class="fh-top">
+        <button type="button" class="fh-rot" data-foco="${j}" title="Preencher só este fornecedor">${rotulo(j)}</button>
+        <span class="fh-tot" id="hd-${k}-${j}"></span>
+      </span>
+      <input class="inp" id="n-${k}-${j}" data-k="nome" data-j="${j}" list="dl-forn" autocomplete="off" placeholder="Buscar fornecedor pelo nome" value="${esc(F.forn[j].nome)}" ${ro}>
+      <span class="fh-st" id="st-${k}-${j}"></span>${errDiv(`n-${k}-${j}`)}</div></th>`).join('');
   const linhas = itens.map(it => {
     const longo = it.desc.length > 110;
     return `<tr id="row-${k}-${it.id}">
@@ -861,7 +898,7 @@ function pintarTabela(){
         <div class="it-m">${it.cod ? `<span class="mono">${esc(it.cod)}</span>` : ''}${it.fora ? '<span class="pill neutral">fora do catálogo</span>' : ''}${longo ? `<button class="more" type="button" data-more="${it.id}">ver descrição toda</button>` : ''}</div>
         ${errDiv(`row-${k}-${it.id}`)}</td>
       <td class="r num">${qtd(it.qtd)}<br><span class="muted">${esc(it.un)}</span></td>
-      ${J.map(j => `<td id="td-${k}-${it.id}-${j}"><div class="cell">
+      ${J.map(j => `<td class="cj-${j}" id="td-${k}-${it.id}-${j}"><div class="cell">
           <input class="inp money" id="p-${k}-${it.id}-${j}" data-k="preco" data-i="${it.id}" data-j="${j}" inputmode="decimal" autocomplete="off" placeholder="R$ unitário" value="${esc(F.precos[it.id][j])}" aria-label="Preço unitário — ${rotulo(j)} — item ${esc(it.desc.slice(0,60))}" ${ro}>
           <button class="pick" type="button" id="k-${k}-${it.id}-${j}" data-pick data-i="${it.id}" data-j="${j}" aria-pressed="false" aria-label="Escolher ${rotulo(j)} para este item" ${ro}></button>
           <div class="lt"><span class="tag-menor" hidden>menor preço</span><span class="ltv"></span></div>
@@ -869,18 +906,19 @@ function pintarTabela(){
     </tr>`;
   }).join('');
   const nomeVazio = j => !F.forn[j].nome.trim();
-  const linhaForn = (rot, dica, fn) => `<tr><th class="sticky" colspan="2">${rot}${dica ? `<span class="hint">${dica}</span>` : ''}</th>${J.map(fn).join('')}</tr>`;
+  const linhaForn = (rot, dica, fn) => `<tr><th class="sticky" colspan="2">${rot}${dica ? `<span class="hint">${dica}</span>` : ''}</th>${J.map(j => fn(j).replace('<td>', `<td class="cj-${j}">`)).join('')}</tr>`;
   const f = j => F.forn[j];
   const pe = [
+    `<tr class="cond-h"><th class="sticky" colspan="2">Condições de cada fornecedor</th>${J.map(j => `<td class="cj-${j}"></td>`).join('')}</tr>`,
     linhaForn('Desconto', 'sobre os itens escolhidos', j => `<td><div class="affix"><span class="pre"></span><input class="inp money" id="d-${k}-${j}" data-k="desc" data-j="${j}" inputmode="decimal" placeholder="0" value="${esc(f(j).desc)}" aria-label="Desconto de ${rotulo(j)} em %" ${ro}><span class="suf">%</span></div>${errDiv(`d-${k}-${j}`)}</td>`),
     linhaForn('Frete', '0 se incluso no preço', j => `<td><div class="affix"><span class="pre">R$</span><input class="inp money" id="f-${k}-${j}" data-k="frete" data-j="${j}" inputmode="decimal" placeholder="0,00" value="${esc(f(j).frete)}" aria-label="Frete de ${rotulo(j)}" ${ro}><span class="suf"></span></div>${errDiv(`f-${k}-${j}`)}</td>`),
     linhaForn('Prazo de entrega', 'dias após o pedido', j => `<td><div class="affix"><span class="pre"></span><input class="inp money" id="z-${k}-${j}" data-k="prazo" data-j="${j}" inputmode="numeric" placeholder="—" value="${esc(f(j).prazo)}" aria-label="Prazo de entrega de ${rotulo(j)} em dias" ${ro}><span class="suf">dias</span></div>${errDiv(`z-${k}-${j}`)}</td>`),
     linhaForn('Condição de pagamento', '', j => `<td><select class="inp" id="c-${k}-${j}" data-k="cond" data-j="${j}" aria-label="Condição de pagamento de ${rotulo(j)}" ${ro}>
         <option value="">Escolher…</option>${COND_PAG.map(o => `<option ${f(j).cond === o ? 'selected' : ''}>${o}</option>`).join('')}</select>${errDiv(`c-${k}-${j}`)}
         <input class="inp" id="l-${k}-${j}" data-k="condLivre" data-j="${j}" placeholder="Descreva a condição" value="${esc(f(j).condLivre)}" style="margin-top:6px" ${f(j).cond === 'Outra' ? '' : 'hidden'} ${ro}>${errDiv(`l-${k}-${j}`)}</td>`),
-    `<tr class="tr-total"><th class="sticky" colspan="2">Total do fornecedor<span class="hint">itens escolhidos − desconto + frete</span></th>${J.map(j => `<td><div class="tot"><span class="big" id="tt-${k}-${j}">—</span><span class="sm" id="ts-${k}-${j}"></span><span class="sm muted" id="tu-${k}-${j}"></span></div></td>`).join('')}</tr>`,
+    `<tr class="tr-total"><th class="sticky" colspan="2">Total do fornecedor<span class="hint">itens escolhidos − desconto + frete</span></th>${J.map(j => `<td class="cj-${j}"><div class="tot"><span class="big" id="tt-${k}-${j}">—</span><span class="sm" id="ts-${k}-${j}"></span><span class="sm muted" id="tu-${k}-${j}"></span></div></td>`).join('')}</tr>`,
   ].join('');
-  $('map-wrap').innerHTML = `<table class="map ${s.defForn === 'unico' ? 'unico' : ''}"><colgroup><col class="c-item"><col class="c-qtd">${J.map(() => '<col>').join('')}</colgroup>
+  $('map-wrap').innerHTML = `<table class="map ${s.defForn === 'unico' ? 'unico' : ''}"><colgroup><col class="c-item"><col class="c-qtd">${J.map((j,i) => `<col class="cf ${i % 2 ? 'cf-alt' : ''}">`).join('')}</colgroup>
     <thead><tr><th class="sticky">Item</th><th class="r">Qtd.</th>${cabec}</tr></thead>
     <tbody>${linhas}</tbody><tfoot>${pe}</tfoot></table>`;
 }
@@ -908,6 +946,37 @@ function refresh(){
     $(`ts-${S.fam}-${x.j}`).textContent = x.n ? plural(x.n,'item escolhido','itens escolhidos') + (x.desc ? ` · −${n2(x.desc)}%` : '') + (x.frete ? ` · frete ${brl(x.frete)}` : '') : (n ? 'nenhum item escolhido' : '');
     $(`tu-${S.fam}-${x.j}`).textContent = x.tudo !== null && fc.linhas.length > 1 ? 'Se levasse tudo: ' + brl(x.tudo) : '';
   });
+  // cabeçalho de cada fornecedor: total corrente e o que falta nele
+  colunas(s).forEach(j => {
+    const x = fc.forn.find(y => y.j === j), nome = fc.F.forn[j].nome.trim();
+    const temPreco = fc.linhas.some(l => l.valido[j]);
+    const f = fc.F.forn[j];
+    const faltaCond = x.n > 0 && [f.frete, f.prazo, f.cond].some(v => String(v).trim() === '');
+    const hd = $(`hd-${S.fam}-${j}`), st = $(`st-${S.fam}-${j}`);
+    if (hd){
+      hd.textContent = x.n ? brl(x.total) : (temPreco ? brl(x.tudo === null ? 0 : x.tudo) : '');
+      hd.classList.toggle('win', x.n > 0);
+      hd.title = x.n ? 'Total dos itens escolhidos com este fornecedor' : 'Total se ele levasse todos os itens';
+    }
+    if (st){
+      let cls = 'fh-st', txt = '';
+      if (!nome && !temPreco){ txt = ''; }
+      else if (!nome){ cls += ' falta'; txt = 'Falta o nome'; }
+      else if (!temPreco){ cls += ' falta'; txt = 'Falta digitar preços'; }
+      else if (faltaCond){ cls += ' falta'; txt = 'Faltam as condições'; }
+      else if (x.n){ cls += ' venc'; txt = `Leva ${plural(x.n,'item','itens')}`; }
+      else { cls += ' ok'; txt = 'Cotado, sem item escolhido'; }
+      st.className = cls; st.textContent = txt;
+    }
+  });
+  // foco em uma coluna
+  const tabela = document.querySelector('.map');
+  if (tabela){
+    tabela.classList.toggle('foco', S.foco !== null);
+    tabela.querySelectorAll('.col-on').forEach(e => e.classList.remove('col-on'));
+    if (S.foco !== null) tabela.querySelectorAll('.cj-' + S.foco).forEach(e => e.classList.add('col-on'));
+  }
+  pintarPassos(s, C, V);
   // abas de família
   const errosPorFam = {}; V.erros.forEach(e => errosPorFam[e.k] = (errosPorFam[e.k] || 0) + 1);
   $('ftabs').innerHTML = C.fams.map(f => {
@@ -929,6 +998,30 @@ function refresh(){
   pintarResumo(C);
   pintarBarra(V);
 }
+function pintarPassos(s, C, V){
+  const alvo = $('passos'); if (!alvo) return;
+  if (soLeitura(s)){ alvo.innerHTML = ''; return; }
+  const cols = colunas(s);
+  let nomes = 0, comPreco = 0, escolhidos = 0, condOk = 0, condPrec = 0;
+  C.fams.forEach(f => cols.forEach(j => {
+    if (f.F.forn[j].nome.trim()) nomes++;
+    if (f.linhas.some(l => l.valido[j])) comPreco++;
+    const x = f.forn.find(y => y.j === j), ff = f.F.forn[j];
+    if (x.n){ condPrec++; if ([ff.frete, ff.prazo, ff.cond].every(v => String(v).trim() !== '')) condOk++; }
+  }));
+  escolhidos = C.escolhidos;
+  const totalCols = C.fams.length * cols.length;
+  const passos = [
+    { n:1, txt:'Quem cotou', v:`${nomes} de ${totalCols}`, feito: nomes === totalCols },
+    { n:2, txt:'Preços', v:`${comPreco} de ${totalCols} colunas`, feito: comPreco === totalCols },
+    { n:3, txt:'Quem fornece cada item', v:`${escolhidos} de ${C.nItens}`, feito: escolhidos === C.nItens && C.nItens > 0 },
+    { n:4, txt:'Condições de quem venceu', v: condPrec ? `${condOk} de ${condPrec}` : '—', feito: condPrec > 0 && condOk === condPrec },
+  ];
+  const agora = passos.findIndex(p => !p.feito);
+  alvo.innerHTML = passos.map((p,i) => `<span class="passo ${p.feito ? 'feito' : ''} ${i === agora ? 'agora' : ''}">
+      <span class="n">${p.feito ? '✓' : p.n}</span>${p.txt} <b>${p.v}</b></span>`).join('');
+}
+
 function trocarFam(k){ S.fam = k; pintarTabela(); refresh(); const b = document.querySelector(`[data-fam="${k}"]`); if (b) b.focus(); }
 
 function pintarResumo(C){
@@ -1019,6 +1112,18 @@ $('view').addEventListener('keydown', e => {
   if (prox){ prox.focus(); if (prox.select) prox.select(); }
 });
 $('view').addEventListener('click', e => {
+  const fc = e.target.closest('[data-foco]');
+  if (fc && S.view === 'mapa'){
+    const j = +fc.dataset.foco;
+    S.foco = S.foco === j ? null : j;
+    refresh();
+    if (S.foco !== null){
+      const primeiro = document.querySelector(`.map tbody .cj-${j} input`);
+      if (primeiro) primeiro.focus();
+      toast('Preenchendo só o ' + fc.textContent + '. Clique de novo para sair.');
+    }
+    return;
+  }
   const b = e.target.closest('[data-pick],[data-more]'); if (!b || S.view !== 'mapa') return;
   if (b.dataset.more){
     const d = $('dd-' + b.dataset.more), aberto = d.classList.toggle('open');
@@ -1134,6 +1239,7 @@ document.addEventListener('keydown', e => {
     }
     return;
   }
+  if (e.key === 'Escape' && S.view === 'mapa' && S.foco !== null){ S.foco = null; refresh(); return; }
   if (e.key === 'Escape' && !$('pend').hidden){ fecharPend(); if ($('bt-pend')) $('bt-pend').focus(); }
 });
 $('sel-comprador').addEventListener('change', e => { S.comprador = e.target.value; S.tab = 'cotar'; S.q = ''; S.tipo = ''; S.flash = null; render(); });

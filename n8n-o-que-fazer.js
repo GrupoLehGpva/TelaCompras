@@ -110,10 +110,11 @@ const APROVOU = {
     + '*Próximo passo do comprador:*\n'
     + '1. Cotar com os fornecedores\n'
     + '2. Anexar os orçamentos nos campos *Fornecedor 1, 2 e 3* — o mais barato vai sempre no *Fornecedor 1*\n'
-    + '3. Preencher os três *Valor Fornecedor*\n'
-    + '4. Preencher o *Local da entrega*\n'
-    + '5. Mover o card para *aprovação gerencial*\n\n'
-    + 'Faltando qualquer um dos cinco, o card volta para cá com a lista do que falta.',
+    + '3. Preencher o *Fornecedor com melhor valor* e o *Melhor Valor*\n'
+    + '4. Mover o card para *aprovação gerencial*\n\n'
+    /* Até 22/09 o card voltava para cá quando faltava algo. Agora ele anda, e o
+       que faltar vira aviso no comentário — decisão do Guilherme no mesmo dia. */
+    + 'Se faltar algo, o card segue assim mesmo: o fluxo só comenta o que ficou faltando.',
   gerencial: '✅ Aprovado na aprovação gerencial' + quem + ' em ' + agora + '. Segue para o financeiro.',
   financeiro: '✅ Aprovado na aprovação financeira' + quem + ' em ' + agora + '.\n\n'
     + 'O card foi para *ordem de compra* — é a entrada nessa coluna que leva os dados para o GR.'
