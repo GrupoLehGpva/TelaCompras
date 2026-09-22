@@ -128,6 +128,7 @@ th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-
 .fila tbody tr:last-child td{border-bottom:0}
 .fila .t{font-weight:600;font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-width:46ch}
 .fila .s{font-size:12px;color:var(--ink-2)}
+.fila .pill{max-width:230px;overflow:hidden;text-overflow:ellipsis;display:inline-block;vertical-align:middle}
 td.r,th.r{text-align:right}
 .state{background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:32px 18px;text-align:center;color:var(--ink-2)}
 .state h3{font-size:17px;color:var(--ink);margin-bottom:6px}
@@ -155,11 +156,13 @@ td.r,th.r{text-align:right}
 .ftab{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 12px;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:150px;text-align:left}
 .ftab .n{font-family:var(--f-display);font-weight:700;font-size:15px}
 .ftab .st{font-size:12px;color:var(--ink-2);display:flex;gap:6px;align-items:center}
+.ftab .st.exemplo{color:var(--ink-3);font-size:11.5px;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
 .ftab[aria-selected="true"]{border-color:var(--accent);box-shadow:inset 0 -3px 0 var(--accent);background:var(--surface)}
 .ftab.done .st{color:var(--ok)}
 .ftab.bad{border-color:var(--crit)}
 .map-h{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin:4px 0 8px}
 .map-h h2{font-size:18px;font-weight:600}
+.fam-nota{font-family:var(--f-body);font-size:11.5px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);margin-left:6px}
 
 /* ---------- planilha de cotação ---------- */
 .map-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line-2);border-radius:8px;margin-bottom:18px;position:relative}
@@ -170,7 +173,7 @@ td.r,th.r{text-align:right}
 .map th:last-child,.map td:last-child{border-right:0}
 .map tr:last-child td,.map tr:last-child th{border-bottom:0}
 /* cabeçalhos */
-.map thead th{background:var(--surface-2);position:sticky;top:0;z-index:3;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:700}
+.map thead th{background:var(--surface-2);position:sticky;top:0;z-index:3;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);font-weight:700}
 .map thead tr:first-child th{height:auto;padding:8px;vertical-align:bottom}
 .map thead tr:nth-child(2) th{height:26px;z-index:2}
 .map thead tr:nth-child(2) th.u,.map thead tr:nth-child(2) th.t{text-align:right}
@@ -182,25 +185,29 @@ td.r,th.r{text-align:right}
 /* cabeçalho do fornecedor */
 .fh{display:flex;flex-direction:column;gap:5px;min-width:0}
 .fh-top{display:flex;align-items:baseline;gap:8px;justify-content:space-between}
-.fh-rot{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:700;background:none;border:0;padding:0;cursor:pointer}
+.fh-rot{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);font-weight:700;background:none;border:0;padding:0;cursor:pointer}
 .fh-rot:hover{color:var(--accent);text-decoration:underline}
-.fh-tot{font-family:var(--f-mono);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink-3);text-transform:none;letter-spacing:0}
+.fh-tot{font-family:var(--f-mono);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink-2);text-transform:none;letter-spacing:0}
 .fh-tot.win{color:var(--accent)}
-.fh-st{font-size:11px;font-weight:600;min-height:14px;color:var(--ink-3);text-transform:none;letter-spacing:0}
+.fh-st{font-size:11px;font-weight:600;min-height:14px;color:var(--ink-2);text-transform:none;letter-spacing:0}
 .fh-st.ok{color:var(--ok)} .fh-st.falta{color:var(--warn)} .fh-st.venc{color:var(--accent)}
 .fh .inp{font-size:13px}
 /* células */
 .map td.sticky .it-d{font-weight:600;font-size:13px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
 .map td.sticky .it-d.open{-webkit-line-clamp:unset;display:block}
-.it-m{font-size:11px;color:var(--ink-3);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.it-m{font-size:11px;color:var(--ink-2);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .more{border:0;background:none;color:var(--accent);cursor:pointer;padding:0;font-size:11px}
 td.it{padding:6px 8px;height:auto}
-td.qt{text-align:right;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--ink-2);white-space:nowrap}
-td.u{padding:0}
-td.u input{width:100%;height:33px;border:0;background:transparent;padding:0 8px;text-align:right;font-family:var(--f-mono);font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink)}
-td.u input:focus{outline:0;background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
-td.u input::placeholder{color:var(--ink-3);font-family:var(--f-body);font-size:12px}
-td.t{text-align:right;font-family:var(--f-mono);font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink-2);white-space:nowrap}
+td.qt{text-align:right;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--ink);white-space:nowrap}
+td.u{padding:3px 5px;background:color-mix(in srgb,var(--accent-soft) 22%,transparent)}
+td.u input{width:100%;height:28px;border:1px solid var(--line-2);border-radius:4px;background:var(--surface);padding:0 8px;text-align:right;font-family:var(--f-mono);font-size:13.5px;font-weight:500;font-variant-numeric:tabular-nums;color:var(--ink)}
+td.u input:hover:not(:disabled){border-color:var(--accent)}
+td.u input:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+td.u input:disabled{background:var(--surface-2);border-color:var(--line);color:var(--ink-2)}
+td.u input::placeholder{color:color-mix(in srgb,var(--ink-2) 65%,transparent);font-family:var(--f-mono);font-size:13px}
+/* célula de leitura não tem caixa: o olho acha onde digitar */
+td.t,td.qt{background:transparent}
+td.t{text-align:right;font-family:var(--f-mono);font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink);white-space:nowrap}
 td.t .menor{font-family:var(--f-body);font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--ok);font-weight:700;margin-right:5px;vertical-align:1px}
 td.k{text-align:center;padding:0 4px;cursor:pointer}
 .pick{width:20px;height:20px;border-radius:4px;border:1.5px solid var(--line-2);background:var(--surface);cursor:pointer;display:inline-grid;place-items:center;vertical-align:middle}
@@ -209,18 +216,20 @@ td.k{text-align:center;padding:0 4px;cursor:pointer}
 .pick[aria-pressed="true"]::after{content:"";width:5px;height:9px;border:solid var(--accent-ink);border-width:0 2px 2px 0;transform:rotate(42deg) translate(-1px,-1px)}
 .pick:disabled{opacity:.3;cursor:not-allowed}
 td.ganha{background:var(--accent-soft)}
+td.u.ganha input{border-color:var(--accent)}
 td.ganha.t{color:var(--accent);font-weight:600}
 td.t.temmenor{color:var(--ok)}
 tr.bad-row td.sticky{box-shadow:inset 3px 0 0 var(--crit)}
 tr.item-row:hover td:not(.sticky){background:color-mix(in srgb,var(--accent-soft) 35%,transparent)}
 /* rodapé de condições */
-.map tfoot th{background:var(--surface-2);font-size:12px;color:var(--ink-2);font-weight:600;text-transform:none;letter-spacing:0}
-.map tfoot th .hint{display:block;font-weight:400;font-size:11px;color:var(--ink-3)}
+.map tfoot th{background:var(--surface-2);font-size:12px;color:var(--ink);font-weight:600;text-transform:none;letter-spacing:0}
+.map tfoot th .hint{display:block;font-weight:400;font-size:11px;color:var(--ink-2)}
 .map tfoot td{padding:0 6px}
-.map tfoot tr.cond-h th,.map tfoot tr.cond-h td{height:28px;background:var(--surface-2);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:700}
+.map tfoot tr.cond-h th,.map tfoot tr.cond-h td{height:28px;background:var(--surface-2);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);font-weight:700}
 .map tfoot .campo{display:flex;align-items:center;gap:6px;justify-content:flex-end}
-.map tfoot .campo .un{font-size:11.5px;color:var(--ink-3);white-space:nowrap;min-width:26px}
+.map tfoot .campo .un{font-size:11.5px;color:var(--ink-2);white-space:nowrap;min-width:26px}
 .map tfoot .campo .un.pre{text-align:right;min-width:18px}
+.map tfoot input.cond{text-align:left;max-width:170px}
 .map tfoot input,.map tfoot select{height:26px;border:1px solid var(--line-2);border-radius:4px;background:var(--surface);font-size:12.5px;padding:0 6px;max-width:150px;width:100%}
 .map tfoot input.money{font-family:var(--f-mono);text-align:right;font-variant-numeric:tabular-nums}
 .map tfoot input:focus,.map tfoot select:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
@@ -229,7 +238,7 @@ tr.item-row:hover td:not(.sticky){background:color-mix(in srgb,var(--accent-soft
 .tot{display:flex;flex-direction:column;align-items:flex-end;gap:1px;padding:4px 2px}
 .tot .big{font-family:var(--f-mono);font-weight:700;font-size:14px;font-variant-numeric:tabular-nums}
 .tot .big.win{color:var(--accent)}
-.tot .sm{font-size:10.5px;color:var(--ink-3);white-space:nowrap}
+.tot .sm{font-size:10.5px;color:var(--ink-2);white-space:nowrap}
 .err{color:var(--crit);font-size:11px;font-weight:500;padding:0 8px 4px;text-transform:none;letter-spacing:0}
 .inp.bad,input.bad,select.bad{border-color:var(--crit)!important;background:var(--crit-soft)!important}
 /* modo foco */
@@ -366,6 +375,7 @@ kbd{font-family:var(--f-mono);font-size:11.5px;border:1px solid var(--line-2);bo
 <div class="toast" id="toast" role="status" hidden></div>
 
 <datalist id="dl-forn"></datalist>
+<datalist id="dl-cond"></datalist>
 <script>
 /* =====================================================================
    REGRAS DA MESA — ajuste aqui quando o processo for validado
@@ -375,10 +385,36 @@ const REGRAS = {
   minPrecosPorItem: 3,         // menos que isso vira aviso e pede observação ao aprovador
   avisarSeNaoForMenor: true,   // escolher um preço que não é o menor pede observação
 };
-// Nome das famílias do catálogo. O banco hoje só guarda o CÓDIGO (IA, MG, MM…).
-// PENDENTE DE DADO REAL: preencher o nome de cada código. Enquanto isso, mostra o código.
-const FAMILIAS = { IA:'IA', MG:'MG', ELE:'ELE · Elétrica', HID:'HID · Hidráulica', CONS:'CONS · Construção', FORA:'Fora do catálogo' };
-const COND_PAG = ['À vista','7 dias','14 dias','21 dias','28 dias','30 dias','30/60','30/60/90','Outra'];
+// Famílias do catálogo do GR. O banco guarda só a sigla; os nomes abaixo foram
+// DEDUZIDOS pelos itens de cada família e precisam do aval do pessoal do GR.
+// Quando vierem os nomes oficiais, é só trocar aqui.
+const FAMILIAS = {
+  MM:'Peças e materiais de máquinas',
+  MG:'Ferramentas e material geral',
+  SE:'Sementes e tratamento de sementes',
+  DA:'Defensivos agrícolas',
+  FE:'Fertilizantes',
+  ST:'Segurança do trabalho',
+  CC:'Cozinha e copa',
+  SP:'Material de aplicação veterinária',
+  MV:'Medicamentos veterinários',
+  IA:'Insumos da fábrica de ração',
+  AA:'Alimentação animal',
+  HL:'Higiene e limpeza',
+  CL:'Combustíveis e lubrificantes',
+  ME:'Escritório e expediente',
+  MO:'Equipamentos e veículos',
+  AN:'Animais',
+  GR:'Grãos e forragens',
+  RR:'Recursos rurais',
+  RC:'Recicláveis e embalagens vazias',
+  LD:'Limpeza e desinfecção',
+  LIM:'Limpeza', SEM:'Sementes', CON:'Construção', DEF:'Defensivos',
+  PEC:'Peças', PNE:'Pneus', ALI:'Alimentos',
+  ELE:'Elétrica', HID:'Hidráulica', CONS:'Construção',
+  FORA:'Fora do catálogo',
+};
+const COND_PAG = ['À vista','PIX à vista','7 dias','14 dias','21 dias','28 dias','30 dias','30/60','30/60/90','Entrada + 30 dias'];
 // Fornecedores do cadastro do GR (nome fantasia). Amostra de 120 da região,
 // só para o campo de busca do protótipo. Em produção a lista inteira (3.568
 // cadastros ativos) vem da tabela `fornecedores` do banco.
@@ -473,7 +509,7 @@ const famKey = it => it.fam || 'FORA';
 // Fornecedor único ocupa uma coluna só; por cotação, as três do card.
 const colunas = s => s.defForn === 'unico' ? [0] : [0,1,2];
 const minPrecos = s => s.defForn === 'unico' ? 1 : REGRAS.minPrecosPorItem;
-const famNome = k => FAMILIAS[k] || k;
+const famNome = k => k === 'FORA' ? FAMILIAS.FORA : (FAMILIAS[k] ? k + ' · ' + FAMILIAS[k] : k);
 function familiasDe(s){ const o = []; s.itens.forEach(it => { const k = famKey(it); if (!o.includes(k)) o.push(k); }); return o; }
 function novaCot(s){
   const fams = {};
@@ -582,8 +618,7 @@ function validar(s){
         const pz = parseBR(f.prazo);
         if (pz === null) erros.push({ k, id:`z-${k}-${j}`, msg:'Informe o prazo de entrega' });
         else if (Number.isNaN(pz) || pz < 0 || !Number.isInteger(pz)) erros.push({ k, id:`z-${k}-${j}`, msg:'Prazo em dias inteiros' });
-        if (!f.cond) erros.push({ k, id:`c-${k}-${j}`, msg:'Escolha a condição de pagamento' });
-        else if (f.cond === 'Outra' && !f.condLivre.trim()) erros.push({ k, id:`l-${k}-${j}`, msg:'Descreva a condição' });
+        if (!f.cond.trim()) erros.push({ k, id:`c-${k}-${j}`, msg:'Informe a condição de pagamento' });
       }
     });
     fc.linhas.forEach(l => {
@@ -710,7 +745,7 @@ function renderFila(){
         return `<tr data-id="${s.id}" tabindex="0">
           <td class="mono">${s.id}${s.exemplo ? '<br><span class="pill warn">EXEMPLO</span>' : ''}</td>
           <td><span class="t">${esc(tituloSol(s))}</span><span class="s">${esc(s.ccNome)} · ${esc(s.solicitante)}</span>${s.urgente ? ' <span class="pill warn">Urgente</span>' : ''}${s.defForn === 'unico' ? ' <span class="pill accent">Fornecedor único</span>' : ''}</td>
-          <td>${familiasDe(s).map(k => `<span class="pill neutral">${esc(famNome(k))}</span>`).join(' ')}</td>
+          <td>${familiasDe(s).map(k => `<span class="pill neutral" title="${esc(famNome(k))}">${esc(famNome(k))}</span>`).join(' ')}</td>
           <td class="num">${dt(s.necessidade)}<br>${necessidadePill(s)}</td>
           <td>${p ? `<span class="pill ${p.cls}" title="Prazo da etapa: ${p.sla} dias"><span class="dot"></span>${dias(p.d)}</span>` : '—'}</td>
           <td><span class="pill ${e.cls}">${esc(e.txt)}</span></td>
@@ -921,9 +956,7 @@ function pintarTabela(){
     linhaCond('Desconto', 'sobre os itens escolhidos', j => `<div class="campo"><span class="un pre"></span><input class="money" id="d-${k}-${j}" data-k="desc" data-j="${j}" inputmode="decimal" placeholder="0" value="${esc(f(j).desc)}" aria-label="Desconto de ${rotulo(j)} em %" ${ro}><span class="un">%</span></div>${errDiv(`d-${k}-${j}`)}`),
     linhaCond('Frete', '0 se incluso no preço', j => `<div class="campo"><span class="un pre">R$</span><input class="money" id="f-${k}-${j}" data-k="frete" data-j="${j}" inputmode="decimal" placeholder="0,00" value="${esc(f(j).frete)}" aria-label="Frete de ${rotulo(j)}" ${ro}><span class="un"></span></div>${errDiv(`f-${k}-${j}`)}`),
     linhaCond('Prazo de entrega', 'dias após o pedido', j => `<div class="campo"><span class="un pre"></span><input class="money" id="z-${k}-${j}" data-k="prazo" data-j="${j}" inputmode="numeric" placeholder="—" value="${esc(f(j).prazo)}" aria-label="Prazo de entrega de ${rotulo(j)} em dias" ${ro}><span class="un">dias</span></div>${errDiv(`z-${k}-${j}`)}`),
-    linhaCond('Condição de pagamento', '', j => `<div class="campo"><select id="c-${k}-${j}" data-k="cond" data-j="${j}" aria-label="Condição de pagamento de ${rotulo(j)}" ${ro}>
-        <option value="">Escolher…</option>${COND_PAG.map(o => `<option ${f(j).cond === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div>${errDiv(`c-${k}-${j}`)}
-        <div class="campo" style="margin-top:4px"><input id="l-${k}-${j}" data-k="condLivre" data-j="${j}" placeholder="Descreva a condição" value="${esc(f(j).condLivre)}" ${f(j).cond === 'Outra' ? '' : 'hidden'} ${ro}></div>${errDiv(`l-${k}-${j}`)}`),
+    linhaCond('Condição de pagamento', 'digite ou escolha', j => `<div class="campo"><input class="cond" id="c-${k}-${j}" data-k="cond" data-j="${j}" list="dl-cond" autocomplete="off" placeholder="ex.: 28 dias" value="${esc(f(j).cond)}" aria-label="Condição de pagamento de ${rotulo(j)}" ${ro}></div>${errDiv(`c-${k}-${j}`)}`),
     `<tr class="tr-total"><th class="sticky" colspan="2">Total do fornecedor<span class="hint">itens escolhidos − desconto + frete</span></th>${J.map(j => `<td colspan="3" class="cj-${j}"><div class="tot"><span class="big" id="tt-${k}-${j}">—</span><span class="sm" id="ts-${k}-${j}"></span><span class="sm" id="tu-${k}-${j}"></span></div></td>`).join('')}</tr>`,
   ].join('');
 
@@ -998,8 +1031,11 @@ function refresh(){
   $('ftabs').innerHTML = C.fams.map(f => {
     const done = f.escolhidos === f.linhas.length, ne = S.mostrarErros ? (errosPorFam[f.k] || 0) : 0;
     const st = ne ? `<span class="pill crit">${plural(ne,'pendência','pendências')}</span>` : done ? '✓ todos escolhidos' : `${f.escolhidos} de ${f.linhas.length} escolhidos`;
-    return `<button class="ftab ${done && !ne ? 'done' : ''} ${ne ? 'bad' : ''}" role="tab" type="button" data-fam="${f.k}" aria-selected="${f.k === S.fam}">
-      <span class="n">${esc(famNome(f.k))}</span><span class="st">${st}</span><span class="st num">${f.total ? brl(f.total) : '<span class="muted">sem valor</span>'}</span></button>`;
+    const exemplos = f.linhas.slice(0,2).map(l => l.it.desc.split(/[,(]/)[0].trim().slice(0,22)).join(', ');
+    return `<button class="ftab ${done && !ne ? 'done' : ''} ${ne ? 'bad' : ''}" role="tab" type="button" data-fam="${f.k}" aria-selected="${f.k === S.fam}"
+      title="Família ${esc(famNome(f.k))} do catálogo do GR · ${esc(exemplos)}">
+      <span class="n">${esc(famNome(f.k))}</span>
+      <span class="st exemplo">${esc(exemplos)}</span><span class="st">${st}</span><span class="st num">${f.total ? brl(f.total) : '<span class="muted">sem valor</span>'}</span></button>`;
   }).join('');
   $('ftabs').querySelectorAll('[data-fam]').forEach(b => b.onclick = () => trocarFam(b.dataset.fam));
   // erros
@@ -1044,7 +1080,7 @@ function pintarResumo(C){
   const s = sol(S.solId);
   const linhas = [];
   C.fams.forEach(f => f.forn.forEach(x => { if (!x.n) return; const fo = f.F.forn[x.j];
-    linhas.push(`<tr><td>${esc(fo.nome || 'Fornecedor ' + (x.j+1) + ' (sem nome)')}</td><td>${esc(famNome(f.k))}</td><td class="r num">${x.n}</td><td class="r num">${brl(x.sub)}</td><td class="r num">${x.desc ? n2(x.desc) + '%' : '—'}</td><td class="r num">${brl(x.frete)}</td><td class="r num"><strong>${brl(x.total)}</strong></td><td>${fo.prazo ? esc(fo.prazo) + ' dias' : '—'}</td><td>${esc(fo.cond === 'Outra' ? fo.condLivre || 'Outra' : fo.cond || '—')}</td></tr>`); }));
+    linhas.push(`<tr><td>${esc(fo.nome || 'Fornecedor ' + (x.j+1) + ' (sem nome)')}</td><td>${esc(famNome(f.k))}</td><td class="r num">${x.n}</td><td class="r num">${brl(x.sub)}</td><td class="r num">${x.desc ? n2(x.desc) + '%' : '—'}</td><td class="r num">${brl(x.frete)}</td><td class="r num"><strong>${brl(x.total)}</strong></td><td>${fo.prazo ? esc(fo.prazo) + ' dias' : '—'}</td><td>${esc(fo.cond.trim() || '—')}</td></tr>`); }));
   $('resumo').innerHTML = linhas.length
     ? `<div class="tbl-wrap"><table><thead><tr><th>Fornecedor</th><th>Família</th><th class="r">Itens</th><th class="r">Subtotal</th><th class="r">Desconto</th><th class="r">Frete</th><th class="r">Total</th><th>Prazo</th><th>Pagamento</th></tr></thead>
        <tbody>${linhas.join('')}</tbody><tfoot><tr><td colspan="2">Orçamento da solicitação</td><td class="r num">${C.escolhidos} de ${C.nItens}</td><td colspan="3"></td><td class="r num">${brl(C.total)}</td><td colspan="2"></td></tr></tfoot></table></div>
@@ -1100,11 +1136,9 @@ function aoDigitar(e){
   const s = sol(S.solId); if (soLeitura(s)) return;
   const F = s.cot.fams[S.fam], j = +t.dataset.j;
   if (k === 'preco') F.precos[t.dataset.i][j] = t.value; else F.forn[j][k] = t.value;
-  if (k === 'cond'){ const l = $(`l-${S.fam}-${j}`); if (l) l.hidden = t.value !== 'Outra'; }
   marcarSalvo(); refresh();
 }
 $('view').addEventListener('input', aoDigitar);
-$('view').addEventListener('change', e => { if (e.target.tagName === 'SELECT') aoDigitar(e); });
 $('view').addEventListener('focusout', e => {
   const t = e.target, k = t.dataset && t.dataset.k;
   if (S.view !== 'mapa' || !(k === 'preco' || k === 'frete')) return;
@@ -1262,6 +1296,7 @@ document.addEventListener('keydown', e => {
 });
 $('sel-comprador').addEventListener('change', e => { S.comprador = e.target.value; S.tab = 'cotar'; S.q = ''; S.tipo = ''; S.flash = null; render(); });
 $('dl-forn').innerHTML = FORN_SUGERIDOS.map(n => `<option value="${esc(n)}"></option>`).join('');
+$('dl-cond').innerHTML = COND_PAG.map(n => `<option value="${esc(n)}"></option>`).join('');
 
 render();
 setTimeout(() => { S.carregado = true; render(); }, 450);
