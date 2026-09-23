@@ -438,6 +438,51 @@ const b = await chromium.launch();
   ok('23b e ninguém some da lista', r.quantos === 4, 'vieram ' + r.quantos + ' de 4');
   await p.close(); }
 
+/* ---- a roda do mouse não pode mexer na quantidade ----
+   No C2609-00012 (23/09) uma solicitação de 4.000 KG de LISINA foi gravada com
+   3.999. Não há arredondamento em lugar nenhum do código: campo `type=number`
+   com foco muda sozinho quando a roda do mouse passa por cima dele. A tela
+   agora tira o foco no primeiro giro. */
+{ const p = await nova(b);
+  await base(p, 'item');
+  await p.evaluate(()=>{ passoAtual = sequencia().indexOf('item'); render(); });
+  await p.waitForTimeout(200);
+
+  const campo = p.locator('#quantidade');
+  await campo.click();
+  await campo.type('4000');
+  const digitado = await campo.inputValue();
+  ok('roda 1 digitou certo', digitado === '4000', 'veio: ' + digitado);
+
+  const perdeuFoco = await p.evaluate(() => {
+    const c = document.getElementById('quantidade');
+    c.focus();
+    c.dispatchEvent(new WheelEvent('wheel', { deltaY: 120, bubbles: true }));
+    return document.activeElement !== c;
+  });
+  ok('roda 2 o campo perde o foco no giro', perdeuFoco,
+     'o campo continuou focado — a roda do mouse ainda pode mudar o número');
+  ok('roda 3 o valor não mudou', await campo.inputValue() === '4000',
+     'valor virou ' + await campo.inputValue());
+
+  /* Digitar continua funcionando depois do giro: o guarda não pode deixar o
+     campo inutilizável. */
+  await campo.click();
+  await campo.fill('4000');
+  ok('roda 4 dá para digitar de novo', await campo.inputValue() === '4000',
+     'valor: ' + await campo.inputValue());
+
+  /* E a quantidade que chega no pacote é a digitada, sem arredondamento. */
+  const qtd = await p.evaluate(() => {
+    estado.tipo = 'item';
+    estado.quantidade = '4000';
+    estado.item = { codigo:'142', descricao:'LISINA (25 KG)', unidade:'KG' };
+    const itens = montarItens();
+    return itens[0] && itens[0].quantidade;
+  });
+  ok('roda 5 o pacote leva 4000 cravado', qtd === 4000, 'levou: ' + qtd);
+  await p.close(); }
+
 await b.close();
 console.log('\n===== FALHAS (' + falhas.length + ') =====');
 falhas.forEach(f=>console.log(' ✗ ' + f));

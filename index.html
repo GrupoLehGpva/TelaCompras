@@ -1342,6 +1342,18 @@ function ligarEventos(){
     estado.item = null; $('ficha').hidden = true; $('buscaItem').value = ''; $('buscaItem').focus();
   });
 
+  /* ---- a roda do mouse não mexe em quantidade ----
+     Campo `type=number` com foco muda de valor quando a roda do mouse passa
+     por cima: quem digitou 4000 e rolou a página sai com 3999, sem aviso e sem
+     rastro. Foi o que aconteceu no C2609-00012 em 23/09 — 4.000 KG de LISINA
+     viraram 3.999. Tirar o foco no primeiro giro mata o efeito e não atrapalha
+     ninguém: a rolagem da página continua igual. */
+  document.querySelectorAll('input[type="number"]').forEach(campo => {
+    campo.addEventListener('wheel', () => {
+      if(document.activeElement === campo) campo.blur();
+    }, { passive:true });
+  });
+
   $('quantidade').addEventListener('input', e=>{
     estado.quantidade = e.target.value;
     if(estado.item) $('unidadeMedida').textContent = unidadePlural(estado.item.unidade, estado.quantidade || 1);
