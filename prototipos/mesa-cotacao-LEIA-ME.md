@@ -28,9 +28,14 @@ fornecedor. É a mesma regra que o `compras.html` já aplica.
 
 ## Tipo de compra
 
-A fila filtra por **Normal** e **Urgente**. **Mensal** aparece marcada como
-"em breve" e não filtra: a compra mensal segue outro fluxo e ainda não passa
-pela mesa do comprador.
+A fila filtra por **Normal**, **Urgente** e **Mensal**.
+
+A compra mensal segue exatamente o mesmo caminho das outras: o que muda é o
+tamanho. São muitos itens de famílias diferentes (alimentos, limpeza,
+escritório), e é para isso que servem as abas por família. Quando a família tem
+8 itens ou mais, aparece o atalho **Só o que falta**, que esconde os itens já
+resolvidos — o comprador termina uma família sem rolar a lista inteira atrás do
+que ficou para trás.
 
 ## O campo de fornecedor não pode listar tudo
 

@@ -428,8 +428,10 @@ const COND_PAG = ['À vista','PIX à vista','7 dias','14 dias','21 dias','28 dia
 // cadastros ativos) vem da tabela `fornecedores` do banco.
 const FORN_SUGERIDOS = ["20-BMW MINI CTBA", "2W FERRAMENTAS", "A POSTO BIN LTDA", "A PRATES", "A. K. NASCIMENTO & CIA LTDA", "ACESSÓRIOS & CIA", "ACIG", "ACQUATIC & LAZER", "ADAO KREUSCHER NETO", "ADARILDO FERREIRA DE JESUS", "ADEMIR JOSÉ DE LIMA", "ADILSON NARZETTI VEICULOS", "ADIVONSIR TONON", "ADMAR PAULO DE MORAES", "ADRIANO JOSE GROXKO", "ADRIGIL EXTINTORES", "ADS COM DE BOMBAS E ACESS LTDA", "ADVANTAGE INFORMATICA - EIRELI", "ADÃO LUIZ STACHECHEM FILHO", "AEPAPA", "AERO POSTO BELO E PINHO LTDA", "AEROCLUBE DE PONTA GROSSA", "AEROPOSTO CADORE", "AFONSO HERZER JUNIOR", "AGIMOLAS", "AGRARIA CENTRO DE EVENTOS", "AGRARIA PECUARIA", "AGRICOLA CANTELLI LTDA - FILIAL 15", "AGRICOLA CANTELLI LTDA - PINHAO", "AGRICOLA ESTRELA LTDA-FILIAL", "AGRICOLA LYCENKO LTDA - TRATORSOLO", "AGRO MANGUEIRAS", "AGRO TATU DISTRIBUIDORA DE PECAS LTDA", "AGROBOI LTDA", "AGROBRAVO VIAGENS CORPORATIVAS LTDA", "AGROCAMPO", "AGROCETE", "AGROHAUS", "AGROPECUARIA GALPAO DO BOIADEIRO LTDA", "AGROPLAN", "AGROVOGES", "AGRÁRIA COMBUSTÍVEIS", "AGRÁRIA FARINHAS", "AGRÁRIA GRITS E FLAKES", "AGRÁRIA INSUMOS", "AGRÁRIA NUTRIÇÃO ANIMAL", "AGRÁRIA ÓLEO E FARELO", "AJR RESTAURANTE", "ALCA LOCACAO DE EQUIPAMENTOS", "ALCIDES DE MORAES", "ALDO TINTAS", "ALFREDO KORCHUVEI AUTOCENTER LTDA", "ALICERCE MAT. CONSTRUÇÃO", "ALICERCE MATERIAIS DE CONSTRUCAO", "ALKA EQUIPAMENTOS DE SEGURANCA", "ALMIX", "AMELIA KIRNISKI", "ANA CLAUDIA BIEGA PECAS AGRICOLAS", "ANA KARINA ESSERT KELLER", "ANA LUISA ROVER VIRMOND", "ANALUNA CONFECCOES", "ANAWAL COMERCIO DE EMBALAGENS", "ANDRE YOITI ENDO", "ANGELA DE OLIVEIRA 07048772956", "ANGELA FERREIRA DO NASCIMENTO", "ANGELO CEZAR BROLINI RECH", "ANNEMARIE PFANN E OUTROS", "ANNO GAS", "ANTONIO LESCHUK", "AP EMPREITEIRA & LAJES", "ARAUFER LOJA", "ARCELORMITTAL BRASIL", "ARENA CONCRETO LTDA", "ARTE BRASIL", "ARTE EM PAPEL", "ARUACARIA AGROPECAS", "ARUCARIA PECAS AGRICOLAS LTDA", "ASSOCIACAO ESPERANCA", "ASSOCIAÇÃO TABOR DAS VOCAÇOES", "ATACADAO DA CONSTRUCAO", "ATILIO CHAVES FILHO", "ATRATIVA MOVEIS", "AUGUSTIN CIA. LTDA.", "AUTO ELETRICA GUIBES", "AUTO MOLAS CORADASSI LTDA.", "AUTO POSTO CRISTO REI", "AUTO POSTO JMMC LTDA", "AUTO POSTO ROZETTI LTDA", "AUTO POSTO SALVARO LTDA", "AUTOBARIGUI - GUARAPUAVA", "AVENIDA 7", "AVENIDA CAFÉ", "Agropecuaria Parteka", "B2 PNEUS - E12 GUARAPUAVA", "BACANA MANGUEIRAS", "BALANMIX", "BALAROTI", "BARI VEICULOS LTDA", "BARRACAO DOS PRESENTES AVENIDA", "BARRACÃO EQUIPAMENTOS", "BATEL EMBALAGENS", "BATERIAS E AUTO ELETRICA", "BATERIAS LIDER MASTER", "BATERIAS PLANALTO", "BELLA PIZZA", "BENILDE ANA BRASIL", "BERGUS RESTAURANTE", "BETTOMOTORES", "BETTOS AUTO PECAS", "BETTOS AUTO PECAS I", "BIOTROP", "BOCCHI ACESSORIOS LTDA", "BONFA'S GASTRONOMY EVENTOS", "BORRACHARIA POTENCIAL", "BORTOLANZA", "BRASIL AUTO CENTER", "BRASOLUB LUBRIFICANTES LTDA", "BRIZOLA MATERIAIS PARA CONSTRUCAO", "BRUNO LEHMANN", "C 3 EMPREENDIMENTOS LTDA"];
 // Tipos de compra. A mensal segue outro fluxo e ainda não passa por esta tela.
+// A mensal segue o mesmo caminho das outras: muda só o tamanho (muitos itens,
+// de várias famílias) e a periodicidade.
 const TIPOS = [ {id:'normal', nome:'Normal', ativo:true}, {id:'urgente', nome:'Urgente', ativo:true},
-                {id:'mensal', nome:'Mensal', ativo:false, nota:'A compra mensal tem fluxo próprio e ainda não passa pela mesa'} ];
+                {id:'mensal', nome:'Mensal', ativo:true} ];
 
 const ETAPAS = [
   { id:'lid', nome:'Liderança imediata',   curto:'Liderança',  sla:2 },
@@ -500,6 +502,29 @@ let SOLS = [
     itens:[
       { id:'b1', cod:'S-900', desc:'Revisão e calibração da balança rodoviária, com emissão de certificado', un:'Serviço', qtd:1, fam:'SE' },
       { id:'b2', cod:'S-901', desc:'Troca das células de carga', un:'UNID', qtd:4, fam:'SE' } ] }),
+  montar({ id:'C2609-90004', exemplo:true, tipo:'mensal', criada:agoraMenos(30), liderEm:agoraMenos(22), nec:diaMais(8),
+    ccNome:'ADMINISTRATIVO (exemplo)', cc:'0000', setor:'Administrativo (exemplo)', solicitante:'MARCOS EXEMPLO', lider:'LÍDER EXEMPLO',
+    motivo:'Compra mensal de outubro — alimentos, limpeza e escritório (exemplo)',
+    itens:[
+      { id:'m01', cod:'CC-101', desc:'Arroz tipo 1 · pacote 5 kg', un:'PCT', qtd:40, fam:'CC' },
+      { id:'m02', cod:'CC-102', desc:'Feijão carioca · pacote 1 kg', un:'PCT', qtd:30, fam:'CC' },
+      { id:'m03', cod:'CC-103', desc:'Açúcar refinado · pacote 5 kg', un:'PCT', qtd:20, fam:'CC' },
+      { id:'m04', cod:'CC-104', desc:'Café torrado e moído · 500 g', un:'PCT', qtd:24, fam:'CC' },
+      { id:'m05', cod:'CC-105', desc:'Óleo de soja · 900 ml', un:'UNID', qtd:36, fam:'CC' },
+      { id:'m06', cod:'CC-106', desc:'Sal refinado · 1 kg', un:'PCT', qtd:12, fam:'CC' },
+      { id:'m07', cod:'CC-107', desc:'Macarrão espaguete · 500 g', un:'PCT', qtd:40, fam:'CC' },
+      { id:'m08', cod:'CC-108', desc:'Molho de tomate · sachê 340 g', un:'UNID', qtd:48, fam:'CC' },
+      { id:'m09', cod:'HL-201', desc:'Água sanitária · 1 L', un:'UNID', qtd:24, fam:'HL' },
+      { id:'m10', cod:'HL-202', desc:'Detergente neutro · 500 ml', un:'UNID', qtd:36, fam:'HL' },
+      { id:'m11', cod:'HL-203', desc:'Papel higiênico 30 m · fardo com 16', un:'FARDO', qtd:10, fam:'HL' },
+      { id:'m12', cod:'HL-204', desc:'Sabão em pó · 1 kg', un:'UNID', qtd:12, fam:'HL' },
+      { id:'m13', cod:'HL-205', desc:'Desinfetante · 2 L', un:'UNID', qtd:18, fam:'HL' },
+      { id:'m14', cod:'HL-206', desc:'Luva de borracha · par, tamanho M', un:'PAR', qtd:10, fam:'HL' },
+      { id:'m15', cod:'ME-301', desc:'Papel sulfite A4 · resma 500 folhas', un:'RESMA', qtd:20, fam:'ME' },
+      { id:'m16', cod:'ME-302', desc:'Caneta esferográfica azul · caixa com 50', un:'CX', qtd:2, fam:'ME' },
+      { id:'m17', cod:'ME-303', desc:'Grampeador de mesa 26/6', un:'UNID', qtd:2, fam:'ME' },
+      { id:'m18', cod:'ME-304', desc:'Pasta suspensa kraft', un:'UNID', qtd:30, fam:'ME' },
+      { id:'m19', cod:'ME-305', desc:'Toner para impressora HP 12A', un:'UNID', qtd:3, fam:'ME' } ] }),
   montar({ id:'C2609-90002', exemplo:true, criada:agoraMenos(120), liderEm:agoraMenos(100), nec:diaMais(1), urgente:true,
     ccNome:'MANUTENÇÃO INDUSTRIAL (exemplo)', cc:'0000', setor:'Manutenção (exemplo)', solicitante:'MARCOS EXEMPLO', lider:'LÍDER EXEMPLO',
     motivo:'Troca de rolamentos da rosca transportadora (exemplo de cotação devolvida)',
@@ -661,7 +686,7 @@ const plural = (n, a, b) => n + ' ' + (n === 1 ? a : b);
 /* =====================================================================
    ESTADO DA TELA
    ===================================================================== */
-const S = { view:'fila', tab:'cotar', q:'', tipo:'', foco:null, comprador:H, carregado:false, solId:null, fam:null, mostrarErros:false,
+const S = { view:'fila', tab:'cotar', q:'', tipo:'', foco:null, soFalta:false, comprador:H, carregado:false, solId:null, fam:null, mostrarErros:false,
             modalList:[], modalIdx:-1, flash:null };
 const sol = id => SOLS.find(s => s.id === id);
 const etapa = id => ETAPAS.find(e => e.id === id);
@@ -752,7 +777,7 @@ function renderFila(){
         const acao = s.status === 'cot' ? (s.cot && s.cot.iniciada ? 'Continuar' : 'Cotar') : 'Ver';
         return `<tr data-id="${s.id}" tabindex="0">
           <td class="mono">${s.id}${s.exemplo ? '<br><span class="pill warn">EXEMPLO</span>' : ''}</td>
-          <td><span class="t">${esc(tituloSol(s))}</span><span class="s">${esc(s.ccNome)} · ${esc(s.solicitante)}</span>${s.urgente ? ' <span class="pill warn">Urgente</span>' : ''}${s.defForn === 'unico' ? ' <span class="pill accent">Fornecedor único</span>' : ''}</td>
+          <td><span class="t">${esc(tituloSol(s))}</span><span class="s">${esc(s.ccNome)} · ${esc(s.solicitante)}</span>${s.urgente ? ' <span class="pill warn">Urgente</span>' : ''}${s.tipo === 'mensal' ? ' <span class="pill neutral">Mensal</span>' : ''}${s.defForn === 'unico' ? ' <span class="pill accent">Fornecedor único</span>' : ''}</td>
           <td>${familiasDe(s).map(k => `<span class="pill neutral" title="${esc(famNome(k))}">${esc(famNome(k))}</span>`).join(' ')}</td>
           <td class="num">${dt(s.necessidade)}<br>${necessidadePill(s)}</td>
           <td>${p ? `<span class="pill ${p.cls}" title="Prazo da etapa: ${p.sla} dias"><span class="dot"></span>${dias(p.d)}</span>` : '—'}</td>
@@ -872,7 +897,7 @@ function navegar(d){ const n = S.modalIdx + d; if (n < 0 || n >= S.modalList.len
 function abrirMapa(id){
   const s = sol(id); if (!s) return;
   cotDe(s);
-  S.view = 'mapa'; S.solId = id; S.mostrarErros = false; S.foco = null;
+  S.view = 'mapa'; S.solId = id; S.mostrarErros = false; S.foco = null; S.soFalta = false;
   S.fam = familiasDe(s)[0];
   render(); window.scrollTo(0,0);
 }
@@ -897,7 +922,7 @@ function renderMapa(){
     <div class="m-top"><div>
       <div class="eyebrow"><span class="mono">${s.id}</span> · Mapa de cotação${s.exemplo ? ' · <span class="pill warn">EXEMPLO</span>' : ''}</div>
       <h1>${esc(tituloSol(s))}</h1>
-      <div class="sub">${esc(s.empresa)} · ${esc(s.cc)} · ${esc(s.ccNome)}${s.urgente ? ' · <span class="pill warn">Urgente</span>' : ''}</div>
+      <div class="sub">${esc(s.empresa)} · ${esc(s.cc)} · ${esc(s.ccNome)}${s.urgente ? ' · <span class="pill warn">Urgente</span>' : ''}${s.tipo === 'mensal' ? ' · <span class="pill neutral">Compra mensal</span>' : ''}</div>
     </div><button class="btn" type="button" id="bt-det">Ver solicitação completa</button></div>
     ${bannerUnico}${banner}
     <div class="facts">
@@ -910,6 +935,7 @@ function renderMapa(){
     <div class="passos" id="passos" aria-label="Como preencher"></div>
     <div class="map-h"><h2 id="map-title"></h2>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <span id="bt-falta-cx"></span>
         ${ro ? '' : `<button class="btn" type="button" id="bt-menores">${s.defForn === 'unico' ? 'Marcar todos os itens' : 'Escolher os menores preços'}</button>`}
       </div></div>
     <p class="muted" style="margin:0 0 8px;font-size:12.5px"><span class="fonte-forn">${CADASTRO.online ? `Fornecedores: busca nos ${CADASTRO.total ? CADASTRO.total.toLocaleString('pt-BR') : ''} cadastros ativos do banco.` : 'Fornecedores: sem conexão com o banco agora — vale a amostra de 120 nomes guardada na página.'}</span><br>${ro ? '' : (s.defForn === 'unico' ? 'Digite o preço unitário do fornecedor único e marque ✓ em cada item. <kbd>Enter</kbd> desce para o próximo item.' : 'Digite o preço unitário de cada fornecedor e marque ✓ em quem vai fornecer o item. <kbd>Enter</kbd> desce para o próximo item do mesmo fornecedor.')}</p>
@@ -928,8 +954,12 @@ function renderMapa(){
 
 function pintarTabela(){
   const s = sol(S.solId), k = S.fam, F = cotDe(s).fams[k], ro = soLeitura(s) ? 'disabled' : '';
-  const itens = s.itens.filter(it => famKey(it) === k);
-  $('map-title').textContent = `${famNome(k)} · ${plural(itens.length,'item','itens')}`;
+  const todos = s.itens.filter(it => famKey(it) === k);
+  const F0 = cotDe(s).fams[k];
+  const pendentes = todos.filter(it => F0.escolha[it.id] === undefined || !String(F0.precos[it.id][F0.escolha[it.id]] || '').trim());
+  const itens = S.soFalta && pendentes.length ? pendentes : todos;
+  $('map-title').textContent = `${famNome(k)} · ${plural(todos.length,'item','itens')}`
+    + (itens.length !== todos.length ? ` · mostrando ${itens.length} pendentes` : '');
   const J = colunas(s);
   const rotulo = j => s.defForn === 'unico' ? 'Fornecedor único' : 'Fornecedor ' + (j+1);
   const errDiv = id => `<div class="err" id="e-${id}" hidden></div>`;
@@ -1032,6 +1062,15 @@ function refresh(){
     tabela.classList.toggle('foco', S.foco !== null);
     tabela.querySelectorAll('.col-on').forEach(e => e.classList.remove('col-on'));
     if (S.foco !== null) tabela.querySelectorAll('.cj-' + S.foco).forEach(e => e.classList.add('col-on'));
+  }
+  // compras grandes (mensal): atalho para ver só o que ainda falta escolher
+  const cx = $('bt-falta-cx');
+  if (cx){
+    const faltam = fc.linhas.filter(l => l.esc === null || !l.valido[l.esc]).length;
+    if (fc.linhas.length >= 8 || S.soFalta){
+      cx.innerHTML = `<button class="btn ${S.soFalta ? 'primary' : ''}" type="button" id="bt-falta">${S.soFalta ? 'Mostrar todos os itens' : `Só o que falta (${faltam})`}</button>`;
+      $('bt-falta').onclick = () => { S.soFalta = !S.soFalta; pintarTabela(); refresh(); };
+    } else cx.innerHTML = '';
   }
   pintarPassos(s, C, V);
   // abas de família
