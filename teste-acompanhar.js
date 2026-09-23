@@ -334,6 +334,97 @@ ok('10 tema escuro', /rgb\(8, 19, 28\)/.test(await p.evaluate(()=>getComputedSty
    'fundo: ' + await p.evaluate(()=>getComputedStyle(document.body).backgroundColor));
 await p.close();
 
+/* 12 — a aba do histórico: tudo o que a pessoa já pediu, num lugar só.
+       Antes era uma página só, com "encerradas" embaixo de "em andamento": quem
+       pede toda semana rolava a tela inteira para achar um pedido de um mês. */
+const ANTIGA = { id:'s9', numero:'CP-0009', assunto:'Bomba do poço da sede',
+  centro_custo_nome:'COMERCIAL', total_itens:1,
+  aberto_em:new Date(Date.now() - 200*864e5).toISOString(),
+  data_necessidade:'2026-03-10', etapa_atual:null, status:'aprovado',
+  decidido_em:new Date(Date.now() - 190*864e5).toISOString(),
+  situacao:'Liberado para compra', com_quem:null, encerrada:true, motivo_recusa:null };
+
+{ const p = await tela(b, { lista: [...LISTA, ANTIGA] });
+  const linhasDe = sel => p.locator(sel + ' tr.linha-pedido').count();
+
+  ok('12 a aba existe', await p.locator('#abaTodos').isVisible(), 'não tem aba do histórico');
+  ok('12 a aba conta tudo', (await p.locator('#contaTodos').textContent()).trim() === '6',
+     'contou: ' + await p.locator('#contaTodos').textContent());
+  ok('12 a outra aba conta só o que anda',
+     (await p.locator('#contaAndamento').textContent()).trim() === '2',
+     'contou: ' + await p.locator('#contaAndamento').textContent());
+  ok('12 histórico começa escondido', await p.locator('#painelTodos').isHidden(), 'já veio aberto');
+
+  await p.click('#abaTodos'); await p.waitForTimeout(250);
+  ok('12 abrir mostra o histórico', await p.locator('#painelTodos').isVisible(), 'não abriu');
+  ok('12 e esconde o dia a dia', await p.locator('#painelAndamento').isHidden(), 'ficaram as duas');
+  ok('12 lista tudo', await linhasDe('#corpoTodos') === 6, 'linhas: ' + await linhasDe('#corpoTodos'));
+  ok('12 a aba fica marcada',
+     await p.locator('#abaTodos').getAttribute('aria-selected') === 'true', 'sem aria-selected');
+
+  /* Nenhuma solicitação pode ser desenhada nas duas tabelas ao mesmo tempo:
+     as linhas de itens têm id, e id repetido quebra o abrir/fechar. */
+  ok('12 não desenha a mesma linha duas vezes',
+     await linhasDe('#corpoAndamento') === 0 && await linhasDe('#corpoEncerradas') === 0,
+     'a tabela do dia a dia continuou desenhada por baixo');
+
+  // situação
+  await p.click('.filtros-hist .chip[data-situacao="reprovado"]'); await p.waitForTimeout(250);
+  ok('12 filtra reprovadas', await linhasDe('#corpoTodos') === 2, 'linhas: ' + await linhasDe('#corpoTodos'));
+  const txtRep = await p.textContent('#corpoTodos') || '';
+  ok('12 só as reprovadas mesmo', /CP-0004/.test(txtRep) && /CP-0005/.test(txtRep) && !/CP-0001/.test(txtRep), txtRep.slice(0,160));
+
+  await p.click('.filtros-hist .chip[data-situacao="andamento"]'); await p.waitForTimeout(250);
+  ok('12 filtra em andamento', await linhasDe('#corpoTodos') === 2, 'linhas: ' + await linhasDe('#corpoTodos'));
+
+  await p.click('.filtros-hist .chip[data-situacao="todas"]'); await p.waitForTimeout(250);
+  ok('12 volta para todas', await linhasDe('#corpoTodos') === 6, 'linhas: ' + await linhasDe('#corpoTodos'));
+
+  // período
+  await p.click('.filtros-hist .chip[data-periodo="30"]'); await p.waitForTimeout(250);
+  ok('12 30 dias tira a antiga', await linhasDe('#corpoTodos') === 5, 'linhas: ' + await linhasDe('#corpoTodos'));
+  ok('12 a antiga é a que sai', !/CP-0009/.test(await p.textContent('#corpoTodos') || ''), 'a antiga ficou');
+  await p.click('.filtros-hist .chip[data-periodo="365"]'); await p.waitForTimeout(250);
+  ok('12 doze meses traz de volta', await linhasDe('#corpoTodos') === 6, 'linhas: ' + await linhasDe('#corpoTodos'));
+
+  // os dois filtros juntos, e o vazio explicado
+  await p.click('.filtros-hist .chip[data-periodo="30"]'); await p.waitForTimeout(200);
+  await p.click('.filtros-hist .chip[data-situacao="aprovado"]'); await p.waitForTimeout(250);
+  ok('12 cruza período e situação', await linhasDe('#corpoTodos') === 1, 'linhas: ' + await linhasDe('#corpoTodos'));
+  await p.fill('#filtro', 'zzzz'); await p.waitForTimeout(250);
+  ok('12 nada no filtro avisa', await p.locator('#vazioTodos').isVisible(), 'não avisou');
+  ok('12 e não mostra tabela vazia', await p.locator('#rolagemTodos').isHidden(), 'deixou a tabela vazia à mostra');
+  await p.fill('#filtro', ''); await p.waitForTimeout(200);
+  await p.click('.filtros-hist .chip[data-periodo="0"]'); await p.waitForTimeout(200);
+  await p.click('.filtros-hist .chip[data-situacao="todas"]'); await p.waitForTimeout(250);
+
+  // a busca continua valendo dentro do histórico
+  await p.fill('#filtro', 'poço'); await p.waitForTimeout(250);
+  ok('12 a busca vale no histórico', await linhasDe('#corpoTodos') === 1, 'linhas: ' + await linhasDe('#corpoTodos'));
+  await p.fill('#filtro', ''); await p.waitForTimeout(200);
+
+  // os itens abrem no histórico também, e continuam abertos ao trocar de aba
+  await p.locator('#corpoTodos tr.linha-pedido').first().locator('.ver-itens').click();
+  await p.waitForTimeout(300);
+  const algumAberto = await p.locator('#corpoTodos tr.itens-do-pedido:not([hidden])').count();
+  ok('12 abre os itens no histórico', algumAberto === 1, 'abertas: ' + algumAberto);
+  await p.click('#abaAndamento'); await p.waitForTimeout(250);
+  ok('12 voltar para o dia a dia funciona', await p.locator('#painelAndamento').isVisible(), 'não voltou');
+  ok('12 e o dia a dia volta com as linhas', await linhasDe('#corpoAndamento') === 2,
+     'linhas: ' + await linhasDe('#corpoAndamento'));
+
+  // trocar de aba não pode ir ao banco de novo
+  const antes = p.__rpcs.length;
+  await p.click('#abaTodos'); await p.waitForTimeout(250);
+  ok('12 trocar de aba não consulta o banco', p.__rpcs.length === antes,
+     'chamou: ' + p.__rpcs.slice(antes).join(','));
+
+  ok('12 continua sendo tela de leitura',
+     await p.locator('button').count() === await p.locator('button.so-leitura').count(),
+     'apareceu botão sem a marca de leitura');
+  await p.screenshot({ path:'t-acompanhar-historico.png', fullPage:true });
+  await p.close(); }
+
 await b.close();
 console.log('\n===== FALHAS (' + falhas.length + ') =====');
 falhas.forEach(f => console.log(' · ' + f));

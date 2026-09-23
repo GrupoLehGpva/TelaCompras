@@ -104,6 +104,32 @@
   .aviso-leitura{background:var(--realce);border:1px solid var(--borda);border-radius:var(--raio);
     padding:12px 16px;margin-bottom:16px;color:var(--muted);font-size:13.5px;line-height:1.55}
 
+  /* ---- abas: o que está andando e tudo o que já foi pedido ----
+     A tela nasceu como uma página só, com "em andamento" em cima e
+     "encerradas" embaixo. Quem pede toda semana acabava rolando a página
+     inteira para achar um pedido de um mês atrás. Agora são duas visões: a do
+     dia a dia e a do histórico, esta com filtro de período e de desfecho. */
+  .abas{display:flex;gap:6px;border-bottom:1px solid var(--borda);margin-bottom:16px;flex-wrap:wrap}
+  .aba{appearance:none;border:0;background:none;font:inherit;font-size:14.5px;font-weight:600;
+    color:var(--muted);cursor:pointer;padding:10px 14px;border-bottom:2.5px solid transparent;
+    margin-bottom:-1px;display:inline-flex;align-items:center;gap:7px}
+  .aba:hover{color:var(--texto)}
+  .aba[aria-selected="true"]{color:var(--verde-mata);border-bottom-color:var(--verde)}
+  .aba .conta{font-size:12px;font-weight:700;padding:1px 7px;border-radius:var(--pilula);
+    background:var(--realce);border:1px solid var(--borda);color:var(--muted)}
+  .aba[aria-selected="true"] .conta{background:var(--verde-claro);border-color:var(--verde);color:var(--verde-mata)}
+
+  /* Filtros do histórico: período e desfecho. Ficam só na aba do histórico,
+     porque no dia a dia eles não têm o que filtrar. */
+  .filtros-hist{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+  .chip{appearance:none;border:1px solid var(--borda);background:var(--card);color:var(--muted);
+    font:inherit;font-size:13px;font-weight:600;padding:7px 14px;border-radius:var(--pilula);cursor:pointer}
+  .chip:hover{border-color:var(--verde);color:var(--texto)}
+  .chip[aria-pressed="true"]{background:var(--verde-claro);border-color:var(--verde);color:var(--verde-mata)}
+  .filtros-hist .rotulo{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--muted);font-weight:700;margin-right:2px}
+  .filtros-hist .separa{width:1px;height:22px;background:var(--borda);margin:0 6px}
+
   .barra{display:flex;flex-wrap:wrap;gap:12px;align-items:center;
     justify-content:space-between;margin-bottom:14px}
   .filtro{padding:9px 16px;border:1px solid var(--borda);border-radius:var(--pilula);
@@ -262,7 +288,7 @@
   .vazio[hidden]{display:none}
 
   @media (max-width:520px){ .envelope{padding:14px 10px 48px} .filtro{min-width:0;width:100%} }
-  @media print{ .barra,.aviso-leitura{display:none} .ver-itens .seta{display:none} .rolagem{overflow:visible;border:0} body{background:#fff} }
+  @media print{ .barra,.aviso-leitura,.abas,.filtros-hist{display:none} .ver-itens .seta{display:none} .rolagem{overflow:visible;border:0} body{background:#fff} }
 </style>
 </head>
 <body>
@@ -292,11 +318,23 @@
       tela dele — aqui você vê onde o seu está e de quem ele está esperando.
     </p>
 
+    <div class="abas" role="tablist">
+      <button type="button" class="aba so-leitura" id="abaAndamento" role="tab"
+              aria-selected="true" aria-controls="painelAndamento">
+        Em andamento <span class="conta" id="contaAndamento">0</span>
+      </button>
+      <button type="button" class="aba so-leitura" id="abaTodos" role="tab"
+              aria-selected="false" aria-controls="painelTodos">
+        Todos os meus pedidos <span class="conta" id="contaTodos">0</span>
+      </button>
+    </div>
+
     <div class="barra">
       <input type="search" class="filtro" id="filtro"
              placeholder="Filtrar por número, assunto ou centro de custo…">
     </div>
 
+    <div id="painelAndamento" role="tabpanel" aria-labelledby="abaAndamento">
     <h2 class="secao" id="tituloAndamento">Em andamento</h2>
     <div class="rolagem" id="rolagemAndamento">
       <table class="lista">
@@ -334,6 +372,46 @@
         </thead>
         <tbody id="corpoEncerradas"></tbody>
       </table>
+    </div>
+    </div><!-- /painelAndamento -->
+
+    <!-- HISTÓRICO: tudo o que a pessoa já pediu, do mais novo para o mais
+         velho, com filtro de período e de desfecho. -->
+    <div id="painelTodos" role="tabpanel" aria-labelledby="abaTodos" hidden>
+      <div class="filtros-hist">
+        <span class="rotulo">Período</span>
+        <button type="button" class="chip so-leitura" data-periodo="30"  aria-pressed="false">30 dias</button>
+        <button type="button" class="chip so-leitura" data-periodo="90"  aria-pressed="false">90 dias</button>
+        <button type="button" class="chip so-leitura" data-periodo="365" aria-pressed="false">12 meses</button>
+        <button type="button" class="chip so-leitura" data-periodo="0"   aria-pressed="true">Tudo</button>
+        <span class="separa"></span>
+        <span class="rotulo">Situação</span>
+        <button type="button" class="chip so-leitura" data-situacao="todas"     aria-pressed="true">Todas</button>
+        <button type="button" class="chip so-leitura" data-situacao="andamento" aria-pressed="false">Em andamento</button>
+        <button type="button" class="chip so-leitura" data-situacao="aprovado"  aria-pressed="false">Aprovadas</button>
+        <button type="button" class="chip so-leitura" data-situacao="reprovado" aria-pressed="false">Reprovadas</button>
+      </div>
+
+      <div class="rolagem" id="rolagemTodos">
+        <table class="lista">
+          <colgroup>
+            <col class="c-num"><col class="c-ass"><col class="c-cc">
+            <col class="c-itens"><col class="c-data"><col class="c-data"><col class="c-onde">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Solicitação</th><th>Motivo</th><th>Centro de custo</th>
+              <th class="n">Itens</th><th>Aberta em</th><th>Entrega até</th><th>Situação</th>
+            </tr>
+          </thead>
+          <tbody id="corpoTodos"></tbody>
+        </table>
+      </div>
+      <div class="vazio" id="vazioTodos" hidden>
+        <b>Nada neste filtro.</b>
+        Tente um período maior ou tire o filtro de situação.
+      </div>
+      <p class="pequeno" id="avisoTeto" hidden></p>
     </div>
   </main>
 </div>
@@ -436,10 +514,23 @@ function ligarAnexos(raiz, lista){
     }
   }));
 }
+/* Os anexos de cada solicitação, guardados depois da primeira leitura.
+   Sem isto, cada redesenho da tabela — e ela redesenha a cada letra digitada no
+   filtro e a cada troca de aba — ia ao banco de novo para a mesma linha. */
+const ANEXOS_LIDOS = new Map();
+
 async function carregarAnexos(caixa, chave){
+  const cache = chave && chave.p_solicitacao_id;
+  if(cache && ANEXOS_LIDOS.has(cache)){
+    const lista = ANEXOS_LIDOS.get(cache);
+    caixa.innerHTML = htmlDosAnexos(lista);
+    ligarAnexos(caixa, lista);
+    return;
+  }
   caixa.innerHTML = '<p class="anexo-vazio">Carregando os anexos…</p>';
   try{
     const lista = await rpc('anexos_da_solicitacao', chave) || [];
+    if(cache) ANEXOS_LIDOS.set(cache, lista);
     caixa.innerHTML = htmlDosAnexos(lista);
     ligarAnexos(caixa, lista);
   }catch(e){
@@ -461,6 +552,13 @@ async function rpc(nome, corpo){
 
 let LISTA = [];
 let termo = '';
+/* Duas visões da mesma lista: o dia a dia e o histórico. `aba` decide qual
+   tabela é desenhada — uma de cada vez, porque as linhas abertas têm id e dois
+   desenhos da mesma solicitação criariam ids repetidos. */
+let aba = 'andamento';
+let periodo = 0;          // em dias; 0 = tudo
+let situacao = 'todas';   // todas | andamento | aprovado | reprovado
+const TETO_DA_CONSULTA = 300;
 
 /* Os itens chegam numa segunda consulta, depois da lista: se ela falhar, a
    lista continua de pé e só a caixa de itens avisa. `abertas` guarda quais
@@ -627,28 +725,76 @@ function alternarItens(id){
   if(abrir){ preencherItens(id); if(!ITENS && !cargaItens) carregarItens(); }
 }
 
+/* ---- os filtros do histórico ----
+   Período conta a partir da abertura do pedido, que é a data que a pessoa
+   lembra ("pedi mês passado"). Situação separa o que ainda anda do que já
+   terminou, e o desfecho de quem terminou. */
+function noPeriodo(s){
+  if(!periodo) return true;
+  const t = new Date(s.aberto_em).getTime();
+  if(isNaN(t)) return true;                 // data estranha não some da lista
+  return (Date.now() - t) <= periodo * DIA;
+}
+function naSituacao(s){
+  if(situacao === 'todas')     return true;
+  if(situacao === 'andamento') return !s.encerrada;
+  return s.status === situacao;
+}
+const doHistorico = () => visiveis().filter(s => noPeriodo(s) && naSituacao(s));
+
 function desenhar(){
   const lista = visiveis();
   const andamento = lista.filter(s => !s.encerrada);
   const encerradas = lista.filter(s => s.encerrada);
 
-  const corpoA = $('corpoAndamento'); corpoA.innerHTML = '';
-  andamento.forEach(s => linha(s).forEach(t => corpoA.appendChild(t)));
-  $('rolagemAndamento').hidden = andamento.length === 0;
-  $('vazioAndamento').hidden   = andamento.length > 0;
-  $('vazioAndamento').querySelector('b').textContent =
-    LISTA.some(s => !s.encerrada) ? 'Nada com esse filtro.' : 'Nenhuma solicitação em andamento.';
+  $('painelAndamento').hidden = aba !== 'andamento';
+  $('painelTodos').hidden     = aba !== 'todos';
+  $('abaAndamento').setAttribute('aria-selected', String(aba === 'andamento'));
+  $('abaTodos').setAttribute('aria-selected', String(aba === 'todos'));
 
+  const corpoA = $('corpoAndamento'); corpoA.innerHTML = '';
   const corpoE = $('corpoEncerradas'); corpoE.innerHTML = '';
-  encerradas.forEach(s => linha(s).forEach(t => corpoE.appendChild(t)));
-  $('tituloEncerradas').hidden  = encerradas.length === 0;
-  $('rolagemEncerradas').hidden = encerradas.length === 0;
+  const corpoT = $('corpoTodos'); corpoT.innerHTML = '';
+
+  if(aba === 'andamento'){
+    andamento.forEach(s => linha(s).forEach(t => corpoA.appendChild(t)));
+    $('rolagemAndamento').hidden = andamento.length === 0;
+    $('vazioAndamento').hidden   = andamento.length > 0;
+    $('vazioAndamento').querySelector('b').textContent =
+      LISTA.some(s => !s.encerrada) ? 'Nada com esse filtro.' : 'Nenhuma solicitação em andamento.';
+
+    encerradas.forEach(s => linha(s).forEach(t => corpoE.appendChild(t)));
+    $('tituloEncerradas').hidden  = encerradas.length === 0;
+    $('rolagemEncerradas').hidden = encerradas.length === 0;
+  } else {
+    const hist = doHistorico();
+    hist.forEach(s => linha(s).forEach(t => corpoT.appendChild(t)));
+    $('rolagemTodos').hidden = hist.length === 0;
+    $('vazioTodos').hidden   = hist.length > 0;
+
+    /* Passou do teto: a pessoa precisa saber que a lista não é tudo o que ela
+       já pediu, em vez de concluir que um pedido antigo sumiu. */
+    const noTeto = LISTA.length >= TETO_DA_CONSULTA;
+    $('avisoTeto').hidden = !noTeto;
+    if(noTeto) $('avisoTeto').textContent =
+      'Mostrando as ' + TETO_DA_CONSULTA + ' solicitações mais recentes. Para as mais antigas, fale com o setor de compras.';
+  }
 
   abertas.forEach(id => preencherItens(id));
 
   const emAberto = LISTA.filter(s => !s.encerrada).length;
+  $('contaAndamento').textContent = emAberto;
+  $('contaTodos').textContent     = LISTA.length;
   $('seloTotal').textContent = emAberto + (emAberto === 1 ? ' em andamento' : ' em andamento');
   $('seloTotal').hidden = false;
+}
+
+function trocarAba(nova){
+  if(aba === nova) return;
+  aba = nova;
+  /* Trocar de aba redesenha as duas tabelas do zero: o que estava aberto numa
+     continua aberto na outra, porque `abertas` é da solicitação, não da linha. */
+  desenhar();
 }
 
 function falhar(titulo, detalhe){
@@ -676,7 +822,10 @@ async function abrir(){
     $('tituloTopo').textContent = 'Solicitações de ' + eu.nome;
     document.title = 'Minhas solicitações · ' + eu.nome + ' · Grupo Leh';
 
-    LISTA = await rpc('minhas_solicitacoes', { p_token: TOKEN });
+    /* O padrão da função são 80 linhas. Quem pede toda semana passa disso em
+       poucos meses, e o histórico truncado sem avisar é pior que histórico
+       nenhum — por isso pedimos o teto e dizemos na tela quando ele é atingido. */
+    LISTA = await rpc('minhas_solicitacoes', { p_token: TOKEN, p_limite: TETO_DA_CONSULTA });
     $('carregando').hidden = true;
     $('conteudo').hidden = false;
     desenhar();
@@ -728,6 +877,22 @@ $('fundoModal').addEventListener('click', e => { if(e.target === $('fundoModal')
 document.addEventListener('keydown', e => { if(e.key === 'Escape' && !$('fundoModal').hidden) fecharMotivo(); });
 
 $('filtro').addEventListener('input', e => { termo = e.target.value; desenhar(); });
+
+$('abaAndamento').addEventListener('click', () => trocarAba('andamento'));
+$('abaTodos').addEventListener('click', () => trocarAba('todos'));
+
+document.querySelectorAll('.filtros-hist .chip').forEach(c => {
+  c.addEventListener('click', () => {
+    const grupo = c.dataset.periodo !== undefined ? 'periodo' : 'situacao';
+    if(grupo === 'periodo') periodo = Number(c.dataset.periodo);
+    else situacao = c.dataset.situacao;
+    document.querySelectorAll('.filtros-hist .chip').forEach(o => {
+      const mesmoGrupo = (o.dataset.periodo !== undefined) === (grupo === 'periodo');
+      if(mesmoGrupo) o.setAttribute('aria-pressed', String(o === c));
+    });
+    desenhar();
+  });
+});
 
 abrir();
 </script>
