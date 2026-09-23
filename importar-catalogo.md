@@ -90,3 +90,47 @@ OneDrive e rodar o fluxo.
 Item que sai da lista do GR vira `ativo = false`. O formulário só lê ativos,
 então some da tela — mas o pedido antigo que citou aquele código continua
 fazendo sentido. Histórico não se apaga.
+
+## Item novo entre uma importação e outra: `cadastro-itens.html`
+
+Item criado hoje no GR não precisa esperar a próxima importação. Quem tem
+login cadastra em **`cadastro-itens.html`** e o item entra no formulário na
+hora. A tela grava pela função `catalogo_salvar_item`, que confere login e
+senha dentro do banco. O catálogo continua sem escrita pela chave pública.
+Tudo está em `cadastro-de-itens.sql`.
+
+**Como a importação trata esses itens.** O item cadastrado pela tela nasce
+com `pendente_gr = true`, e `catalogo_desativar_antigos` **não o desativa**,
+mesmo que ele não esteja no CSV. Quando o código aparece no CSV, o upsert
+grava o que está no GR por cima do que foi digitado, e a marca de pendente
+sai. Se na tela e no GR o nome estiver diferente, vale o do GR.
+
+**O que mudou na resposta da importação.** `ativos_agora` passou a contar
+só o que veio **desta** importação, que é o número que o nó "Conferir o
+resultado" compara com o total do arquivo. Sem essa mudança, os itens
+pendentes somariam aos ativos, a conferência nunca mais bateria e o fluxo
+acusaria erro depois de já ter gravado. O total está em `ativos_total`, e os
+pendentes em `aguardando_gr`. O fluxo do n8n não precisou mudar.
+
+**Logins.** Hoje só a **Elisabeth** (`elisabeth`) cadastra. A tela não tem
+"Trocar senha": senha nova se define aqui, com a mesma função. Logins são
+criados no SQL Editor:
+
+    select public.catalogo_definir_cadastrador('login', 'Nome da Pessoa', 'senha-provisoria');
+
+Para desligar alguém:
+
+    update public.catalogo_cadastradores set ativo = false where login = 'login';
+
+Para ver quem cadastrou o quê:
+
+    select * from public.catalogo_itens_historico order by em desc;
+
+A senha fica guardada só como hash bcrypt. Cinco senhas erradas seguidas
+travam o login por 15 minutos.
+
+**Testes.** `teste-cadastro-itens.js` roda a tela clique a clique contra o
+banco de mentira do `mock-supabase.js`. `teste-cadastro-itens.sql` roda as
+mesmas regras no Postgres de verdade e **desfaz tudo** no fim. Para rodar,
+cole no SQL Editor o `cadastro-de-itens.sql` seguido dele. "TESTES OK" na
+mensagem de erro significa que passou.

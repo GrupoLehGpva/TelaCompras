@@ -105,5 +105,123 @@ function corpoPorUrl(url, { pedido = null, itens = [], anexos = [], centros = []
   return [];
 }
 
-module.exports = { instalar, respostaAbrirPedido, respostaDecisao, corpoPorUrl,
+
+/* ============================================================================
+   CADASTRO DE ITENS — o banco de mentira que responde como o de verdade.
+
+   Diferente dos outros mocks, este guarda estado: a tela cadastra, corrige,
+   retira e reativa, e cada passo depende do anterior. As regras abaixo são
+   as de catalogo_salvar_item (cadastro-de-itens.sql), linha por linha — e
+   teste-cadastro-itens.sql confere as mesmas regras no Postgres de verdade.
+   Se mudar lá, muda aqui.
+   ========================================================================== */
+function bancoDoCadastro({ catalogo = [], logins = { 'compras': { nome:'Compras Teste', senha:'senha-certa-123' } } } = {}){
+  const itens = new Map(catalogo.map(i => [String(i.codigo), Object.assign({ ativo:true, pendente_gr:false }, i)]));
+  const contas = JSON.parse(JSON.stringify(logins));
+  Object.values(contas).forEach(c => { c.falhas = 0; c.bloqueado_ate = null; c.ativo = c.ativo !== false; });
+  const chamadas = [];
+
+  function autenticar(login, senha){
+    const c = contas[String(login||'').trim().toLowerCase()];
+    if(!c || !c.ativo) return { ok:false, erro:'login_ou_senha' };
+    if(c.bloqueado_ate && c.bloqueado_ate > Date.now()) return { ok:false, erro:'bloqueado', bloqueado_ate:new Date(c.bloqueado_ate).toISOString() };
+    if(c.senha !== senha){
+      if(c.falhas + 1 >= 5){ c.falhas = 0; c.bloqueado_ate = Date.now() + 15*60000;
+        return { ok:false, erro:'bloqueado', bloqueado_ate:new Date(c.bloqueado_ate).toISOString() }; }
+      c.falhas++; return { ok:false, erro:'login_ou_senha', restam: 5 - c.falhas };
+    }
+    c.falhas = 0; c.bloqueado_ate = null;
+    return { ok:true, login:String(login).trim().toLowerCase(), nome:c.nome };
+  }
+  function contexto(){
+    const ativos = [...itens.values()].filter(i => i.ativo);
+    const cont = {}; ativos.forEach(i => cont[i.unidade] = (cont[i.unidade]||0) + 1);
+    return {
+      unidades: Object.keys(cont).sort((a,b)=> cont[b]-cont[a] || a.localeCompare(b)),
+      grupos: [...new Set(ativos.map(i => i.especificacao).filter(Boolean))].sort(),
+      pendentes: [...itens.values()].filter(i => i.pendente_gr)
+        .sort((a,b)=> String(b.cadastrado_em).localeCompare(String(a.cadastrado_em)))
+        .map(i => ({ codigo:i.codigo, familia:i.familia, descricao:i.descricao, unidade:i.unidade,
+                     especificacao:i.especificacao ?? null, ativo:i.ativo, cadastrado_por:i.cadastrado_por, cadastrado_em:i.cadastrado_em }))
+    };
+  }
+  let relogio = Date.parse('2026-09-23T12:00:00Z');
+  const agora = () => new Date(relogio += 1000).toISOString();
+
+  function salvar(login, senha, modo, p){
+    const a = autenticar(login, senha); if(!a.ok) return a;
+    if(!['criar','reativar','corrigir','retirar'].includes(modo)) return { ok:false, erro:'modo_invalido' };
+    let cod = String(p.codigo ?? '').trim();
+    if(!/^[0-9]+$/.test(cod)) return { ok:false, erro:'codigo_invalido', campo:'codigo' };
+    cod = cod.replace(/^0+/, '');
+    if(cod === '' || cod.length > 7) return { ok:false, erro:'codigo_invalido', campo:'codigo' };
+    const atual = itens.get(cod);
+    if(modo === 'retirar'){
+      if(!atual) return { ok:false, erro:'nao_encontrado' };
+      if(!atual.pendente_gr) return { ok:false, erro:'veio_do_gr', item:atual };
+      atual.ativo = false;
+      return Object.assign({ ok:true, modo, item:Object.assign({}, atual) }, contexto());
+    }
+    const fam = String(p.familia||'').trim().toUpperCase(), desc = String(p.descricao||'').trim(),
+          un = String(p.unidade||'').trim(), esp = String(p.especificacao||'').trim() || null;
+    const ativos = [...itens.values()].filter(i => i.ativo);
+    if(!ativos.some(i => i.familia === fam)) return { ok:false, erro:'familia_invalida', campo:'familia' };
+    if(desc.length < 3 || desc.length > 150) return { ok:false, erro:'descricao_invalida', campo:'descricao' };
+    if(!ativos.some(i => i.unidade === un)) return { ok:false, erro:'unidade_invalida', campo:'unidade' };
+    if(esp && esp.length > 60) return { ok:false, erro:'grupo_invalido', campo:'especificacao' };
+    if(modo === 'criar' && atual) return { ok:false, erro: atual.ativo ? 'codigo_existe' : 'codigo_inativo', campo:'codigo', item:atual };
+    if(modo === 'reativar' && (!atual || atual.ativo)) return { ok:false, erro:'nao_reativavel', item:atual || null };
+    if(modo === 'corrigir'){
+      if(!atual) return { ok:false, erro:'nao_encontrado' };
+      if(!atual.pendente_gr) return { ok:false, erro:'veio_do_gr', item:atual };
+    }
+    if(!p.confirmar_nome){
+      const outro = ativos.find(i => String(i.codigo) !== cod && i.descricao.trim().toLowerCase() === desc.toLowerCase());
+      if(outro) return { ok:false, erro:'nome_repetido', campo:'descricao', item:{ codigo:outro.codigo, descricao:outro.descricao, unidade:outro.unidade } };
+    }
+    /* Sem a chave `especificacao`, o grupo que o item já tinha fica (a tela
+       não tem mais o campo). Igual ao `p_item ? 'especificacao'` do SQL. */
+    const novo = Object.assign({}, atual || {}, { codigo:cod, familia:fam, descricao:desc, unidade:un,
+                                                  ativo:true, pendente_gr:true });
+    if('especificacao' in p || !atual) novo.especificacao = esp;
+    if(modo !== 'corrigir'){ novo.cadastrado_por = a.nome; novo.cadastrado_em = agora(); }
+    itens.set(cod, novo);
+    return Object.assign({ ok:true, modo, item:Object.assign({}, novo) }, contexto());
+  }
+
+  function trocar(login, senha, nova){
+    const a = autenticar(login, senha); if(!a.ok) return a;
+    if(String(nova||'').length < 8) return { ok:false, erro:'senha_curta' };
+    if(nova === senha) return { ok:false, erro:'senha_igual' };
+    contas[a.login].senha = nova; return { ok:true };
+  }
+
+  /* Instala na página. `falhar` deixa a bateria derrubar um endereço. */
+  async function instalarNa(p, { falhar = {} } = {}){
+    await p.route('**supabase.co/**', async r => {
+      const url = r.request().url();
+      let corpo = {}; try { corpo = JSON.parse(r.request().postData() || '{}'); } catch(e){}
+      const nome = (url.match(/\/rpc\/([a-z_]+)/) || [])[1] || 'tabela';
+      chamadas.push({ nome, url, corpo });
+      if(falhar[nome] === 'rede') return r.abort();
+      if(falhar[nome] === 500) return r.fulfill({ status:500, contentType:'application/json', body:'{"message":"erro de teste"}' });
+      const json = b => r.fulfill({ status:200, contentType:'application/json', body: JSON.stringify(b) });
+      if(nome === 'catalogo_entrar'){ const a = autenticar(corpo.p_login, corpo.p_senha); return json(a.ok ? Object.assign(a, contexto()) : a); }
+      if(nome === 'catalogo_salvar_item') return json(salvar(corpo.p_login, corpo.p_senha, corpo.p_modo, corpo.p_item || {}));
+      if(nome === 'catalogo_trocar_senha') return json(trocar(corpo.p_login, corpo.p_senha, corpo.p_nova));
+      if(url.includes('/rest/v1/catalogo_itens')){
+        const u = new URL(url);
+        const off = +(u.searchParams.get('offset') || 0), lim = +(u.searchParams.get('limit') || 1000);
+        const todos = [...itens.values()].sort((a,b)=> String(a.codigo).localeCompare(String(b.codigo)))
+          .map(i => ({ codigo:i.codigo, descricao:i.descricao, unidade:i.unidade, familia:i.familia, ativo:i.ativo }));
+        return json(todos.slice(off, off + lim));
+      }
+      return json([]);
+    });
+  }
+
+  return { instalarNa, chamadas, itens, contas };
+}
+
+module.exports = { instalar, bancoDoCadastro, respostaAbrirPedido, respostaDecisao, corpoPorUrl,
                    respostaCriarSolicitacao, respostaDoFormulario, EMPRESAS_EXEMPLO };

@@ -21,7 +21,7 @@ const fs = require('fs');
 const path = require('path');
 
 const TELAS = ['index.html', 'pedido.html', 'decisao.html', 'aprovacoes.html',
-               'contrato.html', 'acompanhar.html'];
+               'contrato.html', 'acompanhar.html', 'cadastro-itens.html'];
 
 /* Um trecho = um pedaço que deveria ser idêntico onde quer que apareça.
    `de` e `ate` são marcas de texto; o trecho é o que está entre elas. */
@@ -31,7 +31,8 @@ const TRECHOS = [
   { nome: 'endereço do Supabase',          de: "const SUPABASE_URL",          ate: ';\n' },
   { nome: 'chave publicável',              de: "const SUPABASE_KEY",          ate: ';\n' },
   { nome: 'tabela de plural',              de: 'const UNIDADES_PLURAL',       ate: '};' },
-  { nome: 'plural de palavra',             de: 'function pluralPalavra',      ate: '\n}' }
+  { nome: 'plural de palavra',             de: 'function pluralPalavra',      ate: '\n}' },
+  { nome: 'as 20 famílias do GR',          de: 'familias: [',                 ate: ']' }
 ];
 
 const normalizar = t => t.replace(/\r/g, '').replace(/[ \t]+$/gm, '').trim();
