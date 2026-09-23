@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Cadastro de itens do GR · Compras · Grupo Leh</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<!--
+  ============================================================================
+  CADASTRO DE ITENS DO GR · Grupo Leh
+
+  Para quem cria item novo no GR colocar o mesmo item no formulário de
+  compras na hora, sem esperar a próxima importação do catálogo.
+
+  COMO GRAVA: pela função catalogo_salvar_item, que confere login e senha
+  dentro do banco. A tela não tem escrita direta no catálogo, e não pode ter:
+  a chave abaixo é pública, e o repositório também. Tudo o que esta tela
+  valida o banco valida de novo. Ver cadastro-de-itens.sql.
+
+  QUEM PODE: quem tem login em catalogo_cadastradores. O login é criado pelo
+  SQL Editor (fim de cadastro-de-itens.sql). A senha fica só na memória desta
+  aba: fechar a aba, recarregar ou clicar em Sair esquece.
+
+  O ITEM NASCE "AGUARDANDO O GR": a importação do CSV não o desativa. Quando
+  o código aparece no CSV, o que está no GR sobrescreve o que foi digitado
+  aqui. Por isso só se corrige por aqui item que ainda está aguardando.
+  ============================================================================
+-->
+
+<style>
+  :root{
+    /* Identidade Grupo Leh — livro da marca, maio 2024
+       2965 C #00263d · 2955 C #003865 · 341 C #007A53 · 330 C #00524c
+       321 C #008c95 · 468 C #ddcba3 · Warm Gray 1 C #d7d2cc */
+    color-scheme:light;   /* faz o navegador desenhar rádio, seleção e data no tema certo */
+    --marca:#00263d;      --sobre-marca:#FFFFFF;      --azul:#003865;
+    --verde:#008c95;      --acento-fundo:#00727a;     --sobre-acento:#FFFFFF;
+    --verde-claro:#E2F1F2; --verde-folha:#007A53;     --verde-mata:#00524c;
+    --areia:#ddcba3;      --cinza-quente:#d7d2cc;
+    --bg:#F2F5F8;         --card:#FFFFFF;           --realce:#F7F9FB;
+    --texto:#0F2233;      --muted:#5F7284;
+    --borda:#DBE3EA;      --linha-forte:#B4C2CE;
+    --erro:#B3261E;       --erro-bg:#FDF2F1;        --erro-borda:#E8B4B0;
+    --demo:#8A5A00;       --demo-bg:#FFF8E8;        --demo-borda:#EFDDB4;
+    --ok-bg:#E1F0E9;      --ok-txt:#007A53;
+    --codigo-bg:#00263d;  --codigo-txt:#CFE3E5;
+    --raio:12px;          --pilula:100px;
+    /* O livro da marca adota GoldPlay e autoriza Arial para meios eletrônicos.
+       Figtree entra entre as duas como equivalente aberto mais próximo. */
+    --sans:"Goldplay","Goldplay Alt","Figtree",Arial,Helvetica,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --marca:#001725;      --sobre-marca:#FFFFFF;      --azul:#0A4472;
+      --verde:#2FB3BC;      --acento-fundo:#56C8CF;   --sobre-acento:#04161F;
+      --verde-claro:#0D2A2D; --verde-folha:#3FA37E;   --verde-mata:#0B3B37;
+      --areia:#7A6E55;      --cinza-quente:#6E6A65;
+      --bg:#08131C;         --card:#0F1D28;           --realce:#152431;
+      --texto:#E6EDF3;      --muted:#9CABB9;
+      --borda:#22323F;      --linha-forte:#36485B;
+      --erro:#F0A0A0;       --erro-bg:#2A1616;        --erro-borda:#5B2A2A;
+      --demo:#E0B860;       --demo-bg:#241D0E;        --demo-borda:#3B3218;
+      --ok-bg:#0F2C21;      --ok-txt:#5FC79A;
+      --codigo-bg:#04121B;  --codigo-txt:#CFE3E5;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --marca:#001725;    --sobre-marca:#FFFFFF;    --azul:#0A4472;
+    --verde:#2FB3BC;    --acento-fundo:#56C8CF;   --sobre-acento:#04161F;
+    --verde-claro:#0D2A2D; --verde-folha:#3FA37E;   --verde-mata:#0B3B37;
+    --areia:#7A6E55;    --cinza-quente:#6E6A65;
+    --bg:#08131C;       --card:#0F1D28;         --realce:#152431;
+    --texto:#E6EDF3;    --muted:#9CABB9;
+    --borda:#22323F;    --linha-forte:#36485B;
+    --erro:#F0A0A0;     --erro-bg:#2A1616;      --erro-borda:#5B2A2A;
+    --demo:#E0B860;     --demo-bg:#241D0E;      --demo-borda:#3B3218;
+    --ok-bg:#0F2C21;    --ok-txt:#5FC79A;
+    --codigo-bg:#04121B;  --codigo-txt:#CFE3E5;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--texto);font-family:var(--sans);
+    font-size:16px;line-height:1.5;padding-bottom:60px}
+  [hidden]{display:none !important}
+
+  .topo{background:var(--marca);color:var(--sobre-marca);padding:16px 20px;position:sticky;top:0;z-index:20;
+    display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .marca-bloco{display:flex;align-items:center;gap:16px;min-width:0}
+  .marca-bloco .titulo-tela{border-left:1px solid rgba(255,255,255,.28);padding-left:16px;min-width:0}
+  .logo-leh{display:block;height:34px;width:auto;flex:none}
+  @media (max-width:420px){ .logo-leh{height:28px} .marca-bloco{gap:12px} .marca-bloco .titulo-tela{padding-left:12px} }
+  .topo h1{margin:0;font-size:17px;font-weight:600;letter-spacing:.2px}
+  .topo .rot{display:block;font-size:12px;opacity:.75;margin-top:2px;text-transform:uppercase;letter-spacing:1px}
+  .status{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+    padding:4px 9px;border-radius:99px;white-space:nowrap;background:rgba(255,255,255,.18)}
+  .status.on{background:var(--ok-bg);color:var(--ok-txt)}
+  .status.off{background:var(--demo-bg);color:var(--demo)}
+
+  .wrap{max-width:560px;margin:0 auto;padding:16px}
+  .cartao{background:var(--card);border:1px solid var(--borda);border-radius:var(--raio);padding:20px 18px;margin-bottom:16px}
+  .cartao h2{margin:0 0 6px;font-size:19px;font-weight:650;letter-spacing:-.2px}
+  .cartao .sub{margin:0 0 18px;font-size:14px;color:var(--muted)}
+
+  .sessao{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
+    background:var(--card);border:1px solid var(--borda);border-radius:var(--raio);padding:10px 14px;margin-bottom:16px;font-size:14px}
+  .sessao b{font-weight:600}
+  .sessao .acoes{display:flex;gap:6px}
+
+  .campo{margin-bottom:20px}
+  .campo:last-child{margin-bottom:0}
+  .campo > label{display:block;font-weight:600;font-size:15px;margin-bottom:8px}
+  .ajuda{display:block;font-size:13px;color:var(--muted);margin-top:6px;line-height:1.45}
+  .opcional{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:var(--pilula);
+    background:var(--realce);border:1px solid var(--borda);color:var(--muted);
+    font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;vertical-align:1px}
+  input[type=text],input[type=password],select{
+    width:100%;padding:13px 12px;font-size:16px;font-family:inherit;color:inherit;
+    background:var(--card);border:1px solid var(--borda);border-radius:10px;appearance:none}
+  input:focus,select:focus{outline:none;border-color:var(--verde);box-shadow:0 0 0 3px var(--verde-claro)}
+  select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'><path d='M3 5l4 4 4-4' fill='none' stroke='%236b7770' stroke-width='1.6' stroke-linecap='round'/></svg>");
+    background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
+  input:disabled,select:disabled{background:var(--realce);color:var(--muted)}
+  #codigo{font-family:var(--mono);letter-spacing:.5px}
+  .campo.invalido input,.campo.invalido select{border-color:var(--erro)}
+  .erro-campo{display:none;color:var(--erro);font-size:13px;margin-top:6px;font-weight:500}
+  .campo.invalido .erro-campo{display:block}
+  .contador{float:right;font-size:12px;color:var(--muted);font-weight:400}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:inherit;font-weight:600;font-size:16px;
+    border-radius:10px;padding:13px 18px;cursor:pointer;border:1px solid transparent;min-height:48px}
+  .btn-primario{background:var(--acento-fundo);color:var(--sobre-acento);width:100%}
+  .btn-primario:hover{filter:brightness(1.07)}
+  .btn-secundario{background:var(--card);color:var(--texto);border-color:var(--borda)}
+  .btn-secundario:hover{border-color:var(--linha-forte)}
+  .btn-perigo{background:var(--card);color:var(--erro);border-color:var(--erro-borda)}
+  .btn:disabled{opacity:.55;cursor:wait}
+  .btn-link{background:none;border:0;color:var(--verde);font:inherit;font-size:14px;font-weight:600;cursor:pointer;padding:6px 8px;border-radius:8px}
+  .btn-link:hover{background:var(--verde-claro)}
+  .botoes{display:flex;gap:10px;margin-top:22px}
+  .botoes .btn{flex:1}
+
+  .aviso{border-radius:10px;padding:12px 14px;font-size:14px;line-height:1.5;margin-bottom:16px;border:1px solid}
+  .aviso.erro{background:var(--erro-bg);border-color:var(--erro-borda);color:var(--erro)}
+  .aviso.ok{background:var(--ok-bg);border-color:transparent;color:var(--ok-txt)}
+  .aviso.atencao{background:var(--demo-bg);border-color:var(--demo-borda);color:var(--texto)}
+  .aviso.atencao b{color:var(--demo)}
+  .aviso .botoes{margin-top:12px}
+  .aviso .btn{font-size:15px;min-height:44px;padding:10px 14px}
+  .regras ol{margin:6px 0 0;padding-left:20px}
+  .regras li{margin-top:4px}
+  .regras li b{color:var(--texto)}
+
+  .dica-campo{margin-top:8px;font-size:13px;border-radius:8px;padding:8px 10px}
+  .dica-campo.ruim{background:var(--erro-bg);color:var(--erro)}
+  .dica-campo.meh{background:var(--demo-bg);color:var(--texto)}
+  .dica-campo.bom{background:var(--ok-bg);color:var(--ok-txt)}
+
+  .parecidos{margin-top:8px;border:1px solid var(--borda);border-radius:10px;overflow:hidden}
+  .parecidos .tit{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);
+    padding:8px 12px;background:var(--realce);border-bottom:1px solid var(--borda)}
+  .parecidos .linha{padding:8px 12px;font-size:14px;border-bottom:1px solid var(--borda);display:flex;gap:10px;justify-content:space-between}
+  .parecidos .linha:last-child{border-bottom:0}
+  .parecidos .cod{font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap}
+
+  .previa{border:1px dashed var(--linha-forte);border-radius:10px;padding:12px 14px;background:var(--realce)}
+  .previa .tit{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px}
+  .previa .nome{font-weight:600}
+  .previa .meta{font-size:13px;color:var(--muted);margin-top:2px}
+  .previa .vazio{font-size:14px;color:var(--muted)}
+
+  .modo-selo{display:inline-block;margin-left:8px;padding:2px 9px;border-radius:99px;background:var(--demo-bg);
+    color:var(--demo);font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;vertical-align:3px}
+
+  .lista-pend .item{border-top:1px solid var(--borda);padding:12px 0}
+  .lista-pend .item:first-child{border-top:0;padding-top:0}
+  .lista-pend .cab{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+  .lista-pend .nome{font-weight:600;font-size:15px}
+  .lista-pend .cod{font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap}
+  .lista-pend .meta{font-size:13px;color:var(--muted);margin-top:2px}
+  .lista-pend .retirado .nome{text-decoration:line-through;color:var(--muted)}
+  .lista-pend .acoes{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+  .lista-pend .confirma{margin-top:8px}
+  .selo{display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+  .selo.aguardando{background:var(--demo-bg);color:var(--demo)}
+  .selo.retirado{background:var(--realce);color:var(--muted);border:1px solid var(--borda)}
+  .vazio-lista{font-size:14px;color:var(--muted);margin:0}
+
+  .rodape-nota{max-width:560px;margin:0 auto;padding:0 16px 20px;font-size:12px;color:var(--muted);line-height:1.5}
+</style>
+</head>
+
+<body>
+
+<header class="topo">
+  <div class="marca-bloco">
+    <img class="logo-leh" src="data:image/png;base64,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" alt="Grupo Leh">
+    <div class="titulo-tela">
+      <span class="rot">Compras</span>
+      <h1>Cadastro de itens do GR</h1>
+    </div>
+  </div>
+  <span class="status" id="statusConexao">…</span>
+</header>
+
+<main class="wrap">
+
+  <!-- ===================================================== ENTRAR ======= -->
+  <section id="telaEntrar" class="cartao">
+    <h2>Entrar</h2>
+    <p class="sub">Só quem cadastra item no GR tem acesso. O login é pessoal: cada item fica registrado com o nome de quem cadastrou.</p>
+    <div id="avisoEntrar" class="aviso erro" hidden role="alert"></div>
+    <form id="formEntrar" novalidate autocomplete="on">
+      <div class="campo">
+        <label for="login">Login</label>
+        <input type="text" id="login" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="60">
+      </div>
+      <div class="campo">
+        <label for="senha">Senha</label>
+        <input type="password" id="senha" name="password" autocomplete="current-password" maxlength="200">
+      </div>
+      <button type="submit" class="btn btn-primario" id="btnEntrar">Entrar</button>
+    </form>
+  </section>
+
+  <!-- ===================================================== DENTRO ======= -->
+  <div id="telaDentro" hidden>
+
+    <div class="sessao">
+      <span>Cadastrando como <b id="quemNome"></b></span>
+      <span class="acoes">
+        <button type="button" class="btn-link" id="btnSair">Sair</button>
+      </span>
+    </div>
+
+    <!-- Cadastro -->
+    <section class="cartao" id="cartaoItem">
+      <h2 id="tituloItem">Novo item</h2>
+      <p class="sub" id="subItem">Copie do GR, do jeito que está lá. O item aparece no formulário de compras assim que for salvo.</p>
+
+      <div class="aviso atencao regras" id="regras">
+        <b>Antes de cadastrar, confira duas coisas:</b>
+        <ol>
+          <li><b>O item precisa já estar criado no GR.</b> Use o código e o nome exatamente como estão lá. Item que não existe no GR não vira ordem de compra.</li>
+          <li><b>Cuidado com duplicidade.</b> Veja se o item já não está no formulário com outro nome ou outro código. Enquanto você digita, a tela mostra os parecidos — se um deles for o mesmo item, não cadastre.</li>
+        </ol>
+      </div>
+
+      <div id="avisoItem" class="aviso" hidden role="alert"></div>
+
+      <form id="formItem" novalidate>
+        <div class="campo" data-campo="codigo">
+          <label for="codigo">Código no GR</label>
+          <input type="text" id="codigo" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="Ex.: 8555">
+          <span class="erro-campo" id="erroCodigo">Digite o código numérico do item no GR.</span>
+          <div id="dicaCodigo" class="dica-campo" hidden></div>
+        </div>
+
+        <div class="campo" data-campo="descricao">
+          <label for="descricao">Nome do item no GR <span class="contador" id="contaDescricao">0/150</span></label>
+          <input type="text" id="descricao" autocomplete="off" maxlength="150" placeholder="Ex.: FILTRO DE AR RE181915">
+          <span class="ajuda">Igual ao GR, com a embalagem quando o GR tem (KG, PCT, CX). É o que o solicitante vai ler.</span>
+          <span class="erro-campo" id="erroDescricao">Escreva o nome do item (pelo menos 3 letras).</span>
+          <div id="parecidos" class="parecidos" hidden></div>
+        </div>
+
+        <div class="campo" data-campo="familia">
+          <label for="familia">Família</label>
+          <select id="familia"><option value="">Escolha a família…</option></select>
+          <span class="erro-campo">Escolha a família do item.</span>
+        </div>
+
+        <div class="campo" data-campo="unidade">
+          <label for="unidade">Unidade</label>
+          <select id="unidade"><option value="">Escolha a unidade…</option></select>
+          <span class="erro-campo">Escolha a unidade.</span>
+        </div>
+
+        <div class="campo">
+          <div class="previa" id="previa" aria-live="polite"></div>
+        </div>
+
+        <div class="botoes">
+          <button type="button" class="btn btn-secundario" id="btnCancelarEdicao" hidden>Cancelar</button>
+          <button type="submit" class="btn btn-primario" id="btnSalvar">Cadastrar item</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Aguardando o GR -->
+    <section class="cartao" id="cartaoPendentes">
+      <h2>Cadastrados aqui, aguardando o GR</h2>
+      <p class="sub">Até o item aparecer na planilha do GR e o catálogo ser importado de novo, ele fica nesta lista e dá para corrigir. Depois disso, quem manda é o GR.</p>
+      <div id="listaPendentes" class="lista-pend"></div>
+    </section>
+
+  </div>
+</main>
+
+<p class="rodape-nota">Esqueceu a senha ou precisa de acesso: fale com o time de IA do Grupo Leh. A senha não fica salva neste aparelho — recarregar a página pede de novo.</p>
+
+<script>
+/* ============================================================================
+   1) CONFIGURAÇÃO — o mesmo projeto do formulário
+   ========================================================================== */
+const SUPABASE_URL = 'https://mbwaqnlmscxbacmxdopr.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_AR4D1JlHB-Z12--QbzwYWQ_URZzmVwl';
+
+/* As 20 famílias do GR, iguais às do formulário (index.html). O banco confere
+   a família de novo; esta lista é só para mostrar o nome. */
+const DADOS = {
+  familias: [
+    { id:'AA', nome:'Alimentação Animal' },
+    { id:'CL', nome:'Combustíveis, Lubrificantes, Óleos e Outros' },
+    { id:'CC', nome:'Copa e Cozinha' },
+    { id:'DA', nome:'Defensivos Agrícolas' },
+    { id:'SP', nome:'Equipamentos, Peças e Materiais para Operações' },
+    { id:'FE', nome:'Fertilizantes e Outros' },
+    { id:'GR', nome:'Grãos' },
+    { id:'IA', nome:'Insumos Alimentação Animal' },
+    { id:'MG', nome:'Manutenção Geral' },
+    { id:'MM', nome:'Manutenção de Máquinas e Equipamentos' },
+    { id:'HL', nome:'Materiais de Higiene e Limpeza' },
+    { id:'ME', nome:'Materiais e Equipamentos de Expediente' },
+    { id:'LD', nome:'Materiais para Desinfecção e Sanitização' },
+    { id:'MV', nome:'Medicamentos e Vacinas' },
+    { id:'MO', nome:'Máquinas, Implementos, Veículos e Outros' },
+    { id:'AN', nome:'Plantel de Animais' },
+    { id:'RC', nome:'Recicláveis' },
+    { id:'RR', nome:'Recursos Renováveis' },
+    { id:'ST', nome:'Segurança e Saúde do Trabalho' },
+    { id:'SE', nome:'Sementes' }
+  ]
+};
+
+/* ============================================================================
+   2) API DO SUPABASE
+   ========================================================================== */
+const cabecalhos = extra => Object.assign({
+  'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json'
+}, extra || {});
+
+async function apiGet(caminho){
+  const r = await fetch(SUPABASE_URL + '/rest/v1/' + caminho, { headers: cabecalhos() });
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+/* Mesma paginação do formulário: o servidor corta em 1.000 linhas calado. */
+async function apiGetTudo(caminho, ordem, tamPagina){
+  const passo = tamPagina || 1000;
+  let todos = [], desde = 0;
+  for(let volta = 0; volta < 50; volta++){
+    const pedaco = await apiGet(caminho + '&order=' + ordem +
+                                '&offset=' + desde + '&limit=' + passo);
+    todos = todos.concat(pedaco);
+    if(pedaco.length < passo) return { linhas: todos, completo: true };
+    desde += passo;
+  }
+  return { linhas: todos, completo: false };
+}
+async function apiRpc(nome, corpo){
+  const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + nome, {
+    method:'POST', headers: cabecalhos(), body: JSON.stringify(corpo)
+  });
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+/* ============================================================================
+   3) UTILITÁRIOS
+   ========================================================================== */
+const $ = id => document.getElementById(id);
+const esc = t => String(t==null?'':t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const semAcento = t => String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+const nomeFamilia = id => (DADOS.familias.find(f => f.id === id) || {}).nome || id || '';
+/* Mesma regra do banco: só dígitos, zero à esquerda não conta. */
+function normalizarCodigo(v){
+  const t = String(v||'').trim();
+  if(!/^[0-9]+$/.test(t)) return null;
+  const s = t.replace(/^0+/, '');
+  return (s === '' || s.length > 7) ? null : s;
+}
+function quando(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  if(isNaN(d)) return '';
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+}
+function mostrarAviso(el, tipo, html){
+  el.className = 'aviso ' + tipo; el.innerHTML = html; el.hidden = false;
+}
+function esconder(el){ el.hidden = true; el.innerHTML = ''; }
+
+/* ============================================================================
+   4) ESTADO
+   A senha mora aqui, em memória, e só aqui. Nada vai para localStorage:
+   é a chave de escrita do catálogo, e um computador compartilhado na
+   granja não pode lembrá-la.
+   ========================================================================== */
+const estado = {
+  login: '', senha: '', nome: '',
+  unidades: [], pendentes: [],
+  catalogo: new Map(),        // codigo -> {codigo, descricao, unidade, familia, ativo}
+  catalogoPronto: false,
+  modo: 'criar',              // criar | corrigir | reativar
+  ocupado: false
+};
+
+/* ============================================================================
+   5) CATÁLOGO LOCAL — só para AVISAR antes de salvar (código já usado, nome
+   parecido). Quem decide é o banco; se esta leitura falhar, a tela continua
+   funcionando e o banco barra do mesmo jeito.
+   ========================================================================== */
+async function carregarCatalogo(){
+  try{
+    const r = await apiGetTudo('catalogo_itens?select=codigo,descricao,unidade,familia,ativo', 'codigo');
+    estado.catalogo = new Map(r.linhas.map(i => [String(i.codigo), i]));
+    estado.catalogoPronto = true;
+    const ativos = r.linhas.filter(i => i.ativo).length;
+    $('statusConexao').textContent = ativos.toLocaleString('pt-BR') + ' itens';
+    $('statusConexao').className = 'status on';
+  }catch(e){
+    estado.catalogoPronto = false;
+    $('statusConexao').textContent = 'sem prévia';
+    $('statusConexao').className = 'status off';
+    $('statusConexao').title = 'Não consegui ler o catálogo para os avisos. O cadastro funciona; o banco confere duplicados.';
+  }
+}
+function lembrarNoCatalogo(item){
+  if(item && item.codigo) estado.catalogo.set(String(item.codigo), {
+    codigo:String(item.codigo), descricao:item.descricao, unidade:item.unidade,
+    familia:item.familia, ativo:item.ativo
+  });
+}
+
+/* ============================================================================
+   6) ENTRAR / SAIR
+   ========================================================================== */
+const MSG_BLOQUEADO = b => 'Muitas senhas erradas. O login está travado até <b>' +
+  esc(new Date(b).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})) + '</b>. Tente depois disso ou peça ao setor de Compras.';
+
+async function entrar(ev){
+  ev.preventDefault();
+  if(estado.ocupado) return;
+  const login = $('login').value.trim(), senha = $('senha').value;
+  const aviso = $('avisoEntrar');
+  if(!login || !senha){
+    mostrarAviso(aviso, 'erro', 'Preencha login e senha.');
+    (login ? $('senha') : $('login')).focus();
+    return;
+  }
+  ocupar($('btnEntrar'), 'Entrando…');
+  try{
+    const r = await apiRpc('catalogo_entrar', { p_login: login, p_senha: senha });
+    if(!r || !r.ok){
+      if(r && r.erro === 'bloqueado') mostrarAviso(aviso, 'erro', MSG_BLOQUEADO(r.bloqueado_ate));
+      else mostrarAviso(aviso, 'erro', 'Login ou senha incorretos.' +
+        (r && r.restam != null ? ' ' + (r.restam === 1 ? 'Mais 1 tentativa errada' : 'Mais ' + r.restam + ' tentativas erradas') +
+          ' e o login trava por 15 minutos.' : ''));
+      $('senha').value = ''; $('senha').focus();
+      return;
+    }
+    estado.login = login; estado.senha = senha; estado.nome = r.nome;
+    aplicarContexto(r);
+    esconder(aviso);
+    $('senha').value = '';
+    $('quemNome').textContent = r.nome;
+    $('telaEntrar').hidden = true;
+    $('telaDentro').hidden = false;
+    novoItem();
+    $('codigo').focus();
+  }catch(e){
+    mostrarAviso(aviso, 'erro', 'Não consegui falar com o banco. Confira a internet e tente de novo.<br><small>' + esc(String(e.message).slice(0,200)) + '</small>');
+  }finally{
+    liberar($('btnEntrar'), 'Entrar');
+  }
+}
+
+function sair(motivoHtml){
+  estado.login = estado.senha = estado.nome = '';
+  estado.pendentes = [];
+  $('telaDentro').hidden = true;
+  $('telaEntrar').hidden = false;
+  $('login').value = ''; $('senha').value = '';
+  limparFormulario();
+  esconder($('avisoItem'));
+  if(motivoHtml) mostrarAviso($('avisoEntrar'), 'erro', motivoHtml);
+  else esconder($('avisoEntrar'));
+  $('login').focus();
+}
+
+/* A senha pode deixar de valer no meio do uso (trocada em outra aba, login
+   desligado, trava). Aí a única saída honesta é voltar para o Entrar. */
+function tratarErroDeAcesso(r){
+  if(!r || r.ok) return false;
+  if(r.erro === 'login_ou_senha'){ sair('Sua senha não vale mais (foi trocada ou o login foi desligado). Entre de novo ou fale com o time de IA.'); return true; }
+  if(r.erro === 'bloqueado'){ sair(MSG_BLOQUEADO(r.bloqueado_ate)); return true; }
+  return false;
+}
+
+function aplicarContexto(r){
+  if(Array.isArray(r.unidades)) estado.unidades = r.unidades;
+  if(Array.isArray(r.pendentes)) estado.pendentes = r.pendentes;
+  montarUnidades(); desenharPendentes();
+}
+
+/* ============================================================================
+   7) CAMPOS
+   ========================================================================== */
+function montarFamilias(){
+  const sel = $('familia');
+  DADOS.familias.forEach(f => {
+    const o = document.createElement('option');
+    o.value = f.id; o.textContent = f.nome + ' (' + f.id + ')';
+    sel.appendChild(o);
+  });
+}
+function montarUnidades(){
+  const sel = $('unidade'), atual = sel.value;
+  sel.innerHTML = '<option value="">Escolha a unidade…</option>' +
+    estado.unidades.map(u => '<option value="' + esc(u) + '">' + esc(u) + '</option>').join('');
+  if(atual) sel.value = atual;
+}
+
+function lerFormulario(){
+  return {
+    codigo: $('codigo').value.trim(),
+    descricao: $('descricao').value.trim(),
+    familia: $('familia').value,
+    unidade: $('unidade').value
+  };
+}
+function marcarInvalido(campo, mensagem){
+  const el = document.querySelector('.campo[data-campo="' + campo + '"]');
+  if(!el) return;
+  el.classList.add('invalido');
+  if(mensagem){ const e = el.querySelector('.erro-campo'); if(e) e.textContent = mensagem; }
+}
+function limparInvalidos(){
+  document.querySelectorAll('#formItem .campo.invalido').forEach(c => c.classList.remove('invalido'));
+}
+
+/* Validação na tela: a mesma do banco, para errar cedo e perto do campo. */
+function validar(d){
+  limparInvalidos();
+  const erros = [];
+  if(!normalizarCodigo(d.codigo)) erros.push(['codigo', d.codigo ? 'O código do GR tem só números (até 7 dígitos).' : 'Digite o código numérico do item no GR.']);
+  if(d.descricao.length < 3) erros.push(['descricao', 'Escreva o nome do item (pelo menos 3 letras).']);
+  if(!d.familia) erros.push(['familia']);
+  if(!d.unidade) erros.push(['unidade']);
+  erros.forEach(([c, m]) => marcarInvalido(c, m));
+  if(erros.length){
+    const primeiro = document.querySelector('.campo[data-campo="' + erros[0][0] + '"] input, .campo[data-campo="' + erros[0][0] + '"] select');
+    if(primeiro) primeiro.focus();
+  }
+  return erros.length === 0;
+}
+
+/* Aviso do código enquanto digita. */
+function conferirCodigo(){
+  const dica = $('dicaCodigo');
+  const bruto = $('codigo').value.trim();
+  document.querySelector('.campo[data-campo="codigo"]').classList.remove('invalido');
+  if(estado.modo === 'corrigir' || !bruto){ dica.hidden = true; return; }
+  const cod = normalizarCodigo(bruto);
+  if(!cod){ dica.className = 'dica-campo ruim'; dica.textContent = 'Só números, até 7 dígitos.'; dica.hidden = false; return; }
+  if(!estado.catalogoPronto){ dica.hidden = true; return; }
+  const ja = estado.catalogo.get(cod);
+  if(!ja){ dica.className = 'dica-campo bom'; dica.textContent = 'Código livre no formulário.'; dica.hidden = false; return; }
+  if(ja.ativo){
+    dica.className = 'dica-campo ruim';
+    dica.innerHTML = 'Este código já está no formulário: <b>' + esc(ja.descricao) + '</b> (' + esc(ja.unidade) + ').';
+  }else{
+    dica.className = 'dica-campo meh';
+    dica.innerHTML = 'Este código existe, mas está <b>desativado</b>: ' + esc(ja.descricao) + '. Ao salvar, ele pode ser reativado com os dados abaixo.';
+  }
+  dica.hidden = false;
+}
+
+/* Itens parecidos: a forma mais barata de não cadastrar de novo o que já existe. */
+function conferirParecidos(){
+  const caixa = $('parecidos');
+  const texto = semAcento($('descricao').value.trim());
+  $('contaDescricao').textContent = $('descricao').value.length + '/150';
+  if(texto.length < 3 || !estado.catalogoPronto){ caixa.hidden = true; return; }
+  const palavras = texto.split(/\s+/).filter(p => p.length >= 2);
+  if(!palavras.length){ caixa.hidden = true; return; }
+  const meu = normalizarCodigo($('codigo').value);
+  const achados = [];
+  for(const i of estado.catalogo.values()){
+    if(!i.ativo || String(i.codigo) === meu) continue;
+    const alvo = semAcento(i.descricao);
+    if(palavras.every(p => alvo.includes(p))){
+      achados.push(i);
+      if(achados.length >= 6) break;
+    }
+  }
+  if(!achados.length){ caixa.hidden = true; return; }
+  caixa.innerHTML = '<div class="tit">Já existem no formulário — confira se não é um destes</div>' +
+    achados.slice(0,5).map(i => '<div class="linha"><span>' + esc(i.descricao) + '</span><span class="cod">' +
+      esc(i.codigo) + ' · ' + esc(i.unidade) + '</span></div>').join('');
+  caixa.hidden = false;
+}
+
+function desenharPrevia(){
+  const d = lerFormulario();
+  const p = $('previa');
+  if(!d.descricao && !d.codigo){
+    p.innerHTML = '<div class="tit">Como vai aparecer no formulário</div><div class="vazio">Preencha os campos para ver.</div>';
+    return;
+  }
+  const cod = normalizarCodigo(d.codigo) || d.codigo || '—';
+  p.innerHTML = '<div class="tit">Como vai aparecer no formulário</div>' +
+    '<div class="nome">' + esc(d.descricao || '(sem nome)') + '</div>' +
+    '<div class="meta">' + esc(cod) + ' · ' + esc(d.unidade || 'unidade?') +
+    (d.familia ? ' · ' + esc(nomeFamilia(d.familia)) : '') + '</div>';
+}
+
+/* ============================================================================
+   8) SALVAR
+   ========================================================================== */
+function ocupar(btn, texto){ estado.ocupado = true; btn.disabled = true; btn.dataset.txt = btn.textContent; btn.textContent = texto; }
+function liberar(btn, texto){ estado.ocupado = false; btn.disabled = false; btn.textContent = texto || btn.dataset.txt; }
+
+async function salvar(ev, extra){
+  if(ev) ev.preventDefault();
+  if(estado.ocupado) return;
+  const aviso = $('avisoItem');
+  const d = lerFormulario();
+  if(!validar(d)){ esconder(aviso); return; }
+  const modo = (extra && extra.modo) || estado.modo;
+  const corpo = Object.assign({}, d, { codigo: normalizarCodigo(d.codigo) },
+                              extra && extra.confirmarNome ? { confirmar_nome: true } : {});
+  const btn = $('btnSalvar');
+  ocupar(btn, 'Salvando…');
+  esconder(aviso);
+  let r;
+  try{
+    r = await apiRpc('catalogo_salvar_item', { p_login: estado.login, p_senha: estado.senha, p_modo: modo, p_item: corpo });
+  }catch(e){
+    liberar(btn, textoBotao());
+    mostrarAviso(aviso, 'erro', '<b>Não salvei.</b> Não consegui falar com o banco — confira a internet e clique de novo. Nada do que você digitou se perdeu.<br><small>' +
+      esc(String(e.message).slice(0,200)) + '</small>');
+    return;
+  }
+  liberar(btn, textoBotao());
+  if(tratarErroDeAcesso(r)) return;
+
+  if(r.ok){
+    lembrarNoCatalogo(r.item);
+    aplicarContexto(r);
+    const it = r.item;
+    const verbo = { criar:'cadastrado', corrigir:'corrigido', reativar:'reativado' }[modo] || 'salvo';
+    novoItem();
+    mostrarAviso(aviso, 'ok', '<b>Item ' + esc(it.codigo) + ' ' + verbo + '.</b> ' + esc(it.descricao) +
+      ' já aparece para quem abrir o formulário de compras agora.');
+    $('codigo').focus();
+    return;
+  }
+
+  // Recusas que pedem uma decisão de quem está cadastrando
+  if(r.erro === 'nome_repetido'){
+    marcarInvalido('descricao', 'Já existe item ativo com este nome.');
+    mostrarAviso(aviso, 'atencao',
+      '<b>Já existe um item com este nome:</b> ' + esc(r.item.descricao) + ' — código ' + esc(r.item.codigo) +
+      ' (' + esc(r.item.unidade) + ').<br>Se é o mesmo item, não precisa cadastrar: ele já está no formulário. ' +
+      'Se no GR são dois itens diferentes com o mesmo nome, pode seguir.' +
+      '<div class="botoes"><button type="button" class="btn btn-secundario" id="btnNaoRepetir">Não é outro, cancelar</button>' +
+      '<button type="button" class="btn btn-primario" id="btnRepetir">É outro item, salvar</button></div>');
+    $('btnRepetir').onclick = () => salvar(null, { modo, confirmarNome: true });
+    $('btnNaoRepetir').onclick = () => { esconder(aviso); limparInvalidos(); $('descricao').focus(); };
+    return;
+  }
+  if(r.erro === 'codigo_inativo'){
+    marcarInvalido('codigo', 'Este código existe, mas está desativado.');
+    mostrarAviso(aviso, 'atencao',
+      '<b>O código ' + esc(r.item.codigo) + ' já existiu</b> e foi desativado: ' + esc(r.item.descricao) +
+      ' (' + esc(r.item.unidade) + ').<br>Se o item voltou a ser usado no GR, reative — ele volta ao formulário com os dados que você preencheu.' +
+      '<div class="botoes"><button type="button" class="btn btn-secundario" id="btnNaoReativar">Cancelar</button>' +
+      '<button type="button" class="btn btn-primario" id="btnReativar">Reativar com estes dados</button></div>');
+    $('btnReativar').onclick = () => salvar(null, { modo: 'reativar' });
+    $('btnNaoReativar').onclick = () => { esconder(aviso); limparInvalidos(); $('codigo').focus(); };
+    return;
+  }
+  if(r.erro === 'codigo_existe'){
+    lembrarNoCatalogo(r.item);
+    marcarInvalido('codigo', 'Este código já está no formulário.');
+    mostrarAviso(aviso, 'erro', '<b>Não salvei:</b> o código ' + esc(r.item.codigo) + ' já está no formulário como <b>' +
+      esc(r.item.descricao) + '</b> (' + esc(r.item.unidade) + '). Confira o código no GR.');
+    $('codigo').focus();
+    return;
+  }
+  const MSG = {
+    codigo_invalido:   ['codigo', 'O código do GR tem só números (até 7 dígitos).'],
+    familia_invalida:  ['familia', 'Família não reconhecida. Escolha uma da lista.'],
+    descricao_invalida:['descricao', 'O nome precisa ter de 3 a 150 caracteres.'],
+    unidade_invalida:  ['unidade', 'Unidade não reconhecida. Escolha uma da lista.']
+  };
+  if(MSG[r.erro]){
+    marcarInvalido(MSG[r.erro][0], MSG[r.erro][1]);
+    mostrarAviso(aviso, 'erro', '<b>Não salvei:</b> ' + esc(MSG[r.erro][1]));
+    return;
+  }
+  if(r.erro === 'veio_do_gr'){
+    mostrarAviso(aviso, 'erro', '<b>Não salvei:</b> este item já veio da importação do GR. Correção nele se faz no GR — a próxima importação apagaria o que fosse mudado aqui.');
+    novoItem(true);
+    return;
+  }
+  if(r.erro === 'nao_reativavel'){
+    mostrarAviso(aviso, 'erro', '<b>Não salvei:</b> este código não está mais desativado — alguém pode tê-lo reativado agora. Recarregue a página.');
+    return;
+  }
+  mostrarAviso(aviso, 'erro', '<b>Não salvei.</b> O banco respondeu algo que eu não esperava: <code>' + esc(JSON.stringify(r).slice(0,200)) + '</code>');
+}
+
+function textoBotao(){
+  return estado.modo === 'corrigir' ? 'Salvar correção' : 'Cadastrar item';
+}
+
+function limparFormulario(){
+  ['codigo','descricao'].forEach(id => $(id).value = '');
+  $('familia').value = ''; $('unidade').value = '';
+  $('dicaCodigo').hidden = true; $('parecidos').hidden = true;
+  $('contaDescricao').textContent = '0/150';
+  limparInvalidos();
+}
+
+/* Volta ao modo "novo item". `manterAviso` deixa a mensagem na tela. */
+function novoItem(manterAviso){
+  estado.modo = 'criar';
+  limparFormulario();
+  $('codigo').disabled = false;
+  $('tituloItem').innerHTML = 'Novo item';
+  $('subItem').textContent = 'Copie do GR, do jeito que está lá. O item aparece no formulário de compras assim que for salvo.';
+  $('btnCancelarEdicao').hidden = true;
+  $('btnSalvar').textContent = textoBotao();
+  if(!manterAviso) esconder($('avisoItem'));
+  desenharPrevia();
+}
+
+function corrigirItem(codigo){
+  const it = estado.pendentes.find(p => String(p.codigo) === String(codigo));
+  if(!it) return;
+  esconder($('avisoItem'));
+  limparFormulario();
+  estado.modo = it.ativo ? 'corrigir' : 'reativar';
+  $('codigo').value = it.codigo;
+  $('codigo').disabled = true;       // código errado não se corrige: retira e cadastra de novo
+  $('descricao').value = it.descricao || '';
+  $('familia').value = it.familia || '';
+  $('unidade').value = it.unidade || '';
+  $('contaDescricao').textContent = $('descricao').value.length + '/150';
+  $('tituloItem').innerHTML = (it.ativo ? 'Corrigir item ' : 'Reativar item ') + esc(it.codigo) +
+    '<span class="modo-selo">' + (it.ativo ? 'correção' : 'reativação') + '</span>';
+  $('subItem').textContent = it.ativo
+    ? 'O código não muda. Se o código estiver errado, retire este item e cadastre de novo com o certo.'
+    : 'O item volta ao formulário com os dados abaixo.';
+  $('btnCancelarEdicao').hidden = false;
+  $('btnSalvar').textContent = it.ativo ? 'Salvar correção' : 'Reativar item';
+  desenharPrevia();
+  $('cartaoItem').scrollIntoView({ behavior:'smooth', block:'start' });
+  $('descricao').focus({ preventScroll:true });
+}
+
+/* ============================================================================
+   9) LISTA "AGUARDANDO O GR"
+   ========================================================================== */
+function desenharPendentes(){
+  const caixa = $('listaPendentes');
+  if(!estado.pendentes.length){
+    caixa.innerHTML = '<p class="vazio-lista">Nenhum item esperando. Tudo o que foi cadastrado aqui já apareceu no GR.</p>';
+    return;
+  }
+  caixa.innerHTML = estado.pendentes.map(p => {
+    const ativo = p.ativo !== false;
+    return '<div class="item' + (ativo ? '' : ' retirado') + '" data-codigo="' + esc(p.codigo) + '">' +
+      '<div class="cab"><span class="nome">' + esc(p.descricao) + '</span><span class="cod">' + esc(p.codigo) + '</span></div>' +
+      '<div class="meta">' + esc(p.unidade) + ' · ' + esc(nomeFamilia(p.familia)) + '</div>' +
+      '<div class="meta">' + (ativo ? '<span class="selo aguardando">no formulário · aguardando o GR</span>'
+                                    : '<span class="selo retirado">retirado</span>') +
+        ' ' + esc(p.cadastrado_por || '') + (p.cadastrado_em ? ', ' + esc(quando(p.cadastrado_em)) : '') + '</div>' +
+      '<div class="acoes">' +
+        (ativo ? '<button type="button" class="btn-link" data-acao="corrigir">Corrigir</button>' +
+                 '<button type="button" class="btn-link" data-acao="retirar">Retirar do formulário</button>'
+               : '<button type="button" class="btn-link" data-acao="corrigir">Reativar</button>') +
+      '</div>' +
+      '<div class="confirma" hidden></div>' +
+    '</div>';
+  }).join('');
+}
+
+/* Retirar pede confirmação na própria linha — sem janela do navegador. */
+function pedirRetirada(linha){
+  const conf = linha.querySelector('.confirma');
+  const cod = linha.dataset.codigo;
+  conf.innerHTML = '<div class="aviso atencao" style="margin:0">O item <b>' + esc(cod) + '</b> some do formulário. ' +
+    'Pedido que já citou este código continua como está.' +
+    '<div class="botoes"><button type="button" class="btn btn-secundario" data-acao="nao-retirar">Manter</button>' +
+    '<button type="button" class="btn btn-perigo" data-acao="sim-retirar">Retirar</button></div></div>';
+  conf.hidden = false;
+}
+
+async function retirar(linha){
+  if(estado.ocupado) return;
+  const cod = linha.dataset.codigo;
+  const btn = linha.querySelector('[data-acao="sim-retirar"]');
+  ocupar(btn, 'Retirando…');
+  let r;
+  try{
+    r = await apiRpc('catalogo_salvar_item', { p_login: estado.login, p_senha: estado.senha, p_modo: 'retirar', p_item: { codigo: cod } });
+  }catch(e){
+    liberar(btn, 'Retirar');
+    mostrarAviso($('avisoItem'), 'erro', '<b>Não retirei.</b> Não consegui falar com o banco. Tente de novo.');
+    return;
+  }
+  liberar(btn, 'Retirar');
+  if(tratarErroDeAcesso(r)) return;
+  if(r.ok){
+    lembrarNoCatalogo(r.item);
+    aplicarContexto(r);
+    if(estado.modo !== 'criar' && normalizarCodigo($('codigo').value) === String(cod)) novoItem(true);
+    mostrarAviso($('avisoItem'), 'ok', '<b>Item ' + esc(cod) + ' retirado do formulário.</b>');
+    return;
+  }
+  mostrarAviso($('avisoItem'), 'erro', r.erro === 'veio_do_gr'
+    ? '<b>Não retirei:</b> este item já veio do GR. Para tirar, desative no GR e importe o catálogo.'
+    : '<b>Não retirei.</b> <code>' + esc(JSON.stringify(r).slice(0,200)) + '</code>');
+}
+
+/* ============================================================================
+   10) LIGAÇÕES
+   ========================================================================== */
+function iniciar(){
+  montarFamilias();
+  $('formEntrar').addEventListener('submit', entrar);
+  $('btnSair').addEventListener('click', () => sair());
+  $('formItem').addEventListener('submit', e => salvar(e));
+  $('btnCancelarEdicao').addEventListener('click', () => novoItem());
+
+  $('codigo').addEventListener('input', () => { conferirCodigo(); desenharPrevia(); });
+  $('descricao').addEventListener('input', () => {
+    document.querySelector('.campo[data-campo="descricao"]').classList.remove('invalido');
+    conferirParecidos(); desenharPrevia();
+  });
+  ['familia','unidade'].forEach(id => $(id).addEventListener('change', () => {
+    const c = $(id).closest('.campo'); if(c) c.classList.remove('invalido');
+    desenharPrevia();
+  }));
+
+  $('listaPendentes').addEventListener('click', e => {
+    const b = e.target.closest('button[data-acao]'); if(!b) return;
+    const linha = b.closest('.item');
+    const acao = b.dataset.acao;
+    if(acao === 'corrigir') corrigirItem(linha.dataset.codigo);
+    else if(acao === 'retirar') pedirRetirada(linha);
+    else if(acao === 'nao-retirar'){ const c = linha.querySelector('.confirma'); c.hidden = true; c.innerHTML = ''; }
+    else if(acao === 'sim-retirar') retirar(linha);
+  });
+
+  /* O formulário passa ?nome=&email= no link; o login costuma ser o e-mail
+     sem o domínio. Só sugere — quem digita decide. */
+  const q = new URLSearchParams(location.search);
+  const email = (q.get('email') || '').trim();
+  if(email && email.includes('@')) $('login').value = email.split('@')[0].toLowerCase();
+
+  desenharPrevia();
+  carregarCatalogo();
+  ($('login').value ? $('senha') : $('login')).focus();
+}
+iniciar();
+</script>
+</body>
+</html>
