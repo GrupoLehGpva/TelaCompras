@@ -611,3 +611,30 @@ begin
 end $$;
 
 revoke execute on function public._teste_caminho_telas() from public, anon, authenticated;
+
+-- 24/09 · bateria ajustada para a edição contada ao clicar (C3, C13, C14, C16,
+-- J12, K2, K4). Aplicar depois da função acima.
+do $$
+declare d text;
+  pares text[][] := array[
+    array[$a$r->>'ok'='true' and (r->>'prazo_minutos')::numeric = 30 and r->>'mensagem' like '%30 minutos%'$a$,
+          $b$r->>'ok'='true' and (r->>'prazo_minutos')::numeric = 30 and r->>'mensagem' like '%30 minutos%' and r->>'mensagem' like '%única edição%' and (select edicao_usada from solicitacoes where id=vP)$b$],
+    array[$a$'C13 desistir devolve à liderança sem gastar a edição'$a$, $b$'C13 desistir devolve à liderança (a edição já foi gasta ao clicar)'$b$],
+    array[$a$(select etapa_atual='lider' and not edicao_usada from solicitacoes where id=vR)$a$, $b$(select etapa_atual='lider' and edicao_usada from solicitacoes where id=vR)$b$],
+    array[$a$'C14 depois de desistir ainda pode editar','ok', r->>'ok'='true'$a$, $b$'C14 depois de desistir não edita de novo','ok', r->>'erro'='edicao_ja_usada'$b$],
+    array[$a$(select etapa_atual='lider' and not edicao_usada and motivo='Teste automático' from solicitacoes where id=vS)$a$, $b$(select etapa_atual='lider' and edicao_usada and motivo='Teste automático' from solicitacoes where id=vS)$b$],
+    array[$a$  r := pedido_telas(tf, vR);$a$, $b$  r := abrir_pedido_telas(tf, cab, itens); vT := (r->>'id')::uuid;
+  r := pedido_telas(tf, vT);$b$],
+    array[$a$r := iniciar_edicao(tf, vR, (select versao from solicitacoes where id=vR));$a$, $b$r := iniciar_edicao(tf, vT, (select versao from solicitacoes where id=vT));$b$],
+    array[$a$where (e->>'id')::uuid=vR and e->>'em_edicao'='true'$a$, $b$where (e->>'id')::uuid=vT and e->>'em_edicao'='true'$b$]
+  ];
+  i int; antes text;
+begin
+  d := pg_get_functiondef('public._teste_caminho_telas()'::regprocedure);
+  for i in 1 .. array_length(pares, 1) loop
+    antes := d;
+    d := replace(d, pares[i][1], pares[i][2]);
+    if d = antes then raise exception 'troca % não achou o trecho', i; end if;
+  end loop;
+  execute d;
+end $$;

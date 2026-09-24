@@ -1717,3 +1717,34 @@ end $$;
 alter function public._telas_situacao(text, text) set search_path = public;
 alter function public._telas_prazo_edicao() set search_path = public;
 alter function public._telas_erro(text, text) set search_path = public;
+
+-- ============================================================================
+-- 3i · 24/09 · A edição única conta ao clicar em Editar (decisão do Guilherme):
+-- desistir ou deixar vencer os 30 min também gasta a chance.
+-- ============================================================================
+comment on column public.solicitacoes.edicao_usada is
+  'O facilitador edita uma vez só. Vira true ao clicar em Editar (desistir ou deixar vencer também gasta).';
+
+do $$
+declare d text; n int;
+begin
+  d := pg_get_functiondef('public.iniciar_edicao(text,uuid,integer)'::regprocedure);
+  d := replace(d,
+    $x$em_edicao_desde = now(), entrou_na_etapa_em = now(), versao = versao + 1$x$,
+    $x$em_edicao_desde = now(), entrou_na_etapa_em = now(), versao = versao + 1,
+           edicao_usada = true$x$);
+  d := replace(d,
+    $x$' minutos para salvar. Depois disso, o pedido volta para a liderança como estava.'$x$,
+    $x$' minutos para salvar. Depois disso, o pedido volta para a liderança como estava. Esta é a única edição permitida: se desistir ou o prazo passar, não dá para editar de novo.'$x$);
+  if position('edicao_usada = true' in d) = 0 or position('única edição' in d) = 0 then
+    raise exception 'iniciar_edicao: substituição não bateu';
+  end if;
+  execute d;
+
+  d := pg_get_functiondef('public.desistir_edicao(text,uuid)'::regprocedure); n := length(d);
+  d := replace(d,
+    $x$'Nada foi alterado. O pedido voltou para a liderança e você ainda pode editar uma vez.'$x$,
+    $x$'Nada foi alterado. O pedido voltou para a liderança. A edição deste pedido já foi usada.'$x$);
+  if length(d) = n then raise exception 'desistir_edicao: substituição não bateu'; end if;
+  execute d;
+end $$;
