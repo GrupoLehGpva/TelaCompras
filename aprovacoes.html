@@ -428,6 +428,12 @@
   .btn-lote[disabled]{background:var(--realce);border-color:var(--borda);color:var(--muted)}
   .modal .rodape button.confirmar{background:var(--reprovar);border-color:var(--reprovar);color:#fff}
   .modal .rodape button.confirmar.dev{background:var(--acento-fundo);border-color:var(--acento-fundo);color:var(--sobre-acento)}
+  /* Colunas de pouco texto centralizadas (Guilherme, 24/09): número, datas, quantidades,
+     valores, etapa, situação e botões. Ficam à esquerda só as de texto longo. */
+  table.fila tbody td:not(:nth-child(3)){text-align:center}
+  table.fila tbody td:nth-child(10) > *{justify-content:center;margin-left:auto;margin-right:auto}
+  table.hist tbody td:not(:nth-child(3)){text-align:center}
+  table.hist tbody td:nth-child(3){text-align:left}
 </style>
 </head>
 <body>

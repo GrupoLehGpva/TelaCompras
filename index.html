@@ -2204,6 +2204,8 @@ let FACILITADOR_TELAS = null;   // resposta de eu_facilitador
 let EDICAO = null;              // o pedido em edição (pedido_telas.pedido)
 let relogioEdicao = null;
 let confirmandoDesistir = null;
+let saiuSemSalvar = false;
+let edicaoAberta = false;       // formulário de edição aberto e ainda não salvo/encerrado
 
 const escT = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const horaT = d => d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
@@ -2244,8 +2246,8 @@ async function prepararTelas(){
   }
   if(!r.pedido.em_edicao){
     bloquearTelas('Este pedido não está em edição.',
-      'A edição começa pelo botão Editar, na tela de acompanhamento. Se o prazo passou, ' +
-      'o pedido já voltou para a liderança como estava.');
+      'A edição começa pelo botão Editar, na tela de acompanhamento. Se você saiu da tela de edição sem salvar ' +
+      'ou o prazo passou, o pedido já voltou para a liderança como estava.');
     return;
   }
   EDICAO = r.pedido;
@@ -2308,7 +2310,7 @@ function iniciarRelogio(){
   const expira = EDICAO && EDICAO.edicao_expira_em ? new Date(EDICAO.edicao_expira_em) : null;
   const tique = () => {
     if(!expira || isNaN(expira)){
-      $('textoEdicao').innerHTML = '<b>Editando ' + escT(EDICAO.numero) + '</b>Salve antes de sair desta tela.';
+      $('textoEdicao').innerHTML = '<b>Editando ' + escT(EDICAO.numero) + '</b>Salve antes de sair desta tela: sair sem salvar descarta a edição.';
     } else {
       const falta = Math.ceil((expira.getTime() - Date.now()) / 60000);
       if(falta <= 0){
@@ -2318,10 +2320,11 @@ function iniciarRelogio(){
       }
       $('textoEdicao').innerHTML = '<b>Editando ' + escT(EDICAO.numero) + ' — salve até ' + horaT(expira) +
         ' (falta' + (falta === 1 ? ' 1 minuto' : 'm ' + falta + ' minutos') + ')</b>' +
-        'Só os itens podem mudar. Se o prazo passar ou você desistir, o pedido volta para a liderança como estava, e não dá para editar de novo.';
+        'Só os itens podem mudar. Se sair desta tela sem salvar, desistir ou o prazo passar, o pedido volta para a liderança como estava, e não dá para editar de novo.';
     }
   };
   $('faixaEdicao').hidden = false;
+  edicaoAberta = true;
   tique();
   relogioEdicao = setInterval(tique, 15000);
 }
@@ -2329,6 +2332,7 @@ function pararRelogio(){ if(relogioEdicao){ clearInterval(relogioEdicao); relogi
 
 /* Fim da edição sem salvar (desistiu ou venceu): nada mais se envia daqui. */
 function encerrarEdicao(titulo, detalhe, vencida){
+  edicaoAberta = false;
   pararRelogio();
   const f = $('faixaEdicao');
   f.classList.toggle('vencida', !!vencida);
@@ -2390,6 +2394,7 @@ async function enviarTelas(cabecalho, itens, botao){
       const r = await apiRpc('salvar_edicao', { p_token: TOKEN_TELAS, p_id: EDICAO.id, p_cabecalho: cab, p_itens: its });
       if(r && r.erro === 'edicao_expirou'){ encerrarEdicao('Passou o prazo da edição.', r.mensagem, true); return; }
       if(!r || r.ok !== true) throw new Error((r && r.mensagem) || 'o banco recusou a gravação');
+      edicaoAberta = false;
       pararRelogio();
       $('faixaEdicao').hidden = true;
       const mudou = Object.keys(r.mudou || {}).map(k => CAMPO_TELAS[k] || k);
@@ -2446,6 +2451,22 @@ function concluirTelas(titulo, numero, nota, detalhe, anexos){
 }
 
 $('btnDesistirEdicao').addEventListener('click', desistirEdicao);
+
+/* Não existe pedido "parado em edição" (Guilherme, 24/09): sair do formulário sem
+   salvar — fechar a aba, voltar, atualizar — encerra a edição na hora e o pedido
+   volta para a liderança como estava. keepalive deixa a chamada terminar depois
+   que a página fecha; o prazo de 30 minutos no banco continua como rede de
+   segurança (aba que travou, celular que descartou a página). */
+window.addEventListener('pagehide', () => {
+  if(!edicaoAberta || !EDICAO) return;
+  edicaoAberta = false; saiuSemSalvar = true;
+  try{
+    fetch(SUPABASE_URL + '/rest/v1/rpc/desistir_edicao', { method:'POST', keepalive:true,
+      headers: cabecalhos(), body: JSON.stringify({ p_token: TOKEN_TELAS, p_id: EDICAO.id }) });
+  }catch(e){}
+});
+/* Voltou pelo botão do navegador para uma cópia guardada: a edição já acabou. */
+window.addEventListener('pageshow', ev => { if(ev.persisted && saiuSemSalvar) location.reload(); });
 
 iniciar();
 </script>

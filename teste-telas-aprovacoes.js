@@ -104,8 +104,9 @@ for(const w of [1366, 1440, 1920]){
   ok('2.6 sem etiqueta embaixo do número', await p.locator('#corpoFila .hoje').count() === 0);
   ok('2.6 mesma letra em todos', new Set(th.map(t => t.fonte)).size === 1, JSON.stringify([...new Set(th.map(t => t.fonte))]));
   const al = await linha(p,'C2609-02001').evaluate(tr => [...tr.children].map(td => getComputedStyle(td).textAlign));
-  ok('2.6 motivo e quem pediu à esquerda, o resto centralizado', al[2] === 'left' && al[3] === 'left' &&
-     al.filter((x,i) => i !== 2 && i !== 3).every(x => x === 'center'), JSON.stringify(al));
+  /* 24/09: só o motivo (texto longo) à esquerda; colunas de pouco texto centralizadas */
+  ok('2.6 motivo à esquerda, o resto centralizado', al[2] === 'left' &&
+     al.filter((x,i) => i !== 2).every(x => x === 'center'), JSON.stringify(al));
   await p.close(); }
 
 /* 3 — sem nada em edição, a caixa some */

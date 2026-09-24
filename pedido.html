@@ -274,6 +274,12 @@
   .barra-aprova button.nao:hover:not([disabled]){background:var(--reprovar-fundo);border-color:var(--reprovar);color:var(--reprovar)}
   .modal .rodape button.confirmar{background:var(--reprovar);border-color:var(--reprovar);color:#fff}
   .modal .rodape button.confirmar.dev{background:var(--acento-fundo);border-color:var(--acento-fundo);color:var(--sobre-acento)}
+  /* Colunas de pouco texto centralizadas (Guilherme, 24/09): número, datas, quantidades,
+     valores, etapa, situação e botões. Ficam à esquerda só as de texto longo. */
+  #tabela thead th,#tabela tbody td{text-align:center}
+  #tabela tbody td:nth-child(2){text-align:left}
+  .cot-mapa th,.cot-mapa td{text-align:center}
+  .cot-mapa th.item,.cot-mapa tbody th{text-align:left}
 </style>
 </head>
 <body>

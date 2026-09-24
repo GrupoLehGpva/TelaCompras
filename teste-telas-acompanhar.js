@@ -72,14 +72,15 @@ const b = await chromium.launch();
   ok('1 t1 editar e cancelar', await linha(p,'03001').locator('button[data-acao=editar]').count() === 1 &&
      await linha(p,'03001').locator('button[data-acao=cancelar]').count() === 1);
   const t2 = await linha(p,'03002').textContent();
-  ok('1 t2 em edição por você', /Em edição por você/.test(t2), t2);
-  ok('1 t2 diz até quando', /Salve até \d\d:\d\d/.test(t2), t2);
-  ok('1 t2 continuar editando', (await linha(p,'03002').locator('a.continuar').getAttribute('href')) === 'index.html?t=fc-ana&editar=t2');
-  ok('1 t2 sem editar de novo', await linha(p,'03002').locator('button[data-acao=editar]').count() === 0);
-  ok('1 t2 ainda cancela', await linha(p,'03002').locator('button[data-acao=cancelar]').count() === 1);
+  ok('1 t2 em edição com você', /Em edição/.test(t2) && /com você/.test(t2), t2);
+  ok('1 t2 sem prazo nem continuar (24/09: não fica parado em edição)', !/Salve até|Continuar/.test(t2), t2);
+  ok('1 t2 sem botões', await linha(p,'03002').locator('button[data-acao], a.continuar').count() === 0);
   ok('1 t3 edição usada', /edição deste pedido já foi usada/.test(await linha(p,'03003').textContent()) &&
      await linha(p,'03003').locator('button[data-acao=editar]').count() === 0);
   ok('1 t5 decidido: nada', await linha(p,'03005').locator('button[data-acao]').count() === 0);
+  const al = await linha(p,'03001').evaluate(tr => [...tr.children].map(td => getComputedStyle(td).textAlign));
+  ok('1 motivo e centro de custo à esquerda, o resto centralizado (24/09)', al[1] === 'left' && al[2] === 'left' &&
+     al.filter((x,i) => i !== 1 && i !== 2).every(x => x === 'center'), JSON.stringify(al));
   ok('1 ClickUp: nada', await linha(p,'01001').locator('button[data-acao], a.continuar').count() === 0);
   ok('1 aviso de leitura explica', /editar uma vez ou cancelar/.test(await p.textContent('#avisoLeitura')));
   /* cancelado vai para encerradas, vermelho */
@@ -136,7 +137,7 @@ const b = await chromium.launch();
 
 /* 5 — Cancelar sem motivo manda nulo; clique duplo manda uma vez */
 { const p = await tela(b, {rpc:{cancelar_pedido:(r,c,j)=> new Promise(res => setTimeout(()=>{ j({ok:true}); res(); }, 400))}});
-  await linha(p,'03002').locator('button[data-acao=cancelar]').click();
+  await linha(p,'03003').locator('button[data-acao=cancelar]').click();
   await p.click('#btnConfirmarAcao'); await p.click('#btnConfirmarAcao', {force:true}).catch(()=>{});
   ok('5 durante o envio o botão diz o que faz', /Cancelando/.test(await p.textContent('#btnConfirmarAcao')));
   await p.keyboard.press('Escape');
@@ -144,7 +145,7 @@ const b = await chromium.launch();
   await p.waitForTimeout(700);
   const c = qtas(p,'cancelar_pedido');
   ok('5 uma chamada só', c.length === 1, 'chamadas: ' + c.length);
-  ok('5 motivo nulo', c[0] && c[0].corpo.p_motivo === null && c[0].corpo.p_versao === 2);
+  ok('5 motivo nulo', c[0] && c[0].corpo.p_motivo === null && c[0].corpo.p_versao === 4);
   await p.close(); }
 
 /* 6 — Escape e clique fora fecham */

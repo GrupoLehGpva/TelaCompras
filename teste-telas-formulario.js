@@ -235,6 +235,36 @@ const b = await chromium.launch();
   ok('13 escapa', await p.locator('#alerta img').count() === 0 && !(await p.evaluate(()=>window.__x)));
   await p.close(); }
 
+/* 14 — sair do formulário sem salvar encerra a edição (24/09: não existe "parado em edição") */
+const sair = async p => { await p.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide', {persisted:false}))); await p.waitForTimeout(700); };
+{ const p = await abrir(b, '?t=fc-ana&editar=' + ID);
+  ok('14 faixa avisa que sair descarta', /Se sair desta tela sem salvar/.test(await p.textContent('#textoEdicao')));
+  await p.evaluate(() => { estado.itensLista[0].quantidade = 9; renderLista(); });
+  await sair(p);
+  const d = chamou(p,'desistir_edicao');
+  ok('14 saiu sem salvar: desistiu uma vez', d.length === 1 && d[0].corpo.p_id === ID && d[0].corpo.p_token === 'fc-ana', JSON.stringify(d));
+  ok('14 não salvou nada', chamou(p,'salvar_edicao').length === 0);
+  await p.close(); }
+{ const p = await abrir(b, '?t=fc-ana&editar=' + ID);
+  await enviarPagina(p);
+  ok('14 salvou', /Alterações salvas/.test(await p.textContent('#okTitulo')));
+  await sair(p);
+  ok('14 depois de salvar, sair não desiste', chamou(p,'desistir_edicao').length === 0);
+  await p.close(); }
+{ const p = await abrir(b, '?t=fc-ana&editar=' + ID);
+  await p.click('#btnDesistirEdicao'); await p.click('#btnDesistirEdicao'); await p.waitForTimeout(500);
+  await sair(p);
+  ok('14 desistiu pelo botão: sair não repete', chamou(p,'desistir_edicao').length === 1);
+  await p.close(); }
+{ const p = await abrir(b, '?t=fc-ana&editar=' + ID, {ped:()=>({ok:true, pedido:PEDIDO({em_edicao:false, etapa_atual:'lider'}), itens:ITENS_LISTA})});
+  await sair(p);
+  ok('14 pedido fora de edição: sair não chama nada', chamou(p,'desistir_edicao').length === 0);
+  await p.close(); }
+{ const p = await abrir(b, '?t=fc-ana');
+  await sair(p);
+  ok('14 pedido novo: sair não chama desistir', chamou(p,'desistir_edicao').length === 0);
+  await p.close(); }
+
 await b.close();
 console.log('\n===== FALHAS (' + falhas.length + ') =====');
 falhas.forEach(f=>console.log(' ✗ ' + f));

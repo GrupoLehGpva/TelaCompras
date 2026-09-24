@@ -360,6 +360,11 @@
   .ver-itens:hover{background:var(--realce)}
   table.lista .ha-quanto{font-size:12px}
   .modal-acao .rodape button.confirmar.perigo{background:var(--reprovar);border-color:var(--reprovar);color:#fff}
+  /* Colunas de pouco texto centralizadas (Guilherme, 24/09): número, datas, quantidades,
+     valores, etapa, situação e botões. Ficam à esquerda só as de texto longo. */
+  table.lista tbody td:not(:nth-child(2)):not(:nth-child(3)){text-align:center}
+  table.lista td.num,table.lista td.etapa-cel{text-align:center}
+  table.lista .onde-linha,table.lista .acoes-telas{justify-content:center}
 </style>
 </head>
 <body>
@@ -1028,7 +1033,7 @@ async function juntarTelas(){
     s.edicao_expira_em = x.edicao_expira_em || null;
     s.edicao_usada = x.edicao_usada === true;
     /* O acompanhamento antigo não conhece 'edição' nem 'cancelado'. */
-    if(s.em_edicao){ s.situacao = 'Em edição por você'; s.com_quem = null; s.encerrada = false; }
+    if(s.em_edicao){ s.situacao = 'Em edição'; s.com_quem = 'você'; s.encerrada = false; }
     if(s.status === 'cancelado'){ s.situacao = 'Cancelado'; s.com_quem = null; s.encerrada = true; }
   });
   if(Object.keys(TELAS).length) $('avisoLeitura').textContent =
@@ -1039,16 +1044,9 @@ async function juntarTelas(){
 function acoesTelas(s){
   if(s.canal !== 'telas') return '';
   const id = esc(s.id);
-  if(s.em_edicao){
-    const exp = s.edicao_expira_em ? new Date(s.edicao_expira_em) : null;
-    return '<span class="nota-edicao">' + (exp && !isNaN(exp)
-        ? 'Salve até ' + horaBR(s.edicao_expira_em) + ' — depois volta como estava'
-        : 'Salve a edição antes de sair') + '</span>' +
-      '<div class="acoes-telas"><a class="continuar" href="index.html?t=' + encodeURIComponent(TOKEN) +
-        '&editar=' + encodeURIComponent(s.id) + '">Continuar editando</a>' +
-      (s.pode_cancelar ? '<button type="button" class="cancelar acao-telas" data-acao="cancelar" data-id="' + id + '">Cancelar pedido</button>' : '') +
-      '</div>';
-  }
+  /* Em edição = o formulário está aberto agora. Sair dele sem salvar encerra a edição;
+     aqui não há o que fazer além de esperar (sem 'continuar editando'). */
+  if(s.em_edicao) return '';
   const b = [];
   if(s.pode_editar)   b.push('<button type="button" class="editar acao-telas" data-acao="editar" data-id="' + id + '">Editar</button>');
   if(s.pode_cancelar) b.push('<button type="button" class="cancelar acao-telas" data-acao="cancelar" data-id="' + id + '">Cancelar pedido</button>');
