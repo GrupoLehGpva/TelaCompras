@@ -385,6 +385,30 @@
   .btn-linha.dev:hover:not([disabled]){border-color:var(--texto)}
   .numero-sc{color:var(--acento-fundo);text-decoration:none}
   .numero-sc:hover,.numero-sc:focus-visible{text-decoration:underline}
+  /* ---- Cores de decisão (24/09) ----
+     Aprovar: o verde 341 C da paleta (#007A53), cheio — é a decisão que mais se
+     toma e a que o olho procura. Reprovar: vermelho fechado, só no texto e no
+     contorno — presente, sem gritar. O vermelho cheio fica só na confirmação,
+     quando a pessoa já escreveu o motivo e vai de fato reprovar. */
+  :root{--aprovar:#007A53;--aprovar-forte:#00603F;--sobre-aprovar:#FFFFFF;
+        --reprovar:#9E3A32;--reprovar-borda:#D9B3AE;--reprovar-fundo:#FBF3F2}
+  @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+        --aprovar:#3FA37E;--aprovar-forte:#56B891;--sobre-aprovar:#06140F;
+        --reprovar:#E59C94;--reprovar-borda:#6B3A36;--reprovar-fundo:#2A1716} }
+  :root[data-theme="dark"]{--aprovar:#3FA37E;--aprovar-forte:#56B891;--sobre-aprovar:#06140F;
+        --reprovar:#E59C94;--reprovar-borda:#6B3A36;--reprovar-fundo:#2A1716}
+  /* ---- Leitura confortável na fila ---- */
+  table.fila th,table.fila td{padding:18px 12px;line-height:1.45}
+  table.fila tbody td{font-size:14.5px}
+  table.fila thead th{padding:14px 12px;font-size:11.5px;letter-spacing:.06em}
+  .btn-linha,.btn-linha.sim,.btn-linha.nao,.btn-linha.dev{min-height:34px;font-weight:650}
+  .btn-linha.sim{background:var(--aprovar);border-color:var(--aprovar);color:var(--sobre-aprovar)}
+  .btn-linha.sim:hover:not([disabled]){background:var(--aprovar-forte);border-color:var(--aprovar-forte);color:var(--sobre-aprovar)}
+  .btn-linha.nao{border-color:var(--reprovar-borda);color:var(--reprovar)}
+  .btn-linha.nao:hover:not([disabled]){background:var(--reprovar-fundo);border-color:var(--reprovar);color:var(--reprovar)}
+  .btn-lote{background:var(--aprovar);border-color:var(--aprovar);color:var(--sobre-aprovar)}
+  .btn-lote:hover:not([disabled]){background:var(--aprovar-forte);border-color:var(--aprovar-forte)}
+  .modal .rodape button.confirmar{background:var(--reprovar);border-color:var(--reprovar);color:#fff}
 </style>
 </head>
 <body>

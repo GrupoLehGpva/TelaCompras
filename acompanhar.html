@@ -319,6 +319,22 @@
   .modal-acao .rodape button.confirmar.perigo{background:var(--erro);border-color:var(--erro);color:#fff}
   .modal-acao .rodape button:disabled{opacity:.55;cursor:default}
   @media print{ .barra,.aviso-leitura,.abas,.filtros-hist{display:none} .ver-itens .seta{display:none} .rolagem{overflow:visible;border:0} body{background:#fff} }
+  /* ---- Cores de decisão (24/09) ----
+     Aprovar: o verde 341 C da paleta (#007A53), cheio — é a decisão que mais se
+     toma e a que o olho procura. Reprovar: vermelho fechado, só no texto e no
+     contorno — presente, sem gritar. O vermelho cheio fica só na confirmação,
+     quando a pessoa já escreveu o motivo e vai de fato reprovar. */
+  :root{--aprovar:#007A53;--aprovar-forte:#00603F;--sobre-aprovar:#FFFFFF;
+        --reprovar:#9E3A32;--reprovar-borda:#D9B3AE;--reprovar-fundo:#FBF3F2}
+  @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+        --aprovar:#3FA37E;--aprovar-forte:#56B891;--sobre-aprovar:#06140F;
+        --reprovar:#E59C94;--reprovar-borda:#6B3A36;--reprovar-fundo:#2A1716} }
+  :root[data-theme="dark"]{--aprovar:#3FA37E;--aprovar-forte:#56B891;--sobre-aprovar:#06140F;
+        --reprovar:#E59C94;--reprovar-borda:#6B3A36;--reprovar-fundo:#2A1716}
+  /* ---- Leitura confortável ---- */
+  table.lista th,table.lista td{padding:17px 12px;line-height:1.45}
+  table.lista thead th{padding:14px 12px;font-size:11.5px;letter-spacing:.06em}
+  .modal-acao .rodape button.confirmar.perigo{background:var(--reprovar);border-color:var(--reprovar);color:#fff}
 </style>
 </head>
 <body>

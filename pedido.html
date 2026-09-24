@@ -179,15 +179,25 @@
   .barra-aprova button.nao:hover:not([disabled]){border-color:var(--erro);color:var(--erro)}
   .barra-aprova button[disabled]{opacity:.55;cursor:default}
   .barra-aprova button.dev:hover:not([disabled]){border-color:var(--texto)}
-  /* Cotação escolhida: neutra, sem cor de fundo. A comparação fica na Mesa. */
-  .cot-forn{padding:14px 0;border-bottom:1px solid var(--borda)}
-  .cot-forn:first-child{padding-top:0}
-  .cot-forn-cab{display:flex;justify-content:space-between;gap:12px;align-items:baseline;font-size:15.5px}
-  .cot-valor{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
-  .cot-cond{margin:4px 0 0;color:var(--muted);font-size:13.5px}
-  .cot-itens{list-style:none;margin:8px 0 0;padding:0;font-size:14px}
-  .cot-itens li{display:flex;justify-content:space-between;gap:12px;padding:3px 0}
-  .cot-conta{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+  /* Comparativo da cotação: neutro. Só a célula escolhida leva cor (verde de aprovar). */
+  .cot-fam{margin:0 0 16px}
+  .cot-fam h3{margin:0 0 8px;font-size:14px}
+  .cot-rola{overflow-x:auto;border:1px solid var(--borda);border-radius:10px}
+  .cot-mapa{width:100%;min-width:0;border-collapse:collapse;font-size:14px}
+  .cot-mapa th,.cot-mapa td{padding:12px 14px;border-bottom:1px solid var(--borda);text-align:right;vertical-align:top;
+    font-variant-numeric:tabular-nums;line-height:1.4}
+  .cot-mapa thead th{position:static;cursor:default;background:var(--realce);color:var(--muted);font-size:11.5px;
+    font-weight:700;text-transform:uppercase;letter-spacing:.06em;white-space:normal}
+  .cot-mapa th.item{text-align:left;min-width:200px;color:var(--texto);font-weight:600;font-size:14px;text-transform:none;letter-spacing:0}
+  .cot-mapa thead th.item{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em}
+  .cot-mapa tbody th{text-align:left;font-weight:600;color:var(--muted)}
+  .cot-mapa th.forn{min-width:140px}
+  .cot-mapa .selo-escolha{display:block;margin-top:3px;font-size:11px;letter-spacing:.02em;text-transform:none;color:var(--aprovar);font-weight:650}
+  .cot-mapa td.escolhido{color:var(--aprovar);font-weight:700}
+  .cot-mapa .linha-total,.cot-mapa .qtd-item{display:block;font-size:12px;color:var(--muted);font-weight:400}
+  .cot-mapa td.nao-cotou{color:var(--muted);font-style:italic;font-size:13px}
+  .cot-mapa tr.cond td,.cot-mapa tr.cond th{padding-top:8px;padding-bottom:8px;font-size:13.5px}
+  .cot-mapa tr.total-forn th,.cot-mapa tr.total-forn td{font-weight:700;color:var(--texto);border-bottom:0}
   .cot-rodape{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline;
     padding-top:12px;color:var(--muted);font-size:13.5px}
   .cot-total{font-weight:700;font-size:16px;color:var(--texto);font-variant-numeric:tabular-nums}
@@ -227,6 +237,29 @@
   .modal .rodape button.confirmar{background:var(--erro);border-color:var(--erro);color:#fff}
   .modal .rodape button.confirmar.dev{background:var(--acento-fundo);border-color:var(--acento-fundo);color:var(--sobre-acento)}
   .modal .rodape button[disabled]{opacity:.6;cursor:default}
+  /* ---- Cores de decisão (24/09) ----
+     Aprovar: o verde 341 C da paleta (#007A53), cheio — é a decisão que mais se
+     toma e a que o olho procura. Reprovar: vermelho fechado, só no texto e no
+     contorno — presente, sem gritar. O vermelho cheio fica só na confirmação,
+     quando a pessoa já escreveu o motivo e vai de fato reprovar. */
+  :root{--aprovar:#007A53;--aprovar-forte:#00603F;--sobre-aprovar:#FFFFFF;
+        --reprovar:#9E3A32;--reprovar-borda:#D9B3AE;--reprovar-fundo:#FBF3F2}
+  @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+        --aprovar:#3FA37E;--aprovar-forte:#56B891;--sobre-aprovar:#06140F;
+        --reprovar:#E59C94;--reprovar-borda:#6B3A36;--reprovar-fundo:#2A1716} }
+  :root[data-theme="dark"]{--aprovar:#3FA37E;--aprovar-forte:#56B891;--sobre-aprovar:#06140F;
+        --reprovar:#E59C94;--reprovar-borda:#6B3A36;--reprovar-fundo:#2A1716}
+  /* ---- Leitura confortável ---- */
+  .ficha{gap:18px 24px}
+  .ficha dd{margin-top:4px}
+  tbody td{padding:13px 14px;line-height:1.45}
+  thead th{padding:12px 14px;font-size:11.5px;letter-spacing:.06em}
+  .barra-aprova{padding:16px 20px}
+  .barra-aprova button.sim{background:var(--aprovar);border-color:var(--aprovar);color:var(--sobre-aprovar)}
+  .barra-aprova button.sim:hover:not([disabled]){background:var(--aprovar-forte);border-color:var(--aprovar-forte)}
+  .barra-aprova button.nao{border-color:var(--reprovar-borda);color:var(--reprovar)}
+  .barra-aprova button.nao:hover:not([disabled]){background:var(--reprovar-fundo);border-color:var(--reprovar);color:var(--reprovar)}
+  .modal .rodape button.confirmar{background:var(--reprovar);border-color:var(--reprovar);color:#fff}
 </style>
 </head>
 <body>
@@ -269,7 +302,7 @@
     <!-- Só no caminho das telas (sem ClickUp): a cotação que o comprador indicou.
          Depois do motivo: primeiro o que e por quê, depois por quanto. -->
     <section class="cartao" id="cartaoCotacao" hidden>
-      <h2>Cotação escolhida pelo comprador</h2>
+      <h2>Cotação dos fornecedores</h2>
       <div id="cotacaoCorpo"></div>
     </section>
 
@@ -525,7 +558,9 @@ function desenharTabela(){
 
 function ordenarPor(col){
   ordem = (ordem.col === col) ? { col, asc: !ordem.asc } : { col, asc: true };
-  document.querySelectorAll('thead th').forEach(th=>{
+  /* Só os cabeçalhos da lista de itens (têm data-col): o comparativo da cotação
+     também tem thead, e sem este filtro a ordenação quebrava nele. */
+  document.querySelectorAll('thead th[data-col]').forEach(th=>{
     if(th.dataset.col === col){ th.setAttribute('aria-sort', ordem.asc ? 'ascending' : 'descending');
       th.querySelector('.seta').textContent = ordem.asc ? '↑' : '↓'; }
     else { th.removeAttribute('aria-sort'); th.querySelector('.seta').textContent = '↕'; }
@@ -708,7 +743,7 @@ async function abrir(){
   }
 }
 
-document.querySelectorAll('thead th').forEach(th =>
+document.querySelectorAll('thead th[data-col]').forEach(th =>
   th.addEventListener('click', ()=> ordenarPor(th.dataset.col)));
 $('filtro').addEventListener('input', e => { termo = e.target.value; desenharTabela(); });
 $('btnCSV').addEventListener('click', baixarCSV);
@@ -860,10 +895,12 @@ function podeDevolver(){
 }
 
 /* ---------------------------------------------------------------------------
-   COTAÇÃO ESCOLHIDA (24/09)
-   O aprovador vê o que o comprador indicou: fornecedor, itens, condições e
-   total. A comparação entre fornecedores é trabalho da Mesa de Cotação, não
-   desta tela — aqui ela só diz quantos cotaram.
+   COTAÇÃO — o comparativo dos fornecedores (24/09, 2ª versão)
+   Quem aprova na gerencial e no financeiro decide olhando o que cada
+   fornecedor ofereceu, não só o vencedor. Por família: um fornecedor por
+   coluna, o preço de cada item, as condições e quanto sairia comprar tudo
+   dele. A escolha do comprador aparece em verde e negrito, com ✓ — só a
+   célula escolhida, sem pintar coluna nem linha.
    Só aprovador e comprador recebem o mapa (pedido_telas não manda preço ao
    facilitador).
    --------------------------------------------------------------------------- */
@@ -879,35 +916,45 @@ async function carregarCotacao(){
   const qtd = q => Number(q || 0).toLocaleString('pt-BR', { maximumFractionDigits: 3 });
   const plural = (n, um, varios) => n + ' ' + (n === 1 ? um : varios);
 
-  let cotaram = 0;
-  const blocos = [];
-  (res.familias || []).forEach(fa => {
+  const blocos = (res.familias || []).map(fa => {
     const forn = (fa.fornecedores || []).filter(f => f && f.coluna != null);
-    cotaram = Math.max(cotaram, forn.length);
     const its = itens.filter(i => (i.familia || null) === (fa.familia || null));
-    forn.filter(f => Number(f.itens_ganhos) > 0).forEach(f => {
-      const meus = its.filter(i => escolha[i.id] === f.coluna);
-      const cond = [plural(Number(f.itens_ganhos), 'item', 'itens'),
-        f.prazo_dias != null ? 'prazo de ' + esc(f.prazo_dias) + ' dias' : null,
-        f.condicao ? 'pagamento ' + esc(f.condicao) : null,
-        'frete ' + (Number(f.frete) ? dinheiroBR(f.frete) : 'incluso'),
-        Number(f.desconto_pct) ? 'desconto de ' + esc(String(f.desconto_pct).replace('.', ',')) + '%' : null
-      ].filter(Boolean).join(' · ');
-      blocos.push('<div class="cot-forn"><div class="cot-forn-cab"><b>' + esc(f.nome || '—') + '</b>' +
-        '<span class="cot-valor">' + dinheiroBR(f.total) + '</span></div>' +
-        '<p class="cot-cond">' + cond + '</p>' +
-        (meus.length ? '<ul class="cot-itens">' + meus.map(i => {
-          const pr = precos[i.id + '|' + f.coluna];
-          return '<li><span>' + esc(i.descricao || '—') + '</span><span class="cot-conta">' + qtd(i.quantidade) + ' ' + esc(i.unidade || '') +
-            (pr != null ? ' × ' + dinheiroBR(pr) : '') + '</span></li>';
-        }).join('') + '</ul>' : '') + '</div>');
+    if(!forn.length || !its.length) return '';
+    const cont = forn.map(f => {
+      let sub = 0, cotados = 0;
+      its.forEach(i => { const pr = precos[i.id + '|' + f.coluna];
+        if(pr != null){ cotados++; sub += pr * Number(i.quantidade || 0); } });
+      const desc = Number(f.desconto_pct || 0), frete = Number(f.frete || 0);
+      return { f, cotados, sub, tudo: cotados ? sub * (1 - desc / 100) + frete : null, ganhos: Number(f.itens_ganhos || 0) };
     });
-  });
+    const cab = cont.map(c => '<th class="forn">' + esc(c.f.nome || ('Fornecedor ' + c.f.coluna)) +
+      (c.ganhos ? '<span class="selo-escolha">escolhido para ' + plural(c.ganhos, 'item', 'itens') + '</span>' : '') + '</th>').join('');
+    const linhas = its.map(i => '<tr><th class="item" scope="row">' + esc(i.descricao || '—') +
+      '<span class="qtd-item">' + qtd(i.quantidade) + ' ' + esc(i.unidade || '') + '</span></th>' +
+      cont.map(c => {
+        const pr = precos[i.id + '|' + c.f.coluna];
+        if(pr == null) return '<td class="nao-cotou">não cotou</td>';
+        const eh = escolha[i.id] === c.f.coluna;
+        return '<td' + (eh ? ' class="escolhido"' : '') + '>' + (eh ? '<span class="marca-escolha" aria-label="escolhido">✓ </span>' : '') +
+          dinheiroBR(pr) + '<span class="linha-total">' + dinheiroBR(pr * Number(i.quantidade || 0)) + '</span></td>';
+      }).join('') + '</tr>').join('');
+    const rodape = (rotulo, fn, cls) => '<tr class="' + (cls || 'cond') + '"><th scope="row">' + rotulo + '</th>' +
+      cont.map(c => '<td>' + fn(c) + '</td>').join('') + '</tr>';
+    return '<div class="cot-fam">' + ((res.familias || []).length > 1 ? '<h3>Família ' + esc(fa.familia || '—') + '</h3>' : '') +
+      '<div class="cot-rola"><table class="cot-mapa"><thead><tr><th class="item">Item</th>' + cab + '</tr></thead><tbody>' + linhas +
+      rodape('Desconto', c => c.f.desconto_pct ? esc(String(c.f.desconto_pct).replace('.', ',')) + '%' : '—') +
+      rodape('Frete', c => c.f.frete != null ? (Number(c.f.frete) ? dinheiroBR(c.f.frete) : 'incluso') : '—') +
+      rodape('Prazo', c => c.f.prazo_dias != null ? esc(c.f.prazo_dias) + ' dias' : '—') +
+      rodape('Pagamento', c => esc(c.f.condicao || '—')) +
+      rodape('Total se comprar tudo dele', c => c.tudo == null ? '—' : dinheiroBR(c.tudo) +
+        (c.cotados < its.length ? '<span class="linha-total">faltam ' + plural(its.length - c.cotados, 'item', 'itens') + '</span>' : ''), 'total-forn') +
+      '</tbody></table></div></div>';
+  }).join('');
 
-  $('cotacaoCorpo').innerHTML =
-    (blocos.length ? blocos.join('') : '<p class="escopo">O comprador ainda não indicou fornecedor.</p>') +
-    '<div class="cot-rodape"><span>' + (cotaram ? plural(cotaram, 'fornecedor cotou', 'fornecedores cotaram') +
-      '. O comparativo completo fica na Mesa de Cotação.' : '') + '</span>' +
+  const escolhidos = [].concat(...(res.familias || []).map(fa => (fa.fornecedores || []).filter(f => Number(f.itens_ganhos) > 0)));
+  $('cotacaoCorpo').innerHTML = (blocos || '<p class="escopo">Sem cotação enviada.</p>') +
+    '<div class="cot-rodape"><span>' + (escolhidos.length ? '<b>Escolha do comprador:</b> ' + escolhidos.map(f =>
+        esc(f.nome || '—') + ' (' + plural(Number(f.itens_ganhos), 'item', 'itens') + ', ' + dinheiroBR(f.total) + ')').join(' + ') : '') + '</span>' +
     '<span class="cot-total">Total: ' + dinheiroBR(res.total) + '</span></div>' +
     (m.observacao ? '<div class="cot-obs"><b>Observação do comprador</b>' + esc(m.observacao) + '</div>' : '') +
     ((res.avisos || []).length ? '<p class="cot-aviso"><b>Atenção:</b> ' + res.avisos.map(a => esc(a.msg)).join(' · ') + '</p>' : '');
