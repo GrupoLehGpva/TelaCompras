@@ -274,6 +274,10 @@ function linkSeguro(u){
    ========================================================================== */
 const ETAPA_NOME = {
   lider:      '1ª aprovação · liderança imediata',
+  /* A cotação não é aprovação: é a etapa do comprador, e a única decisão que
+     ele toma lá é barrar a compra. Sem esta linha a tela chamaria a recusa
+     dele de "Aprovação", que é justamente o que ela não é. */
+  cotacao:    'Cotação · setor de compras',
   gerencial:  '2ª aprovação · gerencial',
   financeiro: '3ª aprovação · financeira'
 };

@@ -60,7 +60,7 @@ function respostaDecisao({ ok=true, resultado='aprovado', mensagem='aprovada', n
  * rotas específicas (rpc/abrir_pedido) entram depois das genéricas (rpc/**). */
 async function instalar(p, {
   pedido = null, itens = [], anexos = [], fila = null, centros = [], decisao = null,
-  aoDecidir = null
+  aoDecidir = null, permissao = null
 } = {}){
   const json = corpo => ({ status:200, contentType:'application/json', body: JSON.stringify(corpo) });
 
@@ -71,6 +71,14 @@ async function instalar(p, {
   }
 
   await p.route('**/rest/v1/rpc/abrir_pedido**', r => r.fulfill(json(respostaAbrirPedido(pedido, itens, anexos))));
+
+  /* Como decisao_permitida responde de verdade (ver reprovar-pelo-comprador.sql).
+     É a função que diz se quem abriu a tela pode decidir — e, quando é
+     comprador, que a única decisão dele é reprovar (`so_reprova`).
+     Entra DEPOIS da rota genérica de rpc: no Playwright a última ganha. */
+  if(permissao !== null){
+    await p.route('**/rest/v1/rpc/decisao_permitida**', r => r.fulfill(json(permissao)));
+  }
 
   if(decisao !== null || aoDecidir){
     await p.route('**n8n.cloud/**', async r => {
@@ -91,6 +99,17 @@ async function instalar(p, {
       return r.fulfill(json(resp));
     });
   }
+}
+
+/* O sim do banco para o comprador: o formato exato que decisao_permitida
+   devolve quando o token é de comprador e o pedido está na cotação. */
+function respostaComprador({ ok = true, id = 'herisson', nome = 'HERISSON LUCAS LAPCZAK',
+                             numero = '', card_id = '', mensagem = '' } = {}){
+  return ok
+    ? { ok:true, aprovador:id, aprovador_nome:nome, papel:'comprador', so_reprova:true,
+        numero, card_id, etapa:'cotacao', fluxo:'padrao', tipo_compra:'normal' }
+    : { ok:false, erro:'nao_e_a_vez', papel:'comprador', aprovador:id,
+        mensagem: mensagem || 'Esta solicitação não está na cotação.' };
 }
 
 /* Para as baterias que despacham na mão por URL: um lugar só que sabe qual
@@ -223,5 +242,6 @@ function bancoDoCadastro({ catalogo = [], logins = { 'compras': { nome:'Compras 
   return { instalarNa, chamadas, itens, contas };
 }
 
-module.exports = { instalar, bancoDoCadastro, respostaAbrirPedido, respostaDecisao, corpoPorUrl,
+module.exports = {
+  respostaComprador, instalar, bancoDoCadastro, respostaAbrirPedido, respostaDecisao, corpoPorUrl,
                    respostaCriarSolicitacao, respostaDoFormulario, EMPRESAS_EXEMPLO };

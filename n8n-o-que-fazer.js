@@ -11,7 +11,10 @@ const motivo = String(q.m || '').trim().slice(0, 800);
 // continua caindo no redirect de sempre.
 const formato = String(q.f || '').toLowerCase() === 'json' ? 'json' : 'redirect';
 
-const ESPERADO = { lider:'liderança imediata', gerencial:'aprovação gerencial', financeiro:'aprovação financeiro' };
+/* As colunas onde cada etapa espera decisão. 'cotacao' entrou em 24/09: é a
+   etapa do comprador, e a única em que ele decide — só para reprovar. */
+const ESPERADO = { lider:'liderança imediata', cotacao:'compras · cotação',
+  gerencial:'aprovação gerencial', financeiro:'aprovação financeiro' };
 /* Para onde o card vai depois de cada decisão.
    'financeiro|aprovado' ia para 'efetuar compra' e passou a ir para 'ordem de
    compra' em 16/09, quando o Guilherme reorganizou o Kanban: a coluna 'lançar
@@ -20,7 +23,8 @@ const ESPERADO = { lider:'liderança imediata', gerencial:'aprovação gerencial
 const DESTINO = {
   'lider|aprovado':'compras · cotação', 'gerencial|aprovado':'aprovação financeiro',
   'financeiro|aprovado':'ordem de compra', 'lider|reprovado':'reprovado',
-  'gerencial|reprovado':'reprovado', 'financeiro|reprovado':'reprovado' };
+  'gerencial|reprovado':'reprovado', 'financeiro|reprovado':'reprovado',
+  'cotacao|reprovado':'reprovado' };
 const ROTULO = { lider:'liderança imediata', gerencial:'gerencial', financeiro:'financeira' };
 
 const statusAtual = (t.status && (t.status.status || t.status)) || '';
@@ -84,6 +88,25 @@ if (!decisao || !ESPERADO[etapa] || !t.id) {
 }
 
 // ---------------------------------------------------------------------------
+// COMPRADOR REPROVA, NÃO APROVA.
+//
+// Quem diz isso é o banco: `decisao_permitida` devolve `so_reprova: true`
+// quando o token é de comprador. Aprovar uma compra é da alçada — o comprador
+// só tem a porta de barrar o que não deve seguir, com motivo.
+//
+// Existe porque em 24/09 o Herisson precisou barrar a C2609-00012 (faltava um
+// item) e o único caminho era arrastar o card na mão. Arrastar card não decide
+// nada: o banco continuou esperando o gerente e as duas verdades se separaram.
+// ---------------------------------------------------------------------------
+const SO_REPROVA = permissao.so_reprova === true;
+if (SO_REPROVA && decisao !== 'reprovado') {
+  return parar('erro', 'nesta etapa o comprador só pode reprovar a compra');
+}
+if (!SO_REPROVA && etapa === 'cotacao') {
+  return parar('erro', 'a cotação é decidida pelo comprador');
+}
+
+// ---------------------------------------------------------------------------
 // REPROVAR SEM MOTIVO NÃO EXISTE. Em nenhum caminho.
 //
 // Esta trava valia só para a tela (`formato === 'json'`), e o botão do Slack
@@ -123,8 +146,13 @@ const APROVOU = {
 // O motivo está garantido pela trava acima: reprovação sem ele não chega aqui.
 const comentario = decisao === 'aprovado'
   ? APROVOU[etapa]
-  : '❌ Reprovado na aprovação ' + ROTULO[etapa] + quem + ' em ' + agora + '.\n\n'
-    + '*Motivo:* ' + motivo;
+  : etapa === 'cotacao'
+    ? '❌ Compra reprovada pelo comprador' + quem + ' em ' + agora + '.\n\n'
+      + '*Motivo:* ' + motivo + '\n\n'
+      + 'Quem pediu já recebeu o aviso com este motivo. Se a compra ainda for '
+      + 'necessária, ela volta como solicitação nova — este card não reabre.'
+    : '❌ Reprovado na aprovação ' + ROTULO[etapa] + quem + ' em ' + agora + '.\n\n'
+      + '*Motivo:* ' + motivo;
 
 return [{ json: {
   agir: true, formato, taskId: t.id, numero, etapa, decisao, motivo,
@@ -135,3 +163,4 @@ return [{ json: {
   mensagem: decisao === 'aprovado' ? 'aprovada' : 'reprovada',
   redirect: tela(decisao, numero)
 } }];
+

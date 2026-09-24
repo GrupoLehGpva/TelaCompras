@@ -638,3 +638,51 @@ begin
   end loop;
   execute d;
 end $$;
+
+-- 24/09 · bateria ganha a seção M (comprador reprova na cotação) — 153 verificações.
+do $$
+declare d text; antes text;
+begin
+  d := pg_get_functiondef('public._teste_caminho_telas()'::regprocedure);
+  antes := d;
+  d := replace(d, $a$  -- N. CAMINHO ANTIGO INTACTO$a$, $b$  -- M. COMPRADOR REPROVA (24/09)
+  r := abrir_pedido_telas(tf, cab, itens); vX := (r->>'id')::uuid;
+  r := decidir_pedido(ta_br, vX, 1, 'aprovado', null);
+  select versao into ver from solicitacoes where id=vX;
+  r := pedido_telas(tc, vX);
+  res := res || jsonb_build_array(jsonb_build_object('c','M1 comprador vê o botão reprovar no pedido em cotação','ok', r->'pode'->>'reprovar_cotacao'='true','r',r->'pode'));
+  r := pedido_telas(tf, vX);
+  res := res || jsonb_build_array(jsonb_build_object('c','M2 facilitador não vê reprovar da cotação','ok', r->'pode'->>'reprovar_cotacao'='false','r',r->'pode'));
+  r := reprovar_na_cotacao(tc, vX, ver, '   ');
+  res := res || jsonb_build_array(jsonb_build_object('c','M3 reprovar sem motivo','ok', r->>'erro'='sem_motivo','r',r));
+  r := reprovar_na_cotacao('cp-inventado', vX, ver, 'x');
+  res := res || jsonb_build_array(jsonb_build_object('c','M4 token inventado','ok', r->>'erro'='token_invalido','r',r));
+  r := reprovar_na_cotacao(ta_br, vX, ver, 'x');
+  res := res || jsonb_build_array(jsonb_build_object('c','M5 aprovador não reprova pela porta do comprador','ok', r->>'erro'='token_invalido','r',r));
+  r := reprovar_na_cotacao(tc, vX, ver - 1, 'x');
+  res := res || jsonb_build_array(jsonb_build_object('c','M6 versão vencida','ok', r->>'erro'='versao_mudou','r',r));
+  r := reprovar_na_cotacao(tc, real_id, 1, 'x');
+  res := res || jsonb_build_array(jsonb_build_object('c','M7 pedido do ClickUp recusado','ok', r->>'erro'='canal_clickup','r',r));
+  r := reprovar_na_cotacao(tc, vRep, (select versao from solicitacoes where id=vRep), 'x');
+  res := res || jsonb_build_array(jsonb_build_object('c','M8 pedido fora da cotação recusado','ok', r->>'erro'='fora_da_cotacao','r',r));
+  r := reprovar_na_cotacao(tc2, vX, ver, 'Item descontinuado pelo fabricante');
+  res := res || jsonb_build_array(jsonb_build_object('c','M9 comprador reprova: encerra e grava a decisão da etapa compras','ok',
+     r->>'ok'='true'
+     and (select status='reprovado' and etapa_atual is null and decidido_em is not null from solicitacoes where id=vX)
+     and (select motivo='Item descontinuado pelo fabricante' and resposta='reprovado' from decisoes where solicitacao_id=vX and etapa='compras'),'r',r));
+  res := res || jsonb_build_array(jsonb_build_object('c','M10 aviso a quem pediu, com o motivo','ok',
+     (select count(*)=1 from movimentos_compra where solicitacao_id=vX and acao='reprovado' and etapa='cotacao'
+        and quem_tipo='comprador' and motivo is not null
+        and detalhe->'para' @> '[{"papel":"facilitador","id":"eduarda"}]'),'r',null));
+  r := reprovar_na_cotacao(tc, vX, (select versao from solicitacoes where id=vX), 'de novo');
+  res := res || jsonb_build_array(jsonb_build_object('c','M11 reprovar de novo é recusado','ok', r->>'erro'='fora_da_cotacao','r',r));
+  r := pedido_telas(tf, vX);
+  res := res || jsonb_build_array(jsonb_build_object('c','M12 facilitador vê o motivo da reprovação na cotação','ok',
+     exists (select 1 from jsonb_array_elements(r->'linha_do_tempo') l where l->>'acao'='reprovado' and l->>'motivo'='Item descontinuado pelo fabricante'),'r',null));
+  res := res || jsonb_build_array(jsonb_build_object('c','M13 reprovado sai da fila do comprador','ok',
+     not exists (select 1 from jsonb_array_elements(fila_do_comprador(tc)->'pedidos') e where (e->>'id')::uuid=vX),'r',null));
+
+  -- N. CAMINHO ANTIGO INTACTO$b$);
+  if d = antes then raise exception 'ponto de inserção não encontrado'; end if;
+  execute d;
+end $$;

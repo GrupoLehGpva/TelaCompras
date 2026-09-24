@@ -57,4 +57,7 @@ t('array dentro de um item', new Function('$input',code)($in2).length===1, null)
 // 16 token nulo -> sem link, sem quebrar
 r=run([{...base,id:16,acao:'criado',etapa_seguinte:'lider',urgente:false,para:[{papel:'facilitador',id:'x',nome:'X',slack:'U9',token:null}]}]);
 t('token nulo: mensagem sem link', r[0].enviar && !r[0].texto.includes('?t='), r);
+// 17 comprador reprova na cotação -> facilitador com motivo
+r=run([{...base,id:17,acao:'reprovado',etapa:'cotacao',etapa_seguinte:null,urgente:false,motivo:'Item descontinuado',quem:'HERISSON',para:[P('facilitador','ed')]}]);
+t('comprador reprova: facilitador sabe que foi na cotação e o motivo', r[0].enviar && r[0].texto.includes('reprovada na cotação') && r[0].texto.includes('Motivo: Item descontinuado'), r);
 console.log('ok',ok,'falhou',falhou);

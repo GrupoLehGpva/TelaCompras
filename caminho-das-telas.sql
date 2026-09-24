@@ -1748,3 +1748,156 @@ begin
   if length(d) = n then raise exception 'desistir_edicao: substituição não bateu'; end if;
   execute d;
 end $$;
+
+-- ============================================================================
+-- 4 · 24/09 · Avisos: o n8n RESERVA os pendentes (marca como enviados na mesma
+-- transação) e só devolve à fila os que falharam. Duas rodadas que se encostem
+-- nunca mandam a mesma DM duas vezes; falha volta até 5 tentativas.
+-- Workflow: Compras · Telas · Avisos no Slack e edições vencidas (K4koz6mFwBDfDt94)
+-- ============================================================================
+create or replace function public._telas_payload_avisos(p_ids bigint[])
+returns jsonb language sql stable security definer set search_path = public as $$
+  select coalesce(jsonb_agg(x order by (x->>'id')::bigint), '[]'::jsonb) from (
+    select jsonb_build_object(
+      'id', mv.id, 'acao', mv.acao, 'etapa', mv.etapa, 'etapa_seguinte', mv.etapa_seguinte,
+      'solicitacao_id', mv.solicitacao_id, 'numero', mv.numero,
+      'tipo_compra', s.tipo_compra, 'urgente', (s.tipo_compra = 'urgente'),
+      'assunto', s.motivo, 'facilitador', f.nome,
+      'quem', mv.quem_nome, 'motivo', mv.motivo, 'em', mv.em, 'tentativas', mv.aviso_tentativas,
+      'total', mv.detalhe->'total', 'mudou', mv.detalhe->'mudou', 'reenvio', mv.detalhe->'reenvio',
+      'para', (select coalesce(jsonb_agg(jsonb_build_object(
+                 'papel', p->>'papel', 'id', p->>'id',
+                 'nome',  case p->>'papel' when 'aprovador'   then (select nome from aprovadores   where id = p->>'id')
+                                           when 'facilitador' then (select nome from facilitadores where id = p->>'id')
+                                           when 'comprador'   then (select nome from compradores   where id = p->>'id') end,
+                 'slack', case p->>'papel' when 'aprovador'   then (select slack_user_id from aprovadores   where id = p->>'id')
+                                           when 'facilitador' then (select slack_user_id from facilitadores where id = p->>'id')
+                                           when 'comprador'   then (select slack_user_id from compradores   where id = p->>'id') end,
+                 'token', case p->>'papel' when 'aprovador'   then (select token from aprovadores   where id = p->>'id' and ativo)
+                                           when 'facilitador' then (select token from facilitadores where id = p->>'id' and ativo)
+                                           when 'comprador'   then (select token from compradores   where id = p->>'id' and ativo) end
+               )), '[]'::jsonb)
+               from jsonb_array_elements(mv.detalhe->'para') p)
+    ) as x
+    from movimentos_compra mv
+    join solicitacoes s on s.id = mv.solicitacao_id
+    left join facilitadores f on f.id = s.facilitador_id
+    where mv.id = any(p_ids)
+  ) t;
+$$;
+
+create or replace function public.avisos_pendentes(p_limite integer default 50)
+returns jsonb language sql stable security definer set search_path = public as $$
+  select _telas_payload_avisos(array(
+    select id from movimentos_compra
+     where avisar and avisado_em is null and aviso_tentativas < 5
+     order by id limit greatest(1, least(coalesce(p_limite, 50), 200))));
+$$;
+
+create or replace function public.reservar_avisos(p_limite integer default 50)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare v_ids bigint[];
+begin
+  with alvo as (
+    select id from movimentos_compra
+     where avisar and avisado_em is null and aviso_tentativas < 5
+     order by id
+     limit greatest(1, least(coalesce(p_limite, 50), 200))
+     for update skip locked
+  ), marcados as (
+    update movimentos_compra m set avisado_em = now(), aviso_erro = null
+      from alvo where m.id = alvo.id
+    returning m.id
+  )
+  select array_agg(id order by id) into v_ids from marcados;
+  return _telas_payload_avisos(coalesce(v_ids, array[]::bigint[]));
+end $$;
+
+create or replace function public.marcar_aviso(p_id bigint, p_ok boolean, p_erro text default null)
+returns jsonb language plpgsql security definer set search_path = public as $$
+begin
+  if p_ok then
+    update movimentos_compra set avisado_em = coalesce(avisado_em, now()), aviso_erro = null where id = p_id;
+  else
+    update movimentos_compra
+       set avisado_em = null, aviso_tentativas = aviso_tentativas + 1, aviso_erro = left(p_erro, 500)
+     where id = p_id;
+  end if;
+  return jsonb_build_object('ok', found);
+end $$;
+
+revoke execute on function public._telas_payload_avisos(bigint[]), public.avisos_pendentes(integer),
+  public.reservar_avisos(integer), public.marcar_aviso(bigint, boolean, text)
+  from public, anon, authenticated;
+
+-- ============================================================================
+-- 5 · 24/09 · O comprador pode reprovar o pedido, com motivo obrigatório,
+-- enquanto ele está em cotação. Encerra o pedido e avisa quem pediu.
+-- ============================================================================
+create or replace function public.reprovar_na_cotacao(p_token text, p_id uuid, p_versao integer, p_motivo text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_cod text; v_msg text;
+  c compradores%rowtype; s solicitacoes%rowtype; f facilitadores%rowtype; v_motivo text;
+begin
+  begin
+    select * into c from compradores where token = p_token and ativo;
+    if c.id is null then
+      perform _telas_erro('token_invalido', 'Este link não vale mais.');
+    end if;
+    select * into s from solicitacoes where id = p_id for update;
+    if s.id is null then
+      perform _telas_erro('nao_encontrado', 'Pedido não encontrado.');
+    end if;
+    if s.canal <> 'telas' then
+      perform _telas_erro('canal_clickup', 'Este pedido anda pelo ClickUp.');
+    end if;
+    if s.etapa_atual is distinct from 'cotacao' then
+      perform _telas_erro('fora_da_cotacao', 'Este pedido não está em cotação. Atualize a tela.');
+    end if;
+    if p_versao is distinct from s.versao then
+      perform _telas_erro('versao_mudou', 'O pedido mudou desde que você abriu a tela. Atualize e confira.');
+    end if;
+    v_motivo := nullif(trim(p_motivo), '');
+    if v_motivo is null then
+      perform _telas_erro('sem_motivo', 'Reprovar exige motivo.');
+    end if;
+
+    select * into f from facilitadores where id = s.facilitador_id;
+
+    perform _telas_mover(s.id, null, null, 'reprovado');
+
+    insert into decisoes (id, solicitacao_id, numero, etapa, resposta, motivo,
+                          aprovador_id, decidido_por, decidido_por_slack_id, decidido_em)
+    values (gen_random_uuid(), s.id, s.numero, 'compras', 'reprovado', v_motivo,
+            null, c.nome, c.slack_user_id, now())
+    on conflict (solicitacao_id, etapa) do update
+      set resposta = excluded.resposta, motivo = excluded.motivo,
+          decidido_por = excluded.decidido_por, decidido_por_slack_id = excluded.decidido_por_slack_id,
+          decidido_em = excluded.decidido_em;
+
+    perform _telas_mov(s.id, 'reprovado', 'cotacao', null, 'comprador', c.id, c.nome, v_motivo, '{}'::jsonb,
+      jsonb_build_array(jsonb_build_object('papel', 'facilitador', 'id', f.id)));
+
+    return jsonb_build_object('ok', true, 'status', 'reprovado',
+      'mensagem', 'Pedido reprovado. Quem pediu foi avisado com o motivo.');
+  exception
+    when sqlstate 'P0001' then
+      get stacked diagnostics v_cod = message_text, v_msg = pg_exception_hint;
+      return jsonb_build_object('ok', false, 'erro', v_cod, 'mensagem', v_msg);
+  end;
+end $$;
+
+grant execute on function public.reprovar_na_cotacao(text, uuid, integer, text) to anon, authenticated;
+
+do $$
+declare d text;
+begin
+  d := pg_get_functiondef('public.pedido_telas(text,uuid)'::regprocedure);
+  d := replace(d,
+    $x$'cotar',    (v_tipo = 'comprador' and s.canal = 'telas' and s.etapa_atual = 'cotacao')$x$,
+    $x$'cotar',    (v_tipo = 'comprador' and s.canal = 'telas' and s.etapa_atual = 'cotacao'),
+      'reprovar_cotacao', (v_tipo = 'comprador' and s.canal = 'telas' and s.etapa_atual = 'cotacao')$x$);
+  if position('reprovar_cotacao' in d) = 0 then raise exception 'pedido_telas: trecho não encontrado'; end if;
+  execute d;
+end $$;

@@ -695,6 +695,7 @@ const MOTIVO_MINIMO = 10;
 const TOKEN_APROVADOR = (PARAMS.get('t') || '').trim();
 
 let NA_FILA = null;      // a linha da fila, quando este pedido é daquele aprovador
+let SO_REPROVA = false;  // comprador: a única decisão dele aqui é barrar a compra
 let decidindo = false;
 
 async function rpc(nome, corpo){
@@ -710,25 +711,78 @@ async function rpc(nome, corpo){
 
 async function prepararAprovacao(){
   if(!TOKEN_APROVADOR) return;
-  /* O caminho de volta aparece assim que a tela sabe que veio de uma fila —
-     antes de saber se este pedido é daquele aprovador. Quem clicou numa
-     linha errada precisa conseguir voltar do mesmo jeito. */
+
+  /* Fila fora do ar é diferente de fila vazia: sem conseguir conferir, a tela
+     continua sendo só de leitura em vez de afirmar o que não sabe. */
+  let fila = [];
+  try{ fila = await rpc('fila_de_aprovacao', { p_token: TOKEN_APROVADOR }); }
+  catch(e){ return; }
+
+  const aqui = fila.find(f => f.id === (SOLICITACAO && SOLICITACAO.id));
+  if(aqui){
+    /* O caminho de volta só existe para quem tem fila: a do aprovador. */
+    const voltar = $('voltarTopo');
+    voltar.href = 'aprovacoes.html?t=' + encodeURIComponent(TOKEN_APROVADOR);
+    voltar.hidden = false;
+    NA_FILA = aqui;
+    mostrarBarra('Sua decisão sobre esta solicitação',
+      'Aprovando, ela segue para a próxima etapa. Reprovando, o motivo vai para quem pediu.', '', true);
+    return;
+  }
+
+  await prepararComprador();
+}
+
+/* ----------------------------------------------------------------------------
+   O COMPRADOR TAMBÉM DECIDE — E SÓ PARA REPROVAR.
+   Quem diz se ele pode é o banco, a mesma função que autoriza o aprovador. Ela
+   confere o token, o card, a etapa e se o pedido ainda está aberto; e devolve
+   `so_reprova` quando quem abriu a tela é comprador.
+   Existe porque, até 24/09, barrar uma compra errada só dava para fazer
+   arrastando o card no ClickUp — e arrastar card não avisa ninguém, não grava
+   motivo nenhum e deixa banco e quadro contando histórias diferentes.
+   -------------------------------------------------------------------------- */
+async function prepararComprador(){
+  let r = null;
+  try{
+    r = await rpc('decisao_permitida', {
+      p_token:          TOKEN_APROVADOR,
+      p_solicitacao_id: (SOLICITACAO && SOLICITACAO.id) || null,
+      p_card_id:        (SOLICITACAO && SOLICITACAO.card_id) || '',
+      p_etapa:          'cotacao',
+      p_fluxo:          'padrao'
+    });
+  }catch(e){ r = null; }
+
+  const eComprador = !!(r && r.papel === 'comprador');
+
+  if(eComprador && r.ok === true){
+    SO_REPROVA = true;
+    NA_FILA = { id: SOLICITACAO.id, numero: r.numero,
+                card_id: r.card_id, etapa_atual: 'cotacao' };
+    $('btnReprovar').textContent = 'Reprovar compra';
+    mostrarBarra('Esta compra deve seguir?',
+      'Se ela não deve — item faltando, pedido errado, já tem em estoque — reprove aqui ' +
+      'com o motivo. Quem pediu recebe o aviso e o card vai para reprovado sozinho.',
+      '', true);
+    return;
+  }
+
+  if(eComprador){
+    SO_REPROVA = true;
+    mostrarBarra('Você não pode reprovar esta compra agora.',
+      r.mensagem || 'Ela já saiu da cotação.', 'nao-ok', false);
+    return;
+  }
+
+  /* Não é comprador: então é aprovador que caiu num pedido que não é dele.
+     O caminho de volta continua aparecendo — quem clicou na linha errada
+     precisa conseguir voltar do mesmo jeito. */
   const voltar = $('voltarTopo');
   voltar.href = 'aprovacoes.html?t=' + encodeURIComponent(TOKEN_APROVADOR);
   voltar.hidden = false;
-  let fila = [];
-  try{ fila = await rpc('fila_de_aprovacao', { p_token: TOKEN_APROVADOR }); }
-  catch(e){ return; }   /* sem fila, a tela continua sendo de leitura */
-
-  const aqui = fila.find(f => f.id === (SOLICITACAO && SOLICITACAO.id));
-  if(!aqui){
-    mostrarBarra('Este pedido não está esperando a sua aprovação.',
-      'Ele pode já ter sido decidido, ou estar em outra etapa.', 'nao-ok', false);
-    return;
-  }
-  NA_FILA = aqui;
-  mostrarBarra('Sua decisão sobre esta solicitação',
-    'Aprovando, ela segue para a próxima etapa. Reprovando, o motivo vai para quem pediu.', '', true);
+  mostrarBarra('Este pedido não está esperando a sua aprovação.',
+    'Ele pode já ter sido decidido, ou estar em outra etapa.', 'nao-ok', false);
 }
 
 function mostrarBarra(titulo, sub, classe, comBotoes, girando){
@@ -736,6 +790,9 @@ function mostrarBarra(titulo, sub, classe, comBotoes, girando){
   $('textoAprova').innerHTML = (girando ? '<span class="girando" aria-hidden="true"></span>' : '') +
     '<b>' + esc(titulo) + '</b>' + esc(sub || '');
   $('botoesAprova').querySelectorAll('button').forEach(b => b.hidden = !comBotoes);
+  /* Comprador não aprova compra: aprovar é da alçada. O botão nunca reaparece,
+     nem quando a barra volta a mostrar botões depois de um erro de rede. */
+  if(SO_REPROVA) $('btnAprovar').hidden = true;
   $('barraAprova').hidden = false;
 }
 
@@ -743,7 +800,7 @@ async function decidir(decisao, motivo){
   if(decidindo || !NA_FILA) return;
   decidindo = true;
   $('btnAprovar').disabled = true; $('btnReprovar').disabled = true;
-  mostrarBarra('Registrando…',
+  mostrarBarra(SO_REPROVA ? 'Reprovando a compra…' : 'Registrando…',
     decisao === 'aprovado'
       ? 'Movendo o card e gravando a aprovação.'
       : 'Movendo o card e avisando quem pediu.',
@@ -765,7 +822,8 @@ async function decidir(decisao, motivo){
     const j = await r.json().catch(()=>({}));
     if(r.ok && j.ok){
       NA_FILA = null;
-      mostrarBarra(decisao === 'aprovado' ? 'Aprovado.' : 'Reprovado.',
+      mostrarBarra(decisao === 'aprovado' ? 'Aprovado.'
+                   : SO_REPROVA ? 'Compra reprovada.' : 'Reprovado.',
         decisao === 'aprovado'
           ? 'A solicitação segue para a próxima etapa.'
           : 'Quem abriu o pedido vai receber o aviso com o motivo.',
@@ -784,6 +842,7 @@ async function decidir(decisao, motivo){
 }
 
 function abrirReprova(){
+  $('tituloModal').textContent = SO_REPROVA ? 'Reprovar compra' : 'Reprovar solicitação';
   $('subModal').textContent = 'Solicitação ' + ((NA_FILA && NA_FILA.numero) || '');
   $('motivoReprova').value = '';
   $('erroMotivo').hidden = true;

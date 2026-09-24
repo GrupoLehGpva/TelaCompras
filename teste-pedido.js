@@ -289,6 +289,95 @@ for(const modo of ['esc','cancelar']){
   ok('rede caiu devolve os botões', await p.evaluate(()=>!document.getElementById('btnAprovar').disabled), 'botão ficou travado');
   await p.close(); }
 
+/* ============================================================================
+   O COMPRADOR REPROVA A COMPRA — com motivo, e só isso.
+
+   Nasceu de um caso real: em 24/09 o Herisson precisou barrar a C2609-00012
+   porque faltava um item, e o único caminho era arrastar o card no ClickUp.
+   Arrastar não avisa quem pediu, não grava motivo e deixa o banco achando que
+   o pedido ainda espera o gerente. Estas baterias existem para que esse
+   caminho torto não precise existir de novo — e para que a porta nova não
+   vire, por descuido, uma porta de APROVAR.
+   ========================================================================== */
+async function comComprador(b, {permissao, decisao={ok:true}, token='tk-herisson'}={}){
+  const p = await b.newPage();
+  p.__chamadas = [];
+  /* fila vazia: o token não é de aprovador, e é exatamente assim que o banco
+     responde a `fila_de_aprovacao` quando quem pergunta é comprador. */
+  await mock.instalar(p, { pedido: SOL, itens: ITENS, fila: [], permissao });
+  await p.route('**n8n.cloud/**', r => {
+    if(r.request().url().includes('anexos-do-card')){
+      return r.fulfill({ status:200, contentType:'application/json',
+                         body: JSON.stringify({ ok:true, arquivos: [] }) });
+    }
+    let corpo = {};
+    try { corpo = JSON.parse(r.request().postData() || '{}'); } catch(e){ corpo = { __sem_corpo: r.request().url() }; }
+    p.__chamadas.push(corpo);
+    return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(decisao)});
+  });
+  await p.goto(ARQ + '?id=' + SOL.id + (token ? '&t=' + token : ''), {waitUntil:'load'});
+  await p.waitForTimeout(900);
+  return p;
+}
+const SIM_COMPRADOR = mock.respostaComprador({ numero: SOL.numero, card_id: 'card-1' });
+
+// o comprador vê a porta — e ela só abre para um lado
+{ const p = await comComprador(b, {permissao: SIM_COMPRADOR});
+  ok('comprador vê a barra', await p.locator('#barraAprova').isVisible(), 'a barra não apareceu para o comprador');
+  ok('comprador pode reprovar', await p.locator('#btnReprovar').isVisible(), 'sem o botão de reprovar');
+  ok('comprador NÃO pode aprovar', !(await p.locator('#btnAprovar').isVisible()),
+     'apareceu botão de aprovar para quem não tem alçada');
+  ok('botão fala a língua da compra', /Reprovar compra/.test(await p.locator('#btnReprovar').textContent()||''),
+     'texto do botão: ' + await p.locator('#btnReprovar').textContent());
+  ok('comprador não ganha fila de aprovação', !(await p.locator('#voltarTopo').isVisible()),
+     'ofereceu um caminho de volta que não é dele');
+  await p.close(); }
+
+// reprovar sem motivo não existe — nem para o comprador
+{ const p = await comComprador(b, {permissao: SIM_COMPRADOR});
+  await p.click('#btnReprovar'); await p.waitForTimeout(250);
+  ok('caixa do comprador abre', await p.locator('#fundoModal').isVisible(), 'caixa não abriu');
+  ok('caixa fala de compra', /Reprovar compra/.test(await p.locator('#tituloModal').textContent()||''),
+     'título: ' + await p.locator('#tituloModal').textContent());
+  await p.click('#btnConfirmarReprova'); await p.waitForTimeout(250);
+  ok('comprador sem motivo não passa', p.__chamadas.length === 0, 'reprovou sem motivo');
+  await p.fill('#motivoReprova', 'curto'); await p.click('#btnConfirmarReprova'); await p.waitForTimeout(250);
+  ok('comprador com motivo curto não passa', p.__chamadas.length === 0, 'reprovou com motivo curto');
+  await p.fill('#motivoReprova', 'Falta o item de ração que deveria vir junto nesta compra.');
+  await p.click('#btnConfirmarReprova'); await p.waitForTimeout(700);
+  const c = p.__chamadas[0] || {};
+  ok('comprador manda uma decisão só', p.__chamadas.length === 1, 'chamadas: ' + p.__chamadas.length);
+  ok('vai como reprovado', c.decisao === 'reprovado', 'decisao: ' + c.decisao);
+  ok('vai na etapa da cotação', c.etapa === 'cotacao', 'etapa: ' + c.etapa);
+  ok('leva o token do comprador', c.token === 'tk-herisson', 'token: ' + c.token);
+  ok('leva o card certo', c.card_id === 'card-1', 'card: ' + c.card_id);
+  ok('leva o motivo', /ração que deveria vir junto/.test(c.motivo||''), 'motivo: ' + c.motivo);
+  ok('confirma na tela', /Compra reprovada\./.test(await p.locator('#textoAprova').textContent()||''),
+     'texto: ' + await p.locator('#textoAprova').textContent());
+  await p.close(); }
+
+// o servidor recusa: o botão de aprovar continua sem existir
+{ const p = await comComprador(b, {permissao: SIM_COMPRADOR,
+    decisao:{ok:false, mensagem:'esta solicitação já foi decidida'}});
+  await p.click('#btnReprovar'); await p.waitForTimeout(200);
+  await p.fill('#motivoReprova', 'Já temos esse material em estoque na Granja 103.');
+  await p.click('#btnConfirmarReprova'); await p.waitForTimeout(700);
+  ok('recusa avisa o comprador', /já foi decidida/.test(await p.locator('#textoAprova').textContent()||''),
+     'texto: ' + await p.locator('#textoAprova').textContent());
+  ok('recusa devolve o reprovar', await p.evaluate(()=>!document.getElementById('btnReprovar').disabled),
+     'botão ficou travado');
+  ok('recusa NÃO faz nascer o aprovar', !(await p.locator('#btnAprovar').isVisible()),
+     'o botão de aprovar voltou quando a barra reapareceu');
+  await p.close(); }
+
+// pedido que já saiu da cotação: o banco diz não, e a tela obedece
+{ const p = await comComprador(b, {permissao: mock.respostaComprador({ok:false})});
+  ok('fora da cotação avisa', await p.locator('#barraAprova').isVisible(), 'não avisou nada');
+  ok('fora da cotação sem botão', !(await p.locator('#btnReprovar').isVisible()), 'deixou reprovar assim mesmo');
+  ok('fora da cotação explica', /não está na cotação/.test(await p.locator('#textoAprova').textContent()||''),
+     'texto: ' + await p.locator('#textoAprova').textContent());
+  await p.close(); }
+
 // duplo clique não decide duas vezes
 { const p = await comFila(b, {fila:NA_FILA});
   await Promise.all([
