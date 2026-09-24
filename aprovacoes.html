@@ -303,6 +303,13 @@
   .btn-linha.sim{background:var(--ok-bg);border-color:var(--ok-txt);color:var(--ok-txt)}
   .btn-linha.nao{background:var(--erro-bg);border-color:var(--erro-borda);color:var(--erro)}
   .btn-linha[disabled]{opacity:.5;cursor:default}
+  /* Devolver ao comprador: só no caminho das telas (sem ClickUp), e só onde a
+     regra deixa (gerencial e financeiro no normal/urgente; financeiro no mensal). */
+  .btn-linha.dev{background:var(--demo-bg);border-color:var(--demo-borda);color:var(--demo)}
+  .em-edicao{margin:14px 0 0;padding:12px 16px;border:1px dashed var(--demo-borda);border-radius:var(--raio);
+             background:var(--demo-bg);color:var(--demo);font-size:14px;line-height:1.5}
+  .em-edicao ul{margin:6px 0;padding-left:18px}
+  .em-edicao p{margin:0;font-size:13px}
   input[type=checkbox]{width:17px;height:17px;accent-color:var(--verde);cursor:pointer}
 
   .vazio-fila{padding:44px 20px;text-align:center;color:var(--muted);line-height:1.6}
@@ -423,6 +430,14 @@
       e você recebe o aviso no Slack quatro vezes por dia, nos dias úteis.
       Compra urgente avisa na hora.
     </div>
+
+    <!-- Pedidos do caminho das telas que o facilitador está editando: saem da
+         fila enquanto isso, mas o aprovador precisa saber que existem. -->
+    <div class="em-edicao" id="emEdicao" hidden>
+      <b>Em edição pelo facilitador</b>
+      <ul id="listaEdicao"></ul>
+      <p>Voltam para a sua fila quando o facilitador salvar, ou sozinhos no horário indicado.</p>
+    </div>
     </div><!-- /painelFila -->
 
     <div id="painelHist" hidden>
@@ -463,13 +478,13 @@
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tituloModal">
     <h2 id="tituloModal">Reprovar solicitação</h2>
     <p class="sub" id="subModal"></p>
-    <label for="motivoReprova" style="display:block;font-size:14px;font-weight:600;margin-bottom:6px">
+    <label for="motivoReprova" id="rotuloMotivo" style="display:block;font-size:14px;font-weight:600;margin-bottom:6px">
       Por que está reprovando?
     </label>
     <textarea id="motivoReprova"
       placeholder="Ex.: já temos esse item em estoque na Granja 103; falar com o almoxarifado antes."></textarea>
     <p class="erro-campo" id="erroMotivo" hidden></p>
-    <p class="sub" style="margin:10px 0 0">
+    <p class="sub" id="notaMotivo" style="margin:10px 0 0">
       O motivo vai para quem abriu o pedido, junto com o aviso de reprovação, e fica registrado no card.
     </p>
     <div class="rodape">
@@ -538,6 +553,10 @@ let marcadas = new Set();
 let termo = '';
 let soHoje = false;
 let alvoReprova = null;
+/* 'reprovar' ou 'devolver': a mesma caixa de motivo serve às duas decisões. */
+let modoModal = 'reprovar';
+/* Pedidos do caminho das telas em edição pelo facilitador (fora da fila). */
+let EM_EDICAO = [];
 let enviando = false;
 /* O histórico só é buscado quando alguém abre a aba, e é jogado fora depois de
    cada decisão — senão a pessoa aprova, volta ao histórico e não vê o que
@@ -565,6 +584,45 @@ function visiveis(){
             s.centro_custo_nome, s.motivo, s.observacao]
       .some(v => String(v||'').toLowerCase().includes(t));
   });
+}
+
+/* ----------------------------------------------------------------------------
+   A fila vem de fila_de_aprovacao, como sempre. O caminho das telas (sem
+   ClickUp) acrescenta, por fila_do_aprovador, três coisas a cada linha: o canal
+   (clickup ou telas), a versão do pedido e se dá para devolver ao comprador —
+   além da lista do que está em edição pelo facilitador.
+   Se essa segunda leitura falhar, a tela continua funcionando como antes: tudo
+   vai pelo caminho do ClickUp, e o servidor recusa o que não for de lá.
+   ---------------------------------------------------------------------------- */
+async function carregarFila(){
+  const fila = await rpc('fila_de_aprovacao', { p_token: TOKEN });
+  let extra = null;
+  try{ extra = await rpc('fila_do_aprovador', { p_token: TOKEN }); }catch(e){ extra = null; }
+  EM_EDICAO = [];
+  if(extra && extra.ok === true && Array.isArray(extra.pedidos)){
+    const por = {};
+    extra.pedidos.forEach(x => { if(x && x.id) por[x.id] = x; });
+    (fila || []).forEach(s => {
+      const x = por[s.id];
+      if(x){ s.canal = x.canal; s.versao = x.versao; s.pode_devolver = x.pode_devolver === true; }
+    });
+    EM_EDICAO = Array.isArray(extra.em_edicao) ? extra.em_edicao : [];
+  }
+  return fila;
+}
+
+const horaBR = iso => {
+  if(!iso) return '—';
+  const d = new Date(iso);
+  return isNaN(d) ? '—' : d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+};
+
+function desenharEdicao(){
+  const lista = Array.isArray(EM_EDICAO) ? EM_EDICAO : [];
+  $('emEdicao').hidden = lista.length === 0;
+  $('listaEdicao').innerHTML = lista.map(e =>
+    '<li><b>' + esc(e.numero || '—') + '</b> · ' + esc(e.facilitador || '—') +
+    ' · editando desde ' + horaBR(e.em_edicao_desde) + ', volta até ' + horaBR(e.volta_ate) + '</li>').join('');
 }
 
 /* ============================================================================
@@ -699,13 +757,21 @@ function desenhar(){
     bSim.addEventListener('click', ()=> decidir([s], 'aprovado', ''));
     const bNao = document.createElement('button');
     bNao.type='button'; bNao.className='btn-linha nao'; bNao.textContent='Reprovar';
-    bNao.addEventListener('click', ()=> abrirReprova(s));
+    bNao.addEventListener('click', ()=> abrirReprova(s, 'reprovar'));
     tdA.appendChild(bSim); tdA.appendChild(bNao);
+    if(s.canal === 'telas' && s.pode_devolver){
+      const bDev = document.createElement('button');
+      bDev.type='button'; bDev.className='btn-linha dev'; bDev.textContent='Devolver';
+      bDev.title = 'Devolver ao comprador para rever a cotação';
+      bDev.addEventListener('click', ()=> abrirReprova(s, 'devolver'));
+      tdA.appendChild(bDev);
+    }
     tr.appendChild(tdA);
 
     corpo.appendChild(tr);
   });
 
+  desenharEdicao();
   $('filaVazia').hidden = lista.length > 0;
   $('filaVazia').querySelector('b').textContent =
     FILA.length === 0 ? 'Nada esperando por você.' : 'Nada com esse filtro.';
@@ -743,6 +809,17 @@ async function decidir(itens, decisao, motivo){
   const feitos = [], recusados = [];
   for(const s of alvos){
     try{
+      /* Caminho das telas: decide direto no banco, que confere token, vez,
+         etapa e versão. Nada de card, nada de n8n no meio. */
+      if(s.canal === 'telas'){
+        const j = await rpc('decidir_pedido', {
+          p_token: TOKEN, p_id: s.id, p_versao: s.versao,
+          p_decisao: decisao, p_motivo: motivo || null
+        });
+        if(j && j.ok){ feitos.push(s); marcadas.delete(s.id); }
+        else { emVoo.delete(s.id); recusados.push((s.numero||s.id) + (j && j.mensagem ? ' — ' + j.mensagem : '')); }
+        continue;
+      }
       const r = await fetch(ENDPOINT_DECISAO, {
         method:'POST',
         headers:{ 'Content-Type':'application/json' },
@@ -793,7 +870,7 @@ async function decidir(itens, decisao, motivo){
   let filaRecarregada = false;
   if(recusados.length){
     try{
-      FILA = await rpc('fila_de_aprovacao', { p_token: TOKEN });
+      FILA = await carregarFila();
       /* Marcação de linha que não existe mais não pode ficar viva no Set: ela
          voltaria a contar no "Aprovar N selecionadas" sem estar na tela. */
       const vivos = new Set(FILA.map(s => s.id));
@@ -810,7 +887,9 @@ async function decidir(itens, decisao, motivo){
 
   if(feitos.length && !recusados.length){
     avisar(feitos.length === 1
-      ? 'Solicitação ' + (decisao === 'aprovado' ? 'aprovada' : 'reprovada') + '.'
+      ? (decisao === 'devolvido'
+          ? 'Solicitação devolvida ao comprador.'
+          : 'Solicitação ' + (decisao === 'aprovado' ? 'aprovada' : 'reprovada') + '.')
       : feitos.length + ' solicitações aprovadas.', 'ok');
   } else if(recusados.length){
     const quantas = recusados.length + (recusados.length === 1 ? ' decisão' : ' decisões');
@@ -838,8 +917,20 @@ function avisar(texto, tipo){
 }
 
 /* ---- caixa de reprovação: motivo é obrigatório ---- */
-function abrirReprova(s){
+function abrirReprova(s, modo){
   alvoReprova = s;
+  modoModal = modo === 'devolver' ? 'devolver' : 'reprovar';
+  const dev = modoModal === 'devolver';
+  $('tituloModal').textContent = dev ? 'Devolver ao comprador' : 'Reprovar solicitação';
+  $('rotuloMotivo').textContent = dev ? 'O que o comprador precisa rever?' : 'Por que está reprovando?';
+  $('motivoReprova').placeholder = dev
+    ? 'Ex.: o frete do fornecedor 2 está alto; negociar ou explicar antes de reenviar.'
+    : 'Ex.: já temos esse item em estoque na Granja 103; falar com o almoxarifado antes.';
+  $('notaMotivo').textContent = dev
+    ? 'O pedido volta para a cotação. O comprador vê o seu nome e este motivo na Mesa de Cotação.'
+    : 'O motivo vai para quem abriu o pedido, junto com o aviso de reprovação, e fica registrado ' +
+      (s.canal === 'telas' ? 'no histórico do pedido.' : 'no card.');
+  $('btnConfirmarReprova').textContent = dev ? 'Devolver' : 'Reprovar';
   $('subModal').textContent = 'Solicitação ' + (s.numero||'') +
     (s.motivo ? ' · ' + s.motivo : '');
   $('motivoReprova').value = '';
@@ -854,15 +945,17 @@ function fecharReprova(){
 async function confirmarReprova(){
   const motivo = $('motivoReprova').value.trim();
   if(motivo.length < MOTIVO_MINIMO){
-    $('erroMotivo').textContent =
-      'Escreva o motivo — é o que a pessoa que pediu vai ler para entender a recusa.';
+    $('erroMotivo').textContent = modoModal === 'devolver'
+      ? 'Escreva o que precisa ser revisto — é o que o comprador vai ler.'
+      : 'Escreva o motivo — é o que a pessoa que pediu vai ler para entender a recusa.';
     $('erroMotivo').hidden = false;
     $('motivoReprova').focus();
     return;
   }
   const alvo = alvoReprova;
+  const decisao = modoModal === 'devolver' ? 'devolvido' : 'reprovado';
   fecharReprova();
-  await decidir([alvo], 'reprovado', motivo);
+  await decidir([alvo], decisao, motivo);
 }
 
 /* ============================================================================
@@ -893,7 +986,7 @@ async function abrir(){
     $('tituloTopo').textContent = 'Aprovações de ' + APROVADOR.nome;
     document.title = 'Aprovações · ' + APROVADOR.nome + ' · Grupo Leh';
 
-    FILA = await rpc('fila_de_aprovacao', { p_token: TOKEN });
+    FILA = await carregarFila();
     $('carregando').hidden = true;
     $('conteudo').hidden = false;
     desenhar();

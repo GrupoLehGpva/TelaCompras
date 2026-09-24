@@ -216,6 +216,7 @@
     background:var(--erro-bg);border:1px solid var(--erro-borda);color:var(--erro);
     text-align:left;font-size:14px;line-height:1.6}
   .aviso-falha[hidden]{display:none}
+  .aviso-falha.neutro{background:var(--verde-claro);border-color:var(--borda);color:inherit}
   .resultados button{display:block;width:100%;text-align:left;background:none;border:0;
     border-bottom:1px solid var(--borda);padding:12px 14px;cursor:pointer;font:inherit}
   .resultados button:last-child{border-bottom:0}
@@ -286,6 +287,15 @@
   .campo.invalido .opcoes .opcao{border-color:var(--erro-borda)}
   .campo.invalido .montador{border-color:var(--erro)}
 
+  /* Caminho das telas: faixa da edição (uma vez só, com prazo) */
+  .faixa-edicao{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;
+    margin:0 0 16px;padding:12px 14px;border-radius:10px;border:1px solid var(--demo-borda);background:var(--demo-bg);color:var(--demo);font-size:14px}
+  .faixa-edicao[hidden]{display:none}
+  .faixa-edicao b{display:block}
+  .faixa-edicao.vencida{border-color:var(--erro-borda);background:var(--erro-bg);color:var(--erro)}
+  .faixa-edicao button{border:1px solid currentColor;background:transparent;color:inherit;border-radius:8px;
+    padding:7px 12px;font:inherit;font-weight:600;cursor:pointer}
+  .faixa-edicao button:disabled{opacity:.5;cursor:default}
   .alerta{border:1px solid var(--erro-borda);background:var(--erro-bg);color:var(--erro);border-radius:10px;
     padding:12px 14px;font-size:13px;margin-bottom:16px;line-height:1.5}
   .alerta[hidden]{display:none}
@@ -348,6 +358,11 @@
 <main class="wrap">
 
   <div class="alerta" id="alerta" hidden></div>
+  <!-- Só no caminho das telas, quando o link é de edição (?t=...&editar=...) -->
+  <div class="faixa-edicao" id="faixaEdicao" hidden>
+    <span id="textoEdicao"></span>
+    <button type="button" id="btnDesistirEdicao">Desistir da edição</button>
+  </div>
 
   <dl class="auto" id="auto">
     <div><dt>Solicitante</dt><dd id="autoSolicitante">—</dd></div>
@@ -1039,6 +1054,7 @@ async function iniciar(){
   render();
   await Promise.all([carregarCatalogo(), carregarCentrosCusto(), carregarEmpresas(),
                      carregarFacilitador(SLACK_UID)]);
+  if(TOKEN_TELAS) await prepararTelas();
 }
 
 async function carregarCatalogo(){
@@ -1688,7 +1704,10 @@ function validar(passo){
 
   if(passo === 'solicitante'){
     if(estado.nomeSolicitante.trim().length < 3) falhar('nomeSolicitante','Escreva o nome completo do facilitador.');
-    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(estado.emailSolicitante))
+    /* Pelo caminho das telas quem pede vem do cadastro (o servidor ignora o
+       e-mail da tela), então e-mail vazio no cadastro não trava o pedido. */
+    if(!(MODO_TELAS && !estado.emailSolicitante) &&
+       !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(estado.emailSolicitante))
       falhar('emailSolicitante','Informe um e-mail corporativo válido.');
   }
   if(passo === 'item'){
@@ -1755,6 +1774,7 @@ function trocarVisual(modo){
   render();
 }
 function render(){
+  if(TELAS_BLOQUEADA) return;   /* link das telas recusado: a tela não volta a mostrar o formulário */
   const seq = sequencia();
   if(modoVisual === 'pagina'){
     document.querySelectorAll('.passo').forEach(s=>{
@@ -1764,7 +1784,7 @@ function render(){
     });
     $('progresso').hidden = true;
     $('btnVoltar').hidden = true;
-    $('btnAvancar').textContent = 'Enviar solicitação';
+    $('btnAvancar').textContent = textoEnviar();
     $('nav').hidden = false;
     return;
   }
@@ -1779,7 +1799,7 @@ function render(){
   $('progTitulo').textContent = tituloDe(atual) || '';
   $('progBarra').style.width = ((passoAtual+1)/seq.length*100) + '%';
   $('btnVoltar').hidden = passoAtual === 0;
-  $('btnAvancar').textContent = passoAtual === seq.length-1 ? 'Enviar solicitação' : 'Continuar';
+  $('btnAvancar').textContent = passoAtual === seq.length-1 ? textoEnviar() : 'Continuar';
   $('nav').hidden = false;
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -2052,6 +2072,9 @@ async function enviar(){
   };
   const itens = montarItens();
 
+  /* Caminho das telas (sem ClickUp): só quando o link trouxe o token pessoal. */
+  if(MODO_TELAS) return enviarTelas(cabecalho, itens, botao);
+
   if(!CONECTADO){
     /* Sem banco não há número — e inventar um aqui é justamente o que acabou
        de sair. A confirmação diz isso com todas as letras. */
@@ -2129,6 +2152,269 @@ function concluir(cabecalho, itens, nota, cardCriado, anexos){
   $('nav').hidden = true; $('progresso').hidden = true; $('auto').hidden = true;
   window.scrollTo({top:0,behavior:'smooth'});
 }
+
+/* ============================================================================
+   13) CAMINHO DAS TELAS (sem ClickUp)
+
+   Só entra quando o link traz o token pessoal do facilitador (?t=fc-…). O link
+   do /compras no Slack não traz, então o caminho do ClickUp segue exatamente
+   como era — nada aqui roda para ele.
+
+   Duas situações:
+   · ?t=…            pedido novo, gravado por abrir_pedido_telas. Quem pede vem
+                     do cadastro (o servidor ignora nome e e-mail da tela).
+                     Os avisos saem pela fila do banco; não há webhook nem card.
+   · ?t=…&editar=ID  a edição única, já iniciada na tela de acompanhamento.
+                     Salva por salvar_edicao; tem prazo (30 min) e pode ser
+                     abandonada — o que também gasta a edição.
+   ========================================================================== */
+const PARAMS_TELAS = new URLSearchParams(location.search);
+const TOKEN_TELAS  = (PARAMS_TELAS.get('t') || '').trim();
+const EDITAR_ID    = (PARAMS_TELAS.get('editar') || '').trim();
+let MODO_TELAS = false;
+let TELAS_BLOQUEADA = false;
+let FACILITADOR_TELAS = null;   // resposta de eu_facilitador
+let EDICAO = null;              // o pedido em edição (pedido_telas.pedido)
+let relogioEdicao = null;
+let confirmandoDesistir = null;
+
+const escT = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const horaT = d => d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+const linkAcompanhar = () => 'acompanhar.html?t=' + encodeURIComponent(TOKEN_TELAS);
+function textoEnviar(){ return EDICAO ? 'Salvar alterações' : 'Enviar solicitação'; }
+
+function bloquearTelas(titulo, detalhe){
+  TELAS_BLOQUEADA = true;
+  mostrarAlerta('<b>' + escT(titulo) + '</b> ' + escT(detalhe || '') +
+    (TOKEN_TELAS ? '<br><br><a href="' + escT(linkAcompanhar()) + '">Ver minhas solicitações →</a>' : ''));
+  document.querySelectorAll('.passo').forEach(x => x.hidden = true);
+  $('nav').hidden = true; $('progresso').hidden = true; $('auto').hidden = true;
+  $('faixaEdicao').hidden = true;
+}
+
+async function prepararTelas(){
+  MODO_TELAS = true;
+  $('btnExemplo').hidden = true;
+  let eu = null;
+  try{ eu = await apiRpc('eu_facilitador', { p_token: TOKEN_TELAS }); }catch(e){ eu = null; }
+  if(!eu || eu.ok !== true){
+    bloquearTelas('Não reconheci este link.',
+      (eu && eu.mensagem) || 'Não consegui confirmar quem é você agora. Tente de novo em instantes.');
+    return;
+  }
+  FACILITADOR_TELAS = eu;
+  FACILITADOR = { nome: eu.nome, email: eu.email || '', unidade: eu.unidade || '' };
+  aplicarFacilitador();
+
+  if(!EDITAR_ID) return;
+
+  let r = null;
+  try{ r = await apiRpc('pedido_telas', { p_token: TOKEN_TELAS, p_id: EDITAR_ID }); }catch(e){ r = null; }
+  if(!r || r.ok !== true || !r.pedido){
+    bloquearTelas('Não consegui abrir este pedido para edição.',
+      (r && r.mensagem) || 'Tente de novo pela tela de acompanhamento.');
+    return;
+  }
+  if(!r.pedido.em_edicao){
+    bloquearTelas('Este pedido não está em edição.',
+      'A edição começa pelo botão Editar, na tela de acompanhamento. Se o prazo passou, ' +
+      'o pedido já voltou para a liderança como estava.');
+    return;
+  }
+  EDICAO = r.pedido;
+  preencherDoPedido(r.pedido, r.itens || []);
+  document.querySelector('h1').textContent = 'Editar solicitação';
+  $('autoNumero').textContent = EDICAO.numero || '—';
+  /* Anexo não muda na edição: o que foi enviado continua no pedido. */
+  const anexo = $('anexos').closest('.campo');
+  if(anexo) anexo.innerHTML = '<span class="titulo">Anexos</span>' +
+    '<span class="ajuda">Os anexos enviados com o pedido continuam nele. Na edição não dá para trocar arquivo.</span>';
+  iniciarRelogio();
+  render();
+}
+
+function preencherDoPedido(p, itens){
+  const por = (id, chave, v) => { estado[chave] = v || ''; if($(id)) $(id).value = v || ''; };
+  por('solicitanteNome', 'solicitanteNome', p.solicitante_nome);
+  por('observacao', 'observacao', p.observacao);
+  if(p.empresa_id && $('empresa')){
+    $('empresa').value = p.empresa_id;
+    estado.empresa = $('empresa').value;
+    estado.empresaNome = (EMPRESAS.find(e => e.id === estado.empresa) || {}).nome || '';
+  }
+  if(p.centro_custo){
+    escolherCentro(CENTROS_CUSTO.find(c => c.codigo === p.centro_custo) ||
+      { codigo: p.centro_custo, nome: p.centro_custo_nome || p.centro_custo, unidade: '' });
+  }
+  marcarRadio('tipoCompra', p.tipo_compra);
+  marcarRadio('definicaoFornecedor', p.definicao_fornecedor);
+  if(p.definicao_fornecedor === 'unico') por('justificativaFornecedor', 'justificativaFornecedor', p.justificativa_fornecedor);
+  por('dataLimite', 'dataLimite', p.data_necessidade ? String(p.data_necessidade).slice(0, 10) : '');
+  por('motivoCompra', 'motivoCompra', p.motivo);
+
+  const um = itens.length === 1 ? itens[0] : null;
+  if(um && !um.codigo && /servi/i.test(um.unidade || '')){
+    marcarRadio('tipo', 'servico');
+    por('escopoServico', 'escopoServico', um.descricao);
+  } else if(um && um.codigo && !um.fora_catalogo){
+    marcarRadio('tipo', 'item');
+    por('quantidade', 'quantidade', String(um.quantidade));
+    escolherItem(acharNoCatalogo(um.codigo) ||
+      { codigo: um.codigo, descricao: um.descricao, unidade: um.unidade, especificacao: '' });
+  } else {
+    marcarRadio('tipo', 'lista');
+    estado.itensLista = itens.map(i => {
+      const cat = i.codigo ? acharNoCatalogo(i.codigo) : null;
+      return { foraCatalogo: !!i.fora_catalogo, codigo: i.codigo || null,
+               familia: cat ? cat.familia : null, descricao: i.descricao,
+               unidade: i.unidade, quantidade: Number(i.quantidade) };
+    });
+    renderLista();
+  }
+}
+
+function iniciarRelogio(){
+  const expira = EDICAO && EDICAO.edicao_expira_em ? new Date(EDICAO.edicao_expira_em) : null;
+  const tique = () => {
+    if(!expira || isNaN(expira)){
+      $('textoEdicao').innerHTML = '<b>Editando ' + escT(EDICAO.numero) + '</b>Salve antes de sair desta tela.';
+    } else {
+      const falta = Math.ceil((expira.getTime() - Date.now()) / 60000);
+      if(falta <= 0){
+        encerrarEdicao('Passou o prazo da edição.',
+          'O que foi mudado aqui não vale: o pedido voltou para a liderança como estava. A edição deste pedido já foi usada.', true);
+        return;
+      }
+      $('textoEdicao').innerHTML = '<b>Editando ' + escT(EDICAO.numero) + ' — salve até ' + horaT(expira) +
+        ' (falta' + (falta === 1 ? ' 1 minuto' : 'm ' + falta + ' minutos') + ')</b>' +
+        'Se o prazo passar ou você desistir, o pedido volta para a liderança como estava, e não dá para editar de novo.';
+    }
+  };
+  $('faixaEdicao').hidden = false;
+  tique();
+  relogioEdicao = setInterval(tique, 15000);
+}
+function pararRelogio(){ if(relogioEdicao){ clearInterval(relogioEdicao); relogioEdicao = null; } }
+
+/* Fim da edição sem salvar (desistiu ou venceu): nada mais se envia daqui. */
+function encerrarEdicao(titulo, detalhe, vencida){
+  pararRelogio();
+  const f = $('faixaEdicao');
+  f.classList.toggle('vencida', !!vencida);
+  $('textoEdicao').innerHTML = '<b>' + escT(titulo) + '</b>' + escT(detalhe || '') +
+    ' <a href="' + escT(linkAcompanhar()) + '">Ver minhas solicitações →</a>';
+  $('btnDesistirEdicao').hidden = true;
+  f.hidden = false;
+  TELAS_BLOQUEADA = true;
+  document.querySelectorAll('.passo').forEach(x => x.hidden = true);
+  $('nav').hidden = true; $('progresso').hidden = true;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* Desistir gasta a edição: pede um segundo clique em vez de uma janela do
+   navegador. Cinco segundos para confirmar, depois volta ao normal. */
+async function desistirEdicao(){
+  const b = $('btnDesistirEdicao');
+  if(!confirmandoDesistir){
+    b.textContent = 'Clique de novo para desistir';
+    confirmandoDesistir = setTimeout(() => { confirmandoDesistir = null; b.textContent = 'Desistir da edição'; }, 5000);
+    return;
+  }
+  clearTimeout(confirmandoDesistir); confirmandoDesistir = null;
+  b.disabled = true; b.textContent = 'Desistindo…';
+  let r = null;
+  try{ r = await apiRpc('desistir_edicao', { p_token: TOKEN_TELAS, p_id: EDICAO.id }); }catch(e){ r = null; }
+  if(r && r.ok === true){
+    encerrarEdicao('Edição abandonada.', r.mensagem || 'Nada foi alterado. O pedido voltou para a liderança.', false);
+    return;
+  }
+  b.disabled = false; b.textContent = 'Desistir da edição';
+  mostrarAlerta('<b>Não consegui desistir agora.</b> ' + escT((r && r.mensagem) || 'A rede falhou. Tente de novo.'));
+}
+
+const CAMPO_TELAS = {
+  solicitante_nome:'para quem é', observacao:'observação', empresa_id:'empresa', centro_custo:'centro de custo',
+  unidade_destino:'unidade de destino', local_entrega:'local de entrega', tipo_compra:'tipo de compra',
+  definicao_fornecedor:'definição de fornecedor', justificativa_fornecedor:'justificativa',
+  data_necessidade:'data de necessidade', motivo:'motivo', itens:'itens'
+};
+
+async function enviarTelas(cabecalho, itens, botao){
+  if(!FACILITADOR_TELAS){
+    mostrarAlerta('<b>Não reconheci este link.</b> Peça um novo com /compras no Slack.');
+    return;
+  }
+  const cab = {
+    solicitante_nome: cabecalho.solicitante_nome, observacao: cabecalho.observacao,
+    empresa_id: cabecalho.empresa_id, centro_custo: cabecalho.centro_custo,
+    tipo_compra: cabecalho.tipo_compra, definicao_fornecedor: cabecalho.definicao_fornecedor,
+    justificativa_fornecedor: cabecalho.justificativa_fornecedor,
+    data_necessidade: cabecalho.data_necessidade, motivo: cabecalho.motivo
+  };
+  const its = itens.map(it => ({ codigo: it.codigo, descricao: it.descricao, unidade: it.unidade,
+                                 quantidade: it.quantidade, fora_catalogo: !!it.foraCatalogo }));
+  botao.disabled = true; botao.textContent = EDICAO ? 'Salvando…' : 'Enviando…';
+  try{
+    if(EDICAO){
+      const r = await apiRpc('salvar_edicao', { p_token: TOKEN_TELAS, p_id: EDICAO.id, p_cabecalho: cab, p_itens: its });
+      if(r && r.erro === 'edicao_expirou'){ encerrarEdicao('Passou o prazo da edição.', r.mensagem, true); return; }
+      if(!r || r.ok !== true) throw new Error((r && r.mensagem) || 'o banco recusou a gravação');
+      pararRelogio();
+      $('faixaEdicao').hidden = true;
+      const mudou = Object.keys(r.mudou || {}).map(k => CAMPO_TELAS[k] || k);
+      concluirTelas('Alterações salvas', EDICAO.numero, r.mensagem,
+        mudou.length ? 'Mudou: ' + mudou.join(', ') + '.' : 'Nada foi alterado.', null);
+      return;
+    }
+    const r = await apiRpc('abrir_pedido_telas', { p_token: TOKEN_TELAS, p_cabecalho: cab, p_itens: its });
+    if(!r || r.ok !== true) throw new Error((r && r.mensagem) || 'o banco recusou a gravação');
+    const anexos = await subirAnexos(r.id);
+    concluirTelas('Solicitação enviada', r.numero,
+      (r.situacao || 'Registrada') + (r.com_quem ? ' · com ' + r.com_quem : ''), null, anexos);
+  }catch(e){
+    botao.disabled = false; botao.textContent = textoEnviar();
+    mostrarAlerta('<b>Não consegui gravar.</b> ' + escT(String(e.message).slice(0, 300)));
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+}
+
+function concluirTelas(titulo, numero, nota, detalhe, anexos){
+  $('okSelo').textContent = '✓';
+  $('okTitulo').textContent = titulo;
+  $('okNumero').textContent = (numero || '') + (nota ? ' · ' + nota : '');
+  const lista = document.querySelector('.passo.ok ol');
+  if(lista) lista.innerHTML = EDICAO
+    ? '<li>A liderança recebe o pedido de volta e vê o que mudou</li><li>Daqui em diante ele segue o caminho normal</li>' +
+      '<li>Este pedido não pode mais ser editado</li>'
+    : '<li>Quem aprova recebe o pedido na lista dele</li><li>Compras monta a cotação</li>' +
+      '<li>O valor total define quem dá a aprovação final</li><li>Você acompanha tudo pelo seu link</li>';
+  const aviso = $('okAviso');
+  aviso.hidden = true; aviso.innerHTML = '';
+  if(detalhe){ aviso.hidden = false; aviso.textContent = detalhe; aviso.classList.add('neutro'); }
+  if(anexos && anexos.falhas && anexos.falhas.length){
+    aviso.hidden = false;
+    aviso.innerHTML = (aviso.innerHTML ? aviso.innerHTML + '<br><br>' : '') +
+      '<b>' + contar(anexos.falhas.length, 'anexo não subiu', 'anexos não subiram') + '.</b> ' +
+      'O pedido ' + escT(numero) + ' foi gravado do mesmo jeito.<br>' +
+      anexos.falhas.map(f => '• ' + escT(f)).join('<br>') +
+      '<br><br>Mande o arquivo ao setor de compras com esse número.';
+  }
+  const payload = document.querySelector('.passo.ok details.payload');
+  if(payload) payload.hidden = true;
+  const acoes = document.querySelector('.passo.ok .acoes');
+  if(acoes && !acoes.querySelector('.ir-acompanhar')){
+    const a = document.createElement('a');
+    a.className = 'btn-exemplo ir-acompanhar'; a.href = linkAcompanhar();
+    a.textContent = 'Ver minhas solicitações →';
+    acoes.appendChild(a);
+  }
+  if(EDICAO) $('btnRecomecar').style.display = 'none';
+  document.querySelectorAll('.passo').forEach(x => { x.hidden = x.dataset.passo !== 'confirmacao'; });
+  $('nav').hidden = true; $('progresso').hidden = true; $('auto').hidden = true;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+$('btnDesistirEdicao').addEventListener('click', desistirEdicao);
 
 iniciar();
 </script>

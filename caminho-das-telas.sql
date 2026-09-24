@@ -1901,3 +1901,27 @@ begin
   if position('reprovar_cotacao' in d) = 0 then raise exception 'pedido_telas: trecho não encontrado'; end if;
   execute d;
 end $$;
+
+-- ============================================================================
+-- 6 · 24/09 · Quem é o facilitador deste link (formulário pelo caminho das telas)
+-- O formulário (index.html?t=...) precisa do nome para mostrar e travar o campo.
+-- Só a própria pessoa: nome, e-mail e unidade. Nada do organograma.
+-- facilitador_do_token (do acompanhamento antigo) fica como está.
+-- ============================================================================
+create or replace function public.eu_facilitador(p_token text)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare f facilitadores%rowtype;
+begin
+  if coalesce(trim(p_token), '') = '' then
+    return jsonb_build_object('ok', false, 'erro', 'token_invalido', 'mensagem', 'Link incompleto.');
+  end if;
+  select * into f from facilitadores where token = p_token and ativo;
+  if f.id is null then
+    return jsonb_build_object('ok', false, 'erro', 'token_invalido',
+      'mensagem', 'Este link não vale mais. Peça um novo com /compras no Slack.');
+  end if;
+  return jsonb_build_object('ok', true, 'nome', f.nome, 'email', f.email, 'unidade', f.unidade,
+    'prazo_edicao_minutos', extract(epoch from _telas_prazo_edicao()) / 60);
+end $$;
+revoke all on function public.eu_facilitador(text) from public;
+grant execute on function public.eu_facilitador(text) to anon, authenticated;

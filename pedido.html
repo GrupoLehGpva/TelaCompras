@@ -174,6 +174,16 @@
   .barra-aprova button.sim{background:var(--acento-fundo);border-color:var(--acento-fundo);color:var(--sobre-acento)}
   .barra-aprova button.nao{background:var(--erro-bg);border-color:var(--erro-borda);color:var(--erro)}
   .barra-aprova button[disabled]{opacity:.55;cursor:default}
+  .barra-aprova button.dev{background:var(--demo-bg);border-color:var(--demo-borda);color:var(--demo)}
+  /* Cotação do caminho das telas: o resumo que o aprovador precisa para decidir. */
+  .cot-fam{margin:0 0 14px}
+  .cot-fam h3{margin:0 0 6px;font-size:14px}
+  .cot-tab{width:100%;border-collapse:collapse;font-size:14px}
+  .cot-tab td,.cot-tab th{padding:6px 8px;border-bottom:1px solid var(--borda);text-align:left}
+  .cot-tab .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .cot-total{font-weight:700;font-size:15px;margin:6px 0 0}
+  .cot-obs{margin:10px 0 0;padding:10px 12px;background:var(--realce);border-radius:8px;white-space:pre-wrap}
+  .cot-aviso{margin:8px 0 0;color:var(--demo);font-size:13px}
   /* Enquanto o servidor não responde, a barra diz o que está acontecendo.
      Botão apagado e nada escrito passa por tela travada. */
   .barra-aprova .texto .girando{width:14px;height:14px;display:inline-block;vertical-align:-2px;
@@ -304,6 +314,12 @@
       </div>
     </section>
 
+    <!-- Só no caminho das telas (sem ClickUp): a cotação que o comprador enviou. -->
+    <section class="cartao" id="cartaoCotacao" hidden>
+      <h2>Cotação</h2>
+      <div id="cotacaoCorpo"></div>
+    </section>
+
     <p class="marca-dagua" id="rodape"></p>
   </main>
 
@@ -312,6 +328,7 @@
     <div class="botoes" id="botoesAprova">
       <button type="button" class="sim" id="btnAprovar">Aprovar</button>
       <button type="button" class="nao" id="btnReprovar">Reprovar</button>
+      <button type="button" class="dev" id="btnDevolver" hidden>Devolver ao comprador</button>
     </div>
   </div>
 </div>
@@ -320,13 +337,13 @@
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tituloModal">
     <h2 id="tituloModal">Reprovar solicitação</h2>
     <p class="sub" id="subModal"></p>
-    <label for="motivoReprova" style="display:block;font-size:14px;font-weight:600;margin-bottom:6px">
+    <label for="motivoReprova" id="rotuloMotivo" style="display:block;font-size:14px;font-weight:600;margin-bottom:6px">
       Por que está reprovando?
     </label>
     <textarea id="motivoReprova"
       placeholder="Ex.: já temos esse item em estoque na Granja 103; falar com o almoxarifado antes."></textarea>
     <p class="erro-campo" id="erroMotivo" hidden></p>
-    <p class="sub" style="margin:10px 0 0">
+    <p class="sub" id="notaMotivo" style="margin:10px 0 0">
       O motivo vai para quem abriu o pedido, junto com o aviso de reprovação, e fica registrado no card.
     </p>
     <div class="rodape">
@@ -727,8 +744,33 @@ async function prepararAprovacao(){
     NA_FILA = aqui;
     mostrarBarra('Sua decisão sobre esta solicitação',
       'Aprovando, ela segue para a próxima etapa. Reprovando, o motivo vai para quem pediu.', '', true);
+    $('btnDevolver').hidden = !podeDevolver();
+    if(ehDasTelas()) carregarCotacao().catch(()=>{});
     return;
   }
+
+  /* Caminho das telas (sem ClickUp): nada de card, então a porta do comprador
+     do ClickUp (decisao_permitida) não se aplica — o comprador decide na Mesa
+     de Cotação. Aqui só explicamos onde o pedido está. */
+  if(ehDasTelas()){
+    const voltar = $('voltarTopo');
+    voltar.href = 'aprovacoes.html?t=' + encodeURIComponent(TOKEN_APROVADOR);
+    voltar.hidden = false;
+    if(SOLICITACAO.etapa_atual === 'edicao'){
+      /* Pedido em edição pelo facilitador sai da fila. Dizer isso é melhor que
+         "não está esperando a sua aprovação" — ele vai voltar. */
+      const desde = SOLICITACAO.em_edicao_desde ? new Date(SOLICITACAO.em_edicao_desde) : null;
+      const hora = d => d ? d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) : '—';
+      mostrarBarra('Em edição pelo facilitador.',
+        'Desde ' + hora(desde) + '. Volta para a sua decisão quando ele salvar' +
+        (desde ? ', ou sozinho às ' + hora(new Date(desde.getTime() + 30*60000)) : '') + '.', 'nao-ok', false);
+      return;
+    }
+    mostrarBarra('Este pedido não está esperando a sua aprovação.',
+      'Ele pode já ter sido decidido, ou estar em outra etapa.', 'nao-ok', false);
+    return;
+  }
+
 
   await prepararComprador();
 }
@@ -785,6 +827,46 @@ async function prepararComprador(){
     'Ele pode já ter sido decidido, ou estar em outra etapa.', 'nao-ok', false);
 }
 
+/* ---------------------------------------------------------------------------
+   CAMINHO DAS TELAS (sem ClickUp)
+   O pedido diz por onde anda (canal). Pelas telas, a decisão vai direto ao
+   banco (decidir_pedido), que confere token, vez, etapa e versão; e o
+   aprovador pode devolver ao comprador onde a regra deixa.
+   --------------------------------------------------------------------------- */
+function ehDasTelas(){ return !!(SOLICITACAO && SOLICITACAO.canal === 'telas'); }
+function podeDevolver(){
+  if(!ehDasTelas() || !NA_FILA || SO_REPROVA) return false;
+  const et = NA_FILA.etapa_atual, mensal = String(SOLICITACAO.tipo_compra || '').toLowerCase() === 'mensal';
+  return mensal ? et === 'financeiro' : (et === 'gerencial' || et === 'financeiro');
+}
+
+async function carregarCotacao(){
+  const r = await rpc('pedido_telas', { p_token: TOKEN_APROVADOR, p_id: SOLICITACAO.id });
+  if(!r || r.ok !== true || !r.mapa || !r.mapa.resumo) return;
+  const m = r.mapa, res = m.resumo;
+  const html = (res.familias || []).map(fa => {
+    const venc = (fa.fornecedores || []).filter(f => Number(f.itens_ganhos) > 0);
+    if(!venc.length) return '';
+    return '<div class="cot-fam"><h3>Família ' + esc(fa.familia) + '</h3>' +
+      '<table class="cot-tab"><thead><tr><th>Fornecedor</th><th class="num">Itens</th>' +
+      '<th class="num">Desconto</th><th class="num">Frete</th><th>Prazo</th><th>Pagamento</th><th class="num">Total</th></tr></thead><tbody>' +
+      venc.map(f => '<tr><td>' + esc(f.nome || '—') + '</td>' +
+        '<td class="num">' + esc(f.itens_ganhos) + '</td>' +
+        '<td class="num">' + (f.desconto_pct ? esc(String(f.desconto_pct).replace('.', ',')) + '%' : '—') + '</td>' +
+        '<td class="num">' + dinheiroBR(f.frete) + '</td>' +
+        '<td>' + (f.prazo_dias != null ? esc(f.prazo_dias) + ' dias' : '—') + '</td>' +
+        '<td>' + esc(f.condicao || '—') + '</td>' +
+        '<td class="num">' + dinheiroBR(f.total) + '</td></tr>').join('') +
+      '</tbody></table></div>';
+  }).join('');
+  $('cotacaoCorpo').innerHTML = (html || '<p class="escopo">Sem cotação enviada.</p>') +
+    '<p class="cot-total">Total da cotação: ' + dinheiroBR(res.total) + '</p>' +
+    (m.observacao ? '<div class="cot-obs"><b>Observação do comprador:</b> ' + esc(m.observacao) + '</div>' : '') +
+    ((res.avisos || []).length ? '<p class="cot-aviso">Pontos de atenção: ' +
+       res.avisos.map(a => esc(a.msg)).join(' · ') + '</p>' : '');
+  $('cartaoCotacao').hidden = false;
+}
+
 function mostrarBarra(titulo, sub, classe, comBotoes, girando){
   $('barraAprova').className = 'barra-aprova ' + (classe || '');
   $('textoAprova').innerHTML = (girando ? '<span class="girando" aria-hidden="true"></span>' : '') +
@@ -793,19 +875,41 @@ function mostrarBarra(titulo, sub, classe, comBotoes, girando){
   /* Comprador não aprova compra: aprovar é da alçada. O botão nunca reaparece,
      nem quando a barra volta a mostrar botões depois de um erro de rede. */
   if(SO_REPROVA) $('btnAprovar').hidden = true;
+  if(comBotoes) $('btnDevolver').hidden = !podeDevolver();
   $('barraAprova').hidden = false;
 }
 
 async function decidir(decisao, motivo){
   if(decidindo || !NA_FILA) return;
   decidindo = true;
-  $('btnAprovar').disabled = true; $('btnReprovar').disabled = true;
+  $('btnAprovar').disabled = true; $('btnReprovar').disabled = true; $('btnDevolver').disabled = true;
   mostrarBarra(SO_REPROVA ? 'Reprovando a compra…' : 'Registrando…',
-    decisao === 'aprovado'
-      ? 'Movendo o card e gravando a aprovação.'
-      : 'Movendo o card e avisando quem pediu.',
+    ehDasTelas()
+      ? 'Gravando a decisão.'
+      : (decisao === 'aprovado'
+          ? 'Movendo o card e gravando a aprovação.'
+          : 'Movendo o card e avisando quem pediu.'),
     '', false, true);
   try{
+    if(ehDasTelas()){
+      const j = await rpc('decidir_pedido', {
+        p_token: TOKEN_APROVADOR, p_id: NA_FILA.id, p_versao: SOLICITACAO.versao,
+        p_decisao: decisao, p_motivo: motivo || null
+      });
+      if(j && j.ok){
+        NA_FILA = null;
+        mostrarBarra(decisao === 'aprovado' ? 'Aprovado.' : (decisao === 'devolvido' ? 'Devolvido ao comprador.' : 'Reprovado.'),
+          j.mensagem || '', decisao === 'aprovado' ? 'ok' : 'nao-ok', false);
+      } else if(j && j.erro === 'versao_mudou'){
+        NA_FILA = null;
+        mostrarBarra('Este pedido foi alterado.', 'Recarregue a página e confira antes de decidir.', 'nao-ok', false);
+      } else {
+        mostrarBarra('Não consegui registrar a decisão.', (j && j.mensagem) || 'Tente de novo.', 'nao-ok', true, false);
+        $('btnAprovar').disabled = false; $('btnReprovar').disabled = false; $('btnDevolver').disabled = false;
+      }
+      decidindo = false;
+      return;
+    }
     const r = await fetch(ENDPOINT_DECISAO, {
       method:'POST',
       headers:{ 'Content-Type':'application/json' },
@@ -841,8 +945,21 @@ async function decidir(decisao, motivo){
   decidindo = false;
 }
 
-function abrirReprova(){
-  $('tituloModal').textContent = SO_REPROVA ? 'Reprovar compra' : 'Reprovar solicitação';
+let modoModal = 'reprovar';
+function abrirReprova(modo){
+  modoModal = modo === 'devolver' ? 'devolver' : 'reprovar';
+  const dev = modoModal === 'devolver';
+  $('tituloModal').textContent = dev ? 'Devolver ao comprador'
+                               : SO_REPROVA ? 'Reprovar compra' : 'Reprovar solicitação';
+  $('rotuloMotivo').textContent = dev ? 'O que o comprador precisa rever?' : 'Por que está reprovando?';
+  $('motivoReprova').placeholder = dev
+    ? 'Ex.: o frete do fornecedor 2 está alto; negociar ou explicar antes de reenviar.'
+    : 'Ex.: já temos esse item em estoque na Granja 103; falar com o almoxarifado antes.';
+  $('notaMotivo').textContent = dev
+    ? 'O pedido volta para a cotação. O comprador vê o seu nome e este motivo na Mesa de Cotação.'
+    : 'O motivo vai para quem abriu o pedido, junto com o aviso de reprovação, e fica registrado ' +
+      (ehDasTelas() ? 'no histórico do pedido.' : 'no card.');
+  $('btnConfirmarReprova').textContent = dev ? 'Devolver' : 'Reprovar';
   $('subModal').textContent = 'Solicitação ' + ((NA_FILA && NA_FILA.numero) || '');
   $('motivoReprova').value = '';
   $('erroMotivo').hidden = true;
@@ -852,19 +969,21 @@ function abrirReprova(){
 function fecharReprova(){ $('fundoModal').hidden = true; }
 
 $('btnAprovar').addEventListener('click', ()=> decidir('aprovado', ''));
-$('btnReprovar').addEventListener('click', abrirReprova);
+$('btnReprovar').addEventListener('click', ()=> abrirReprova('reprovar'));
+$('btnDevolver').addEventListener('click', ()=> abrirReprova('devolver'));
 $('btnCancelar').addEventListener('click', fecharReprova);
 $('btnConfirmarReprova').addEventListener('click', async ()=>{
   const motivo = $('motivoReprova').value.trim();
   if(motivo.length < MOTIVO_MINIMO){
-    $('erroMotivo').textContent =
-      'Escreva o motivo — é o que a pessoa que pediu vai ler para entender a recusa.';
+    $('erroMotivo').textContent = modoModal === 'devolver'
+      ? 'Escreva o que precisa ser revisto — é o que o comprador vai ler.'
+      : 'Escreva o motivo — é o que a pessoa que pediu vai ler para entender a recusa.';
     $('erroMotivo').hidden = false;
     $('motivoReprova').focus();
     return;
   }
   fecharReprova();
-  await decidir('reprovado', motivo);
+  await decidir(modoModal === 'devolver' ? 'devolvido' : 'reprovado', motivo);
 });
 $('fundoModal').addEventListener('click', e=>{ if(e.target === $('fundoModal')) fecharReprova(); });
 document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && !$('fundoModal').hidden) fecharReprova(); });

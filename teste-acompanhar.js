@@ -141,16 +141,22 @@ ok('4 encerradas aparecem depois', await p.locator('#tituloEncerradas').isVisibl
 /* 6 — a regra da tela: nada aqui muda nada.
        Botão passou a ser permitido (o "Ver motivo"), mas TODO botão precisa
        estar marcado como de leitura. É assim que um botão de ação acrescentado
-       no futuro reprova aqui em vez de passar despercebido. */
+       no futuro reprova aqui em vez de passar despercebido.
+       Exceção desde 24/09: o caminho das telas (sem ClickUp) permite editar e
+       cancelar. Esses botões levam a marca `acao-telas` e só existem em pedido
+       das telas — num pedido do ClickUp, como os desta bateria, nenhum aparece.
+       Quem cobre os botões de ação é teste-telas-acompanhar.js. */
 { const botoes   = await p.locator('button').count();
-  const leitura  = await p.locator('button.so-leitura').count();
+  const leitura  = await p.locator('button.so-leitura').count() + await p.locator('button.acao-telas').count();
+  ok('6 nenhuma ação nas linhas do ClickUp', await p.locator('tbody button.acao-telas').count() === 0,
+     'apareceu botão de ação num pedido do ClickUp');
   const inputs   = await p.locator('input:not([type=search])').count();
   const forms    = await p.locator('form').count();
   ok('6 todo botão é de leitura', botoes === leitura,
      (botoes - leitura) + ' botão(ões) sem a marca de leitura numa tela que não muda nada');
   ok('6 sem campo',   inputs === 0, 'apareceram ' + inputs + ' campos além do filtro');
   ok('6 sem formulário', forms === 0, 'apareceu formulário numa tela de leitura');
-  const chamadas = p.__rpcs.filter(n => !/^facilitador_do_token|^minhas_solicitacoes|^itens_das_minhas_solicitacoes|^anexos_da_solicitacao/.test(n));
+  const chamadas = p.__rpcs.filter(n => !/^facilitador_do_token|^minhas_solicitacoes|^meus_pedidos|^itens_das_minhas_solicitacoes|^anexos_da_solicitacao/.test(n));
   ok('6 só lê', chamadas.length === 0, 'chamou além da leitura: ' + chamadas.join(',')); }
 
 /* 6.5 — a janela do motivo: abre, mostra o que precisa, e fecha */
@@ -280,9 +286,10 @@ p = await tela(b);
      'caixa: ' + await p.locator('#itens-s3').textContent());
 
   // regra da tela continua valendo com a caixa aberta
-  ok('11 todo botão segue de leitura', await p.locator('button').count() === await p.locator('button.so-leitura').count(),
+  ok('11 todo botão segue de leitura', await p.locator('button:not(.so-leitura):not(.acao-telas)').count() === 0 &&
+     await p.locator('tbody button.acao-telas').count() === 0,
      'botão sem marca de leitura');
-  ok('11 só lê', p.__rpcs.every(n => /^facilitador_do_token|^minhas_solicitacoes|^itens_das_minhas_solicitacoes|^anexos_da_solicitacao/.test(n)),
+  ok('11 só lê', p.__rpcs.every(n => /^facilitador_do_token|^minhas_solicitacoes|^meus_pedidos|^itens_das_minhas_solicitacoes|^anexos_da_solicitacao/.test(n)),
      'chamou: ' + p.__rpcs.join(','));
   await p.screenshot({path:'t-acompanhar-itens.png', fullPage:true});
 }
@@ -420,7 +427,8 @@ const ANTIGA = { id:'s9', numero:'CP-0009', assunto:'Bomba do poço da sede',
      'chamou: ' + p.__rpcs.slice(antes).join(','));
 
   ok('12 continua sendo tela de leitura',
-     await p.locator('button').count() === await p.locator('button.so-leitura').count(),
+     await p.locator('button:not(.so-leitura):not(.acao-telas)').count() === 0 &&
+     await p.locator('tbody button.acao-telas').count() === 0,
      'apareceu botão sem a marca de leitura');
   await p.screenshot({ path:'t-acompanhar-historico.png', fullPage:true });
   await p.close(); }

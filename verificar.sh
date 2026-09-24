@@ -18,13 +18,21 @@ for b in bateria-tela.js teste-centros.js teste-pedido.js teste-decisao.js \
          teste-empresa.js teste-cotacao-completa.js teste-planilha.js \
          teste-catalogo-paginado.js teste-titulo-card.js teste-aviso-urgente.js \
          teste-cliques.js teste-anexo.js bateria-erros.js \
-         teste-cadastro-itens.js; do
+         teste-cadastro-itens.js \
+         teste-telas-aprovacoes.js teste-telas-pedido.js teste-telas-formulario.js \
+         teste-telas-acompanhar.js; do
   echo
   echo "== $b =="
   saida=$(node "$b" 2>&1) || { echo "$saida" | tail -20; falhou=1; continue; }
   echo "$saida" | grep -E "FALHAS|ATENÇÃO" -A 8 | head -14
   echo "$saida" | grep -q "FALHAS (0)" || falhou=1
 done
+
+echo
+echo "== teste-avisos-telas.js (mensagens do Slack, caminho das telas) =="
+saida=$(node teste-avisos-telas.js 2>&1) || falhou=1
+echo "$saida" | tail -1
+echo "$saida" | grep -q "falhou 0" || falhou=1
 
 echo
 echo "== teste-comparativa.py (planilha de cotacao) =="

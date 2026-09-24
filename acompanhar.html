@@ -288,6 +288,33 @@
   .vazio[hidden]{display:none}
 
   @media (max-width:520px){ .envelope{padding:14px 10px 48px} .filtro{min-width:0;width:100%} }
+  /* ---- Caminho das telas: editar (uma vez), cancelar, histórico ---- */
+  .acoes-telas{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .acoes-telas button,.acoes-telas a{padding:5px 12px;border-radius:var(--pilula);border:1px solid var(--linha-forte);
+    background:var(--card);color:var(--texto);font:inherit;font-size:12.5px;font-weight:650;cursor:pointer;text-decoration:none}
+  .acoes-telas .editar,.acoes-telas .continuar{border-color:var(--verde);color:var(--verde-mata)}
+  .acoes-telas .cancelar:hover{border-color:var(--erro);color:var(--erro)}
+  .nota-edicao{display:block;margin-top:6px;font-size:12.5px;color:var(--demo)}
+  .aviso-topo{border-radius:var(--raio);padding:12px 16px;margin-bottom:14px;font-size:14px;
+    background:var(--ok-bg);color:var(--ok-txt);border:1px solid var(--borda)}
+  .aviso-topo[hidden]{display:none}
+  .historico-telas{margin-top:12px;border-top:1px solid var(--borda);padding-top:8px}
+  .historico-telas ol{list-style:none;margin:0;padding:0}
+  .historico-telas li{padding:6px 0;font-size:13.5px;border-bottom:1px dashed var(--borda)}
+  .historico-telas li:last-child{border-bottom:0}
+  .historico-telas .quando{color:var(--muted);font-variant-numeric:tabular-nums;margin-right:8px}
+  .historico-telas .det{display:block;color:var(--muted);font-size:13px}
+  .modal-acao h2{color:var(--texto)}
+  .modal-acao .texto-acao{font-size:14px;line-height:1.55}
+  .modal-acao .texto-acao ul{margin:8px 0 0;padding-left:20px}
+  .modal-acao label{display:block;font-size:13.5px;font-weight:600;margin:14px 0 6px}
+  .modal-acao textarea{width:100%;min-height:80px;box-sizing:border-box;border:1px solid var(--borda);border-radius:8px;
+    padding:8px 10px;font:inherit;background:var(--card);color:var(--texto)}
+  .modal-acao .erro-acao{color:var(--erro);font-size:13.5px;margin:10px 0 0}
+  .modal-acao .rodape{gap:8px}
+  .modal-acao .rodape button.confirmar{background:var(--acento-fundo);border-color:var(--acento-fundo);color:var(--sobre-acento)}
+  .modal-acao .rodape button.confirmar.perigo{background:var(--erro);border-color:var(--erro);color:#fff}
+  .modal-acao .rodape button:disabled{opacity:.55;cursor:default}
   @media print{ .barra,.aviso-leitura,.abas,.filtros-hist{display:none} .ver-itens .seta{display:none} .rolagem{overflow:visible;border:0} body{background:#fff} }
 </style>
 </head>
@@ -313,7 +340,8 @@
   <div class="erro" id="erro" hidden></div>
 
   <main id="conteudo" hidden>
-    <p class="aviso-leitura">
+    <div class="aviso-topo" id="avisoTopo" role="status" hidden></div>
+    <p class="aviso-leitura" id="avisoLeitura">
       Esta tela é só para acompanhar. Quem decide cada etapa recebe o pedido na
       tela dele — aqui você vê onde o seu está e de quem ele está esperando.
     </p>
@@ -423,6 +451,21 @@
     <div class="texto-motivo" id="textoMotivo"></div>
     <div class="rodape">
       <button type="button" class="so-leitura" id="btnFechar">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="fundo-modal" id="fundoAcao" hidden>
+  <div class="modal modal-acao" role="dialog" aria-modal="true" aria-labelledby="tituloAcao">
+    <h2 id="tituloAcao"></h2>
+    <p class="sub" id="subAcao"></p>
+    <div class="texto-acao" id="textoAcao"></div>
+    <label for="motivoAcao" id="rotuloMotivoAcao" hidden>Motivo do cancelamento <span style="font-weight:400">— opcional</span></label>
+    <textarea id="motivoAcao" maxlength="500" hidden></textarea>
+    <p class="erro-acao" id="erroAcao" hidden></p>
+    <div class="rodape">
+      <button type="button" class="acao-telas" id="btnVoltarAcao">Voltar</button>
+      <button type="button" class="confirmar acao-telas" id="btnConfirmarAcao"></button>
     </div>
   </div>
 </div>
@@ -589,7 +632,7 @@ const qtdBR = q => q == null || q === '' ? '—'
 const ETAPAS = ['lider', 'cotacao', 'gerencial', 'financeiro'];
 
 function classeDe(s){
-  if(s.status === 'reprovado') return 'nao';
+  if(s.status === 'reprovado' || s.status === 'cancelado') return 'nao';
   if(s.status === 'aprovado')  return 'ok';
   return ETAPAS.includes(s.etapa_atual) ? s.etapa_atual : 'lider';
 }
@@ -600,7 +643,7 @@ function trilha(s){
   /* Reprovado não desenha trilha. A solicitação guarda o motivo, mas não em qual
      etapa a recusa aconteceu — e trilha chutando a etapa é pior que trilha
      nenhuma. A etiqueta e o motivo já contam o que houve. */
-  if(s.status === 'reprovado') return '';
+  if(s.status === 'reprovado' || s.status === 'cancelado') return '';
 
   const pronta = s.status === 'aprovado';
   const atual  = ETAPAS.indexOf(s.etapa_atual);
@@ -665,6 +708,7 @@ function linha(s){
                que abre uma janela vazia. */
             : '<span class="sem-motivo">Motivo não registrado</span>')
         : '') +
+      acoesTelas(s) +
     '</td>';
 
   /* A linha dos itens nasce junto, escondida, logo abaixo da do pedido. */
@@ -697,8 +741,9 @@ function preencherItens(id){
   if(!itens.length){
     caixa.innerHTML = '<div class="aviso-itens">Esta solicitação não tem itens registrados.</div>' +
       '<div class="anexos-linha"><div class="titulo-anexos">Anexos</div>' +
-      '<div class="caixa-anexos" id="anexos-' + id + '"></div></div>' + rodape;
+      '<div class="caixa-anexos" id="anexos-' + id + '"></div></div>' + caixaHistorico(s) + rodape;
     carregarAnexos(document.getElementById('anexos-' + id), { p_solicitacao_id: id, p_numero: null });
+    preencherHistorico(s);
     return;
   }
   const anexosHTML = '<div class="anexos-linha"><div class="titulo-anexos">Anexos</div>' +
@@ -708,8 +753,9 @@ function preencherItens(id){
     '<span class="desc">' + esc(i.descricao || '—') +
       (i.fora_catalogo ? '<span class="fora">fora do catálogo</span>' : '') + '</span>' +
     (i.codigo ? '<span class="cod">cód. ' + esc(i.codigo) + '</span>' : '') +
-    '</li>').join('') + '</ul>' + anexosHTML + rodape;
+    '</li>').join('') + '</ul>' + anexosHTML + caixaHistorico(s) + rodape;
   carregarAnexos(document.getElementById('anexos-' + id), { p_solicitacao_id: id, p_numero: null });
+  preencherHistorico(s);
 }
 
 function alternarItens(id){
@@ -826,6 +872,7 @@ async function abrir(){
        poucos meses, e o histórico truncado sem avisar é pior que histórico
        nenhum — por isso pedimos o teto e dizemos na tela quando ele é atingido. */
     LISTA = await rpc('minhas_solicitacoes', { p_token: TOKEN, p_limite: TETO_DA_CONSULTA });
+    await juntarTelas();
     $('carregando').hidden = true;
     $('conteudo').hidden = false;
     desenhar();
@@ -866,6 +913,9 @@ document.addEventListener('click', e => {
   const v = e.target.closest('.ver-itens');
   if(v) return alternarItens(v.dataset.id);
 
+  const ac = e.target.closest('button[data-acao]');
+  if(ac) return abrirAcao(ac.dataset.acao, ac.dataset.id);
+
   /* Clicar em qualquer ponto da linha também abre os itens — menos no número
      (que abre o pedido) e em outro botão. Quem seleciona texto para copiar
      não quer a linha abrindo e fechando. */
@@ -874,7 +924,11 @@ document.addEventListener('click', e => {
 });
 $('btnFechar').addEventListener('click', fecharMotivo);
 $('fundoModal').addEventListener('click', e => { if(e.target === $('fundoModal')) fecharMotivo(); });
-document.addEventListener('keydown', e => { if(e.key === 'Escape' && !$('fundoModal').hidden) fecharMotivo(); });
+document.addEventListener('keydown', e => {
+  if(e.key !== 'Escape') return;
+  if(!$('fundoModal').hidden) fecharMotivo();
+  if(!$('fundoAcao').hidden) fecharAcao();
+});
 
 $('filtro').addEventListener('input', e => { termo = e.target.value; desenhar(); });
 
@@ -893,6 +947,209 @@ document.querySelectorAll('.filtros-hist .chip').forEach(c => {
     desenhar();
   });
 });
+
+/* ============================================================================
+   CAMINHO DAS TELAS (sem ClickUp)
+   Pedido aberto pelas telas ganha, aqui, o que dá para fazer com ele enquanto
+   a liderança não decidiu: editar UMA vez (conta ao clicar, com 30 minutos
+   para salvar) e cancelar. Quem manda é o banco (meus_pedidos diz o que pode;
+   iniciar_edicao e cancelar_pedido conferem de novo). Pedido do ClickUp não
+   muda nada: se meus_pedidos falhar, a tela fica como sempre foi.
+   ========================================================================== */
+let TELAS = {};
+let ACAO = null;
+let acaoEnviando = false;
+const HIST = {};   // id -> { linhas } | { erro } | 'carregando'
+
+const horaBR = iso => { const d = new Date(iso); return isNaN(d) ? '—' : d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}); };
+const quandoBR = iso => { const d = new Date(iso); return isNaN(d) ? '—'
+  : d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) + ' ' + horaBR(iso); };
+
+async function juntarTelas(){
+  let r = null;
+  try{ r = await rpc('meus_pedidos', { p_token: TOKEN, p_limite: TETO_DA_CONSULTA }); }catch(e){ r = null; }
+  TELAS = {};
+  if(!r || r.ok !== true || !Array.isArray(r.pedidos)) return;
+  r.pedidos.forEach(x => { if(x && x.id && x.canal === 'telas') TELAS[x.id] = x; });
+  LISTA.forEach(s => {
+    const x = TELAS[s.id];
+    if(!x) return;
+    s.canal = 'telas';
+    s.versao = x.versao;
+    s.pode_editar = x.pode_editar === true;
+    s.pode_cancelar = x.pode_cancelar === true;
+    s.em_edicao = x.em_edicao === true;
+    s.edicao_expira_em = x.edicao_expira_em || null;
+    s.edicao_usada = x.edicao_usada === true;
+    /* O acompanhamento antigo não conhece 'edição' nem 'cancelado'. */
+    if(s.em_edicao){ s.situacao = 'Em edição por você'; s.com_quem = null; s.encerrada = false; }
+    if(s.status === 'cancelado'){ s.situacao = 'Cancelado'; s.com_quem = null; s.encerrada = true; }
+  });
+  if(Object.keys(TELAS).length) $('avisoLeitura').textContent =
+    'Aqui você vê onde cada pedido está e de quem ele está esperando. Nos pedidos abertos pelo seu link, ' +
+    'enquanto a liderança não decidiu, dá para editar uma vez ou cancelar.';
+}
+
+function acoesTelas(s){
+  if(s.canal !== 'telas') return '';
+  const id = esc(s.id);
+  if(s.em_edicao){
+    const exp = s.edicao_expira_em ? new Date(s.edicao_expira_em) : null;
+    return '<span class="nota-edicao">' + (exp && !isNaN(exp)
+        ? 'Salve até ' + horaBR(s.edicao_expira_em) + '. Depois disso volta sozinho, como estava.'
+        : 'Salve a edição antes de sair.') + '</span>' +
+      '<div class="acoes-telas"><a class="continuar" href="index.html?t=' + encodeURIComponent(TOKEN) +
+        '&editar=' + encodeURIComponent(s.id) + '">Continuar editando</a>' +
+      (s.pode_cancelar ? '<button type="button" class="cancelar acao-telas" data-acao="cancelar" data-id="' + id + '">Cancelar pedido</button>' : '') +
+      '</div>';
+  }
+  const b = [];
+  if(s.pode_editar)   b.push('<button type="button" class="editar acao-telas" data-acao="editar" data-id="' + id + '">Editar</button>');
+  if(s.pode_cancelar) b.push('<button type="button" class="cancelar acao-telas" data-acao="cancelar" data-id="' + id + '">Cancelar pedido</button>');
+  let h = b.length ? '<div class="acoes-telas">' + b.join('') + '</div>' : '';
+  if(!s.pode_editar && s.edicao_usada && s.etapa_atual === 'lider')
+    h += '<span class="pequeno">A edição deste pedido já foi usada.</span>';
+  return h;
+}
+
+function avisarTopo(texto){
+  const el = $('avisoTopo');
+  el.textContent = texto || '';
+  el.hidden = !texto;
+}
+
+function abrirAcao(acao, id){
+  const s = LISTA.find(x => x.id === id);
+  if(!s || s.canal !== 'telas') return;
+  const ed = acao === 'editar';
+  if(ed && !s.pode_editar) return;
+  if(!ed && !s.pode_cancelar) return;
+  ACAO = { acao: ed ? 'editar' : 'cancelar', s };
+  $('tituloAcao').textContent = ed ? 'Editar a solicitação' : 'Cancelar a solicitação';
+  $('subAcao').textContent = (s.numero || '') + ' · ' + (s.assunto || '');
+  $('textoAcao').innerHTML = ed
+    ? '<b>Dá para editar este pedido uma vez só.</b><ul>' +
+      '<li>Ao confirmar, ele sai da fila da liderança enquanto você edita — ninguém aprova no meio da mudança.</li>' +
+      '<li>Você tem 30 minutos para salvar. Depois disso ele volta sozinho, como estava.</li>' +
+      '<li>Se desistir ou o prazo passar, a edição fica gasta: não dá para editar de novo.</li>' +
+      '<li>Ao salvar, a liderança recebe o pedido de volta e vê o que mudou.</li></ul>'
+    : 'O pedido sai da fila de quem aprova e fica encerrado como <b>cancelado</b>. Não dá para desfazer.';
+  $('motivoAcao').hidden = ed; $('rotuloMotivoAcao').hidden = ed; $('motivoAcao').value = '';
+  const c = $('btnConfirmarAcao');
+  c.textContent = ed ? 'Começar a editar' : 'Cancelar o pedido';
+  c.className = 'confirmar acao-telas' + (ed ? '' : ' perigo');
+  c.disabled = false;
+  $('erroAcao').hidden = true;
+  $('fundoAcao').hidden = false;
+  (ed ? c : $('motivoAcao')).focus();
+}
+function fecharAcao(){
+  if(acaoEnviando) return;
+  $('fundoAcao').hidden = true;
+  ACAO = null;
+}
+
+async function recarregarLista(){
+  try{
+    LISTA = await rpc('minhas_solicitacoes', { p_token: TOKEN, p_limite: TETO_DA_CONSULTA });
+    await juntarTelas();
+    Object.keys(HIST).forEach(k => delete HIST[k]);
+    desenhar();
+  }catch(e){ /* a lista antiga continua na tela */ }
+}
+
+async function confirmarAcao(){
+  if(!ACAO || acaoEnviando) return;
+  const { acao, s } = ACAO;
+  const c = $('btnConfirmarAcao');
+  acaoEnviando = true;
+  c.disabled = true; $('btnVoltarAcao').disabled = true;
+  c.textContent = acao === 'editar' ? 'Abrindo…' : 'Cancelando…';
+  $('erroAcao').hidden = true;
+  let r = null;
+  try{
+    r = acao === 'editar'
+      ? await rpc('iniciar_edicao', { p_token: TOKEN, p_id: s.id, p_versao: s.versao })
+      : await rpc('cancelar_pedido', { p_token: TOKEN, p_id: s.id, p_versao: s.versao,
+                                       p_motivo: $('motivoAcao').value.trim() || null });
+  }catch(e){ r = { ok:false, mensagem:'A rede falhou no meio. Tente de novo.' }; }
+  acaoEnviando = false;
+  $('btnVoltarAcao').disabled = false;
+
+  if(r && r.ok === true){
+    if(acao === 'editar'){
+      location.href = 'index.html?t=' + encodeURIComponent(TOKEN) + '&editar=' + encodeURIComponent(s.id);
+      return;
+    }
+    fecharAcao();
+    avisarTopo('Pedido ' + (s.numero || '') + ' cancelado.');
+    await recarregarLista();
+    return;
+  }
+  $('erroAcao').textContent = (r && r.mensagem) || 'Não deu certo agora. Tente de novo.';
+  $('erroAcao').hidden = false;
+  c.disabled = false;
+  c.textContent = acao === 'editar' ? 'Começar a editar' : 'Cancelar o pedido';
+  /* O pedido mudou por baixo (decidido, já editado, em edição em outra aba):
+     a lista precisa mostrar o que vale agora. */
+  if(r && ['versao_mudou', 'fora_da_janela', 'edicao_ja_usada', 'ja_em_edicao', 'nao_encontrado'].includes(r.erro)){
+    c.disabled = true;
+    await recarregarLista();
+  }
+}
+
+/* ---- histórico do pedido (só caminho das telas) ---- */
+const ACAO_TXT = {
+  criado:'Pedido aberto', aprovado:'Aprovado', reprovado:'Reprovado', devolvido:'Devolvido ao comprador',
+  cotacao_enviada:'Cotação enviada', edicao_iniciada:'Edição começou', edicao_salva:'Edição salva',
+  edicao_desistida:'Edição abandonada', edicao_expirada:'Edição descartada (passou o prazo)', cancelado:'Cancelado'
+};
+const ETAPA_TXT = { lider:'liderança', gerencial:'aprovação gerencial', financeiro:'aprovação financeira',
+                    cotacao:'cotação', compras:'cotação', edicao:'edição' };
+const CAMPO_TXT = {
+  solicitante_nome:'para quem é', observacao:'observação', empresa_id:'empresa', centro_custo:'centro de custo',
+  unidade_destino:'unidade de destino', local_entrega:'local de entrega', tipo_compra:'tipo de compra',
+  definicao_fornecedor:'definição de fornecedor', justificativa_fornecedor:'justificativa',
+  data_necessidade:'data de necessidade', motivo:'motivo', itens:'itens'
+};
+
+function caixaHistorico(s){
+  if(!s || s.canal !== 'telas') return '';
+  return '<div class="historico-telas"><div class="titulo-anexos">Histórico</div>' +
+         '<div id="hist-' + esc(s.id) + '"><div class="aviso-itens">Carregando o histórico…</div></div></div>';
+}
+
+function desenharHistorico(id){
+  const caixa = document.getElementById('hist-' + id);
+  const h = HIST[id];
+  if(!caixa || !h || h === 'carregando') return;
+  if(h.erro){ caixa.innerHTML = '<div class="aviso-itens">Não consegui carregar o histórico agora.</div>'; return; }
+  if(!h.linhas.length){ caixa.innerHTML = '<div class="aviso-itens">Sem movimentos registrados.</div>'; return; }
+  caixa.innerHTML = '<ol>' + h.linhas.map(m => {
+    const oque = ACAO_TXT[m.acao] || String(m.acao || '').replace(/_/g, ' ');
+    const onde = (m.acao === 'aprovado' || m.acao === 'reprovado') && ETAPA_TXT[m.etapa] ? ' na ' + ETAPA_TXT[m.etapa] : '';
+    const mudou = m.mudou && typeof m.mudou === 'object' ? Object.keys(m.mudou).map(k => CAMPO_TXT[k] || k) : [];
+    return '<li><span class="quando">' + quandoBR(m.em) + '</span><b>' + esc(oque + onde) + '</b>' +
+      (m.quem ? ' · ' + esc(m.quem) : '') +
+      (m.motivo ? '<span class="det">Motivo: ' + esc(m.motivo) + '</span>' : '') +
+      (m.acao === 'edicao_salva' ? '<span class="det">' + (mudou.length ? 'Mudou: ' + esc(mudou.join(', ')) + '.' : 'Nada foi alterado.') + '</span>' : '') +
+      '</li>';
+  }).join('') + '</ol>';
+}
+
+function preencherHistorico(s){
+  if(!s || s.canal !== 'telas') return;
+  if(HIST[s.id]){ desenharHistorico(s.id); return; }
+  HIST[s.id] = 'carregando';
+  rpc('pedido_telas', { p_token: TOKEN, p_id: s.id })
+    .then(r => { HIST[s.id] = (r && r.ok === true) ? { linhas: Array.isArray(r.linha_do_tempo) ? r.linha_do_tempo : [] } : { erro: true }; })
+    .catch(() => { HIST[s.id] = { erro: true }; })
+    .then(() => desenharHistorico(s.id));
+}
+
+$('btnVoltarAcao').addEventListener('click', fecharAcao);
+$('btnConfirmarAcao').addEventListener('click', confirmarAcao);
+$('fundoAcao').addEventListener('click', e => { if(e.target === $('fundoAcao')) fecharAcao(); });
 
 abrir();
 </script>
