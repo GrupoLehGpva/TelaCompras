@@ -231,10 +231,11 @@
      Este é o ÚNICO tipo de botão permitido nesta tela, e ele não muda nada:
      abre e fecha uma janela de leitura. A bateria confere isso. */
   .ver-motivo{margin-top:7px;padding:5px 12px;border-radius:var(--pilula);
-    border:1px solid var(--erro-borda);background:var(--erro-bg);color:var(--erro);
+    border:1px solid var(--linha-forte);background:var(--card);color:var(--texto);
     font:inherit;font-size:12.5px;font-weight:650;cursor:pointer;display:inline-flex;
     align-items:center;gap:6px}
-  .ver-motivo:hover{border-color:var(--erro)}
+  /* Neutro: a etiqueta "Reprovado" ao lado já diz o que houve. */
+  .ver-motivo:hover{border-color:var(--texto)}
   /* ---- os itens, num clique ----
      A lista responde "onde está"; o que foi pedido ficava só dentro do pedido.
      Um clique na linha (ou no número de itens) abre os itens logo embaixo, sem
@@ -1031,6 +1032,7 @@ function abrirAcao(acao, id){
   $('subAcao').textContent = (s.numero || '') + ' · ' + (s.assunto || '');
   $('textoAcao').innerHTML = ed
     ? '<b>Dá para editar este pedido uma vez só.</b><ul>' +
+      '<li>Só os itens podem mudar: quantidades, incluir ou tirar itens. O resto do pedido fica como está.</li>' +
       '<li>Ao confirmar, ele sai da fila da liderança enquanto você edita — ninguém aprova no meio da mudança.</li>' +
       '<li>Você tem 30 minutos para salvar. Depois disso ele volta sozinho, como estava.</li>' +
       '<li>Se desistir ou o prazo passar, a edição fica gasta: não dá para editar de novo.</li>' +

@@ -87,12 +87,21 @@ for(const w of [1366, 1440, 1920]){
   await p.close();
 }
 
-/* 2.6 — cabeçalho: nomes centralizados, divisão entre colunas, mesma letra */
+/* 2.6 — cabeçalho: nomes centralizados, SEM linhas entre as colunas (24/09), mesma letra */
 { const p = await tela(b);
   const th = await p.evaluate(() => [...document.querySelectorAll('table.fila thead th')].map(t => {
     const c = getComputedStyle(t); return {txt:t.textContent.trim(), al:c.textAlign, borda:c.borderRightWidth, fonte:c.fontFamily}; }));
   ok('2.6 todos centralizados', th.every(t => t.al === 'center'), JSON.stringify(th.map(t => t.txt + ':' + t.al)));
-  ok('2.6 divisão entre as colunas', th.slice(0,-1).every(t => t.borda === '1px') && th[th.length-1].borda === '0px', JSON.stringify(th.map(t => t.borda)));
+  ok('2.6 sem linhas entre as colunas', th.every(t => t.borda === '0px'), JSON.stringify(th.map(t => t.borda)));
+  const bt = await linha(p,'C2609-02001').evaluate(tr => [...tr.querySelectorAll('.btn-linha')].map(b => {
+    const c = getComputedStyle(b); return {cls:b.className, fundo:c.backgroundColor, cor:c.color}; }));
+  const fundoCard = await p.evaluate(() => getComputedStyle(document.querySelector('.rolagem')).backgroundColor);
+  /* 24/09 (2ª rodada): Aprovar em verde cheio da paleta; Reprovar vermelho fechado só no
+     texto e no contorno; Devolver neutro. */
+  ok('2.6 Aprovar verde cheio', bt[0].fundo === 'rgb(0, 122, 83)' && bt[0].cor === 'rgb(255, 255, 255)', JSON.stringify(bt[0]));
+  ok('2.6 Reprovar sem fundo, texto vermelho fechado', bt[1].fundo === fundoCard && bt[1].cor === 'rgb(158, 58, 50)', JSON.stringify(bt[1]));
+  ok('2.6 Devolver neutro', bt[2].fundo === fundoCard && bt[2].cor !== bt[1].cor, JSON.stringify(bt[2]));
+  ok('2.6 sem etiqueta embaixo do número', await p.locator('#corpoFila .hoje').count() === 0);
   ok('2.6 mesma letra em todos', new Set(th.map(t => t.fonte)).size === 1, JSON.stringify([...new Set(th.map(t => t.fonte))]));
   const al = await linha(p,'C2609-02001').evaluate(tr => [...tr.children].map(td => getComputedStyle(td).textAlign));
   ok('2.6 motivo e quem pediu à esquerda, o resto centralizado', al[2] === 'left' && al[3] === 'left' &&

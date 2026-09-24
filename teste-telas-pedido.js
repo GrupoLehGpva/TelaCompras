@@ -77,19 +77,27 @@ const b = await chromium.launch();
   ok('1 devolver aparece na gerencial', await p.locator('#btnDevolver').isVisible());
   ok('1 cartão da cotação', await p.locator('#cartaoCotacao').isVisible());
   const t = await p.locator('#cotacaoCorpo').textContent() || '';
+  /* 24/09 (2ª): o comparativo volta — gerente e financeiro decidem olhando todos os
+     fornecedores. Destaque só na célula escolhida, sem pintar coluna nem linha. */
   const cab = await p.locator('.cot-mapa thead th.forn').allTextContents();
   ok('1 todos os fornecedores aparecem', cab.length === 3 && /ROLAMAX/.test(cab[0]) && /CASA/.test(cab[1]) && /PERDEU/.test(cab[2]), JSON.stringify(cab));
-  ok('1 indicados destacados', /Indicado para 2 itens/.test(cab[0]) && /Indicado para 1 item/.test(cab[1]) && !/Indicado/.test(cab[2]) &&
-     await p.locator('.cot-mapa thead th.forn.indicado').count() === 2, JSON.stringify(cab));
+  ok('1 quem foi escolhido diz para quantos itens', /escolhido para 2 itens/.test(cab[0]) && /escolhido para 1 item/.test(cab[1]) && !/escolhido/.test(cab[2]), JSON.stringify(cab));
   ok('1 três células escolhidas', await p.locator('.cot-mapa td.escolhido').count() === 3);
   const graxa = await p.locator('.cot-mapa tbody tr', {hasText:'GRAXA'}).locator('td').allTextContents();
   ok('1 graxa: ROLAMAX não cotou, CASA escolhida', /não cotou/.test(graxa[0]) && /84,00/.test(graxa[1]) && /168,00/.test(graxa[1]) &&
      await p.locator('.cot-mapa tbody tr', {hasText:'GRAXA'}).locator('td').nth(1).evaluate(e => e.classList.contains('escolhido')), JSON.stringify(graxa));
   const tot = await p.locator('.cot-mapa tr.total-forn td').allTextContents();
   ok('1 total se comprar tudo de cada um', /836,00/.test(tot[0]) && /faltam 1 item/.test(tot[0]) && /1\.126,00/.test(tot[1]) && /1\.270,00/.test(tot[2]), JSON.stringify(tot));
+  ok('1 condições', /5%/.test(t) && /18,00/.test(t) && /7 dias/.test(t) && /à vista/.test(t), t);
   ok('1 escolha do comprador resumida', /Escolha do comprador: ROLAMAX \(2 itens, R\$\s?836,00\) \+ CASA DO ROLAMENTO \(1 item, R\$\s?186,00\)/.test(t), t);
-  ok('1 total da cotação escolhida', /Total da cotação escolhida: R\$\s?1\.022,00/.test(t), t);
-  ok('1 desconto, frete, prazo e condição', /5%/.test(t) && /18,00/.test(t) && /7 dias/.test(t) && /à vista/.test(t), t);
+  ok('1 total', /Total: R\$\s?1\.022,00/.test(t), t);
+  ok('1 nada pintado de fundo', await p.evaluate(() => [...document.querySelectorAll('.cot-mapa tbody td, .cot-mapa tbody th')]
+     .every(e => getComputedStyle(e).backgroundColor === 'rgba(0, 0, 0, 0)')));
+  ok('1 sem linhas verticais', await p.evaluate(() => [...document.querySelectorAll('.cot-mapa td, .cot-mapa th')]
+     .every(e => getComputedStyle(e).borderRightWidth === '0px')));
+  /* ordenar a lista de itens com o comparativo na tela não quebra */
+  await p.click('thead th[data-col="quantidade"]'); await p.waitForTimeout(150);
+  ok('1 ordenar itens com o comparativo na tela', await p.locator('#corpoTabela tr').count() >= 1);
   ok('1 observação do comprador', /Observação do comprador/.test(t), t);
   ok('1 observação escapada', await p.locator('#cotacaoCorpo .cot-obs b').count() === 1, 'HTML da observação virou tag');
   ok('1 pontos de atenção', /Só um fornecedor cotou/.test(t), t);
@@ -97,23 +105,36 @@ const b = await chromium.launch();
   ok('1 pedido_telas com token e id', pt && pt.corpo.p_token === 'ap-teste' && pt.corpo.p_id === ID, JSON.stringify(pt));
   await p.close(); }
 
-/* 1.2 — um fornecedor com todos os itens: melhor opção indicada */
+/* 1.1 — selo de status em português e só o Aprovar com cor cheia */
+{ const p = await abrir(b, {ped:PED({status:'aguardando aprovacao'})});
+  ok('1.1 status legível', (await p.textContent('#seloStatus')) === 'Aguardando aprovação', await p.textContent('#seloStatus'));
+  const cores = await p.evaluate(() => ['btnAprovar','btnReprovar','btnDevolver'].map(id => getComputedStyle(document.getElementById(id)).backgroundColor));
+  const card = await p.evaluate(() => getComputedStyle(document.querySelector('.barra-aprova')).backgroundColor);
+  ok('1.1 Aprovar cheio, Reprovar e Devolver neutros', cores[0] !== card && cores[1] === card && cores[2] === card, JSON.stringify({cores, card}));
+  await p.click('#btnDevolver');
+  const conf = await p.evaluate(() => getComputedStyle(document.getElementById('btnConfirmarReprova')).backgroundColor);
+  await p.click('#btnCancelar'); await p.click('#btnReprovar');
+  const confR = await p.evaluate(() => getComputedStyle(document.getElementById('btnConfirmarReprova')).backgroundColor);
+  ok('1.1 confirmar devolução não é vermelho; confirmar reprovação é', conf !== confR, JSON.stringify({conf, confR}));
+  await p.close(); }
+
+/* 1.2 — um fornecedor com todos os itens */
 { const p = await abrir(b, {mapa:MAPA_UNICO});
   const cab = await p.locator('.cot-mapa thead th.forn').allTextContents();
-  ok('1.2 melhor opção indicada', /Melhor opção indicada/.test(cab[0]) && !/Indicado|Melhor/.test(cab[1]), JSON.stringify(cab));
+  ok('1.2 escolhido para todos', /escolhido para 2 itens/.test(cab[0]) && !/escolhido/.test(cab[1]), JSON.stringify(cab));
   await p.close(); }
 
 /* 1.3 — nome de fornecedor e de item não viram HTML */
 { const m = JSON.parse(JSON.stringify(MAPA)); m.mapa.resumo.familias[0].fornecedores[0].nome = '<img src=x onerror="window.__x=1">';
   m.itens[0].descricao = '<b>x</b>';
   const p = await abrir(b, {mapa:m});
-  ok('1.3 escapa', await p.locator('.cot-mapa img').count() === 0 && await p.locator('.cot-mapa th.item b').count() === 0 && !(await p.evaluate(()=>window.__x)));
+  ok('1.3 escapa', await p.locator('#cotacaoCorpo img').count() === 0 && await p.locator('.cot-mapa th.item b').count() === 0 && !(await p.evaluate(()=>window.__x)));
   await p.close(); }
 
-/* 1.5 — a cotação vem logo depois do resumo, antes dos itens (no fim ela ficava sob a barra) */
+/* 1.5 — ordem: resumo, motivo, cotação, itens (o que e por quê, depois por quanto) */
 { const p = await abrir(b);
   const ordem = await p.evaluate(() => [...document.querySelectorAll('main > section')].map(s => s.id || 'resumo'));
-  ok('1.5 cotação antes dos itens', ordem.indexOf('cartaoCotacao') === 1 && ordem.indexOf('cartaoCotacao') < ordem.indexOf('cartaoItens'), ordem.join(','));
+  ok('1.5 cotação depois do motivo e antes dos itens', ordem.indexOf('cartaoMotivo') === 1 && ordem.indexOf('cartaoCotacao') === 2 && ordem.indexOf('cartaoCotacao') < ordem.indexOf('cartaoItens'), ordem.join(','));
   await p.close(); }
 
 /* 2 — aprovar: pelo banco, com a versão */

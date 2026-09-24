@@ -206,7 +206,7 @@
      Deixar editável seria convidar a abrir pedido no nome de outra pessoa. */
   input[readonly]{background:var(--realce);color:var(--muted);cursor:default}
   input[readonly]:focus{border-color:var(--borda);box-shadow:none}
-  .travado-nota{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:var(--pilula);
+  .travado-nota{display:inline-block;margin-right:4px;padding:1px 8px;border-radius:var(--pilula);
     background:var(--verde-claro);border:1px solid var(--borda);color:var(--muted);
     font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;vertical-align:1px}
   /* O pedido foi gravado, mas não chegou ao Compras. Isso não pode passar como
@@ -1277,8 +1277,10 @@ function travarCampo(id, travar){
     selo.className = 'travado-nota';
     /* Pelo link pessoal (caminho das telas) nome e e-mail vêm do cadastro. */
     selo.textContent = MODO_TELAS ? 'do cadastro' : 'do Slack';
-    ajuda.appendChild(document.createTextNode(' '));
-    ajuda.appendChild(selo);
+    /* A etiqueta vai no começo da ajuda: no fim ela quebrava sozinha para a
+       linha de baixo, solta embaixo do texto. */
+    ajuda.insertBefore(document.createTextNode(' '), ajuda.firstChild);
+    ajuda.insertBefore(selo, ajuda.firstChild);
   }
 }
 

@@ -91,7 +91,9 @@ ok('4 três linhas', (await linhas(p)) === 3, 'linhas: ' + await linhas(p));
 ok('4 nome do aprovador', (await p.locator('#seloAprovador').textContent()) === 'Brandão', 'selo: ' + await p.locator('#seloAprovador').textContent());
 ok('4 título com o nome', /Brandão/.test(await p.locator('#tituloTopo').textContent()||''), 'título errado');
 ok('4 total na fila', /3 na fila/.test(await p.locator('#seloTotal').textContent()||''), 'total: ' + await p.locator('#seloTotal').textContent());
-ok('4 selo de hoje', (await p.locator('.hoje').count()) === 1, 'selos "hoje": ' + await p.locator('.hoje').count());
+/* 24/09: a etiqueta "hoje" embaixo do número saiu (atrapalhava a leitura do
+   número). O "hoje" continua na coluna Aberta em — ver o caso 18.5. */
+ok('4 sem etiqueta embaixo do número', (await p.locator('.hoje').count()) === 0, 'etiquetas: ' + await p.locator('.hoje').count());
 ok('4 etapa por linha', (await p.locator('.etapa.lider').count()) === 2 && (await p.locator('.etapa.gerencial').count()) === 1, 'etapas erradas');
 ok('4 link do pedido', /pedido\.html\?id=a1&t=tk-brandao&e=lider/.test(await p.locator('#corpoFila a').first().getAttribute('href')||''), 'link: ' + await p.locator('#corpoFila a').first().getAttribute('href'));
 ok('4 lote começa travado', await p.locator('#btnLote').isDisabled(), 'botão de lote veio habilitado sem seleção');

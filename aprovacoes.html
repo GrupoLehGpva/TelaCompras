@@ -335,6 +335,7 @@
   .modal .rodape button{padding:10px 18px;border-radius:var(--pilula);font:inherit;font-size:14px;
     font-weight:650;cursor:pointer;border:1px solid var(--linha-forte);background:var(--card);color:var(--texto)}
   .modal .rodape button.confirmar{background:var(--erro);border-color:var(--erro);color:#fff}
+  .modal .rodape button.confirmar.dev{background:var(--acento-fundo);border-color:var(--acento-fundo);color:var(--sobre-acento)}
   .modal .rodape button[disabled]{opacity:.6;cursor:default}
 
   .aviso-topo{padding:12px 16px;border-radius:var(--raio);margin-bottom:14px;font-size:14px;line-height:1.55}
@@ -357,17 +358,33 @@
   tr.em-voo{background:var(--realce)}
   @media (max-width:640px){ .assunto{max-width:200px} }
 
-  /* ---- Cabeçalho das tabelas (24/09): nomes centralizados, com uma divisão
-     entre as colunas, na mesma letra. Na fila, as colunas curtas também
-     centralizam o conteúdo; Motivo e Quem pediu seguem à esquerda, porque
-     texto comprido se lê melhor alinhado. ---- */
-  table.fila thead th,table.hist thead th{text-align:center;font-family:var(--sans);
-    border-right:1px solid var(--borda)}
-  table.fila thead th:last-child,table.hist thead th:last-child{border-right:0}
+  /* ---- Padrão visual das telas (24/09) ----
+     · Cabeçalho: nomes centralizados, sem linhas entre as colunas.
+     · Colunas curtas centralizam o conteúdo; Motivo e Quem pediu seguem à
+       esquerda, porque texto comprido se lê melhor alinhado.
+     · Botões da linha sem cor de fundo: só o Aprovar leva a cor da marca,
+       porque é a decisão mais comum. Reprovar e Devolver são neutros e só
+       mostram a cor ao passar o mouse — cor demais em toda linha faz o olho
+       não achar nada.
+     · Número do pedido é link, na cor da marca, sem sublinhado e sem
+       etiqueta embaixo (o "hoje" já aparece em Aberta em). */
+  table.fila thead th,table.hist thead th{text-align:center;font-family:var(--sans)}
   table.fila tbody td,table.fila tbody td.num,table.fila tbody td.acoes{text-align:center}
   table.fila tbody td:nth-child(3),table.fila tbody td:nth-child(4){text-align:left}
-  table.fila td.acoes{padding-right:12px}
-  table.fila td.acoes .btn-linha{margin:3px 4px}
+  table.fila col.c-num{width:118px}
+  table.fila col.c-data{width:110px}
+  table.fila col.c-dec{width:260px}
+  table.fila{min-width:1266px}
+  table.fila td.acoes{padding-right:12px;white-space:nowrap}
+  table.fila td.acoes .btn-linha{margin:3px 2px}
+  .btn-linha,.btn-linha.sim,.btn-linha.nao,.btn-linha.dev{padding:6px 10px;font-size:13px;
+    background:var(--card);border:1px solid var(--linha-forte);color:var(--texto)}
+  .btn-linha.sim{border-color:var(--acento-fundo);color:var(--acento-fundo)}
+  .btn-linha.sim:hover:not([disabled]){background:var(--acento-fundo);color:var(--sobre-acento)}
+  .btn-linha.nao:hover:not([disabled]){border-color:var(--erro);color:var(--erro)}
+  .btn-linha.dev:hover:not([disabled]){border-color:var(--texto)}
+  .numero-sc{color:var(--acento-fundo);text-decoration:none}
+  .numero-sc:hover,.numero-sc:focus-visible{text-decoration:underline}
 </style>
 </head>
 <body>
@@ -669,7 +686,6 @@ function desenhar(){
     link.textContent = s.numero || '—';
     const tdN = document.createElement('td');
     tdN.appendChild(link);
-    if(ehDeHoje(s)){ const b = document.createElement('span'); b.className='hoje'; b.textContent='hoje'; tdN.appendChild(b); }
     tr.appendChild(tdN);
 
     const cel = (txt, cls) => {
@@ -945,6 +961,7 @@ function abrirReprova(s, modo){
     : 'O motivo vai para quem abriu o pedido, junto com o aviso de reprovação, e fica registrado ' +
       (s.canal === 'telas' ? 'no histórico do pedido.' : 'no card.');
   $('btnConfirmarReprova').textContent = dev ? 'Devolver' : 'Reprovar';
+  $('btnConfirmarReprova').className = 'confirmar' + (dev ? ' dev' : '');
   $('subModal').textContent = 'Solicitação ' + (s.numero||'') +
     (s.motivo ? ' · ' + s.motivo : '');
   $('motivoReprova').value = '';
