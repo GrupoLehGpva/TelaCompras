@@ -84,7 +84,9 @@
   .selo{border-radius:var(--pilula);padding:5px 12px;font-size:12px;font-weight:700;
     background:rgba(255,255,255,.12);color:var(--sobre-marca);white-space:nowrap}
   .selo.status{background:var(--verde);color:var(--sobre-acento)}
-  .envelope{max-width:1080px;margin:0 auto;padding:20px 16px 64px}
+  /* Largura padrão das telas de compras (24/09): a mesma da fila de aprovação,
+     para as telas alinharem na mesma borda. O formulário fica de fora. */
+  .envelope{max-width:1300px;margin:0 auto;padding:20px 16px 64px}
   .cartao{background:var(--card);border:1px solid var(--borda);border-radius:var(--raio);
     padding:18px 20px;margin-bottom:16px}
   .cartao h2{margin:0 0 14px;font-size:13px;font-weight:700;letter-spacing:.7px;
@@ -178,12 +180,31 @@
   /* Cotação do caminho das telas: o resumo que o aprovador precisa para decidir. */
   .cot-fam{margin:0 0 14px}
   .cot-fam h3{margin:0 0 6px;font-size:14px}
-  .cot-tab{width:100%;border-collapse:collapse;font-size:14px}
-  .cot-tab td,.cot-tab th{padding:6px 8px;border-bottom:1px solid var(--borda);text-align:left}
-  .cot-tab .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   .cot-total{font-weight:700;font-size:15px;margin:6px 0 0}
   .cot-obs{margin:10px 0 0;padding:10px 12px;background:var(--realce);border-radius:8px;white-space:pre-wrap}
   .cot-aviso{margin:8px 0 0;color:var(--demo);font-size:13px}
+  /* Mapa da cotação: um fornecedor por coluna, a escolha do comprador em destaque. */
+  .cot-rola{overflow-x:auto;border:1px solid var(--borda);border-radius:10px}
+  .cot-mapa{width:100%;border-collapse:collapse;font-size:14px}
+  .cot-mapa th,.cot-mapa td{padding:8px 12px;border-bottom:1px solid var(--borda);border-right:1px solid var(--borda);
+    text-align:center;vertical-align:middle}
+  .cot-mapa tr > :last-child{border-right:0}
+  .cot-mapa thead th{background:var(--realce);color:var(--muted);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+  .cot-mapa th.item{text-align:left;min-width:220px;font-weight:600;color:var(--texto);text-transform:none;letter-spacing:0;font-size:14px}
+  .cot-mapa thead th.item{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  .cot-mapa tbody th{text-align:left;font-weight:600;color:var(--muted)}
+  .cot-mapa th.forn{min-width:150px}
+  .cot-mapa th.forn.indicado{background:var(--ok-bg);color:var(--ok-txt);box-shadow:inset 0 3px 0 var(--ok-txt)}
+  .cot-mapa .selo-escolha{display:block;margin-top:4px;font-size:10.5px;letter-spacing:.03em}
+  .cot-mapa td{font-variant-numeric:tabular-nums}
+  .cot-mapa td b{font-weight:650}
+  .cot-mapa td.escolhido{background:var(--ok-bg);color:var(--ok-txt);font-weight:700;position:relative}
+  .cot-mapa .marca-escolha{margin-right:6px}
+  .cot-mapa .linha-total,.cot-mapa .qtd-item{display:block;font-size:12px;color:var(--muted);font-weight:400}
+  .cot-mapa td.nao-cotou{color:var(--muted);font-style:italic;font-size:13px}
+  .cot-mapa td.col-indicada{background:var(--ok-bg)}
+  .cot-mapa tr.total-forn th,.cot-mapa tr.total-forn td{font-weight:700;color:var(--texto);border-bottom:0}
+  .cot-escolha{margin:12px 0 0;font-size:14.5px}
   /* Enquanto o servidor não responde, a barra diz o que está acontecendo.
      Botão apagado e nada escrito passa por tela travada. */
   .barra-aprova .texto .girando{width:14px;height:14px;display:inline-block;vertical-align:-2px;
@@ -842,27 +863,72 @@ function podeDevolver(){
   return mensal ? et === 'financeiro' : (et === 'gerencial' || et === 'financeiro');
 }
 
+/* ---------------------------------------------------------------------------
+   COTAÇÃO — o mapa inteiro, não só o vencedor (24/09).
+   Por família: uma coluna por fornecedor com o preço de cada item, o total que
+   custaria comprar tudo dele, desconto, frete, prazo e pagamento. A escolha do
+   comprador aparece destacada: a célula do item escolhido e o fornecedor
+   indicado. O aprovador vê o que foi escolhido E o que ficou de fora.
+   Só aprovador e comprador recebem o mapa (pedido_telas não manda preço ao
+   facilitador).
+   --------------------------------------------------------------------------- */
 async function carregarCotacao(){
   const r = await rpc('pedido_telas', { p_token: TOKEN_APROVADOR, p_id: SOLICITACAO.id });
   if(!r || r.ok !== true || !r.mapa || !r.mapa.resumo) return;
   const m = r.mapa, res = m.resumo;
-  const html = (res.familias || []).map(fa => {
-    const venc = (fa.fornecedores || []).filter(f => Number(f.itens_ganhos) > 0);
-    if(!venc.length) return '';
-    return '<div class="cot-fam"><h3>Família ' + esc(fa.familia) + '</h3>' +
-      '<table class="cot-tab"><thead><tr><th>Fornecedor</th><th class="num">Itens</th>' +
-      '<th class="num">Desconto</th><th class="num">Frete</th><th>Prazo</th><th>Pagamento</th><th class="num">Total</th></tr></thead><tbody>' +
-      venc.map(f => '<tr><td>' + esc(f.nome || '—') + '</td>' +
-        '<td class="num">' + esc(f.itens_ganhos) + '</td>' +
-        '<td class="num">' + (f.desconto_pct ? esc(String(f.desconto_pct).replace('.', ',')) + '%' : '—') + '</td>' +
-        '<td class="num">' + dinheiroBR(f.frete) + '</td>' +
-        '<td>' + (f.prazo_dias != null ? esc(f.prazo_dias) + ' dias' : '—') + '</td>' +
-        '<td>' + esc(f.condicao || '—') + '</td>' +
-        '<td class="num">' + dinheiroBR(f.total) + '</td></tr>').join('') +
-      '</tbody></table></div>';
+  const itens = Array.isArray(r.itens) ? r.itens : [];
+  const precos = {};                                   // item_id|coluna -> preço unitário
+  (m.precos || []).forEach(x => { if(x && x.preco != null) precos[x.item_id + '|' + x.coluna] = Number(x.preco); });
+  const escolha = {};                                  // item_id -> coluna escolhida
+  (m.escolhas || []).forEach(x => { if(x) escolha[x.item_id] = x.coluna; });
+  const qtd = q => Number(q || 0).toLocaleString('pt-BR', { maximumFractionDigits: 3 });
+
+  const blocos = (res.familias || []).map(fa => {
+    const forn = (fa.fornecedores || []).filter(f => f && f.coluna != null);
+    const its = itens.filter(i => (i.familia || null) === (fa.familia || null));
+    if(!forn.length || !its.length) return '';
+    const cont = forn.map(f => {
+      let sub = 0, cotados = 0;
+      its.forEach(i => { const pr = precos[i.id + '|' + f.coluna];
+        if(pr != null){ cotados++; sub += pr * Number(i.quantidade || 0); } });
+      const desc = Number(f.desconto_pct || 0), frete = Number(f.frete || 0);
+      return { f, cotados, sub, tudo: cotados ? sub * (1 - desc / 100) + frete : null,
+               ganhos: Number(f.itens_ganhos || 0) };
+    });
+    const unico = cont.filter(c => c.ganhos > 0).length === 1 && cont.some(c => c.ganhos === its.length);
+    const cab = cont.map(c => '<th class="forn' + (c.ganhos ? ' indicado' : '') + '">' + esc(c.f.nome || ('Fornecedor ' + c.f.coluna)) +
+      (c.ganhos ? '<span class="selo-escolha">' + (unico ? 'Melhor opção indicada' : 'Indicado para ' + c.ganhos + (c.ganhos === 1 ? ' item' : ' itens')) + '</span>' : '') +
+      '</th>').join('');
+    const linhas = its.map(i => '<tr><th class="item" scope="row">' + esc(i.descricao || '—') +
+      '<span class="qtd-item">' + qtd(i.quantidade) + ' ' + esc(i.unidade || '') + '</span></th>' +
+      cont.map(c => {
+        const pr = precos[i.id + '|' + c.f.coluna];
+        const eh = escolha[i.id] === c.f.coluna;
+        if(pr == null) return '<td class="nao-cotou">não cotou</td>';
+        return '<td class="' + (eh ? 'escolhido' : '') + '">' + (eh ? '<span class="marca-escolha" aria-label="escolhido">✓</span>' : '') +
+          '<b>' + dinheiroBR(pr) + '</b><span class="linha-total">' + dinheiroBR(pr * Number(i.quantidade || 0)) + '</span></td>';
+      }).join('') + '</tr>').join('');
+    const rodape = (rotulo, fn, cls) => '<tr class="' + (cls || '') + '"><th scope="row">' + rotulo + '</th>' +
+      cont.map(c => '<td class="' + (c.ganhos ? 'col-indicada' : '') + '">' + fn(c) + '</td>').join('') + '</tr>';
+    return '<div class="cot-fam"><h3>Família ' + esc(fa.familia || '—') + '</h3>' +
+      '<div class="cot-rola"><table class="cot-mapa"><thead><tr><th class="item">Item</th>' + cab + '</tr></thead><tbody>' + linhas +
+      rodape('Subtotal', c => c.cotados ? dinheiroBR(c.sub) : '—') +
+      rodape('Desconto', c => c.f.desconto_pct ? esc(String(c.f.desconto_pct).replace('.', ',')) + '%' : '—') +
+      rodape('Frete', c => c.f.frete != null ? dinheiroBR(c.f.frete) : '—') +
+      rodape('Prazo', c => c.f.prazo_dias != null ? esc(c.f.prazo_dias) + ' dias' : '—') +
+      rodape('Pagamento', c => esc(c.f.condicao || '—')) +
+      rodape('Total se comprar tudo dele', c => c.tudo == null ? '—' : dinheiroBR(c.tudo) +
+        (c.cotados < its.length ? '<span class="linha-total">faltam ' + (its.length - c.cotados) + ' ' + (its.length - c.cotados === 1 ? 'item' : 'itens') + '</span>' : ''), 'total-forn') +
+      '</tbody></table></div></div>';
   }).join('');
-  $('cotacaoCorpo').innerHTML = (html || '<p class="escopo">Sem cotação enviada.</p>') +
-    '<p class="cot-total">Total da cotação: ' + dinheiroBR(res.total) + '</p>' +
+
+  const escolhidos = [].concat(...(res.familias || []).map(fa => (fa.fornecedores || []).filter(f => Number(f.itens_ganhos) > 0)));
+  const resumo = escolhidos.length
+    ? '<p class="cot-escolha"><b>Escolha do comprador:</b> ' + escolhidos.map(f => esc(f.nome || '—') + ' (' + f.itens_ganhos +
+        (Number(f.itens_ganhos) === 1 ? ' item' : ' itens') + ', ' + dinheiroBR(f.total) + ')').join(' + ') + '</p>'
+    : '';
+  $('cotacaoCorpo').innerHTML = (blocos || '<p class="escopo">Sem cotação enviada.</p>') + resumo +
+    '<p class="cot-total">Total da cotação escolhida: ' + dinheiroBR(res.total) + '</p>' +
     (m.observacao ? '<div class="cot-obs"><b>Observação do comprador:</b> ' + esc(m.observacao) + '</div>' : '') +
     ((res.avisos || []).length ? '<p class="cot-aviso">Pontos de atenção: ' +
        res.avisos.map(a => esc(a.msg)).join(' · ') + '</p>' : '');

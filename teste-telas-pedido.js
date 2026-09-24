@@ -17,11 +17,29 @@ const PED = (x={}) => Object.assign({
   motivo:'Rolamentos da peletizadora', empresa_id:'wienfried-pr', status:'solicitado'
 }, x);
 const ITENS = [{codigo:'1201', descricao:'ROLAMENTO 6205', unidade:'UNID', quantidade:4}];
-const MAPA = { ok:true, mapa:{ estado:'enviado', versao:2, observacao:'Fornecedor 2 tem prazo maior, mas <b>frete</b> grátis',
-  resumo:{ total:980, avisos:[{msg:'Só um fornecedor cotou a família 12.'}], familias:[
-    {familia:'12', total:980, fornecedores:[
-      {coluna:1, nome:'ROLAMAX', itens_ganhos:1, desconto_pct:5, frete:30, prazo_dias:7, condicao:'28 dias', total:980},
-      {coluna:2, nome:'PERDEU LTDA', itens_ganhos:0, total:0}]}]}}};
+/* Mapa com três fornecedores: o comprador escolheu ROLAMAX para dois itens e a
+   CASA para a graxa (a ROLAMAX não cotou a graxa). PERDEU cotou tudo e não
+   ganhou nada — e precisa aparecer do mesmo jeito. */
+const IT_MAPA = [
+  {id:'i1', codigo:'1201', descricao:'ROLAMENTO 6205', unidade:'UNID', quantidade:4, familia:'MM'},
+  {id:'i2', codigo:'1207', descricao:'RETENTOR 35X52X7', unidade:'UNID', quantidade:4, familia:'MM'},
+  {id:'i3', codigo:'1310', descricao:'GRAXA LITIO 1KG', unidade:'UNID', quantidade:2, familia:'MM'}];
+const P = (item_id, coluna, preco) => ({item_id, coluna, preco});
+const MAPA = { ok:true, itens:IT_MAPA, mapa:{ estado:'enviado', versao:2, observacao:'Fornecedor 2 tem prazo maior, mas <b>frete</b> grátis',
+  precos:[P('i1',1,100),P('i2',1,120), P('i1',2,110),P('i2',2,125),P('i3',2,84), P('i1',3,130),P('i2',3,140),P('i3',3,95)],
+  escolhas:[{item_id:'i1',coluna:1},{item_id:'i2',coluna:1},{item_id:'i3',coluna:2}],
+  resumo:{ total:1022, avisos:[{msg:'Só um fornecedor cotou a família 12.'}], familias:[
+    {familia:'MM', total:1022, fornecedores:[
+      {coluna:1, nome:'ROLAMAX', itens_ganhos:2, desconto_pct:5, frete:0, prazo_dias:7, condicao:'28 dias', total:836},
+      {coluna:2, nome:'CASA DO ROLAMENTO', itens_ganhos:1, desconto_pct:0, frete:18, prazo_dias:3, condicao:'à vista', total:186},
+      {coluna:3, nome:'PERDEU LTDA', itens_ganhos:0, desconto_pct:0, frete:0, prazo_dias:10, condicao:'28 dias', total:0}]}]}}};
+/* Um fornecedor ganhou tudo: é a melhor opção indicada. */
+const MAPA_UNICO = { ok:true, itens:IT_MAPA.slice(0,2), mapa:{ estado:'enviado', observacao:null,
+  precos:[P('i1',1,100),P('i2',1,120),P('i1',2,110),P('i2',2,125)],
+  escolhas:[{item_id:'i1',coluna:1},{item_id:'i2',coluna:1}],
+  resumo:{ total:836, avisos:[], familias:[{familia:'MM', fornecedores:[
+    {coluna:1, nome:'ROLAMAX', itens_ganhos:2, desconto_pct:5, frete:0, prazo_dias:7, condicao:'28 dias', total:836},
+    {coluna:2, nome:'CASA DO ROLAMENTO', itens_ganhos:0, desconto_pct:0, frete:18, prazo_dias:3, condicao:'à vista', total:0}]}]}}};
 
 async function abrir(b, {ped=PED(), fila=null, mapa=MAPA, decide=()=>({ok:true, mensagem:'Segue para a aprovação financeira.'}), token='ap-teste'}={}){
   const p = await b.newPage({viewport:{width:1100,height:1000}});
@@ -59,15 +77,37 @@ const b = await chromium.launch();
   ok('1 devolver aparece na gerencial', await p.locator('#btnDevolver').isVisible());
   ok('1 cartão da cotação', await p.locator('#cartaoCotacao').isVisible());
   const t = await p.locator('#cotacaoCorpo').textContent() || '';
-  ok('1 vencedor aparece', /ROLAMAX/.test(t), t);
-  ok('1 quem não ganhou item não aparece', !/PERDEU/.test(t), t);
-  ok('1 total da cotação', /Total da cotação: R\$\s?980,00/.test(t), t);
-  ok('1 desconto, frete, prazo e condição', /5%/.test(t) && /R\$\s?30,00/.test(t) && /7 dias/.test(t) && /28 dias/.test(t), t);
+  const cab = await p.locator('.cot-mapa thead th.forn').allTextContents();
+  ok('1 todos os fornecedores aparecem', cab.length === 3 && /ROLAMAX/.test(cab[0]) && /CASA/.test(cab[1]) && /PERDEU/.test(cab[2]), JSON.stringify(cab));
+  ok('1 indicados destacados', /Indicado para 2 itens/.test(cab[0]) && /Indicado para 1 item/.test(cab[1]) && !/Indicado/.test(cab[2]) &&
+     await p.locator('.cot-mapa thead th.forn.indicado').count() === 2, JSON.stringify(cab));
+  ok('1 três células escolhidas', await p.locator('.cot-mapa td.escolhido').count() === 3);
+  const graxa = await p.locator('.cot-mapa tbody tr', {hasText:'GRAXA'}).locator('td').allTextContents();
+  ok('1 graxa: ROLAMAX não cotou, CASA escolhida', /não cotou/.test(graxa[0]) && /84,00/.test(graxa[1]) && /168,00/.test(graxa[1]) &&
+     await p.locator('.cot-mapa tbody tr', {hasText:'GRAXA'}).locator('td').nth(1).evaluate(e => e.classList.contains('escolhido')), JSON.stringify(graxa));
+  const tot = await p.locator('.cot-mapa tr.total-forn td').allTextContents();
+  ok('1 total se comprar tudo de cada um', /836,00/.test(tot[0]) && /faltam 1 item/.test(tot[0]) && /1\.126,00/.test(tot[1]) && /1\.270,00/.test(tot[2]), JSON.stringify(tot));
+  ok('1 escolha do comprador resumida', /Escolha do comprador: ROLAMAX \(2 itens, R\$\s?836,00\) \+ CASA DO ROLAMENTO \(1 item, R\$\s?186,00\)/.test(t), t);
+  ok('1 total da cotação escolhida', /Total da cotação escolhida: R\$\s?1\.022,00/.test(t), t);
+  ok('1 desconto, frete, prazo e condição', /5%/.test(t) && /18,00/.test(t) && /7 dias/.test(t) && /à vista/.test(t), t);
   ok('1 observação do comprador', /Observação do comprador/.test(t), t);
   ok('1 observação escapada', await p.locator('#cotacaoCorpo .cot-obs b').count() === 1, 'HTML da observação virou tag');
   ok('1 pontos de atenção', /Só um fornecedor cotou/.test(t), t);
   const pt = p.__rpc.find(x => x.nome === 'pedido_telas');
   ok('1 pedido_telas com token e id', pt && pt.corpo.p_token === 'ap-teste' && pt.corpo.p_id === ID, JSON.stringify(pt));
+  await p.close(); }
+
+/* 1.2 — um fornecedor com todos os itens: melhor opção indicada */
+{ const p = await abrir(b, {mapa:MAPA_UNICO});
+  const cab = await p.locator('.cot-mapa thead th.forn').allTextContents();
+  ok('1.2 melhor opção indicada', /Melhor opção indicada/.test(cab[0]) && !/Indicado|Melhor/.test(cab[1]), JSON.stringify(cab));
+  await p.close(); }
+
+/* 1.3 — nome de fornecedor e de item não viram HTML */
+{ const m = JSON.parse(JSON.stringify(MAPA)); m.mapa.resumo.familias[0].fornecedores[0].nome = '<img src=x onerror="window.__x=1">';
+  m.itens[0].descricao = '<b>x</b>';
+  const p = await abrir(b, {mapa:m});
+  ok('1.3 escapa', await p.locator('.cot-mapa img').count() === 0 && await p.locator('.cot-mapa th.item b').count() === 0 && !(await p.evaluate(()=>window.__x)));
   await p.close(); }
 
 /* 1.5 — a cotação vem logo depois do resumo, antes dos itens (no fim ela ficava sob a barra) */

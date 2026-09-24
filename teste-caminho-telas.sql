@@ -686,3 +686,20 @@ begin
   if d = antes then raise exception 'ponto de inserção não encontrado'; end if;
   execute d;
 end $$;
+
+-- 24/09 · bateria: a edição muda só os itens (C9 passa a exigir que o motivo
+-- enviado seja ignorado).
+do $$
+declare d text; antes text;
+begin
+  d := pg_get_functiondef('public._teste_caminho_telas()'::regprocedure);
+  antes := d;
+  d := replace(d, $a$'C9 salva edição: volta à liderança e registra o que mudou','ok',
+     r->>'ok'='true' and r->'mudou' ? 'motivo' and r->'mudou' ? 'itens'$a$,
+$b$'C9 salva edição: só os itens mudam, volta à liderança e registra o que mudou','ok',
+     r->>'ok'='true' and not (r->'mudou' ? 'motivo') and r->'mudou' ? 'itens'
+     and (select motivo='Teste automático' from solicitacoes where id=vP)
+     and (select count(*)=3 and bool_or(quantidade=4000) from solicitacao_itens where solicitacao_id=vP)$b$);
+  if d = antes then raise exception 'bateria: C9 não encontrado'; end if;
+  execute d;
+end $$;

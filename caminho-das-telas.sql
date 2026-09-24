@@ -1925,3 +1925,26 @@ begin
 end $$;
 revoke all on function public.eu_facilitador(text) from public;
 grant execute on function public.eu_facilitador(text) to anon, authenticated;
+
+-- ============================================================================
+-- 7 · 24/09 · A edição do facilitador muda SÓ OS ITENS (decisão do Guilherme).
+-- O cabeçalho que vier da tela é ignorado: salvar_edicao usa o que já está
+-- gravado. Assim nem uma tela antiga nem uma chamada montada à mão mudam
+-- motivo, centro de custo, tipo, empresa ou data pela edição.
+-- ============================================================================
+do $$
+declare d text; antes text;
+begin
+  d := pg_get_functiondef('public.salvar_edicao(text,uuid,jsonb,jsonb)'::regprocedure);
+  antes := d;
+  d := replace(d, 'perform _telas_validar_cabecalho(p_cabecalho);',
+$r$-- Só os itens mudam na edição: o cabeçalho é o que já está gravado.
+    p_cabecalho := jsonb_build_object(
+      'solicitante_nome', s.solicitante_nome, 'observacao', s.observacao, 'empresa_id', s.empresa_id,
+      'centro_custo', s.centro_custo, 'unidade_destino', s.unidade_destino, 'local_entrega', s.local_entrega,
+      'tipo_compra', s.tipo_compra, 'definicao_fornecedor', s.definicao_fornecedor,
+      'justificativa_fornecedor', s.justificativa_fornecedor, 'data_necessidade', s.data_necessidade,
+      'motivo', s.motivo);$r$);
+  if d = antes then raise exception 'salvar_edicao: ponto de troca não encontrado'; end if;
+  execute d;
+end $$;

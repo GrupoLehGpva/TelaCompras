@@ -87,6 +87,18 @@ for(const w of [1366, 1440, 1920]){
   await p.close();
 }
 
+/* 2.6 — cabeçalho: nomes centralizados, divisão entre colunas, mesma letra */
+{ const p = await tela(b);
+  const th = await p.evaluate(() => [...document.querySelectorAll('table.fila thead th')].map(t => {
+    const c = getComputedStyle(t); return {txt:t.textContent.trim(), al:c.textAlign, borda:c.borderRightWidth, fonte:c.fontFamily}; }));
+  ok('2.6 todos centralizados', th.every(t => t.al === 'center'), JSON.stringify(th.map(t => t.txt + ':' + t.al)));
+  ok('2.6 divisão entre as colunas', th.slice(0,-1).every(t => t.borda === '1px') && th[th.length-1].borda === '0px', JSON.stringify(th.map(t => t.borda)));
+  ok('2.6 mesma letra em todos', new Set(th.map(t => t.fonte)).size === 1, JSON.stringify([...new Set(th.map(t => t.fonte))]));
+  const al = await linha(p,'C2609-02001').evaluate(tr => [...tr.children].map(td => getComputedStyle(td).textAlign));
+  ok('2.6 motivo e quem pediu à esquerda, o resto centralizado', al[2] === 'left' && al[3] === 'left' &&
+     al.filter((x,i) => i !== 2 && i !== 3).every(x => x === 'center'), JSON.stringify(al));
+  await p.close(); }
+
 /* 3 — sem nada em edição, a caixa some */
 { const p = await tela(b, {extra:()=>Object.assign(EXTRA(), {em_edicao:[]})});
   ok('3 caixa escondida sem edição', !(await p.locator('#emEdicao').isVisible()), 'apareceu vazia');

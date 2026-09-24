@@ -357,6 +357,17 @@
   tr.em-voo{background:var(--realce)}
   @media (max-width:640px){ .assunto{max-width:200px} }
 
+  /* ---- Cabeçalho das tabelas (24/09): nomes centralizados, com uma divisão
+     entre as colunas, na mesma letra. Na fila, as colunas curtas também
+     centralizam o conteúdo; Motivo e Quem pediu seguem à esquerda, porque
+     texto comprido se lê melhor alinhado. ---- */
+  table.fila thead th,table.hist thead th{text-align:center;font-family:var(--sans);
+    border-right:1px solid var(--borda)}
+  table.fila thead th:last-child,table.hist thead th:last-child{border-right:0}
+  table.fila tbody td,table.fila tbody td.num,table.fila tbody td.acoes{text-align:center}
+  table.fila tbody td:nth-child(3),table.fila tbody td:nth-child(4){text-align:left}
+  table.fila td.acoes{padding-right:12px}
+  table.fila td.acoes .btn-linha{margin:3px 4px}
 </style>
 </head>
 <body>
@@ -420,7 +431,7 @@
             <th>Aberta em</th>
             <th>Entrega até</th>
             <th>Etapa</th>
-            <th style="text-align:right">Decisão</th>
+            <th>Decisão</th>
           </tr>
         </thead>
         <tbody id="corpoFila"></tbody>

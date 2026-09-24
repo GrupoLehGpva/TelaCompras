@@ -973,7 +973,9 @@ let SLACK_UID = '';        // id do usuário no Slack, vindo da query string (va
 
    TODA A NUMERAÇÃO SAI DAQUI: "Passo 3 de 5" e o "1., 2., 3." da página única
    são calculados desta lista, então tirar um passo acerta os dois sozinho. */
-const sequencia = () => ['solicitante','entrega','item','compra','prazo'];
+/* Na edição do caminho das telas só os ITENS mudam (decisão de 24/09): o
+   formulário mostra apenas esse passo. O banco também ignora o resto. */
+const sequencia = () => EDICAO ? ['item'] : ['solicitante','entrega','item','compra','prazo'];
 
 const TITULOS = {
   solicitante:'Solicitante',
@@ -2224,6 +2226,10 @@ async function prepararTelas(){
   }
   EDICAO = r.pedido;
   preencherDoPedido(r.pedido, r.itens || []);
+  /* Só os itens: o tipo (item, lista, serviço) fica como está. */
+  const campoTipo = document.querySelector('.campo[data-campo="tipo"]');
+  if(campoTipo) campoTipo.innerHTML = '<span class="ajuda">Na edição só os itens podem mudar: quantidades, ' +
+    'incluir ou tirar itens. Motivo, centro de custo, tipo de compra e o resto do pedido ficam como estão.</span>';
   document.querySelector('h1').textContent = 'Editar solicitação';
   $('autoNumero').textContent = EDICAO.numero || '—';
   /* Anexo não muda na edição: o que foi enviado continua no pedido. */
@@ -2288,7 +2294,7 @@ function iniciarRelogio(){
       }
       $('textoEdicao').innerHTML = '<b>Editando ' + escT(EDICAO.numero) + ' — salve até ' + horaT(expira) +
         ' (falta' + (falta === 1 ? ' 1 minuto' : 'm ' + falta + ' minutos') + ')</b>' +
-        'Se o prazo passar ou você desistir, o pedido volta para a liderança como estava, e não dá para editar de novo.';
+        'Só os itens podem mudar. Se o prazo passar ou você desistir, o pedido volta para a liderança como estava, e não dá para editar de novo.';
     }
   };
   $('faixaEdicao').hidden = false;

@@ -46,7 +46,7 @@ async function abrir(b, qs, {eu=EU, ped=()=>({ok:true, pedido:PEDIDO(), itens:IT
       if(nome === 'eu_facilitador') return j(eu);
       if(nome === 'pedido_telas') return j(ped());
       if(nome === 'abrir_pedido_telas') return j({ok:true, id:'novo-1', numero:'C2609-02011', etapa:'lider', situacao:'Esperando a liderança', com_quem:'Brandão'});
-      if(nome === 'salvar_edicao') return j({ok:true, versao:3, mudou:{motivo:{antes:'a',depois:'b'}, itens:{}}, mensagem:'Alterações salvas. O pedido voltou para a liderança, que foi avisada.'});
+      if(nome === 'salvar_edicao') return j({ok:true, versao:3, mudou:{itens:{}}, mensagem:'Alterações salvas. O pedido voltou para a liderança, que foi avisada.'});
       if(nome === 'desistir_edicao') return j({ok:true, versao:3, mensagem:'Nada foi alterado. O pedido voltou para a liderança. A edição deste pedido já foi usada.'});
       if(nome === 'criar_solicitacao') return j(mock.respostaCriarSolicitacao({id:'velho-1', numero:'C2609-00999'}));
       return j([]);
@@ -140,17 +140,26 @@ const b = await chromium.launch();
      est.tipoCompra === 'normal' && est.definicaoFornecedor === 'cotacao' && est.dataLimite === '2027-01-15' &&
      est.solicitanteNome === 'João' && est.observacao === 'Urgente para a linha 2', JSON.stringify(est));
   ok('4 campo de anexo trocado por aviso', await p.locator('#anexos').count() === 0 && /Na edição não dá para trocar arquivo/.test(await p.textContent('body')));
+  /* Só os itens: um passo só, sem tipo, sem motivo, sem centro de custo (decisão de 24/09) */
+  ok('4 passo único dos itens', /Passo 1 de 1/.test(await p.textContent('#progTexto')) && await p.locator('section.passo[data-passo="item"]').isVisible(),
+     await p.textContent('#progTexto'));
+  ok('4 sem escolha de tipo', await p.locator('input[name="tipo"]').count() === 0 && /só os itens podem mudar/.test(await p.textContent('section.passo[data-passo="item"]')));
+  ok('4 faixa diz que só os itens mudam', /Só os itens podem mudar/.test(await p.textContent('#textoEdicao')));
   await p.click('#verPagina');
+  for(const k of ['solicitante','entrega','compra','prazo'])
+    ok('4 página única sem o passo ' + k, !(await p.locator('section.passo[data-passo="' + k + '"]').isVisible()));
   ok('4 botão diz salvar', (await p.textContent('#btnAvancar')).trim() === 'Salvar alterações');
-  /* muda o motivo e salva */
-  await p.fill('#motivoCompra', 'Rolamentos e retentores da peletizadora');
+  /* muda a quantidade de um item e salva */
+  await p.evaluate(() => { estado.itensLista[0].quantidade = 6; renderLista(); });
   await p.click('#btnAvancar'); await p.waitForTimeout(600);
   const s = chamou(p,'salvar_edicao')[0];
-  ok('4 salvou por salvar_edicao', s && s.corpo.p_id === ID && s.corpo.p_token === 'fc-ana' &&
-     s.corpo.p_cabecalho.motivo === 'Rolamentos e retentores da peletizadora' && s.corpo.p_itens.length === 2, JSON.stringify(s));
+  ok('4 salvou por salvar_edicao', s && s.corpo.p_id === ID && s.corpo.p_token === 'fc-ana' && s.corpo.p_itens.length === 2 &&
+     s.corpo.p_itens.some(i => i.codigo === '1201' && i.quantidade === 6), JSON.stringify(s));
+  ok('4 cabeçalho vai como estava', s && s.corpo.p_cabecalho.motivo === 'Rolamentos da peletizadora' && s.corpo.p_cabecalho.centro_custo === '20' &&
+     s.corpo.p_cabecalho.data_necessidade === '2027-01-15', JSON.stringify(s && s.corpo.p_cabecalho));
   ok('4 não abriu pedido novo', chamou(p,'abrir_pedido_telas').length === 0 && chamou(p,'criar_solicitacao').length === 0 && p.__hook.length === 0);
   ok('4 confirmação', /Alterações salvas/.test(await p.textContent('#okTitulo')));
-  ok('4 diz o que mudou', /Mudou: motivo, itens\./.test(await p.textContent('#okAviso')), await p.textContent('#okAviso'));
+  ok('4 diz o que mudou', /Mudou: itens\./.test(await p.textContent('#okAviso')), await p.textContent('#okAviso'));
   ok('4 sem nova solicitação', !(await p.locator('#btnRecomecar').isVisible()));
   ok('4 faixa some', !(await p.locator('#faixaEdicao').isVisible()));
   await p.close(); }
