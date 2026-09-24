@@ -63,7 +63,7 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45}
-.wrap{max-width:1440px;margin:0 auto;padding:20px 20px 120px}
+.wrap{max-width:1300px;margin:0 auto;padding:20px 16px 120px}
 @media (max-width:600px){.wrap{padding:14px 16px 150px}}
 h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0}
 .num{font-variant-numeric:tabular-nums}
@@ -123,6 +123,8 @@ table{border-collapse:collapse;width:100%}
 th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);font-size:13px;vertical-align:top}
 th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:600;background:var(--surface-2)}
 .fila{min-width:860px}
+.fila thead th{text-align:center}
+.fila td.tipo{white-space:nowrap}
 .fila tbody tr{cursor:pointer}
 .fila tbody tr:hover{background:var(--surface-2)}
 .fila tbody tr:last-child td{border-bottom:0}
@@ -706,6 +708,14 @@ function necessidadePill(s){
   if (d <= 2) return `<span class="pill warn">em ${plural(d,'dia','dias')}</span>`;
   return `<span class="pill neutral">em ${d} dias</span>`;
 }
+/* Que tipo de cotação é: item único, lista de itens ou serviço — o mesmo rótulo
+   da "Natureza" na tela do pedido. Serviço é o pedido de uma linha em "Serviço". */
+function tipoSolicitacao(s){
+  const n = (s.itens || []).length;
+  if (n === 1 && /servi/i.test(s.itens[0].un || '')) return 'Serviço';
+  if (n === 1) return 'Item único';
+  return 'Lista · ' + n + ' itens';
+}
 function tituloSol(s){
   const p = s.itens[0]; if (!p) return 'Sem itens';
   const t = p.desc.length > 90 ? p.desc.slice(0,88).trim() + '…' : p.desc;
@@ -771,16 +781,17 @@ function renderFila(){
               : `<div class="state"><h3>${vazio[0]}</h3><p>${vazio[1]}</p></div>`;
   } else {
     corpo = `<div class="tbl-wrap"><table class="fila"><thead><tr>
-      <th>Nº</th><th>Solicitação</th><th>Famílias</th><th>Precisa até</th><th>Na etapa</th><th>Cotação</th><th class="r"><span class="sr-only">Ação</span></th></tr></thead><tbody>
+      <th>Nº</th><th>Solicitação</th><th>Tipo</th><th>Famílias</th><th>Precisa até</th><th>Na etapa</th><th>Cotação</th><th class="r"><span class="sr-only">Ação</span></th></tr></thead><tbody>
       ${lista.map(s => {
         const p = prazoEtapa(s), e = estadoCot(s);
         const acao = s.status === 'cot' ? (s.cot && s.cot.iniciada ? 'Continuar' : 'Cotar') : 'Ver';
         return `<tr data-id="${s.id}" tabindex="0">
           <td class="mono">${s.id}${s.exemplo ? '<br><span class="pill warn">EXEMPLO</span>' : ''}</td>
           <td><span class="t">${esc(tituloSol(s))}</span><span class="s">${esc(s.ccNome)} · ${esc(s.solicitante)}</span>${s.urgente ? ' <span class="pill warn">Urgente</span>' : ''}${s.tipo === 'mensal' ? ' <span class="pill neutral">Mensal</span>' : ''}${s.defForn === 'unico' ? ' <span class="pill accent">Fornecedor único</span>' : ''}</td>
+          <td class="tipo">${tipoSolicitacao(s)}</td>
           <td>${familiasDe(s).map(k => `<span class="pill neutral" title="${esc(famNome(k))}">${esc(famNome(k))}</span>`).join(' ')}</td>
-          <td class="num">${dt(s.necessidade)}<br>${necessidadePill(s)}</td>
-          <td>${p ? `<span class="pill ${p.cls}" title="Prazo da etapa: ${p.sla} dias"><span class="dot"></span>${dias(p.d)}</span>` : '—'}</td>
+          <td class="num">${dt(s.necessidade)}</td>
+          <td>${p ? `<span class="pill ${p.cls}" title="Prazo da etapa: ${p.sla} dias">${dias(p.d)}</span>` : '—'}</td>
           <td><span class="pill ${e.cls}">${esc(e.txt)}</span></td>
           <td class="r"><button class="btn ${s.status === 'cot' ? 'primary' : ''}" type="button" data-open="${s.id}">${acao}</button></td></tr>`;
       }).join('')}</tbody></table></div>`;
@@ -839,7 +850,7 @@ const kv = (k, v, extra='') => `<div class="kv"><div class="k">${k}</div><div cl
 function pintarDetalhe(){
   const s = sol(S.modalList[S.modalIdx]); if (!s){ fecharModal(); return; }
   const p = prazoEtapa(s), idx = ETAPAS.findIndex(e => e.id === s.status);
-  const holder = p ? `<div class="holder ${p.cls}"><strong>${etapa(s.status).nome}</strong><span>com ${esc(comQuem(s))}</span><span>há <strong>${dias(p.d)}</strong> (prazo da etapa: ${p.sla} dias)</span><span class="pill ${p.cls}"><span class="dot"></span>${p.txt}</span></div>` : '';
+  const holder = p ? `<div class="holder ${p.cls}"><strong>${etapa(s.status).nome}</strong><span>com ${esc(comQuem(s))}</span><span>há <strong>${dias(p.d)}</strong> (prazo da etapa: ${p.sla} dias)</span><span class="pill ${p.cls}">${p.txt}</span></div>` : '';
   const steps = ETAPAS.map((e,i) => `<div class="step ${i < idx ? 'done' : i === idx ? 'cur' : ''}"><span class="ln"></span>${e.curto}</div>`).join('');
   const C = s.cot && s.cot.iniciada ? calcTudo(s) : null;
   const linhaDe = it => { if (!C) return null; const fc = C.fams.find(f => f.k === famKey(it)); return fc.linhas.find(l => l.it.id === it.id); };

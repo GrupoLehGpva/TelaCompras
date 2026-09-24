@@ -331,9 +331,34 @@
         --reprovar:#E59C94;--reprovar-borda:#6B3A36;--reprovar-fundo:#2A1716} }
   :root[data-theme="dark"]{--aprovar:#3FA37E;--aprovar-forte:#56B891;--sobre-aprovar:#06140F;
         --reprovar:#E59C94;--reprovar-borda:#6B3A36;--reprovar-fundo:#2A1716}
-  /* ---- Leitura confortável ---- */
-  table.lista th,table.lista td{padding:17px 12px;line-height:1.45}
-  table.lista thead th{padding:14px 12px;font-size:11.5px;letter-spacing:.06em}
+  /* ==== Padrão visual das telas de compras (24/09): o da Mesa de Cotação ====
+     Letra base 14px. Tabela: cabeçalho 11px em maiúsculas, células 13px, texto
+     principal 14px, secundário 12px, 10px de respiro. Botões com canto de 6px;
+     etiquetas pequenas, de fundo suave e sem contorno. Pouca cor: verde só no
+     Aprovar, vermelho fechado só no Reprovar. */
+  body{font-size:14px;line-height:1.45}
+  .btn,.btn-linha,.btn-lote,.chip,.modal .rodape button,.voltar-topo,.ver-motivo,.ver-itens,
+  .acoes-telas button,.acoes-telas a,.barra-aprova button{border-radius:6px}
+  .onde,.selo-res{border-radius:999px;padding:2px 8px;font-size:11.5px;font-weight:600;letter-spacing:0;border-color:transparent}
+  table.lista th,table.lista td{padding:10px 12px;line-height:1.4}
+  table.lista thead th{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:center}
+  table.lista tbody td{font-size:13px}
+  table.lista tbody td:nth-child(2){font-size:13.5px;font-weight:600}
+  table.lista tbody td:nth-child(4),table.lista tbody td:nth-child(5),table.lista tbody td:nth-child(6){text-align:center}
+  /* Linha do pedido no formato da Mesa: sem barra colorida na borda, sem trilha,
+     situação e "com quem" numa linha, ações pequenas lado a lado. */
+  table.lista td.num{border-left:0}
+  table.lista td.num a{font-size:12.5px}
+  table.lista td.etapa-cel{text-align:left}
+  .onde-linha{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+  .onde-linha .quem{font-size:12px;color:var(--muted)}
+  .nota-edicao{display:block;margin-top:4px;font-size:12px;color:var(--demo)}
+  .acoes-telas{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;justify-content:flex-start}
+  .acoes-telas button,.acoes-telas a,.ver-motivo{font-size:12.5px;padding:4px 10px;min-height:28px;display:inline-flex;align-items:center;font-weight:600}
+  .ver-motivo{margin-top:6px}
+  .ver-itens{border-color:transparent;background:transparent;color:var(--verde-mata);font-weight:650}
+  .ver-itens:hover{background:var(--realce)}
+  table.lista .ha-quanto{font-size:12px}
   .modal-acao .rodape button.confirmar.perigo{background:var(--reprovar);border-color:var(--reprovar);color:#fff}
 </style>
 </head>
@@ -715,9 +740,11 @@ function linha(s){
     '</td>' +
     '<td>' + dataBR(s.aberto_em) + haQuanto(s) + '</td>' +
     '<td>' + dataBR(s.data_necessidade) + '</td>' +
-    '<td class="etapa-cel ' + cls + '">' + trilha(s) +
-      '<span class="onde">' + esc(s.situacao || '—') + '</span>' +
-      (s.com_quem ? '<span class="pequeno">' + esc(s.com_quem) + '</span>' : '') +
+    '<td class="etapa-cel ' + cls + '">' +
+      /* Uma linha só: a situação e com quem está. A trilha de etapas e o nome
+         empilhado deixavam cada pedido com quatro andares (24/09). */
+      '<div class="onde-linha"><span class="onde">' + esc(s.situacao || '—') + '</span>' +
+      (s.com_quem ? '<span class="quem">com ' + esc(s.com_quem) + '</span>' : '') + '</div>' +
       (s.status === 'reprovado'
         ? (s.motivo_recusa
             ? '<button type="button" class="ver-motivo so-leitura" data-id="' + esc(s.id) + '">' +
@@ -1015,8 +1042,8 @@ function acoesTelas(s){
   if(s.em_edicao){
     const exp = s.edicao_expira_em ? new Date(s.edicao_expira_em) : null;
     return '<span class="nota-edicao">' + (exp && !isNaN(exp)
-        ? 'Salve até ' + horaBR(s.edicao_expira_em) + '. Depois disso volta sozinho, como estava.'
-        : 'Salve a edição antes de sair.') + '</span>' +
+        ? 'Salve até ' + horaBR(s.edicao_expira_em) + ' — depois volta como estava'
+        : 'Salve a edição antes de sair') + '</span>' +
       '<div class="acoes-telas"><a class="continuar" href="index.html?t=' + encodeURIComponent(TOKEN) +
         '&editar=' + encodeURIComponent(s.id) + '">Continuar editando</a>' +
       (s.pode_cancelar ? '<button type="button" class="cancelar acao-telas" data-acao="cancelar" data-id="' + id + '">Cancelar pedido</button>' : '') +

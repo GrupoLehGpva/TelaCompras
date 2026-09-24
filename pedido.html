@@ -249,17 +249,31 @@
         --reprovar:#E59C94;--reprovar-borda:#6B3A36;--reprovar-fundo:#2A1716} }
   :root[data-theme="dark"]{--aprovar:#3FA37E;--aprovar-forte:#56B891;--sobre-aprovar:#06140F;
         --reprovar:#E59C94;--reprovar-borda:#6B3A36;--reprovar-fundo:#2A1716}
-  /* ---- Leitura confortável ---- */
-  .ficha{gap:18px 24px}
-  .ficha dd{margin-top:4px}
-  tbody td{padding:13px 14px;line-height:1.45}
-  thead th{padding:12px 14px;font-size:11.5px;letter-spacing:.06em}
-  .barra-aprova{padding:16px 20px}
+  /* ==== Padrão visual das telas de compras (24/09): o da Mesa de Cotação ====
+     Letra base 14px. Tabela: cabeçalho 11px em maiúsculas, células 13px, texto
+     principal 14px, secundário 12px, 10px de respiro. Botões com canto de 6px;
+     etiquetas pequenas, de fundo suave e sem contorno. Pouca cor: verde só no
+     Aprovar, vermelho fechado só no Reprovar. */
+  body{font-size:14px;line-height:1.45}
+  .btn,.btn-linha,.btn-lote,.chip,.modal .rodape button,.voltar-topo,.ver-motivo,.ver-itens,
+  .acoes-telas button,.acoes-telas a,.barra-aprova button{border-radius:6px}
+  .ficha{gap:14px 22px}
+  thead th{padding:10px 12px;font-size:11px;font-weight:600;letter-spacing:.06em}
+  tbody td{padding:10px 12px;font-size:13px;line-height:1.4}
+  .cot-mapa{font-size:13px}
+  .cot-mapa th,.cot-mapa td{padding:10px 12px}
+  .cot-mapa thead th{font-size:11px;font-weight:600}
+  .cot-mapa th.item{font-size:13px}
+  .barra-aprova{padding:14px 18px}
+  .barra-aprova button{padding:9px 18px;font-size:14px;min-height:40px}
+  /* Cores de decisão: Aprovar verde cheio da paleta; Reprovar vermelho fechado só no
+     texto e no contorno; vermelho cheio só na confirmação. */
   .barra-aprova button.sim{background:var(--aprovar);border-color:var(--aprovar);color:var(--sobre-aprovar)}
   .barra-aprova button.sim:hover:not([disabled]){background:var(--aprovar-forte);border-color:var(--aprovar-forte)}
-  .barra-aprova button.nao{border-color:var(--reprovar-borda);color:var(--reprovar)}
+  .barra-aprova button.nao{background:var(--card);border-color:var(--reprovar-borda);color:var(--reprovar)}
   .barra-aprova button.nao:hover:not([disabled]){background:var(--reprovar-fundo);border-color:var(--reprovar);color:var(--reprovar)}
   .modal .rodape button.confirmar{background:var(--reprovar);border-color:var(--reprovar);color:#fff}
+  .modal .rodape button.confirmar.dev{background:var(--acento-fundo);border-color:var(--acento-fundo);color:var(--sobre-acento)}
 </style>
 </head>
 <body>

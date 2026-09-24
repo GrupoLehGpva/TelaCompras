@@ -19,6 +19,19 @@ with sync_playwright() as p:
     check('C2609-90001' in pg.locator('table.fila tbody tr').nth(0).inner_text() or True,'ordem')
     first=pg.locator('table.fila tbody tr td.mono').all_inner_texts()
     R.append('ordem: '+str([x.split()[0] for x in first]))
+    # 24/09: padrão das telas — largura 1300, cabeçalho centralizado, sem o ponto na etapa,
+    # só a data em "Precisa até" e a coluna Tipo (item único, lista de itens ou serviço).
+    check(pg.evaluate("getComputedStyle(document.querySelector('.wrap')).maxWidth")=='1300px','largura padrão 1300px')
+    check(pg.evaluate("[...document.querySelectorAll('table.fila thead th')].slice(0,-1).every(t=>getComputedStyle(t).textAlign==='center')"),'cabeçalho centralizado')
+    check(pg.locator('table.fila .dot').count()==0,'sem o ponto na coluna Na etapa')
+    cab=pg.locator('table.fila thead th').all_inner_texts()
+    ip=[i for i,t in enumerate(cab) if 'PRECISA' in t.upper()][0]; it=[i for i,t in enumerate(cab) if t.strip().upper()=='TIPO'][0]
+    datas=pg.locator(f'table.fila tbody tr td:nth-child({ip+1})').all_inner_texts()
+    check(all(re.fullmatch(r'\d\d/\d\d/\d{4}', d.strip()) for d in datas), 'Precisa até só com a data '+str(datas[:3]))
+    tipos={pg.locator('table.fila tbody tr').nth(i).locator('td.mono').inner_text().split()[0]: pg.locator('table.fila tbody tr').nth(i).locator(f'td:nth-child({it+1})').inner_text().replace('\n',' ') for i in range(rows())}
+    check(tipos.get('C2609-00003')=='Serviço', 'tipo serviço '+str(tipos.get('C2609-00003')))
+    check(tipos.get('C2609-00001')=='Item único', 'tipo item único '+str(tipos.get('C2609-00001')))
+    check(tipos.get('C2609-00002')=='Lista · 2 itens', 'tipo lista '+str(tipos.get('C2609-00002')))
     pg.click('[data-tab=dev]'); check(rows()==1,'Devolvidas 1')
     pg.click('[data-tab=env]'); check(pg.locator('.state h3').inner_text()=='Nada enviado ainda','Enviadas vazio')
     pg.click('[data-tab=cotar]')
