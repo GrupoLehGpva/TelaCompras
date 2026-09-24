@@ -70,6 +70,12 @@ const b = await chromium.launch();
   ok('1 pedido_telas com token e id', pt && pt.corpo.p_token === 'ap-teste' && pt.corpo.p_id === ID, JSON.stringify(pt));
   await p.close(); }
 
+/* 1.5 — a cotação vem logo depois do resumo, antes dos itens (no fim ela ficava sob a barra) */
+{ const p = await abrir(b);
+  const ordem = await p.evaluate(() => [...document.querySelectorAll('main > section')].map(s => s.id || 'resumo'));
+  ok('1.5 cotação antes dos itens', ordem.indexOf('cartaoCotacao') === 1 && ordem.indexOf('cartaoCotacao') < ordem.indexOf('cartaoItens'), ordem.join(','));
+  await p.close(); }
+
 /* 2 — aprovar: pelo banco, com a versão */
 { const p = await abrir(b);
   await p.click('#btnAprovar'); await p.waitForTimeout(400);

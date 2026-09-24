@@ -21,7 +21,8 @@ const fs = require('fs');
 const path = require('path');
 
 const TELAS = ['index.html', 'pedido.html', 'decisao.html', 'aprovacoes.html',
-               'contrato.html', 'acompanhar.html', 'cadastro-itens.html'];
+               'contrato.html', 'acompanhar.html', 'cadastro-itens.html',
+               'reprovar-compra.html'];
 
 /* Um trecho = um pedaço que deveria ser idêntico onde quer que apareça.
    `de` e `ate` são marcas de texto; o trecho é o que está entre elas. */

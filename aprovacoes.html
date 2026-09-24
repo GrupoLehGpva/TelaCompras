@@ -296,7 +296,10 @@
   .hoje{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:var(--pilula);
     background:var(--verde);color:#fff;font-size:10px;font-weight:700;text-transform:uppercase;
     letter-spacing:.04em}
-  table.fila td.acoes{white-space:nowrap;text-align:right;padding-right:22px}
+  /* Os botões quebram linha dentro da célula: com o Devolver (caminho das
+     telas) são três, e com nowrap o terceiro vazava para fora da tabela. */
+  table.fila td.acoes{white-space:normal;text-align:right;padding-right:22px}
+  table.fila td.acoes .btn-linha{margin:3px 0 3px 8px;white-space:nowrap}
   .btn-linha{padding:7px 14px;margin-left:8px;border-radius:var(--pilula);border:1px solid var(--linha-forte);
     background:var(--card);color:var(--texto);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
   .btn-linha:hover{border-color:var(--verde)}

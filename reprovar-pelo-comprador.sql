@@ -289,7 +289,10 @@ begin
 
   select count(*) into itens from solicitacao_itens i where i.solicitacao_id = s.id;
 
-  link := 'https://grupolehgpva.github.io/TelaCompras/pedido.html?id='
+  -- A tela do comprador tem arquivo proprio desde 24/09: a tela do pedido e do
+  -- caminho das telas e esta sendo mexida em outra frente. Duas maos no mesmo
+  -- arquivo e como se perde trabalho.
+  link := 'https://grupolehgpva.github.io/TelaCompras/reprovar-compra.html?id='
           || s.id::text || '&t=' || c.token;
 
   return jsonb_build_object(

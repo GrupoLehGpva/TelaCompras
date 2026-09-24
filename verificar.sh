@@ -18,6 +18,7 @@ for b in bateria-tela.js teste-centros.js teste-pedido.js teste-decisao.js \
          teste-empresa.js teste-cotacao-completa.js teste-planilha.js \
          teste-catalogo-paginado.js teste-titulo-card.js teste-aviso-urgente.js \
          teste-cliques.js teste-anexo.js bateria-erros.js \
+         teste-reprovar-compra.js \
          teste-cadastro-itens.js \
          teste-telas-aprovacoes.js teste-telas-pedido.js teste-telas-formulario.js \
          teste-telas-acompanhar.js; do

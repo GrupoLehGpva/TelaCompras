@@ -100,6 +100,12 @@ const b = await chromium.launch();
   ok('1 link para acompanhar', (await p.getAttribute('.ir-acompanhar','href')) === 'acompanhar.html?t=fc-ana');
   await p.close(); }
 
+/* 1.5 — campo travado diz de onde veio: do cadastro */
+{ const p = await abrir(b, '?t=fc-ana');
+  ok('1.5 etiqueta do cadastro', (await p.textContent('#ajudaNome .travado-nota')) === 'do cadastro' &&
+     (await p.textContent('#ajudaEmail .travado-nota')) === 'do cadastro');
+  await p.close(); }
+
 /* 2 — sem ?t= continua pelo ClickUp */
 { const p = await abrir(b, '');
   ok('2 não perguntou eu_facilitador', chamou(p,'eu_facilitador').length === 0);

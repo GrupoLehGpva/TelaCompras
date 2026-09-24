@@ -250,6 +250,14 @@
       <dl class="ficha" id="fichaCabecalho"></dl>
     </section>
 
+    <!-- Só no caminho das telas (sem ClickUp): a cotação que o comprador enviou.
+         Logo depois do resumo: é o que o aprovador precisa ver para decidir, e
+         no fim da página ela ficava embaixo da barra de decisão. -->
+    <section class="cartao" id="cartaoCotacao" hidden>
+      <h2>Cotação</h2>
+      <div id="cotacaoCorpo"></div>
+    </section>
+
     <section class="cartao" id="cartaoMotivo" hidden>
       <h2>Motivo da compra</h2>
       <p class="escopo" id="motivoTexto"></p>
@@ -312,12 +320,6 @@
         <span id="contagem"></span>
         <span id="soma"></span>
       </div>
-    </section>
-
-    <!-- Só no caminho das telas (sem ClickUp): a cotação que o comprador enviou. -->
-    <section class="cartao" id="cartaoCotacao" hidden>
-      <h2>Cotação</h2>
-      <div id="cotacaoCorpo"></div>
     </section>
 
     <p class="marca-dagua" id="rodape"></p>

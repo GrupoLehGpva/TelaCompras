@@ -73,6 +73,20 @@ const b = await chromium.launch();
   ok('2 caixa mostra horários', /editando desde \d\d:\d\d, volta até \d\d:\d\d/.test(t), t);
   await p.close(); }
 
+/* 2.5 — os três botões cabem na célula (em tela de notebook e larga) */
+for(const w of [1366, 1440, 1920]){
+  const p = await tela(b); await p.setViewportSize({width:w, height:900}); await p.waitForTimeout(200);
+  const td = await linha(p,'C2609-02001').locator('td.acoes').boundingBox();
+  for(const cls of ['sim','nao','dev']){
+    const bt = await linha(p,'C2609-02001').locator('.btn-linha.' + cls).boundingBox();
+    ok('2.5 ' + w + 'px ' + cls + ' dentro da célula', bt && td && bt.x >= td.x - 1 && bt.x + bt.width <= td.x + td.width + 1,
+       JSON.stringify({td, bt}));
+  }
+  const larg = await p.evaluate(() => { const r = document.querySelector('#corpoFila').closest('.rolagem'); return r.scrollWidth - r.clientWidth; });
+  if(w >= 1440) ok('2.5 ' + w + 'px sem rolagem lateral', larg <= 0, 'sobra ' + larg + 'px');
+  await p.close();
+}
+
 /* 3 — sem nada em edição, a caixa some */
 { const p = await tela(b, {extra:()=>Object.assign(EXTRA(), {em_edicao:[]})});
   ok('3 caixa escondida sem edição', !(await p.locator('#emEdicao').isVisible()), 'apareceu vazia');

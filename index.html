@@ -1273,7 +1273,8 @@ function travarCampo(id, travar){
   if(travar && !jaTem){
     const selo = document.createElement('span');
     selo.className = 'travado-nota';
-    selo.textContent = 'do Slack';
+    /* Pelo link pessoal (caminho das telas) nome e e-mail vêm do cadastro. */
+    selo.textContent = MODO_TELAS ? 'do cadastro' : 'do Slack';
     ajuda.appendChild(document.createTextNode(' '));
     ajuda.appendChild(selo);
   }

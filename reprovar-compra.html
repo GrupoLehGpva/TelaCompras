@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reprovar compra · Grupo Leh</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<!--
+  ============================================================================
+  REPROVAR COMPRA — Grupo Leh · Compras
+  A tela do COMPRADOR. Abre por ?id=<uuid da solicitação>&t=<token do comprador>
+  e serve a uma decisão só: barrar uma compra que não deve seguir, com motivo.
+
+  POR QUE ELA EXISTE, E POR QUE SEPARADA
+  Até 24/09 o comprador não tinha porta nenhuma: para impedir uma compra errada
+  ele arrastava o card no ClickUp. Arrastar não avisa quem pediu, não grava
+  motivo e deixa o banco achando que o pedido ainda espera aprovação — foi o
+  que embolou a C2609-00012.
+
+  A decisão dele mora AQUI, e não na tela do pedido, porque a tela do pedido é
+  do caminho das telas (sem ClickUp) e está sendo mexida em outra frente. Duas
+  mãos no mesmo arquivo é como se perde trabalho. Esta é a tela do comprador do
+  caminho do ClickUp: uma decisão, um arquivo, um dono.
+
+  Quem manda é o banco: `decisao_permitida` confere token, card, etapa e se o
+  pedido ainda está aberto, e responde `so_reprova` quando quem abriu é
+  comprador. Aprovar compra é da alçada — aqui não existe esse botão.
+  ============================================================================
+-->
+<style>
+  :root{
+    /* Identidade Grupo Leh — livro da marca, maio 2024
+       2965 C #00263d · 2955 C #003865 · 341 C #007A53 · 330 C #00524c
+       321 C #008c95 · 468 C #ddcba3 · Warm Gray 1 C #d7d2cc */
+    color-scheme:light;   /* faz o navegador desenhar rádio, seleção e data no tema certo */
+    --marca:#00263d;      --sobre-marca:#FFFFFF;      --azul:#003865;
+    --verde:#008c95;      --acento-fundo:#00727a;     --sobre-acento:#FFFFFF;
+    --verde-claro:#E2F1F2; --verde-folha:#007A53;     --verde-mata:#00524c;
+    --areia:#ddcba3;      --cinza-quente:#d7d2cc;
+    --bg:#F2F5F8;         --card:#FFFFFF;           --realce:#F7F9FB;
+    --texto:#0F2233;      --muted:#5F7284;
+    --borda:#DBE3EA;      --linha-forte:#B4C2CE;
+    --erro:#B3261E;       --erro-bg:#FDF2F1;        --erro-borda:#E8B4B0;
+    --demo:#8A5A00;       --demo-bg:#FFF8E8;        --demo-borda:#EFDDB4;
+    --ok-bg:#E1F0E9;      --ok-txt:#007A53;
+    --codigo-bg:#00263d;  --codigo-txt:#CFE3E5;
+    --raio:12px;          --pilula:100px;
+    /* O livro da marca adota GoldPlay e autoriza Arial para meios eletrônicos.
+       Figtree entra entre as duas como equivalente aberto mais próximo. */
+    --sans:"Goldplay","Goldplay Alt","Figtree",Arial,Helvetica,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --marca:#001725;      --sobre-marca:#FFFFFF;      --azul:#0A4472;
+      --verde:#2FB3BC;      --acento-fundo:#56C8CF;   --sobre-acento:#04161F;
+      --verde-claro:#0D2A2D; --verde-folha:#3FA37E;   --verde-mata:#0B3B37;
+      --areia:#7A6E55;      --cinza-quente:#6E6A65;
+      --bg:#08131C;         --card:#0F1D28;           --realce:#152431;
+      --texto:#E6EDF3;      --muted:#9CABB9;
+      --borda:#22323F;      --linha-forte:#36485B;
+      --erro:#F0A0A0;       --erro-bg:#2A1616;        --erro-borda:#5B2A2A;
+      --demo:#E0B860;       --demo-bg:#241D0E;        --demo-borda:#3B3218;
+      --ok-bg:#0F2C21;      --ok-txt:#5FC79A;
+      --codigo-bg:#04121B;  --codigo-txt:#CFE3E5;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --marca:#001725;    --sobre-marca:#FFFFFF;    --azul:#0A4472;
+    --verde:#2FB3BC;    --acento-fundo:#56C8CF;   --sobre-acento:#04161F;
+    --verde-claro:#0D2A2D; --verde-folha:#3FA37E;   --verde-mata:#0B3B37;
+    --areia:#7A6E55;    --cinza-quente:#6E6A65;
+    --bg:#08131C;       --card:#0F1D28;         --realce:#152431;
+    --texto:#E6EDF3;    --muted:#9CABB9;
+    --borda:#22323F;    --linha-forte:#36485B;
+    --erro:#F0A0A0;     --erro-bg:#2A1616;      --erro-borda:#5B2A2A;
+    --demo:#E0B860;     --demo-bg:#241D0E;      --demo-borda:#3B3218;
+    --ok-bg:#0F2C21;    --ok-txt:#5FC79A;
+    --codigo-bg:#04121B;  --codigo-txt:#CFE3E5;
+  }
+  .marca-bloco{display:flex;align-items:center;gap:16px;min-width:0}
+  .marca-bloco .titulo-tela{border-left:1px solid rgba(255,255,255,.28);padding-left:16px;min-width:0}
+  .logo-leh{display:block;height:34px;width:auto;flex:none}
+  .logo-leh.impressao{display:none}
+  @media (max-width:420px){ .logo-leh{height:28px} }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--texto);
+    font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .topo{background:var(--marca);color:var(--sobre-marca);padding:14px 20px;
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .topo .marca{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;opacity:.72}
+  .topo h1{margin:2px 0 0;font-size:19px;font-weight:650;line-height:1.2}
+  .topo .direita{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .selo{border-radius:var(--pilula);padding:5px 12px;font-size:12px;font-weight:700;
+    background:rgba(255,255,255,.12);color:var(--sobre-marca);white-space:nowrap}
+  .selo.status{background:var(--verde);color:var(--sobre-acento)}
+  .envelope{max-width:1080px;margin:0 auto;padding:20px 16px 64px}
+  .cartao{background:var(--card);border:1px solid var(--borda);border-radius:var(--raio);
+    padding:18px 20px;margin-bottom:16px}
+  .cartao h2{margin:0 0 14px;font-size:13px;font-weight:700;letter-spacing:.7px;
+    text-transform:uppercase;color:var(--muted)}
+  .anexos{list-style:none;margin:0;padding:0}
+  .anexos li{border-bottom:1px solid var(--borda)}
+  .anexos li:last-child{border-bottom:0}
+  .anexos a{display:flex;align-items:center;gap:12px;padding:11px 2px;
+    color:var(--texto);text-decoration:none;font-weight:600;word-break:break-word}
+  .anexos a:hover{color:var(--verde)}
+  .anexos .tipo{flex:none;font-size:11px;font-weight:700;letter-spacing:.6px;
+    padding:3px 9px;border-radius:999px;background:var(--realce);color:var(--muted)}
+  .anexos .peso{flex:none;margin-left:auto;color:var(--muted);font-weight:400;font-size:13px}
+  .anexos .campo-do-card{display:block;font-weight:400;font-size:12.5px;color:var(--muted);margin-top:2px}
+  .ficha{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px 22px;margin:0}
+  .ficha dt{font-size:11px;letter-spacing:.7px;text-transform:uppercase;color:var(--muted)}
+  .ficha dd{margin:3px 0 0;font-size:15px;font-weight:600;line-height:1.4;word-break:break-word}
+  .ficha dd.solto{font-weight:400}
+  .barra-ferramentas{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .busca-tabela{flex:1 1 240px;min-width:0}
+  .busca-tabela input{width:100%;padding:11px 12px;font-size:15px;font-family:inherit;color:inherit;
+    background:var(--card);border:1px solid var(--borda);border-radius:10px;appearance:none}
+  .busca-tabela input:focus{outline:none;border-color:var(--verde);box-shadow:0 0 0 3px var(--verde-claro)}
+  .btn{border-radius:var(--pilula);border:1px solid var(--borda);background:var(--card);
+    color:var(--texto);font:inherit;font-size:14px;font-weight:600;padding:10px 18px;cursor:pointer;white-space:nowrap}
+  .btn:hover{border-color:var(--linha-forte)}
+  .rolagem{overflow-x:auto;border:1px solid var(--borda);border-radius:var(--raio);background:var(--card)}
+  table{border-collapse:collapse;width:100%;min-width:560px}
+  thead th{position:sticky;top:0;background:var(--realce);border-bottom:1px solid var(--borda);
+    text-align:left;padding:11px 14px;font-size:11px;letter-spacing:.7px;text-transform:uppercase;
+    color:var(--muted);white-space:nowrap;cursor:pointer;user-select:none}
+  thead th:hover{color:var(--texto)}
+  thead th .seta{opacity:.35;margin-left:6px;font-size:10px}
+  thead th[aria-sort] .seta{opacity:1;color:var(--verde)}
+  tbody td{border-bottom:1px solid var(--borda);padding:11px 14px;vertical-align:top}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:nth-child(even){background:var(--realce)}
+  td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+  td.cod{font-family:var(--mono);font-size:13px;color:var(--muted);white-space:nowrap}
+  td.desc{font-weight:600;min-width:220px}
+  .vazio-tabela{padding:26px 16px;text-align:center;color:var(--muted);font-size:14px}
+  .rodape-tabela{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    margin-top:12px;font-size:13px;color:var(--muted)}
+  .rodape-tabela b{color:var(--texto);font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .escopo{white-space:pre-wrap;font-size:15px;line-height:1.6;margin:0}
+  .aviso{border:1px dashed var(--demo-borda);background:var(--demo-bg);color:var(--demo);
+    border-radius:10px;padding:14px 16px;font-size:13px;line-height:1.5;margin-bottom:16px}
+  .erro{border:1px solid var(--erro-borda);background:var(--erro-bg);color:var(--erro);
+    border-radius:10px;padding:16px;font-size:14px;line-height:1.5}
+  .carregando{color:var(--muted);padding:30px 4px;font-size:14px}
+  .marca-dagua{margin-top:22px;font-size:12px;color:var(--muted);line-height:1.5}
+  @media (max-width:560px){
+    .envelope{padding:14px 10px 48px}
+    .cartao{padding:15px 14px}
+  }
+  .barra-aprova{position:sticky;bottom:0;z-index:20;margin-top:20px;
+    background:var(--card);border:1px solid var(--borda);border-radius:var(--raio);
+    padding:14px 18px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;
+    justify-content:space-between;box-shadow:0 -6px 22px rgba(0,20,32,.10)}
+  .barra-aprova[hidden]{display:none}
+  .barra-aprova .texto{color:var(--muted);font-size:14px;line-height:1.5;min-width:0}
+  .barra-aprova .texto b{color:var(--texto);display:block;font-size:15px}
+  .barra-aprova .botoes{display:flex;gap:10px;flex-wrap:wrap}
+  .barra-aprova button{padding:11px 20px;border-radius:var(--pilula);font:inherit;font-size:15px;
+    font-weight:650;cursor:pointer;border:1px solid var(--linha-forte);background:var(--card);color:var(--texto)}
+  .barra-aprova button.sim{background:var(--acento-fundo);border-color:var(--acento-fundo);color:var(--sobre-acento)}
+  .barra-aprova button.nao{background:var(--erro-bg);border-color:var(--erro-borda);color:var(--erro)}
+  .barra-aprova button[disabled]{opacity:.55;cursor:default}
+  .barra-aprova .texto .girando{width:14px;height:14px;display:inline-block;vertical-align:-2px;
+    margin-right:8px;border-radius:50%;border:2px solid var(--linha-forte);
+    border-top-color:var(--verde);animation:gira .7s linear infinite}
+  @keyframes gira{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){ .barra-aprova .texto .girando{animation-duration:2.4s} }
+  .barra-aprova a.voltar{color:var(--verde);font-size:14px;font-weight:600;text-decoration:none;white-space:nowrap}
+  .barra-aprova a.voltar:hover{text-decoration:underline}
+  .barra-aprova.ok{border-color:var(--ok-txt);background:var(--ok-bg)}
+  .barra-aprova.ok .texto b{color:var(--ok-txt)}
+  .barra-aprova.nao-ok{border-color:var(--erro-borda);background:var(--erro-bg)}
+  .barra-aprova.nao-ok .texto b{color:var(--erro)}
+  @media print{ .barra-aprova{display:none} }
+  .fundo-modal{position:fixed;inset:0;background:rgba(0,20,32,.55);display:flex;
+    align-items:center;justify-content:center;padding:20px;z-index:50}
+  .fundo-modal[hidden]{display:none}
+  .modal{background:var(--card);border-radius:var(--raio);border:1px solid var(--borda);
+    max-width:520px;width:100%;padding:24px;box-shadow:0 18px 48px rgba(0,20,32,.28)}
+  .modal h2{margin:0 0 6px;font-size:19px;color:var(--erro);border:0;padding:0}
+  .modal p.sub{margin:0 0 16px;color:var(--muted);font-size:14px;line-height:1.55}
+  .modal textarea{width:100%;padding:11px 13px;border:1px solid var(--borda);border-radius:var(--raio);
+    background:var(--card);color:var(--texto);font:inherit;font-size:14px;resize:vertical;min-height:110px}
+  .modal textarea:focus{outline:none;border-color:var(--verde)}
+  .modal .erro-campo{color:var(--erro);font-size:13px;margin:8px 0 0}
+  .modal .erro-campo[hidden]{display:none}
+  .modal .rodape{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+  .modal .rodape button{padding:10px 18px;border-radius:var(--pilula);font:inherit;font-size:14px;
+    font-weight:650;cursor:pointer;border:1px solid var(--linha-forte);background:var(--card);color:var(--texto)}
+  .modal .rodape button.confirmar{background:var(--erro);border-color:var(--erro);color:#fff}
+  .modal .rodape button[disabled]{opacity:.6;cursor:default}
+
+  /* ---- a tela ---------------------------------------------------------- */
+  .voltar-pedido{display:inline-flex;align-items:center;gap:7px;color:var(--verde);
+    font-size:14px;font-weight:600;text-decoration:none;margin-bottom:14px}
+  .voltar-pedido:hover{text-decoration:underline}
+  .itens{width:100%;border-collapse:collapse}
+  .itens thead th{background:var(--realce);border-bottom:1px solid var(--borda);
+    text-align:left;padding:10px 14px;font-size:11px;letter-spacing:.7px;
+    text-transform:uppercase;color:var(--muted);white-space:nowrap}
+  .itens tbody td{border-bottom:1px solid var(--borda);padding:11px 14px;vertical-align:top}
+  .itens tbody tr:last-child td{border-bottom:0}
+  .itens tbody tr:nth-child(even){background:var(--realce)}
+  .itens td.cod{font-family:var(--mono);font-size:13px;color:var(--muted);white-space:nowrap}
+  .itens td.desc{font-weight:600;min-width:200px}
+  .itens td.qtd{text-align:right;font-family:var(--mono);
+    font-variant-numeric:tabular-nums;white-space:nowrap}
+  .rolagem{overflow-x:auto;border:1px solid var(--borda);border-radius:var(--raio);background:var(--card)}
+  .itens{min-width:520px}
+  .contagem{margin:12px 0 0;font-size:13px;color:var(--muted)}
+  /* O botão é vermelho e sozinho de propósito: esta tela tem uma ação só, e ela
+     é destrutiva. Nada de "Salvar" e "Reprovar" com o mesmo peso ao lado. */
+  .barra-aprova button.nao{background:var(--erro);border-color:var(--erro);color:#fff}
+</style>
+</head>
+<body>
+
+<header class="topo">
+  <div class="marca-bloco">
+    <img class="logo-leh" src="data:image/png;base64,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" alt="Grupo Leh">
+    <img class="logo-leh impressao" src="data:image/png;base64,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" alt="Grupo Leh">
+    <div class="titulo-tela">
+      <div class="marca">Compras · cotação</div>
+      <h1 id="tituloTopo">Reprovar compra</h1>
+    </div>
+  </div>
+  <div class="direita">
+    <span class="selo" id="seloNumero" hidden></span>
+  </div>
+</header>
+
+<div class="envelope">
+  <p class="carregando" id="carregando">Abrindo o pedido…</p>
+  <div class="erro" id="falha" hidden></div>
+
+  <main id="conteudo" hidden>
+    <a class="voltar-pedido" id="verCompleto" href="#" target="_blank" rel="noopener">
+      Ver o pedido completo, com anexos e impressão →
+    </a>
+
+    <section class="cartao">
+      <h2>O pedido</h2>
+      <dl class="ficha" id="ficha"></dl>
+    </section>
+
+    <section class="cartao">
+      <h2>Itens</h2>
+      <div class="rolagem">
+        <table class="itens">
+          <thead><tr>
+            <th>Código</th><th>Descrição</th><th>Unidade</th><th class="qtd">Quantidade</th>
+          </tr></thead>
+          <tbody id="corpoItens"></tbody>
+        </table>
+      </div>
+      <p class="contagem" id="contagem"></p>
+    </section>
+
+    <section class="cartao" id="cartaoAnexos" hidden>
+      <h2>Anexos de quem pediu</h2>
+      <ul class="anexos" id="listaAnexos"></ul>
+    </section>
+
+    <p class="marca-dagua">
+      Esta tela decide uma coisa só. Para cotar, anexar orçamento e mover o card,
+      continue pelo ClickUp.
+    </p>
+  </main>
+
+  <div class="barra-aprova" id="barraAprova" hidden>
+    <div class="texto" id="textoBarra"></div>
+    <div class="botoes" id="botoesBarra">
+      <button type="button" class="nao" id="btnReprovar">Reprovar compra</button>
+    </div>
+  </div>
+</div>
+
+<div class="fundo-modal" id="fundoModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tituloModal">
+    <h2 id="tituloModal">Reprovar compra</h2>
+    <p class="sub" id="subModal"></p>
+    <label for="motivoReprova" style="display:block;font-size:14px;font-weight:600;margin-bottom:6px">
+      Por que esta compra não deve seguir?
+    </label>
+    <textarea id="motivoReprova"
+      placeholder="Ex.: falta o item de ração que deveria vir junto — o facilitador vai reabrir com a lista completa."></textarea>
+    <p class="erro-campo" id="erroMotivo" hidden></p>
+    <p class="sub" style="margin:10px 0 0">
+      Quem abriu o pedido recebe este texto no Slack, e ele fica registrado no card.
+      Escreva o que a pessoa precisa fazer para acertar.
+    </p>
+    <div class="rodape">
+      <button type="button" id="btnCancelar">Cancelar</button>
+      <button type="button" class="confirmar" id="btnConfirmarReprova">Reprovar compra</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   CONFIGURAÇÃO — mesma chave pública do formulário
+   ========================================================================== */
+const SUPABASE_URL = 'https://mbwaqnlmscxbacmxdopr.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_AR4D1JlHB-Z12--QbzwYWQ_URZzmVwl';
+
+const $ = id => document.getElementById(id);
+const PARAMS = new URLSearchParams(location.search);
+
+async function apiGet(caminho){
+  const r = await fetch(SUPABASE_URL + '/rest/v1/' + caminho, {
+    headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+  });
+  if(!r.ok) throw new Error('HTTP ' + r.status + ' — ' + (await r.text()).slice(0,140));
+  return r.json();
+}
+
+/* Chamar a função em vez de ler a tabela.
+   A chave desta página é pública — está aqui no código, tem que estar. Se a
+   página lê a TABELA, quem copiar a chave lê a tabela inteira: todos os
+   pedidos, com nome de quem pediu e o motivo escrito à mão. Pela FUNÇÃO só
+   vem um pedido, e só para quem já sabe qual. */
+async function apiRpc(nome, corpo){
+  const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + nome, {
+    method:'POST',
+    headers:{ apikey: SUPABASE_KEY, Authorization:'Bearer ' + SUPABASE_KEY,
+              'Content-Type':'application/json' },
+    body: JSON.stringify(corpo)
+  });
+  if(!r.ok) throw new Error('HTTP ' + r.status + ' — ' + (await r.text()).slice(0,140));
+  return r.json();
+}
+
+/* ============================================================================
+   NOMES LEGÍVEIS — o banco guarda o código; a tela mostra o nome
+   ========================================================================== */
+const CENTROS = {
+  'CC-101-PROD':'Granja 101 · Produção', 'CC-101-MAN':'Granja 101 · Manutenção',
+  'CC-102-PROD':'Granja 102 · Produção', 'CC-102-MAN':'Granja 102 · Manutenção',
+  'CC-103-PROD':'Granja 103 · Produção', 'CC-103-MAN':'Granja 103 · Manutenção',
+  'CC-103-MOR':'Granja 103 · Casa dos moradores', 'CC-FROTA':'Frota',
+  'CC-AGRI':'Agricultura', 'CC-ADM':'Administrativo', 'CC-RH':'RH',
+  'CC-PI-AGRI':'Piauí · Agricultura', 'CC-PI-COZ':'Piauí · Cozinha e despensa'
+};
+/* 'programada' fica aqui para sempre: rótulo dos pedidos abertos antes de 18/09. */
+const TIPOS_COMPRA = { normal:'Normal', urgente:'Urgente', mensal:'Mensal', programada:'Programada' };
+const DEF_FORNECEDOR = { cotacao:'Cotação', unico:'Fornecedor único' };
+
+const legivel = (mapa, cod) => cod ? (mapa[cod] || cod) : '—';
+
+/* Os 746 centros do ERP vivem na tabela centros_custo. A tela busca só o do
+   pedido — o mapa acima fica como reserva para as solicitações antigas, que
+   ainda guardam os códigos CC-… criados antes da carga do ERP. */
+let CENTRO_NOME = '';
+async function nomeDoCentro(codigo){
+  if(!codigo) return '';
+  try{
+    const r = await apiGet('centros_custo?select=nome,unidade&codigo=eq.' +
+      encodeURIComponent(codigo) + '&limit=1');
+    if(r.length) return r[0].nome + (r[0].unidade ? ' · ' + r[0].unidade : '');
+  }catch(e){ /* sem banco: cai no mapa de reserva */ }
+  return '';
+}
+const dataBR = iso => {
+  if(!iso) return '—';
+  const d = new Date(String(iso).length <= 10 ? iso + 'T12:00:00' : iso);
+  return isNaN(d) ? String(iso) : d.toLocaleDateString('pt-BR');
+};
+const numBR = n => Number(n||0).toLocaleString('pt-BR', {maximumFractionDigits:3});
+const esc = t => String(t==null?'':t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ----------------------------------------------------------------------------
+   CONCORDÂNCIA DA UNIDADE
+   "1 unidade", "5 unidades". As irregulares vêm da tabela; o resto segue a
+   regra. Abreviação (kg, m, L, un) não flexiona — "5 kgs" não existe.
+   A capitalização do cadastro é preservada: "Unidade" vira "Unidades".
+   -------------------------------------------------------------------------- */
+const UNIDADES_PLURAL = {
+  'unidade':'unidades','peça':'peças','litro':'litros','saco':'sacos','metro':'metros',
+  'metro cúbico':'metros cúbicos','metro quadrado':'metros quadrados','quilo':'quilos',
+  'caixa':'caixas','par':'pares','rolo':'rolos','pacote':'pacotes','lata':'latas',
+  'galão':'galões','fardo':'fardos','tonelada':'toneladas','conjunto':'conjuntos',
+  'jogo':'jogos','kit':'kits','frasco':'frascos','barra':'barras','folha':'folhas',
+  'tubo':'tubos','balde':'baldes','serviço':'serviços','dúzia':'dúzias',
+  'ampola':'ampolas','bobina':'bobinas','bombona':'bombonas','resma':'resmas'
+};
+const UNIDADES_INVARIAVEIS = new Set(
+  ['kg','g','mg','t','l','ml','m','cm','mm','km','m²','m³','m2','m3','un','pç','pc','cx','h','min']);
+
+function pluralPalavra(entrada){
+  const b = String(entrada).toLowerCase();
+  if(/ão$/.test(b))                 return b.replace(/ão$/,'ões');
+  if(/[aeiouáéíóúâêôãõ]$/.test(b))  return b + 's';
+  if(/m$/.test(b))                  return b.replace(/m$/,'ns');
+  if(/(r|z)$/.test(b))              return b + 'es';
+  if(/s$/.test(b))                  return b;
+  if(/il$/.test(b))                 return b.replace(/il$/,'is');
+  if(/l$/.test(b))                  return b.replace(/l$/,'is');
+  return b + 's';
+}
+
+function comoOriginal(velho, novo){
+  if(velho === velho.toUpperCase()) return novo.toUpperCase();
+  if(velho.charAt(0) !== velho.charAt(0).toLowerCase())
+    return novo.charAt(0).toUpperCase() + novo.slice(1);
+  return novo;
+}
+
+function plural(unidade, q){
+  const u = String(unidade || '').trim();
+  if(!u) return '';
+  if(Number(q) === 1) return u;
+  const base = u.toLowerCase();
+  if(UNIDADES_INVARIAVEIS.has(base)) return u;
+  const p = UNIDADES_PLURAL[base] || base.split(/\s+/).map(pluralPalavra).join(' ');
+  return comoOriginal(u, p);
+}
+
+/* ============================================================================
+   ABERTURA
+   ========================================================================== */
+const ENDPOINT_DECISAO = 'https://grupoleh.app.n8n.cloud/webhook/decisao-tela-5a31745968808aaf41ce';
+const MOTIVO_MINIMO = 10;
+const TOKEN = (PARAMS.get('t') || '').trim();
+
+let SOLICITACAO = null;
+let PODE = null;          /* a resposta do banco, quando ele diz que pode */
+let decidindo = false;
+
+function falhar(titulo, detalhe){
+  $('carregando').hidden = true;
+  $('falha').hidden = false;
+  $('falha').innerHTML = '<b>' + esc(titulo) + '</b><br>' + esc(detalhe || '');
+}
+
+const campo = (rot, val, solto) =>
+  '<div><dt>' + esc(rot) + '</dt><dd' + (solto ? ' class="solto"' : '') + '>' +
+  esc(val == null || val === '' ? '—' : val) + '</dd></div>';
+
+function desenhar(s, itens){
+  $('seloNumero').textContent = s.numero || '';
+  $('seloNumero').hidden = !s.numero;
+  $('verCompleto').href = 'pedido.html?id=' + encodeURIComponent(s.id);
+
+  $('ficha').innerHTML =
+    campo('Solicitação', s.numero) +
+    campo('Quem pediu', s.solicitante_nome || s.solicitante) +
+    campo('Facilitador', s.facilitador) +
+    campo('Centro de custo', CENTRO_NOME || legivel(CENTROS, s.centro_custo)) +
+    campo('Empresa', s.empresa_nome) +
+    campo('Tipo de compra', legivel(TIPOS_COMPRA, s.tipo_compra)) +
+    campo('Precisa até', dataBR(s.data_necessidade)) +
+    campo('Fornecedor', legivel(DEF_FORNECEDOR, s.definicao_fornecedor)) +
+    campo('Motivo do pedido', s.motivo, true) +
+    (s.observacao ? campo('Observação', s.observacao, true) : '');
+
+  $('corpoItens').innerHTML = itens.map(i =>
+    '<tr><td class="cod">' + esc(i.codigo || '—') + '</td>' +
+    '<td class="desc">' + esc(i.descricao) + '</td>' +
+    '<td>' + esc(plural(i.unidade, i.quantidade)) + '</td>' +
+    '<td class="qtd">' + numBR(i.quantidade) + '</td></tr>').join('');
+  $('contagem').textContent = itens.length === 1 ? '1 item' : itens.length + ' itens';
+
+  const anexos = (SOLICITACAO.anexos || []);
+  if(anexos.length){
+    $('listaAnexos').innerHTML = anexos.map(a =>
+      '<li><a href="' + esc(a.url) + '" target="_blank" rel="noopener">' +
+      '<span class="tipo">' + esc((a.nome || '').split('.').pop().slice(0,5).toUpperCase() || 'ARQ') + '</span>' +
+      esc(a.nome || 'arquivo') + '</a></li>').join('');
+    $('cartaoAnexos').hidden = false;
+  }
+
+  $('carregando').hidden = true;
+  $('conteudo').hidden = false;
+}
+
+async function abrir(){
+  const id = (PARAMS.get('id') || '').trim();
+  if(!id){
+    falhar('Link incompleto.',
+      'O endereço precisa trazer a solicitação e o seu token: reprovar-compra.html?id=…&t=…');
+    return;
+  }
+  if(!TOKEN){
+    falhar('Este link não tem a sua identificação.',
+      'Abra pelo link que chegou na sua DM do Slack — é ele que diz ao sistema quem está decidindo.');
+    return;
+  }
+  try{
+    const r = await apiRpc('abrir_pedido', { p_id: id, p_numero: null });
+    if(!r || r.ok !== true){
+      falhar('Solicitação não encontrada.',
+        'Confira o link. Se o pedido foi aberto agora, aguarde alguns segundos e recarregue.');
+      return;
+    }
+    SOLICITACAO = r.pedido;
+    SOLICITACAO.anexos = r.anexos || [];
+    CENTRO_NOME = SOLICITACAO.centro_custo_nome || await nomeDoCentro(SOLICITACAO.centro_custo);
+    desenhar(SOLICITACAO, r.itens || []);
+    await conferirPermissao();
+  }catch(e){
+    falhar('Não consegui ler o pedido no banco.', String(e.message).slice(0,220));
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   QUEM PODE REPROVAR? O BANCO RESPONDE.
+   A mesma função que autoriza o aprovador. Ela confere o token, o card, a etapa
+   e se o pedido ainda está aberto. `so_reprova` é o sim que esta tela espera —
+   sem ele, não há botão, mesmo que o token seja válido para outra coisa.
+   -------------------------------------------------------------------------- */
+async function conferirPermissao(){
+  let r = null;
+  try{
+    r = await apiRpc('decisao_permitida', {
+      p_token:          TOKEN,
+      p_solicitacao_id: SOLICITACAO.id,
+      p_card_id:        SOLICITACAO.card_id || '',
+      p_etapa:          'cotacao',
+      p_fluxo:          'padrao'
+    });
+  }catch(e){
+    mostrarBarra('Não consegui conferir quem está decidindo.',
+      'A rede falhou. Recarregue a página em um minuto.', 'nao-ok', false);
+    return;
+  }
+
+  if(r && r.ok === true && r.so_reprova === true){
+    PODE = r;
+    mostrarBarra('Esta compra deve seguir?',
+      'Se não deve — falta item, pedido errado, já tem em estoque — reprove com o motivo. ' +
+      'Quem pediu recebe o aviso e o card vai para reprovado sozinho.', '', true);
+    return;
+  }
+
+  /* Sem permissão: dizer POR QUE. "Você não pode" sem motivo faz a pessoa
+     tentar de novo no mesmo link e achar que a tela está quebrada. */
+  mostrarBarra('Você não pode reprovar esta compra.',
+    (r && r.mensagem) || 'Ela pode já ter sido decidida, ou estar em outra etapa.',
+    'nao-ok', false);
+}
+
+function mostrarBarra(titulo, sub, classe, comBotao, girando){
+  $('barraAprova').className = 'barra-aprova ' + (classe || '');
+  $('textoBarra').innerHTML = (girando ? '<span class="girando" aria-hidden="true"></span>' : '') +
+    '<b>' + esc(titulo) + '</b>' + esc(sub || '');
+  $('btnReprovar').hidden = !comBotao;
+  $('barraAprova').hidden = false;
+}
+
+/* ----------------------------------------------------------------------------
+   A DECISÃO
+   POST, não link: o token e o motivo não podem viajar em query string — ficam
+   em log, em histórico e no Referer. Mesma porta que a tela do aprovador usa.
+   -------------------------------------------------------------------------- */
+async function reprovar(motivo){
+  if(decidindo || !PODE) return;
+  decidindo = true;
+  $('btnReprovar').disabled = true;
+  mostrarBarra('Reprovando a compra…',
+    'Movendo o card e avisando quem pediu.', '', false, true);
+  try{
+    const r = await fetch(ENDPOINT_DECISAO, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({
+        token:          TOKEN,
+        solicitacao_id: SOLICITACAO.id,
+        card_id:        PODE.card_id || SOLICITACAO.card_id || '',
+        etapa:          'cotacao',
+        numero:         PODE.numero || SOLICITACAO.numero || '',
+        decisao:        'reprovado',
+        motivo:         motivo || ''
+      })
+    });
+    const j = await r.json().catch(()=>({}));
+    if(r.ok && j.ok){
+      PODE = null;
+      mostrarBarra('Compra reprovada.',
+        'Quem abriu o pedido já recebeu o aviso com o seu motivo, e o card foi para reprovado.',
+        'nao-ok', false);
+    } else {
+      mostrarBarra('Não consegui registrar a reprovação.',
+        (j.mensagem || 'Tente de novo, ou abra o card no ClickUp.'), 'nao-ok', true, false);
+      $('btnReprovar').disabled = false;
+    }
+  }catch(e){
+    mostrarBarra('Não consegui registrar a reprovação.',
+      'A rede falhou no meio. Tente de novo.', 'nao-ok', true, false);
+    $('btnReprovar').disabled = false;
+  }
+  decidindo = false;
+}
+
+function abrirCaixa(){
+  $('subModal').textContent = 'Solicitação ' + ((PODE && PODE.numero) || '');
+  $('motivoReprova').value = '';
+  $('erroMotivo').hidden = true;
+  $('fundoModal').hidden = false;
+  $('motivoReprova').focus();
+}
+function fecharCaixa(){ $('fundoModal').hidden = true; }
+
+$('btnReprovar').addEventListener('click', abrirCaixa);
+$('btnCancelar').addEventListener('click', fecharCaixa);
+$('btnConfirmarReprova').addEventListener('click', async ()=>{
+  const motivo = $('motivoReprova').value.trim();
+  if(motivo.length < MOTIVO_MINIMO){
+    $('erroMotivo').textContent =
+      'Escreva o motivo — é o que a pessoa que pediu vai ler para entender a recusa.';
+    $('erroMotivo').hidden = false;
+    $('motivoReprova').focus();
+    return;
+  }
+  fecharCaixa();
+  await reprovar(motivo);
+});
+$('fundoModal').addEventListener('click', e=>{ if(e.target === $('fundoModal')) fecharCaixa(); });
+document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && !$('fundoModal').hidden) fecharCaixa(); });
+
+abrir();
+</script>
+
+</body>
+</html>
