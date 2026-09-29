@@ -2109,3 +2109,193 @@ begin
   if length(d) = n or position('razao_social' in d) = 0 then raise exception '_telas_resumo_mapa: troca não bateu'; end if;
   execute d;
 end $$;
+
+-- 29/09 · telas_13 · Fila compartilhada do financeiro (Guilherme). Wienfried,
+-- Elisângela e Isabela aprovam no financeiro pela MESMA fila: os três veem os
+-- mesmos pedidos, basta UM decidir, e fica registrado quem decidiu (decisoes,
+-- linha do tempo, histórico). Só no caminho das telas: pedido do ClickUp que
+-- chegar ao financeiro até sexta continua só com o Wienfried.
+-- O grupo é explícito (aprovadores.fila_compartilhada), não "quem tem a etapa
+-- financeiro": aprovador de teste com etapa financeiro não entra na fila deles.
+alter table public.aprovadores add column if not exists fila_compartilhada text;
+
+update public.aprovadores set fila_compartilhada = 'financeiro' where id = 'wienfried';
+insert into public.aprovadores (id, token, nome, email, slack_user_id, etapas, ativo, atualizado_em, fila_compartilhada) values
+  ('elisangela', 'ap-' || md5(random()::text || clock_timestamp()::text), 'ELISANGELA G. B. KLOSTER', 'elisangela@leh.com.br', 'U0C23S63US1', array['financeiro'], true, now(), 'financeiro'),
+  ('isabela',    'ap-' || md5(random()::text || clock_timestamp()::text), 'ISABELA CANESIN',           'isabela@leh.com.br',    'U0C33002A2C', array['financeiro'], true, now(), 'financeiro')
+on conflict (id) do update set fila_compartilhada = excluded.fila_compartilhada, etapas = excluded.etapas, ativo = true;
+
+-- p_quem pode decidir/ver o que está com p_atual? Ele mesmo, ou alguém da mesma fila compartilhada (só telas).
+create or replace function public._na_fila_de(p_quem text, p_atual text, p_canal text)
+returns boolean language sql stable security definer set search_path = public as $$
+  select coalesce(p_quem = p_atual, false)
+      or (p_canal = 'telas' and exists (
+            select 1 from aprovadores x join aprovadores y on y.fila_compartilhada = x.fila_compartilhada
+             where x.id = p_quem and y.id = p_atual and x.ativo and x.fila_compartilhada is not null));
+$$;
+-- Nome de quem segura o pedido; na fila compartilhada, os nomes do grupo.
+create or replace function public._nome_na_etapa(p_atual text, p_canal text)
+returns text language sql stable security definer set search_path = public as $$
+  select case when p_canal = 'telas' and a.fila_compartilhada is not null then
+           'Financeiro (' || (select string_agg(initcap(split_part(g.nome, ' ', 1)), ', ' order by g.id = p_atual desc, g.nome)
+                                from aprovadores g where g.ativo and g.fila_compartilhada = a.fila_compartilhada) || ')'
+         else a.nome end
+    from aprovadores a where a.id = p_atual;
+$$;
+-- Quem recebe os avisos de "chegou para você": o aprovador ou todo o grupo.
+create or replace function public._para_aprovador(p_atual text, p_canal text)
+returns jsonb language sql stable security definer set search_path = public as $$
+  select coalesce((select jsonb_agg(jsonb_build_object('papel', 'aprovador', 'id', g.id) order by g.id)
+                     from aprovadores a join aprovadores g on g.fila_compartilhada = a.fila_compartilhada and g.ativo
+                    where a.id = p_atual and p_canal = 'telas' and a.fila_compartilhada is not null),
+                  jsonb_build_array(jsonb_build_object('papel', 'aprovador', 'id', p_atual)));
+$$;
+revoke all on function public._na_fila_de(text, text, text), public._nome_na_etapa(text, text), public._para_aprovador(text, text) from public, anon, authenticated;
+
+do $$
+declare d text; n int;
+  procedure_troca text;
+begin
+  -- fila antiga (a que a tela lê primeiro)
+  d := pg_get_functiondef('public.fila_de_aprovacao(text)'::regprocedure); n := length(d);
+  d := replace(d, $a$     and s.aprovador_atual = a.id$a$, $b$     and public._na_fila_de(a.id, s.aprovador_atual, s.canal)$b$);
+  if length(d) = n then raise exception 'fila_de_aprovacao'; end if; execute d;
+
+  -- lista 4x ao dia
+  d := pg_get_functiondef('public.filas_pendentes(text[])'::regprocedure); n := length(d);
+  d := replace(d, $a$        on s.aprovador_atual = a.id$a$, $b$        on public._na_fila_de(a.id, s.aprovador_atual, s.canal)$b$);
+  if length(d) = n then raise exception 'filas_pendentes'; end if; execute d;
+
+  -- fila das telas + com quem ela é compartilhada
+  d := pg_get_functiondef('public.fila_do_aprovador(text)'::regprocedure); n := length(d);
+  d := replace(d, $a$    where s.aprovador_atual = a.id and s.etapa_atual = any(a.etapas)$a$,
+                  $b$    where public._na_fila_de(a.id, s.aprovador_atual, s.canal) and s.etapa_atual = any(a.etapas)$b$);
+  d := replace(d, $a$  return jsonb_build_object('ok', true, 'aprovador', a.nome, 'etapas', to_jsonb(a.etapas),$a$,
+                  $b$  return jsonb_build_object('ok', true, 'aprovador', a.nome, 'etapas', to_jsonb(a.etapas),
+                            'fila_compartilhada', a.fila_compartilhada,
+                            'compartilhada_com', (select coalesce(jsonb_agg(g.nome order by g.nome), '[]'::jsonb) from aprovadores g
+                                                   where a.fila_compartilhada is not null and g.fila_compartilhada = a.fila_compartilhada
+                                                     and g.ativo and g.id <> a.id),$b$);
+  if length(d) - n < 200 then raise exception 'fila_do_aprovador'; end if; execute d;
+
+  -- decidir: qualquer um da fila; registra quem decidiu (a.id, a.nome — já era assim)
+  d := pg_get_functiondef('public.decidir_pedido(text,uuid,integer,text,text)'::regprocedure); n := length(d);
+  d := replace(d, $a$    if s.aprovador_atual is distinct from a.id or not (s.etapa_atual = any(a.etapas)) then$a$,
+                  $b$    if not public._na_fila_de(a.id, s.aprovador_atual, s.canal) or not (s.etapa_atual = any(a.etapas)) then$b$);
+  d := replace(d, $a$      v_para := jsonb_build_array(jsonb_build_object('papel', 'aprovador', 'id', prox_a.id),
+                                  jsonb_build_object('papel', 'facilitador', 'id', f.id));$a$,
+                  $b$      v_para := public._para_aprovador(prox_a.id, s.canal) || jsonb_build_array(jsonb_build_object('papel', 'facilitador', 'id', f.id));$b$);
+  d := replace(d, $a$      'com_quem', prox_a.nome,$a$, $b$      'com_quem', public._nome_na_etapa(prox_a.id, s.canal),$b$);
+  d := replace(d, $a$else 'Aprovado. O pedido segue para ' || prox_a.nome || '.' end);$a$,
+                  $b$else 'Aprovado. O pedido segue para ' || public._nome_na_etapa(prox_a.id, s.canal) || '.' end);$b$);
+  if (select count(*) from regexp_matches(d, '_na_fila_de|_para_aprovador|_nome_na_etapa', 'g')) <> 4 then raise exception 'decidir_pedido'; end if;
+  execute d;
+
+  -- envio da cotação: avisa o grupo e diz "Financeiro (…)"
+  d := pg_get_functiondef('public.enviar_mapa(text,uuid,integer,text)'::regprocedure); n := length(d);
+  d := replace(d, $a$      jsonb_build_array(jsonb_build_object('papel', 'aprovador', 'id', a.id),
+                        jsonb_build_object('papel', 'facilitador', 'id', f.id)));$a$,
+                  $b$      public._para_aprovador(a.id, s.canal) || jsonb_build_array(jsonb_build_object('papel', 'facilitador', 'id', f.id)));$b$);
+  d := replace(d, $a$'com_quem', a.nome,$a$, $b$'com_quem', public._nome_na_etapa(a.id, s.canal),$b$);
+  d := replace(d, $a$else 'a aprovação financeira' end || ' (' || a.nome || ').');$a$,
+                  $b$else 'a aprovação financeira' end || ' (' || public._nome_na_etapa(a.id, s.canal) || ').');$b$);
+  if (select count(*) from regexp_matches(d, '_para_aprovador|_nome_na_etapa', 'g')) <> 3 then raise exception 'enviar_mapa'; end if;
+  execute d;
+
+  -- ver o pedido e os botões
+  d := pg_get_functiondef('public.pedido_telas(text,uuid)'::regprocedure); n := length(d);
+  d := replace(d, $a$                            or s.aprovador_atual = v_quem$a$,
+                  $b$                            or public._na_fila_de(v_quem, s.aprovador_atual, s.canal)
+                            or public._na_fila_de(v_quem, f.financeiro_id, s.canal)$b$);
+  d := replace(d, $a$'decidir',  (v_tipo = 'aprovador' and s.canal = 'telas' and s.aprovador_atual = v_quem$a$,
+                  $b$'decidir',  (v_tipo = 'aprovador' and s.canal = 'telas' and public._na_fila_de(v_quem, s.aprovador_atual, s.canal)$b$);
+  d := replace(d, $a$'devolver', (v_tipo = 'aprovador' and s.canal = 'telas' and s.aprovador_atual = v_quem$a$,
+                  $b$'devolver', (v_tipo = 'aprovador' and s.canal = 'telas' and public._na_fila_de(v_quem, s.aprovador_atual, s.canal)$b$);
+  d := replace(d, $a$then (select nome from aprovadores where id = s.aprovador_atual)$a$,
+                  $b$then public._nome_na_etapa(s.aprovador_atual, s.canal)$b$);
+  if (select count(*) from regexp_matches(d, '_na_fila_de|_nome_na_etapa', 'g')) <> 5 then raise exception 'pedido_telas'; end if;
+  execute d;
+
+  -- "com quem está" nas outras telas
+  d := pg_get_functiondef('public.meus_pedidos(text,integer)'::regprocedure); n := length(d);
+  d := replace(d, $a$'com_quem', case when s.etapa_atual in ('lider','gerencial','financeiro') then ap.nome$a$,
+                  $b$'com_quem', case when s.etapa_atual in ('lider','gerencial','financeiro') then public._nome_na_etapa(s.aprovador_atual, s.canal)$b$);
+  if length(d) = n then raise exception 'meus_pedidos'; end if; execute d;
+
+  d := pg_get_functiondef('public.fila_do_comprador(text)'::regprocedure); n := length(d);
+  d := replace(d, $a$'com_quem', ap.nome,$a$, $b$'com_quem', public._nome_na_etapa(s.aprovador_atual, s.canal),$b$);
+  if length(d) = n then raise exception 'fila_do_comprador'; end if; execute d;
+
+  d := pg_get_functiondef('public.painel_diretoria(text)'::regprocedure); n := length(d);
+  d := replace(d, $a$'aprovador_atual_nome', ap.nome,$a$, $b$'aprovador_atual_nome', public._nome_na_etapa(s.aprovador_atual, s.canal),$b$);
+  if length(d) = n then raise exception 'painel_diretoria'; end if; execute d;
+
+  -- /compras aprovação: quantos esperam esta pessoa (inclui a fila compartilhada)
+  d := pg_get_functiondef('public.aprovador_do_slack(text)'::regprocedure); n := length(d);
+  d := replace(d, $a$   where aprovador_atual = a.id$a$, $b$   where public._na_fila_de(a.id, aprovador_atual, canal)$b$);
+  if length(d) = n then raise exception 'aprovador_do_slack'; end if; execute d;
+end $$;
+
+-- Histórico: na fila compartilhada, cada um vê também o que os outros decidiram
+-- no financeiro, com o nome de quem decidiu (coluna nova no fim: decidido_por).
+drop function if exists public.historico_de_aprovacoes(text, integer);
+create function public.historico_de_aprovacoes(p_token text, p_limite integer DEFAULT 60)
+ RETURNS TABLE(id uuid, numero text, etapa text, resposta text, motivo text, decidido_em timestamp with time zone,
+               aberto_em timestamp with time zone, facilitador text, centro_custo_nome text, situacao text, decidido_por text, fui_eu boolean)
+ LANGUAGE sql SECURITY DEFINER SET search_path TO 'public'
+AS $function$
+  select d.solicitacao_id, d.numero, d.etapa, d.resposta, d.motivo, d.decidido_em,
+         s.aberto_em, s.facilitador, cc.nome,
+         case
+           when s.status = 'reprovado'       then 'reprovado'
+           when s.status = 'aprovado'        then 'aprovado · liberado para compra'
+           when s.status = 'cancelado'       then 'cancelado'
+           when s.etapa_atual = 'cotacao'    then 'em cotação'
+           when s.etapa_atual = 'gerencial'  then 'aguardando o gerente'
+           when s.etapa_atual = 'financeiro' then 'aguardando o financeiro'
+           when s.etapa_atual = 'lider'      then 'aguardando a liderança'
+           else coalesce(s.status, '—')
+         end,
+         coalesce(d.decidido_por, (select nome from public.aprovadores x where x.id = d.aprovador_id)),
+         d.aprovador_id = a.id
+    from public.aprovadores a
+    join public.decisoes d
+      on d.aprovador_id = a.id
+      or (d.etapa = 'financeiro' and a.fila_compartilhada is not null
+          and exists (select 1 from public.aprovadores o where o.id = d.aprovador_id and o.fila_compartilhada = a.fila_compartilhada)
+          and exists (select 1 from public.solicitacoes s2 where s2.id = d.solicitacao_id and s2.canal = 'telas'))
+    join public.solicitacoes s on s.id = d.solicitacao_id
+    left join public.centros_custo cc on cc.codigo = s.centro_custo
+   where a.token = p_token and a.ativo
+   order by d.decidido_em desc
+   limit greatest(1, least(coalesce(p_limite, 60), 200));
+$function$;
+grant execute on function public.historico_de_aprovacoes(text, integer) to anon, authenticated;
+
+-- 29/09 · telas_14 · Fila compartilhada: quem chega depois fica sabendo quem já
+-- decidiu. Se Isabela aprova e o Wienfried clica em seguida (tela aberta de
+-- antes), a mensagem diz "Isabela já aprovou este pedido às 10:42", em vez de
+-- "não está esperando a sua decisão".
+do $$
+declare d text; n int;
+begin
+  d := pg_get_functiondef('public.decidir_pedido(text,uuid,integer,text,text)'::regprocedure); n := length(d);
+  d := replace(d, $a$v_motivo text;
+begin$a$, $b$v_motivo text; v_ja record;
+begin$b$);
+  d := replace(d, $a$    if s.etapa_atual = 'edicao' then$a$,
+                  $b$    if a.fila_compartilhada is not null and s.etapa_atual is distinct from 'financeiro' then
+      select m.quem_nome, m.acao, m.em into v_ja from movimentos_compra m
+       where m.solicitacao_id = s.id and m.etapa = 'financeiro' and m.quem_tipo = 'aprovador' and m.quem_id <> a.id
+         and exists (select 1 from aprovadores o where o.id = m.quem_id and o.fila_compartilhada = a.fila_compartilhada)
+       order by m.em desc limit 1;
+      if v_ja.quem_nome is not null then
+        perform _telas_erro('ja_decidido_pelo_grupo', initcap(split_part(v_ja.quem_nome, ' ', 1)) || ' já ' ||
+          case v_ja.acao when 'aprovado' then 'aprovou' when 'reprovado' then 'reprovou' when 'devolvido' then 'devolveu ao comprador' else 'decidiu' end ||
+          ' este pedido às ' || to_char(v_ja.em at time zone 'America/Sao_Paulo', 'HH24:MI') || '.');
+      end if;
+    end if;
+    if s.etapa_atual = 'edicao' then$b$);
+  if (select count(*) from regexp_matches(d, 'ja_decidido_pelo_grupo|v_ja record', 'g')) <> 2 then raise exception 'decidir_pedido telas_14'; end if;
+  execute d;
+end $$;

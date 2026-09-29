@@ -248,6 +248,42 @@ for(const w of [1366, 1440, 1920]){
   ok('9 fornecedor único continua', await linha(p,'C2609-02001').locator('.selo-unico').count() === 1, 'sumiu');
   await p.close(); }
 
+/* Fila compartilhada do financeiro (29/09): aviso na fila e quem decidiu no histórico */
+async function telaFin(b, {grupo, hist}){
+  const p = await b.newPage();
+  await p.route('**/rest/v1/rpc/**', r => {
+    const nome = r.request().url().split('/rpc/')[1].split('?')[0];
+    const j = x => r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(x)});
+    if(nome === 'aprovador_do_token') return j([{id:'isabela', nome:'ISABELA CANESIN', etapas:['financeiro']}]);
+    if(nome === 'fila_de_aprovacao') return j([FILA()[0]]);
+    if(nome === 'fila_do_aprovador') return j({ ok:true, pedidos:[{id:'t1', canal:'telas', versao:7, pode_devolver:true}], em_edicao:[],
+      fila_compartilhada: grupo ? 'financeiro' : null, compartilhada_com: grupo ? ['ELISANGELA G. B. KLOSTER','WIENFRIED MATTHIAS LEH'] : [] });
+    if(nome === 'historico_de_aprovacoes') return j(hist);
+    return j([]);
+  });
+  await p.goto(base + '?t=ap-teste', {waitUntil:'load'}); await p.waitForTimeout(600);
+  return p;
+}
+const H = (numero, fui_eu, por, resposta='aprovado') => ({ id:'h-'+numero, numero, etapa:'financeiro', resposta, motivo: resposta==='aprovado'?null:'x',
+  decidido_em:hoje, aberto_em:hoje, facilitador:'Ana', centro_custo_nome:'FABRICA', situacao:'aprovado · liberado para compra', decidido_por:por, fui_eu });
+{ const p = await telaFin(b, { grupo:true, hist:[H('C2609-03001', false, 'WIENFRIED MATTHIAS LEH'), H('C2609-03002', true, 'ISABELA CANESIN'), H('C2609-03003', false, 'ELISANGELA G. B. KLOSTER', 'devolvido')] });
+  ok('10 aviso de fila compartilhada', await p.locator('#filaGrupo').isVisible() && /Elisangela e Wienfried também veem/.test(await p.textContent('#filaGrupo')), await p.textContent('#filaGrupo'));
+  await p.click('#abaHist'); await p.waitForTimeout(500);
+  ok('10 coluna vira "Decisão"', (await p.textContent('#thDecisao')).trim() === 'Decisão', await p.textContent('#thDecisao'));
+  const l1 = await p.locator('#corpoHist tr', {hasText:'03001'}).textContent();
+  const l2 = await p.locator('#corpoHist tr', {hasText:'03002'}).textContent();
+  const l3 = await p.locator('#corpoHist tr', {hasText:'03003'}).textContent();
+  ok('10 decisão de outra pessoa mostra o nome', /Aprovada\s*por WIENFRIED MATTHIAS LEH/.test(l1), l1);
+  ok('10 a própria diz "por você"', /por você/.test(l2), l2);
+  ok('10 devolução aparece como Devolvida', /Devolvida\s*por ELISANGELA/.test(l3), l3);
+  await p.close(); }
+{ const p = await telaFin(b, { grupo:false, hist:[H('C2609-03001', true, 'ISABELA CANESIN')] });
+  ok('11 fora da fila compartilhada, sem aviso', !(await p.locator('#filaGrupo').isVisible()));
+  await p.click('#abaHist'); await p.waitForTimeout(500);
+  ok('11 coluna continua "Sua decisão", sem "por"', (await p.textContent('#thDecisao')).trim() === 'Sua decisão' &&
+     !/por /.test(await p.locator('#corpoHist tr').first().textContent()));
+  await p.close(); }
+
 await b.close();
 console.log('\n===== FALHAS (' + falhas.length + ') =====');
 falhas.forEach(f=>console.log(' ✗ ' + f));

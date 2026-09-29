@@ -309,6 +309,9 @@
   /* Devolver ao comprador: só no caminho das telas (sem ClickUp), e só onde a
      regra deixa (gerencial e financeiro no normal/urgente; financeiro no mensal). */
   .btn-linha.dev{background:var(--demo-bg);border-color:var(--demo-borda);color:var(--demo)}
+  .fila-grupo{margin:0 0 14px;padding:10px 14px;border-radius:8px;background:var(--verde-claro);color:var(--verde-mata);font-size:13.5px;line-height:1.5}
+  .hist-quem{display:block;margin-top:3px;font-size:12px;color:var(--muted)}
+  .hist-quem.outro{color:var(--texto);font-weight:600}
   .em-edicao{margin:14px 0 0;padding:12px 16px;border:1px dashed var(--demo-borda);border-radius:var(--raio);
              background:var(--demo-bg);color:var(--demo);font-size:14px;line-height:1.5}
   .em-edicao ul{margin:6px 0;padding-left:18px}
@@ -485,6 +488,8 @@
     </div>
 
     <div id="painelFila">
+    <!-- Fila compartilhada (29/09): financeiro com Wienfried, Elisângela e Isabela. -->
+    <div class="fila-grupo" id="filaGrupo" hidden></div>
     <div class="barra-fila">
       <div class="esq">
         <input type="search" class="filtro-fila" id="filtro"
@@ -550,7 +555,7 @@
               <th>Quem pediu</th>
               <th>Centro de custo</th>
               <th>Etapa</th>
-              <th>Sua decisão</th>
+              <th id="thDecisao">Sua decisão</th>
               <th>Onde está hoje</th>
               <th>Aberta em</th>
               <th>Decidida em</th>
@@ -703,6 +708,8 @@ async function carregarFila(){
              s.editado = x.editado === true; if(x.urgente === true) s.tipo_compra = 'urgente'; }
     });
     EM_EDICAO = Array.isArray(extra.em_edicao) ? extra.em_edicao : [];
+    GRUPO = Array.isArray(extra.compartilhada_com) && extra.compartilhada_com.length ? extra.compartilhada_com : null;
+    desenharGrupo();
   }
   return fila;
 }
@@ -712,6 +719,19 @@ const horaBR = iso => {
   const d = new Date(iso);
   return isNaN(d) ? '—' : d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
 };
+
+/* Fila compartilhada: quem mais vê estes pedidos. Basta um decidir, e fica o nome. */
+let GRUPO = null;
+const primeiroNome = n => { const p = String(n || '').trim().split(/\s+/)[0] || ''; return p.charAt(0) + p.slice(1).toLowerCase(); };
+function desenharGrupo(){
+  const el = $('filaGrupo');
+  if(!GRUPO){ el.hidden = true; return; }
+  const nomes = GRUPO.map(primeiroNome);
+  const lista = nomes.length > 1 ? nomes.slice(0, -1).join(', ') + ' e ' + nomes[nomes.length - 1] : nomes[0];
+  el.innerHTML = '<b>Fila compartilhada do financeiro.</b> ' + esc(lista) + (nomes.length > 1 ? ' também veem' : ' também vê') +
+    ' estes pedidos. Basta uma pessoa decidir: o pedido sai da fila de todos e fica registrado quem decidiu (veja em Histórico).';
+  el.hidden = false;
+}
 
 function desenharEdicao(){
   const lista = Array.isArray(EM_EDICAO) ? EM_EDICAO : [];
@@ -1111,10 +1131,15 @@ function desenharHist(){
   $('histRolagem').hidden = vazio;
   $('histVazio').hidden   = !vazio;
   if(vazio) return;
+  $('thDecisao').textContent = (GRUPO || HIST.some(h => h.fui_eu === false)) ? 'Decisão' : 'Sua decisão';
 
   HIST.forEach(h=>{
     const tr = document.createElement('tr');
     const aprovou = h.resposta === 'aprovado';
+    const rotulo = aprovou ? 'Aprovada' : h.resposta === 'devolvido' ? 'Devolvida' : 'Reprovada';
+    /* Fila compartilhada: diz quem decidiu (o próprio ou outra pessoa do financeiro). */
+    const quem = h.fui_eu === false ? '<span class="hist-quem outro">por ' + esc(h.decidido_por || '—') + '</span>'
+               : (GRUPO ? '<span class="hist-quem">por você</span>' : '');
     const link = 'pedido.html?id=' + encodeURIComponent(h.id) +
                  '&t=' + encodeURIComponent(TOKEN) + '&e=' + encodeURIComponent(h.etapa || '');
 
@@ -1125,7 +1150,7 @@ function desenharHist(){
       '<td><span class="etapa ' + esc(h.etapa || '') + '">' +
         esc(ETAPA_NOME[h.etapa] || h.etapa || '—') + '</span></td>' +
       '<td><span class="selo-res ' + (aprovou ? 'sim' : 'nao') + '">' +
-        (aprovou ? 'Aprovada' : 'Reprovada') + '</span>' +
+        rotulo + '</span>' + quem +
         (h.motivo ? '<div class="hist-motivo" title="' + esc(h.motivo) + '">' + esc(h.motivo) + '</div>' : '') +
       '</td>' +
       '<td><span class="corta">' + esc(h.situacao || '—') + '</span></td>' +
