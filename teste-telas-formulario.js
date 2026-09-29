@@ -49,6 +49,10 @@ async function abrir(b, qs, {eu=EU, ped=()=>({ok:true, pedido:PEDIDO(), itens:IT
       if(nome === 'salvar_edicao') return j({ok:true, versao:3, mudou:{itens:{}}, mensagem:'Alterações salvas. O pedido voltou para a liderança, que foi avisada.'});
       if(nome === 'desistir_edicao') return j({ok:true, versao:3, mensagem:'Nada foi alterado. O pedido voltou para a liderança. A edição deste pedido já foi usada.'});
       if(nome === 'criar_solicitacao') return j(mock.respostaCriarSolicitacao({id:'velho-1', numero:'C2609-00999'}));
+      /* Caminho do ClickUp: quem abre tem que estar na lista de facilitadores
+         (trava ligada em 29/09). No caminho das telas quem identifica é o
+         ?t=, por eu_facilitador — por isso só este lado precisa da resposta. */
+      if(nome === 'facilitador_por_slack') return j(mock.FACILITADOR_EXEMPLO);
       return j([]);
     }
     if(u.includes('catalogo_itens')) return j(u.includes('offset=0') ? CATALOGO : []);
@@ -106,10 +110,13 @@ const b = await chromium.launch();
      (await p.textContent('#ajudaEmail .travado-nota')) === 'do cadastro');
   await p.close(); }
 
-/* 2 — sem ?t= continua pelo ClickUp */
-{ const p = await abrir(b, '');
+/* 2 — sem ?t= continua pelo ClickUp.
+   Com ?uid=: no caminho do ClickUp quem identifica é o usuário do Slack, e sem
+   ele a trava do facilitador barra o envio antes de qualquer coisa. Nome e
+   e-mail passam a vir do cadastro (e ficam travados), então não se digita. */
+{ const p = await abrir(b, '?uid=' + mock.UID_EXEMPLO);
   ok('2 não perguntou eu_facilitador', chamou(p,'eu_facilitador').length === 0);
-  await p.fill('#nomeSolicitante','Fulano de Tal'); await p.fill('#emailSolicitante','fulano@leh.com.br');
+  ok('2 identificou pelo Slack', chamou(p,'facilitador_por_slack').length === 1);
   await preencherNovo(p);
   await enviarPagina(p);
   ok('2 criar_solicitacao', chamou(p,'criar_solicitacao').length === 1, JSON.stringify(p.__rpc.map(x=>x.nome)));

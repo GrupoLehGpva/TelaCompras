@@ -83,7 +83,9 @@ async function abrir(b, { aoSubir = null, aoRegistrar = null } = {}){
     return r.fulfill({ status:200, contentType:'application/json', body:'{"ok":true}' });
   });
 
-  await p.goto(formulario, { waitUntil:'load' });
+  /* Com o uid: desde 29/09 o formulário só envia para quem está na lista de
+     facilitadores, e o mock responde que este uid está. */
+  await p.goto(mock.comoFacilitador(formulario), { waitUntil:'load' });
   await p.waitForTimeout(900);
   return p;
 }

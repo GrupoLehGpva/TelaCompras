@@ -233,8 +233,12 @@ const b = await chromium.launch();
   else ok('12 clique duplo não duplica', true);
   await p.close(); }
 
-// 13 — nome vindo da URL não executa script
-{ const p = await nova(b, ARQ + '?nome=%3Cimg%20src%3Dx%20onerror%3Dwindow.__XSS%3D1%3E&uid=U123');
+/* 13 — nome vindo da URL não executa script.
+   Sem `uid` de propósito: com um uid a tela pergunta ao banco quem é a pessoa e
+   o nome do cadastro toma o lugar do que veio na URL — que é o certo, e é o
+   caso 10 do teste-facilitador. Aqui o que está sob teste é o texto hostil
+   sobreviver como TEXTO no campo, e para isso ele precisa continuar lá. */
+{ const p = await nova(b, ARQ + '?nome=%3Cimg%20src%3Dx%20onerror%3Dwindow.__XSS%3D1%3E');
   await p.waitForTimeout(500);
   const xss = await p.evaluate(()=> !!window.__XSS);
   const valor = await p.inputValue('#nomeSolicitante');

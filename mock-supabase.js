@@ -38,7 +38,21 @@ const EMPRESAS_EXEMPLO = [
   { id:'wienfried-pr', nome:'WIENFRIED MATTHIAS LEH - PR' }
 ];
 
-function respostaDoFormulario(url, { catalogo = [], centros = [], facilitador = [], empresas, criada } = {}){
+/* SÓ FACILITADOR ABRE PEDIDO (index.html, 29/09).
+   Quem abre o formulário sem estar na lista é barrado antes do envio — e uma
+   bateria que não se identifica passa a testar a trava sem querer, em vez do
+   que ela queria testar. Por isso o mock responde, por padrão, que quem abriu É
+   facilitador: a bateria que quiser provar a trava passa `facilitador: []` de
+   propósito (é o que teste-facilitador.js faz).
+
+   O uid tem que ir na URL junto: sem ele a tela nem pergunta ao banco. Use
+   `comoFacilitador(url)` para não esquecer. */
+const UID_EXEMPLO = 'U0BL5JPQX97';
+const FACILITADOR_EXEMPLO = [{ slack_user_id: UID_EXEMPLO, nome: 'Guilherme Pimpão',
+                               email: 'ia@leh.com.br', unidade: 'Escritório Central' }];
+const comoFacilitador = url => url + (url.includes('?') ? '&' : '?') + 'uid=' + UID_EXEMPLO;
+
+function respostaDoFormulario(url, { catalogo = [], centros = [], facilitador = FACILITADOR_EXEMPLO, empresas, criada } = {}){
   if(url.includes('/rpc/criar_solicitacao'))    return criada || respostaCriarSolicitacao();
   if(url.includes('empresas'))                  return empresas || EMPRESAS_EXEMPLO;
   if(url.includes('/rpc/facilitador_por_slack'))return facilitador;
@@ -243,5 +257,5 @@ function bancoDoCadastro({ catalogo = [], logins = { 'compras': { nome:'Compras 
 }
 
 module.exports = {
-  respostaComprador, instalar, bancoDoCadastro, respostaAbrirPedido, respostaDecisao, corpoPorUrl,
+  respostaComprador, FACILITADOR_EXEMPLO, UID_EXEMPLO, comoFacilitador, instalar, bancoDoCadastro, respostaAbrirPedido, respostaDecisao, corpoPorUrl,
                    respostaCriarSolicitacao, respostaDoFormulario, EMPRESAS_EXEMPLO };

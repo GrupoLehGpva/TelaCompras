@@ -671,8 +671,17 @@ const CONECTADO = SUPABASE_KEY.trim().length > 20;
 /* Só facilitador abre pedido. Com isto em true, quem não estiver na tabela
    `facilitadores` não consegue enviar — nem quem abrir a tela sem passar pelo
    /compras, porque aí não há usuário do Slack para conferir.
-   Fica false até a lista estar carregada; ligar antes tranca todo mundo. */
-const EXIGIR_FACILITADOR = false;
+
+   Ficou false enquanto a lista não existia: ligar antes trancaria todo mundo.
+   Ligou em 29/09, depois de dois pedidos abertos por quem não está na lista
+   (C2609-00017 e C2609-00021). Os dois nasceram sem liderança para aprovar e
+   ficaram parados, invisíveis, sem ninguém saber. Quem abre é o facilitador da
+   área — ou quem o substitui na ausência dele, que na tabela de hoje já é
+   facilitador por conta própria.
+
+   Esta é a porta da frente. A de trás — link antigo, aba velha, chamada direta
+   ao endpoint — é fechada por `criar_solicitacao`, que recusa antes de gravar. */
+const EXIGIR_FACILITADOR = true;
 
 /* ============================================================================
    1) DADOS FIXOS
@@ -1140,6 +1149,9 @@ async function carregarCatalogo(){
    -------------------------------------------------------------------------- */
 let FACILITADOR = null;      // a linha da tabela, quando encontrada
 let FACILITADOR_BUSCADO = false;
+/* "Não consegui conferir" e "você não está na lista" são coisas diferentes, e
+   dizer uma pela outra manda a pessoa procurar um cadastro que ela já tem. */
+let CONSULTA_FALHOU = false;
 
 async function carregarFacilitador(uid){
   if(!CONECTADO || !uid) return;
@@ -1150,9 +1162,11 @@ async function carregarFacilitador(uid){
     const r = await apiRpc('facilitador_por_slack', { p_uid: uid });
     FACILITADOR = r.length ? r[0] : null;
   }catch(e){
-    /* Tabela ainda não existe, ou banco fora do ar. Não é motivo para travar a
-       tela: cai no que veio pelo link do Slack. */
+    /* Tabela fora do ar. Com a trava ligada isto BARRA: um controle que libera
+       quando não consegue conferir não é controle nenhum. Mas a pessoa precisa
+       ouvir o motivo certo — "tente de novo", não "você não está na lista". */
     FACILITADOR = null;
+    CONSULTA_FALHOU = true;
   }
   FACILITADOR_BUSCADO = true;
   aplicarFacilitador();
@@ -1176,12 +1190,23 @@ function aplicarFacilitador(){
     return;
   }
   if(EXIGIR_FACILITADOR && FACILITADOR_BUSCADO){
+    if(CONSULTA_FALHOU){
+      $('veioDoSlack').textContent =
+        'Não consegui conferir a lista de facilitadores agora. Recarregue esta página em um ' +
+        'minuto; se continuar assim, avise o setor de compras.';
+      $('veioDoSlack').hidden = false;
+      mostrarAlerta('<b>Não consegui conferir quem está abrindo o pedido.</b> ' +
+        'Nada foi perdido — recarregue a página e tente de novo.');
+      return;
+    }
     $('veioDoSlack').textContent =
       'Este acesso não está na lista de facilitadores de compras, então não dá para abrir pedido por aqui. ' +
+      'Quem abre é o facilitador da sua área — ou quem responde por ele na ausência dele. ' +
       'Abra a tela pelo comando /compras no Slack, ou fale com o setor de compras para ser incluído.';
     $('veioDoSlack').hidden = false;
     mostrarAlerta('<b>Só facilitador de compras abre pedido.</b> ' +
-      'Se você é facilitador e está vendo isso, o seu usuário do Slack ainda não foi cadastrado.');
+      'Peça ao facilitador da sua área para abrir a solicitação. Se você é facilitador e está ' +
+      'vendo isso, o seu usuário do Slack ainda não foi cadastrado.');
   }
 }
 

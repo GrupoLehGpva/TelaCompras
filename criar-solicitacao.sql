@@ -1,4 +1,12 @@
 -- ============================================================================
+-- ATENÇÃO — A VERSÃO VIVA DESTA FUNÇÃO MORA EM so-facilitador-abre-pedido.sql
+-- desde 29/09/2026, quando `criar_solicitacao` passou a RECUSAR quem não está
+-- na lista de facilitadores. O que está abaixo é a história de como a função
+-- chegou até aqui, e continua valendo como leitura — mas não é o que está no
+-- banco. Ao mexer na função, mexa lá.
+-- ============================================================================
+
+-- ============================================================================
 -- ABRIR UM PEDIDO É UMA OPERAÇÃO, NÃO UM INSERT
 --
 -- O formulário gravava direto na tabela, com `Prefer: return=representation`

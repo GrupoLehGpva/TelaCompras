@@ -79,6 +79,22 @@ ok('4 limpar filtros volta à ordem normal', (await cols())[1] === 'Compras · c
   ok('6 limpar filtros pelo aviso', await q.locator('.card').count() === 3 && await q.$eval('#f-tipo', e => e.value) === '');
   await q.close(); }
 
+/* quadro com tamanho fixo e rolagem própria, mesmo com muitos pedidos (29/09) */
+{ const q = await b.newPage({ viewport: { width: 1600, height: 900 } });
+  const muitos = []; for (let k = 0; k < 60; k++) muitos.push(L('X-' + String(k).padStart(2,'0'), 'normal', 'lider'));
+  await q.route('**/*', r => { const u = r.request().url(); if (u.startsWith('file:')) return r.continue();
+    if (u.includes('/rpc/painel_diretoria')) return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, solicitacoes: muitos }) });
+    return r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }); });
+  await q.goto('file://' + __dirname + '/painel.html?t=pd-teste'); await q.waitForTimeout(900);
+  const m = await q.evaluate(() => { const b = document.querySelector('.board-scroll'); const r = b.getBoundingClientRect();
+    return { h: Math.round(r.height), sh: b.scrollHeight, ov: getComputedStyle(b).overflowY, pagina: document.documentElement.scrollHeight }; });
+  ok('7 quadro com altura fixa e rolagem própria', m.ov === 'auto' && m.h >= 480 && m.h <= 1200 && m.sh > m.h + 100, JSON.stringify(m));
+  ok('7 a página não cresce com os cards', m.pagina < 900 + 700, JSON.stringify(m));
+  await q.$eval('.board-scroll', b => b.scrollTop = 2000); await q.waitForTimeout(200);
+  const topo = await q.evaluate(() => { const b = document.querySelector('.board-scroll').getBoundingClientRect(); const h = document.querySelector('.col-h').getBoundingClientRect(); return h.top - b.top; });
+  ok('7 nome da coluna fica parado no topo ao rolar', topo >= -2 && topo < 40, topo);
+  await q.close(); }
+
 /* celular */
 await p.setViewportSize({ width: 390, height: 800 }); await p.selectOption('#f-tipo', 'mensal'); await p.waitForTimeout(300);
 ok('5 celular sem rolagem lateral da página', await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));

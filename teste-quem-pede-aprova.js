@@ -11,6 +11,7 @@
  * ela ficaria errada no dia em que a do banco mudasse — e ninguém veria.
  */
 const { chromium } = require('playwright');
+const mock = require('./mock-supabase.js');
 const { respostaDoFormulario, respostaCriarSolicitacao } = require('./mock-supabase.js');
 
 const url = 'file://' + __dirname + '/index.html';
@@ -52,7 +53,9 @@ async function enviar(b, resposta){
     await r.fulfill({ status:200, contentType:'application/json', body:'{"ok":true}' });
   });
 
-  await p.goto(url, { waitUntil:'load' });
+  /* Com o uid: desde 29/09 o formulário só envia para quem está na lista de
+     facilitadores, e o mock responde que este uid está. */
+  await p.goto(mock.comoFacilitador(url), { waitUntil:'load' });
   await p.waitForTimeout(900);
   await p.evaluate(() => {
     estado.nomeSolicitante = 'Quem Pede';

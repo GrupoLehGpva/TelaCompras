@@ -228,6 +228,16 @@ td.r,th.r{text-align:right}
 .card .ttl{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 @media (prefers-reduced-motion:no-preference){.card,.kpi{transition:background .12s,border-color .12s}}
 .aviso-vazio{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--ink-2)}
+/* Quadro com tamanho fixo e rolagem própria (29/09): com muitos pedidos a página não
+   cresce sem fim — rola só o quadro, e o nome de cada coluna fica parado no topo. */
+.board-scroll{height:clamp(480px,calc(100vh - 200px),1200px);overflow:auto;border:1px solid var(--line);border-radius:10px;
+  background:var(--surface);padding:10px;margin-bottom:28px;overscroll-behavior:contain}
+.board{min-height:100%;align-items:stretch}
+.col{min-height:100%}
+.col-h,.col-sub{position:sticky;background:var(--surface-2);z-index:2}
+.col-h{top:-10px;padding-top:12px;margin-top:-10px}
+.col-sub{top:22px}
+@media (max-width:600px){ .board-scroll{height:70vh} }
 </style>
 </head><body>
 

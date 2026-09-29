@@ -14,6 +14,7 @@
  *    existe lá.
  */
 const { chromium } = require('playwright');
+const mock = require('./mock-supabase.js');
 const { respostaDoFormulario, respostaCriarSolicitacao, EMPRESAS_EXEMPLO } = require('./mock-supabase.js');
 
 const url = 'file://' + __dirname + '/index.html';
@@ -29,7 +30,9 @@ async function abrir(b, empresas){
   }));
   await p.route('**n8n.cloud/**', r => r.fulfill({
     status:200, contentType:'application/json', body:'{"ok":true}' }));
-  await p.goto(url, { waitUntil:'load' });
+  /* Com o uid: desde 29/09 o formulário só envia para quem está na lista de
+     facilitadores, e o mock responde que este uid está. */
+  await p.goto(mock.comoFacilitador(url), { waitUntil:'load' });
   await p.waitForTimeout(900);
   return p;
 }

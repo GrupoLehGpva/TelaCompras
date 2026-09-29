@@ -4,7 +4,7 @@ const url = 'file://' + __dirname + '/index.html';
 const falhas = [];
 const ok = (n,c,d)=> c ? null : falhas.push(n + ' — ' + d);
 
-async function abrir(b, qs, facilitadores){
+async function abrir(b, qs, facilitadores, arquivo){
   const p = await b.newPage();
   await p.route('**supabase.co/**', r => {
     const u = r.request().url();
@@ -20,22 +20,33 @@ async function abrir(b, qs, facilitadores){
         body:JSON.stringify(require('./mock-supabase.js').EMPRESAS_EXEMPLO)});
     return r.fulfill({status:200,contentType:'application/json',body:'[]'});
   });
-  await p.goto(url + (qs||''), {waitUntil:'load'});
+  await p.goto((arquivo || url) + (qs||''), {waitUntil:'load'});
   await p.waitForTimeout(1300);
   return p;
 }
+const abrirSemTrava = (b, qs, facilitadores) => abrir(b, qs, facilitadores, arquivoSemTrava);
 const FAC = [{slack_user_id:'U0BL5JPQX97', nome:'Guilherme Pimpão',
               email:'IA@Leh.com.BR', unidade:'Escritório Central'}];
-const arquivoComTrava = (()=>{
+/* A trava ligou em 29/09, então o arquivo de verdade JÁ a tem — e é ele que as
+   baterias da trava usam. O que precisa ser fabricado agora é o contrário: uma
+   cópia sem a trava, para os dois casos que descrevem o comportamento antigo.
+   Se um dia alguém desligar a constante, este teste quebra na hora. */
+const arquivoComTrava = url;
+const arquivoSemTrava = (()=>{
   const fs = require('fs');
   const orig = fs.readFileSync(__dirname + '/index.html','utf8');
-  const alterado = orig.replace('const EXIGIR_FACILITADOR = false;','const EXIGIR_FACILITADOR = true;');
-  if(alterado === orig) throw new Error('não achei a constante EXIGIR_FACILITADOR para o teste da trava');
-  fs.writeFileSync('/tmp/index-trava.html', alterado);
-  return 'file:///tmp/index-trava.html';
+  const alterado = orig.replace('const EXIGIR_FACILITADOR = true;','const EXIGIR_FACILITADOR = false;');
+  if(alterado === orig) throw new Error('a trava EXIGIR_FACILITADOR não está ligada no index.html');
+  fs.writeFileSync('/tmp/index-sem-trava.html', alterado);
+  return 'file:///tmp/index-sem-trava.html';
 })();
 async function abrirComTrava(b, qs, facilitadores){
   const p = await b.newPage();
+  /* A prova que vale: o pedido não pode CHEGAR ao n8n. Barrar a tela e deixar o
+     POST sair seria criar o card assim mesmo — o pedido órfão de volta. */
+  p.__n8n = 0;
+  await p.route('**n8n.cloud/**', r => { p.__n8n++;
+    return r.fulfill({status:200,contentType:'application/json',body:'{"ok":true}'}); });
   await p.route('**supabase.co/**', r => {
     const u = r.request().url();
     if(u.includes('facilitador'))
@@ -43,6 +54,18 @@ async function abrirComTrava(b, qs, facilitadores){
     if(u.includes('empresas'))
       return r.fulfill({status:200,contentType:'application/json',
         body:JSON.stringify(require('./mock-supabase.js').EMPRESAS_EXEMPLO)});
+    /* Os centros precisam existir de verdade aqui: sem eles a validação barra o
+       envio por falta de centro de custo, e o teste da trava passaria sem a
+       trava fazer nada. Formulário válido, barrado só por quem o preenche. */
+    if(u.includes('centros_custo'))
+      return r.fulfill({status:200,contentType:'application/json',
+        body:JSON.stringify([{codigo:'3180', nome:'MANUTENCAO', unidade:'AGRICULTURA SUL', tipo:'Produtivo'}])});
+    /* E o banco tem que aceitar a gravação, senão o envio para antes do webhook
+       por um motivo que não é a trava — e o "nada chegou ao n8n" passaria sem
+       provar nada. Aqui o único obstáculo no caminho é quem está pedindo. */
+    if(u.includes('/rpc/criar_solicitacao'))
+      return r.fulfill({status:200,contentType:'application/json',
+        body:JSON.stringify(require('./mock-supabase.js').respostaCriarSolicitacao())});
     return r.fulfill({status:200,contentType:'application/json',body:'[]'});
   });
   await p.goto(arquivoComTrava + (qs||''), {waitUntil:'load'});
@@ -69,8 +92,14 @@ const pacote = p => p.evaluate(()=>montarPacote(null, {
 (async () => {
 const b = await chromium.launch();
 
-// 1 — o link do Slack preenche nome e e-mail
-let p = await abrir(b, '?nome=' + encodeURIComponent('Guilherme Pimpão') +
+/* 1 — o link do Slack preenche nome e e-mail.
+   Roda na cópia SEM a trava de propósito: o que está sob teste é a camada que
+   lê a query string e trava os campos, e ela é o mesmo código nos dois
+   arquivos. Com a trava ligada e um uid fora da lista, o aviso de "você não
+   está na lista" toma o lugar do aviso de origem — e é isso que deve mesmo
+   acontecer, porque é o recado mais importante. O caminho de quem ESTÁ na
+   lista, no arquivo de verdade, é o caso 10. */
+let p = await abrirSemTrava(b, '?nome=' + encodeURIComponent('Guilherme Pimpão') +
   '&email=' + encodeURIComponent('IA@Leh.com.BR ') + '&uid=U0BL5JPQX97');
 ok('1 nome preenchido', (await p.inputValue('#nomeSolicitante')) === 'Guilherme Pimpão', 'veio ' + await p.inputValue('#nomeSolicitante'));
 ok('1 e-mail preenchido', (await p.inputValue('#emailSolicitante')) === 'ia@leh.com.br', 'veio "' + await p.inputValue('#emailSolicitante') + '"');
@@ -194,14 +223,14 @@ ok('10 estado acompanhou', await p.evaluate(()=>estado.emailSolicitante) === 'ia
 await p.close();
 
 // 11 — sem trava, quem não está na tabela segue como antes
-p = await abrir(b, '?nome=Fulano&uid=UZZZZ', []);
+p = await abrirSemTrava(b, '?nome=Fulano&uid=UZZZZ', []);
 ok('11 cai no link', (await p.inputValue('#nomeSolicitante')) === 'Fulano', 'perdeu o nome do link');
 ok('11 e-mail livre', await p.evaluate(()=>$('emailSolicitante').readOnly) === false, 'travou sem cadastro');
 ok('11 liberado', await p.evaluate(()=>facilitadorLiberado()) === true, 'barrou com a trava desligada');
 await p.close();
 
 // 12 — tabela ainda não existe: a tela não pode quebrar
-p = await abrir(b, '?nome=Fulano&uid=U0BL5JPQX97', 404);
+p = await abrirSemTrava(b, '?nome=Fulano&uid=U0BL5JPQX97', 404);
 ok('12 sobrevive ao 404', (await p.inputValue('#nomeSolicitante')) === 'Fulano', 'quebrou sem a tabela');
 ok('12 liberado', await p.evaluate(()=>facilitadorLiberado()) === true, 'barrou por causa do 404');
 await p.close();
@@ -216,7 +245,7 @@ ok('13 sem alerta de facilitador', !/facilitador/i.test(await p.locator('#alerta
 await p.close();
 
 // 14 — com a trava ligada, quem não está na lista não envia
-p = await abrirComTrava(b, '?nome=Fulano&uid=UZZZZ', []);
+p = await abrirComTrava(b, '?nome=Fulano&email=fulano@leh.com.br&uid=UZZZZ', []);
 ok('14 barrado', await p.evaluate(()=>facilitadorLiberado()) === false, 'deixou passar quem não é facilitador');
 ok('14 alerta na tela', await p.locator('#alerta').isVisible(), 'não avisou');
 ok('14 aviso explica', /não está na lista/.test(await p.locator('#veioDoSlack').textContent()||''),
@@ -228,11 +257,27 @@ await p.waitForTimeout(500);
 ok('14 envio bloqueado', !(await p.locator('#okAviso, [data-passo="confirmacao"]').first().isVisible()),
    'o pedido foi enviado mesmo assim');
 ok('14 alerta no envio', /Só facilitador/.test(await p.locator('#alerta').textContent()||''), 'sem alerta no envio');
+ok('14 nada chegou ao n8n', p.__n8n === 0, 'o pedido foi para o n8n mesmo barrado: ' + p.__n8n + ' chamada(s)');
 await p.close();
 
 // 15 — com a trava ligada, tela aberta sem o Slack não envia
 p = await abrirComTrava(b, '', []);
 ok('15 sem uid barrado', await p.evaluate(()=>facilitadorLiberado()) === false, 'deixou passar sem usuário do Slack');
+await p.close();
+
+/* 16 — trava ligada e a consulta fora do ar.
+   Duas coisas têm que valer ao mesmo tempo: BARRAR (um controle que libera
+   quando não consegue conferir não controla nada) e dizer o motivo CERTO.
+   Mandar quem já é facilitador "pedir para ser incluído" é o tipo de erro que
+   faz a pessoa desistir da tela e comprar por fora. */
+p = await abrir(b, '?nome=Fulano&uid=U0BL5JPQX97', 404);
+ok('16 consulta caiu barra', await p.evaluate(()=>facilitadorLiberado()) === false,
+   'liberou sem conseguir conferir a lista');
+ok('16 a tela não quebra', (await p.inputValue('#nomeSolicitante')) === 'Fulano',
+   'a tela caiu junto com a consulta');
+const aviso16 = await p.locator('#veioDoSlack').textContent() || '';
+ok('16 explica que foi falha', /não consegui conferir/i.test(aviso16), 'aviso: ' + aviso16);
+ok('16 não acusa de não ser facilitador', !/não está na lista/i.test(aviso16), 'aviso: ' + aviso16);
 await p.close();
 
 await b.close();

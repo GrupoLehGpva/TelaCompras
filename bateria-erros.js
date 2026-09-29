@@ -27,6 +27,14 @@ function servir(p, plano){
       if(r2 === 500)     return r.fulfill({status:500,contentType:'application/json',body:'{"message":"boom"}'});
       return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(r2)});
     }
+    /* Quem está abrindo o formulário é facilitador, salvo cenário que diga o
+       contrário. Desde 29/09 a tela barra quem não está na lista, e sem esta
+       linha os cenários de erro do formulário passariam a testar a trava em vez
+       do erro que descrevem — calados, porque quase todos afirmam negativas. */
+    if(u.includes('/rpc/facilitador_por_slack')){
+      const f = plano.facilitador !== undefined ? plano.facilitador : mock.FACILITADOR_EXEMPLO;
+      return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(f)});
+    }
     const ehAbrirPedido = u.includes('/rpc/abrir_pedido');
     const alvo = ehAbrirPedido                     ? 'solicitacoes'
                : u.includes('solicitacao_itens')   ? 'itens'
@@ -202,7 +210,7 @@ await p.close();
 
 // C1 — catálogo respondendo 500: cai na lista local e avisa
 p = await b.newPage(); await servir(p, {padrao:500});
-await p.goto(dir + 'index.html', {waitUntil:'load'}); await p.waitForTimeout(1500);
+await p.goto(dir + 'index.html?uid=U0BL5JPQX97', {waitUntil:'load'}); await p.waitForTimeout(1500);
 ok('C1 avisa a queda', await p.locator('#alerta').isVisible(), 'não avisou o 500 do catálogo');
 ok('C1 catálogo local', (await p.evaluate(()=>CATALOGO.length)) > 0, 'ficou sem catálogo');
 ok('C1 centros locais', (await p.evaluate(()=>CENTROS_CUSTO.length)) > 0, 'ficou sem centro de custo');
@@ -210,7 +218,7 @@ await p.close();
 
 // C2 — resposta que não é JSON
 p = await b.newPage(); await servir(p, {padrao:'html'});
-await p.goto(dir + 'index.html', {waitUntil:'load'}); await p.waitForTimeout(1500);
+await p.goto(dir + 'index.html?uid=U0BL5JPQX97', {waitUntil:'load'}); await p.waitForTimeout(1500);
 ok('C2 sobrevive a HTML', (await p.evaluate(()=>CATALOGO.length)) > 0, 'quebrou com resposta HTML');
 await p.close();
 
@@ -218,7 +226,7 @@ await p.close();
 p = await b.newPage();
 await servir(p, { catalogo:[], centros:[], padrao:[] });
 await p.route('**n8n.cloud/**', r => r.fulfill({status:500,contentType:'text/plain',body:'erro'}));
-await p.goto(dir + 'index.html', {waitUntil:'load'}); await p.waitForTimeout(1400);
+await p.goto(dir + 'index.html?uid=U0BL5JPQX97', {waitUntil:'load'}); await p.waitForTimeout(1400);
 await p.evaluate(()=>{
   $('nomeSolicitante').value='Teste'; $('nomeSolicitante').dispatchEvent(new Event('input'));
   $('emailSolicitante').value='ia@leh.com.br'; $('emailSolicitante').dispatchEvent(new Event('input'));
@@ -252,7 +260,7 @@ await p.route('**/rest/v1/solicitacoes**', r => r.request().method() === 'POST'
   ? r.fulfill({status:201,contentType:'application/json',body:JSON.stringify([{id:'novo-2'}])})
   : r.fulfill({status:200,contentType:'application/json',body:'[]'}));
 await p.route('**n8n.cloud/**', r => r.fulfill({status:200,contentType:'application/json',body:'{"ok":true}'}));
-await p.goto(dir + 'index.html', {waitUntil:'load'}); await p.waitForTimeout(1400);
+await p.goto(dir + 'index.html?uid=U0BL5JPQX97', {waitUntil:'load'}); await p.waitForTimeout(1400);
 await p.evaluate(()=>{
   $('nomeSolicitante').value='Teste'; $('nomeSolicitante').dispatchEvent(new Event('input'));
   $('emailSolicitante').value='ia@leh.com.br'; $('emailSolicitante').dispatchEvent(new Event('input'));
