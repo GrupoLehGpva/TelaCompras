@@ -766,3 +766,38 @@ begin
   if d = antes then raise exception 'seção O: ponto de inserção não achado'; end if;
   execute d;
 end $$;
+
+-- 29/09 · bateria: seção P (um fornecedor basta)
+-- bateria: seção P
+do $$
+declare d text; antes text;
+begin
+  d := pg_get_functiondef('public._teste_caminho_telas()'::regprocedure);
+  antes := d;
+  d := replace(d, $a$  -- N. CAMINHO ANTIGO INTACTO$a$, $b$  -- P. UM FORNECEDOR BASTA (29/09)
+  declare vP1 uuid; mv1 int; fam1 text; r3 jsonb;
+  begin
+    r := abrir_pedido_telas(tf, cab, itens); vP1 := (r->>'id')::uuid;
+    r := fila_do_aprovador(ta_br);
+    res := res || jsonb_build_array(jsonb_build_object('c','P3 fila do aprovador diz a definição de fornecedor','ok',
+       exists (select 1 from jsonb_array_elements(r->'pedidos') e where (e->>'id')::uuid = vP1 and e->>'definicao_fornecedor' = 'cotacao'),'r',null));
+    r := decidir_pedido(ta_br, vP1, 1, 'aprovado', null);
+    select _telas_familia(codigo) into fam1 from solicitacao_itens where solicitacao_id = vP1 limit 1;
+    r := salvar_mapa(tc, vP1, 0, jsonb_build_object(
+      'fornecedores', (select jsonb_agg(distinct jsonb_build_object('familia', _telas_familia(i.codigo), 'coluna', 1,
+          'fornecedor_id', (select id from fornecedores where ativo order by id limit 1), 'frete', 0, 'prazo_dias', 2, 'condicao', 'À vista'))
+          from solicitacao_itens i where i.solicitacao_id = vP1),
+      'precos', (select jsonb_agg(jsonb_build_object('item_id', i.id, 'coluna', 1, 'preco', 10)) from solicitacao_itens i where i.solicitacao_id = vP1),
+      'escolhas', (select jsonb_agg(jsonb_build_object('item_id', i.id, 'coluna', 1)) from solicitacao_itens i where i.solicitacao_id = vP1)));
+    mv1 := (r->>'versao_mapa')::int;
+    res := res || jsonb_build_array(jsonb_build_object('c','P1 um fornecedor: avisos marcados como poucos_precos','ok',
+       jsonb_array_length(r->'resumo'->'avisos') > 0
+       and not exists (select 1 from jsonb_array_elements(r->'resumo'->'avisos') a where a->>'tipo' is distinct from 'poucos_precos'),'r',r->'resumo'->'avisos'));
+    r3 := enviar_mapa(tc, vP1, mv1, null);
+    res := res || jsonb_build_array(jsonb_build_object('c','P2 um fornecedor envia sem observação','ok', r3->>'ok'='true','r',r3));
+  end;
+
+  -- N. CAMINHO ANTIGO INTACTO$b$);
+  if d = antes then raise exception 'seção P: ponto de inserção não achado'; end if;
+  execute d;
+end $$;

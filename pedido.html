@@ -292,6 +292,8 @@
   input[type=search]:focus,input[type=text]:focus,select:focus,textarea:focus{outline:none;border-color:var(--verde);box-shadow:0 0 0 2px var(--verde-claro, rgba(0,114,122,.15))}
   /* barra do topo na mesma margem do conteúdo */
   @media (min-width:601px){ .topo{padding-left:24px;padding-right:24px} }
+  .cot-unico{margin:0 0 14px;padding:10px 14px;border-radius:8px;background:var(--demo-bg);color:var(--demo);font-size:13px;line-height:1.5}
+  .cot-unico-just{display:block;color:var(--texto);margin-top:4px}
 </style>
 </head>
 <body>
@@ -984,7 +986,11 @@ async function carregarCotacao(){
   }).join('');
 
   const escolhidos = [].concat(...(res.familias || []).map(fa => (fa.fornecedores || []).filter(f => Number(f.itens_ganhos) > 0)));
-  $('cotacaoCorpo').innerHTML = (blocos || '<p class="escopo">Sem cotação enviada.</p>') +
+  /* Fornecedor único (29/09): explícito para quem aprova — por isso há um preço só. */
+  const unico = SOLICITACAO && SOLICITACAO.definicao_fornecedor === 'unico';
+  const avisoUnico = unico ? '<div class="cot-unico"><b>Fornecedor único</b> — o solicitante dispensou a cotação com outros fornecedores, por isso há um preço só.' +
+    (SOLICITACAO.justificativa_fornecedor ? '<span class="cot-unico-just">Justificativa: ' + esc(SOLICITACAO.justificativa_fornecedor) + '</span>' : '') + '</div>' : '';
+  $('cotacaoCorpo').innerHTML = avisoUnico + (blocos || '<p class="escopo">Sem cotação enviada.</p>') +
     '<div class="cot-rodape"><span>' + (escolhidos.length ? '<b>Escolha do comprador:</b> ' + escolhidos.map(f =>
         esc(f.nome || '—') + ' (' + plural(Number(f.itens_ganhos), 'item', 'itens') + ', ' + dinheiroBR(f.total) + ')').join(' + ') : '') + '</span>' +
     '<span class="cot-total">Total: ' + dinheiroBR(res.total) + '</span></div>' +

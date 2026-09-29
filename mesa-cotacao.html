@@ -594,9 +594,9 @@ function validar(s){
       l.p.forEach((x,j) => { if (x !== null && (Number.isNaN(x) || x <= 0)) erros.push({ k, id:`p-${k}-${l.it.id}-${j}`, msg:`Preço inválido · ${nomeItem}` }); });
       if (l.esc === null) erros.push({ k, id:`row-${k}-${l.it.id}`, foco:`p-${k}-${l.it.id}-0`, msg:`Escolha o fornecedor · ${nomeItem}` });
       else if (!l.valido[l.esc]) erros.push({ k, id:`row-${k}-${l.it.id}`, foco:`p-${k}-${l.it.id}-${l.esc}`, msg:`O fornecedor escolhido está sem preço · ${nomeItem}` });
-      if (l.nPrecos < minPrecos(s)) avisos.push({ k, msg:`${nomeItem}: ${l.nPrecos} de ${minPrecos(s)} ${minPrecos(s) === 1 ? 'preço' : 'cotações'}` });
+      if (l.nPrecos < minPrecos(s)) avisos.push({ k, tipo:'poucos_precos', msg:`${nomeItem}: ${l.nPrecos} de ${minPrecos(s)} ${minPrecos(s) === 1 ? 'preço' : 'cotações'}` });
       if (REGRAS.avisarSeNaoForMenor && s.defForn !== 'unico' && l.esc !== null && l.valido[l.esc] && l.nPrecos > 1 && !l.menor[l.esc])
-        avisos.push({ k, msg:`${nomeItem}: escolhido Fornecedor ${l.esc+1}, que não tem o menor preço` });
+        avisos.push({ k, tipo:'nao_menor', msg:`${nomeItem}: escolhido Fornecedor ${l.esc+1}, que não tem o menor preço` });
     });
   });
   return { erros, avisos, C };
@@ -1376,7 +1376,7 @@ const itemDoBanco = i => ({ id:i.id, cod:i.codigo || null, desc:i.descricao || '
 
 /* ---------- fila ---------- */
 let carregandoFila = null;
-async function carregarFila(manual){
+async function carregarFila(manual, silencioso){
   if (!TOKEN){
     S.erro = { titulo:'Este link está incompleto', texto:'Abra a Mesa pelo link que chega no Slack — ele é pessoal e identifica você.' };
     S.carregado = true; render(); return;
@@ -1388,7 +1388,7 @@ async function carregarFila(manual){
     catch (e){ r = { ok:false, erro:'rede' }; }
     carregandoFila = null;
     if (!r || r.ok !== true){
-      if (S.carregado && !S.erro && r && r.erro === 'rede'){ toast('Sem conexão agora. Mostrando o que já estava na tela.'); return; }
+      if (S.carregado && !S.erro && r && r.erro === 'rede'){ if (!silencioso) toast('Sem conexão agora. Mostrando o que já estava na tela.'); return; }
       S.erro = r && r.erro === 'token_invalido'
         ? { titulo:'Este link não vale mais', texto:(r.mensagem || '') + ' Peça um novo link ao responsável de Compras.' }
         : { titulo:'Não consegui abrir a Mesa agora', texto:'O banco de compras não respondeu. Confira a internet e tente de novo.', tentar:true };
@@ -1400,7 +1400,8 @@ async function carregarFila(manual){
     const velhos = new Map(SOLS.map(x => [x.uid, x]));
     SOLS = (r.pedidos || []).filter(p => p.e_meu || !p.comprador_responsavel).map(p => deBanco(p, velhos.get(p.id)));
     S.carregado = true;
-    if (S.view === 'fila') render();
+    const digitando = document.activeElement && document.activeElement.id === 'f-q';
+    if (S.view === 'fila' && !(silencioso && (digitando || !$('overlay').hidden))) render();
     if (manual) toast('Fila atualizada');
   })();
   return carregandoFila;
@@ -1586,7 +1587,9 @@ function tentarEnviar(){
   refresh();
   if (V.erros.length){ abrirPend(V); toast(`Falta resolver ${plural(V.erros.length,'pendência','pendências')} antes de enviar`); return; }
   fecharPend();
-  const C = V.C, precisaObs = V.avisos.length > 0 || !!s.devolucao;
+  /* 29/09: um fornecedor basta — menos de 3 preços vai como aviso ao aprovador, sem
+     obrigar observação. Obrigatória só quando a escolha não é o menor preço, e no reenvio. */
+  const C = V.C, precisaObs = V.avisos.some(a => a.tipo === 'nao_menor') || !!s.devolucao;
   const linhas = [];
   C.fams.forEach(f => f.forn.forEach(x => { if (x.n) linhas.push(`<div><span>${esc(f.F.forn[x.j].nome)} <span class="muted">· ${esc(famNome(f.k))} · ${plural(x.n,'item','itens')}</span></span><span class="v">${brl(x.total)}</span></div>`); }));
   const destino = proximaEtapa(s);
@@ -1596,10 +1599,11 @@ function tentarEnviar(){
       <button class="x" id="m-close" type="button" aria-label="Fechar">✕</button></div>
     <div class="m-body">
       <div class="sumlines">${linhas.join('')}<div class="grand"><span><strong>Orçamento</strong></span><span class="v">${brl(C.total)}</span></div></div>
+      ${s.defForn === 'unico' ? `<div class="holder info unico-envio" style="flex-direction:column;align-items:flex-start"><strong>Fornecedor único</strong><span>O solicitante dispensou a cotação com outros fornecedores. O aprovador vê isso em destaque, com a justificativa.</span></div>` : ''}
       ${V.avisos.length ? `<div class="holder warn" style="flex-direction:column;align-items:flex-start"><strong>O aprovador vai ver estes pontos</strong><ul class="warnlist">${V.avisos.map(a => `<li>${esc(a.msg)}</li>`).join('')}</ul></div>` : ''}
       <div class="obs-box" style="margin:0">
         <label for="dlg-obs">Observação para o aprovador${precisaObs ? '' : ' <span class="muted">(opcional)</span>'}</label>
-        ${precisaObs ? `<span class="muted" style="font-size:12.5px">${s.devolucao ? 'Responda ao motivo da devolução.' : 'Explique os pontos acima — obrigatório quando há aviso.'}</span>` : ''}
+        ${precisaObs ? `<span class="muted" style="font-size:12.5px">${s.devolucao ? 'Responda ao motivo da devolução.' : 'Explique por que a escolha não é o menor preço — obrigatório nesse caso.'}</span>` : ''}
         <textarea class="inp" id="dlg-obs" rows="3" placeholder="${s.devolucao ? 'ex.: negociei o frete com o Fornecedor 2, caiu para R$ 250,00' : 'ex.: Fornecedor 2 entrega em 2 dias, os outros só na semana que vem'}">${esc(s.devolucao ? '' : s.cot.obs)}</textarea>
         <div class="err" id="e-dlg-obs" hidden></div>
       </div>
@@ -1706,9 +1710,26 @@ async function subirOrcamentos(s, arquivos){
   if (st2){ st2.textContent = falhas.length ? 'Não entrou: ' + falhas.join('; ') : plural(meta.length, 'orçamento anexado', 'orçamentos anexados') + '.'; st2.classList.toggle('erro', !!falhas.length); }
 }
 
+/* ---------- a fila se atualiza sozinha (29/09) ----------
+   O pedido aparece para o comprador assim que a liderança aprova: a Mesa relê
+   a fila a cada 60 s enquanto a aba está aberta, e na hora em que ele volta
+   para a aba. Não redesenha enquanto ele digita na busca nem com janela aberta. */
+const REFRESCO_MS = 60000;
+function idsParaCotar(){ return new Set(SOLS.filter(x => x.status === 'cot' && !x.devolucao).map(x => x.uid)); }
+async function refrescar(){
+  if (document.hidden || !TOKEN || S.erro) return;
+  const antes = idsParaCotar();
+  await carregarFila(false, true);
+  const novos = [...idsParaCotar()].filter(id => !antes.has(id)).length;
+  if (novos && antes.size + novos > 0 && S.jaCarregouUmaVez) toast(plural(novos, 'pedido novo', 'pedidos novos') + ' para cotar');
+  S.jaCarregouUmaVez = true;
+}
+setInterval(refrescar, REFRESCO_MS);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) refrescar(); });
+
 /* ---------- início ---------- */
 render();
-carregarFila();
+carregarFila().then(() => { S.jaCarregouUmaVez = true; });
 ligarCadastro();
 
 </script>

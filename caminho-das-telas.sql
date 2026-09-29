@@ -2044,3 +2044,32 @@ end $$;
 
 revoke execute on function public.registrar_orcamentos(text, uuid, jsonb) from public;
 grant execute on function public.registrar_orcamentos(text, uuid, jsonb) to anon, authenticated;
+
+-- 29/09 · telas_10 · Um fornecedor basta (Guilherme). Menos de 3 preços continua
+-- como aviso para o aprovador, mas não obriga observação; a observação segue
+-- obrigatória quando a escolha não é o menor preço e no reenvio de devolvida.
+-- E a fila do aprovador passa a dizer se o pedido é de fornecedor único.
+do $$
+declare d text; n int;
+begin
+  d := pg_get_functiondef('public._telas_resumo_mapa(uuid)'::regprocedure); n := length(d);
+  d := replace(d, $a$'msg', '"' || r.descricao || '" tem '$a$, $b$'tipo', 'poucos_precos', 'msg', '"' || r.descricao || '" tem '$b$);
+  d := replace(d, $a$'msg', 'A escolha de "'$a$, $b$'tipo', 'nao_menor', 'msg', 'A escolha de "'$b$);
+  if position('poucos_precos' in d) = 0 or position('nao_menor' in d) = 0 then raise exception '_telas_resumo_mapa: troca não bateu'; end if;
+  execute d;
+
+  d := pg_get_functiondef('public.enviar_mapa(text,uuid,integer,text)'::regprocedure); n := length(d);
+  d := replace(d, $a$if (jsonb_array_length(v_res->'avisos') > 0 or v_reenvio) and v_obs is null then$a$,
+                  $b$if (exists (select 1 from jsonb_array_elements(v_res->'avisos') av where av->>'tipo' = 'nao_menor') or v_reenvio) and v_obs is null then$b$);
+  d := replace(d, $a$'Há avisos no mapa: escreva uma observação ao aprovador explicando.'$a$,
+                  $b$'Há item em que a escolha não é o menor preço: escreva uma observação ao aprovador explicando.'$b$);
+  if position('nao_menor' in d) = 0 or position('não é o menor preço: escreva' in d) = 0 then raise exception 'enviar_mapa: troca não bateu'; end if;
+  execute d;
+
+  d := pg_get_functiondef('public.fila_do_aprovador(text)'::regprocedure); n := length(d);
+  d := replace(d, $a$'tipo_compra', s.tipo_compra, 'urgente', (s.tipo_compra = 'urgente'),$a$,
+                  $b$'tipo_compra', s.tipo_compra, 'urgente', (s.tipo_compra = 'urgente'),
+      'definicao_fornecedor', s.definicao_fornecedor,$b$);
+  if length(d) = n then raise exception 'fila_do_aprovador: troca não bateu'; end if;
+  execute d;
+end $$;

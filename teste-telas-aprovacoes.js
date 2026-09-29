@@ -22,7 +22,7 @@ const FILA = () => [
    motivo:'Pedido antigo do ClickUp', aberto_em:hoje, total_itens:1}
 ];
 const EXTRA = () => ({ ok:true,
-  pedidos:[ {id:'t1', canal:'telas', versao:7, pode_devolver:true},
+  pedidos:[ {id:'t1', canal:'telas', versao:7, pode_devolver:true, definicao_fornecedor:'unico'},
             {id:'t2', canal:'telas', versao:3, pode_devolver:false},
             {id:'c1', canal:'clickup', versao:1, pode_devolver:false} ],
   em_edicao:[ {numero:'C2609-02009', facilitador:'Joana Lima',
@@ -66,6 +66,8 @@ const b = await chromium.launch();
   ok('1 devolver no t1', await linha(p,'C2609-02001').locator('.btn-linha.dev').count() === 1, 'sem botão');
   ok('1 sem devolver no t2 (liderança)', await linha(p,'C2609-02002').locator('.btn-linha.dev').count() === 0, 'apareceu');
   ok('1 sem devolver no ClickUp', await linha(p,'C2609-01001').locator('.btn-linha.dev').count() === 0, 'apareceu');
+  ok('1 selo fornecedor único na fila (29/09)', await linha(p,'C2609-02001').locator('.selo-unico').count() === 1 &&
+     await linha(p,'C2609-02002').locator('.selo-unico').count() === 0, 'selo');
   /* 2 — caixa do que está em edição */
   ok('2 caixa em edição visível', await p.locator('#emEdicao').isVisible(), 'escondida');
   const t = await p.locator('#listaEdicao').textContent() || '';

@@ -446,6 +446,7 @@
   input[type=search]:focus,input[type=text]:focus,select:focus,textarea:focus{outline:none;border-color:var(--verde);box-shadow:0 0 0 2px var(--verde-claro, rgba(0,114,122,.15))}
   /* barra do topo na mesma margem do conteúdo */
   @media (min-width:601px){ .topo{padding-left:24px;padding-right:24px} }
+  .selo-unico{display:inline-block;margin-top:4px;padding:1px 8px;border-radius:999px;background:var(--demo-bg);color:var(--demo);font-size:11px;font-weight:700}
 </style>
 </head>
 <body>
@@ -696,7 +697,7 @@ async function carregarFila(){
     extra.pedidos.forEach(x => { if(x && x.id) por[x.id] = x; });
     (fila || []).forEach(s => {
       const x = por[s.id];
-      if(x){ s.canal = x.canal; s.versao = x.versao; s.pode_devolver = x.pode_devolver === true; }
+      if(x){ s.canal = x.canal; s.versao = x.versao; s.pode_devolver = x.pode_devolver === true; s.definicao_fornecedor = x.definicao_fornecedor || s.definicao_fornecedor; }
     });
     EM_EDICAO = Array.isArray(extra.em_edicao) ? extra.em_edicao : [];
   }
@@ -757,7 +758,10 @@ function desenhar(){
               sp.textContent=txt; sp.title=txt; td.appendChild(sp); }
       return td;
     };
-    tr.appendChild(cel(s.motivo || '—', 'assunto-cel'));
+    const tdM = cel(s.motivo || '—', 'assunto-cel');
+    /* Fornecedor único fica explícito já na fila: quem aprova sabe que não houve cotação com outros. */
+    if(s.definicao_fornecedor === 'unico'){ const u = document.createElement('span'); u.className = 'selo-unico'; u.textContent = 'Fornecedor único'; tdM.appendChild(u); }
+    tr.appendChild(tdM);
 
     /* Quem pediu e centro de custo dividem uma coluna, em duas linhas.
        Separados, cada um puxava largura da tabela e o assunto — que é por onde

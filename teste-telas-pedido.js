@@ -124,6 +124,15 @@ const b = await chromium.launch();
   ok('1.2 escolhido para todos', /escolhido para 2 itens/.test(cab[0]) && !/escolhido/.test(cab[1]), JSON.stringify(cab));
   await p.close(); }
 
+/* 1.2b — fornecedor único fica explícito para quem aprova (29/09) */
+{ const p = await abrir(b, {ped:PED({definicao_fornecedor:'unico', justificativa_fornecedor:'Assistência <b>autorizada</b>'}), mapa:MAPA_UNICO});
+  const t = await p.textContent('#cotacaoCorpo');
+  ok('1.2b aviso de fornecedor único na cotação', await p.locator('#cotacaoCorpo .cot-unico').count() === 1 && /Fornecedor único/.test(t) && /Assistência <b>autorizada<\/b>/.test(t), t.slice(0,300));
+  await p.close(); }
+{ const p = await abrir(b);
+  ok('1.2b pedido por cotação não mostra o aviso', await p.locator('#cotacaoCorpo .cot-unico').count() === 0);
+  await p.close(); }
+
 /* 1.3 — nome de fornecedor e de item não viram HTML */
 { const m = JSON.parse(JSON.stringify(MAPA)); m.mapa.resumo.familias[0].fornecedores[0].nome = '<img src=x onerror="window.__x=1">';
   m.itens[0].descricao = '<b>x</b>';

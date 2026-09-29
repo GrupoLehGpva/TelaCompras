@@ -50,7 +50,10 @@ function resumo(p){
     const n = m.precos.filter(x => x.item_id === i.id).length;
     if (!e) bloq.push({ msg:'Escolha o fornecedor do item "' + i.descricao + '".' });
     else if (!m.precos.find(x => x.item_id === i.id && x.coluna === e.coluna)) bloq.push({ msg:'sem preço' });
-    if (!unico && n < 3) avis.push({ msg:'"' + i.descricao + '" tem ' + n + ' preço(s); o padrão são 3.' });
+    if (!unico && n < 3) avis.push({ tipo:'poucos_precos', msg:'"' + i.descricao + '" tem ' + n + ' preço(s); o padrão são 3.' });
+    const ps = m.precos.filter(x => x.item_id === i.id).map(x => x.preco);
+    const pe = e && (m.precos.find(x => x.item_id === i.id && x.coluna === e.coluna) || {}).preco;
+    if (pe != null && ps.length > 1 && pe > Math.min(...ps)) avis.push({ tipo:'nao_menor', msg:'A escolha de "' + i.descricao + '" não é o menor preço.' });
   });
   let total = 0;
   [...new Set(p.itens.map(i => i.familia))].forEach(fam => {
@@ -105,7 +108,7 @@ function responder(B, nome, c){
     if (r.bloqueios.length) return { ok:false, erro:'cotacao_incompleta', mensagem:'Falta resolver ' + r.bloqueios.length + ' ponto(s) antes de enviar.', bloqueios:r.bloqueios };
     const reenvio = p.mapa.estado === 'devolvida';
     const obs = reenvio ? (c.p_observacao || '').trim() : ((c.p_observacao || '').trim() || p.mapa.observacao);
-    if ((r.avisos.length || reenvio) && !obs) return { ok:false, erro:'observacao_obrigatoria', mensagem:'Escreva uma observação ao aprovador.' };
+    if ((r.avisos.some(a => a.tipo === 'nao_menor') || reenvio) && !obs) return { ok:false, erro:'observacao_obrigatoria', mensagem:'Escreva uma observação ao aprovador.' };
     const prox = p.tipo_compra === 'mensal' ? 'financeiro' : 'gerencial';
     p.etapa_atual = prox; p.total = r.total; p.com_quem = prox === 'gerencial' ? 'Gerente W' : 'Carla Financeiro';
     p.mapa.estado = 'enviada'; p.mapa.versao++; p.mapa.observacao = obs; delete p.devolvida;
@@ -239,11 +242,12 @@ const b = await chromium.launch();
   await p.click('[data-open="C2609-03001"]'); await p.waitForTimeout(700);
   ok('4 reabriu com o que foi salvo', (await p.inputValue('#n-MG-1')) === 'CASA DO ROLAMENTO' && (await p.inputValue('#p-MG-i1-1')) === '90,00'
      && (await p.getAttribute('#k-MG-i1-1', 'aria-pressed')) === 'true' && (await p.inputValue('#c-MG-1')) === 'À vista');
-  /* enviar: tem aviso (menos de 3 preços) → observação obrigatória */
+  /* enviar: escolhe o preço mais alto no item 1 (não é o menor) → observação obrigatória */
+  await p.click('#k-MG-i1-0'); await p.waitForTimeout(200);
   await p.click('#bt-enviar'); await p.waitForTimeout(300);
   ok('4 modal de envio para a gerencial', /Enviar para aprovação gerencial/.test(await txt(p, '#modal')));
   await p.click('#dlg-ok'); await p.waitForTimeout(200);
-  ok('4 observação obrigatória com aviso', /mínimo 5 letras/.test(await txt(p, '#e-dlg-obs')) && ch(p, 'enviar_mapa').length === 0);
+  ok('4 observação obrigatória quando não é o menor preço', /mínimo 5 letras/.test(await txt(p, '#e-dlg-obs')) && ch(p, 'enviar_mapa').length === 0);
   await p.fill('#dlg-obs', 'Só dois fornecedores atendem a região.');
   await p.click('#dlg-ok'); await p.waitForTimeout(1200);
   const env = ch(p, 'enviar_mapa')[0];
@@ -286,7 +290,15 @@ const b = await chromium.launch();
 { const p = await abrir(b, '?t=' + TOKEN);
   await p.click('[data-open="C2609-03002"]'); await p.waitForTimeout(700);
   ok('7 uma coluna só', await p.locator('#n-FORA-0').count() === 1 && await p.locator('#n-FORA-1').count() === 0);
-  ok('7 justificativa em destaque', /Assistência autorizada/.test(await txt(p, '#view')));
+  ok('7 justificativa em destaque', /Assistência autorizada/.test(await txt(p, '#view')) && /Fornecedor único/.test(await txt(p, '#view')));
+  await p.click('#n-FORA-0'); await p.type('#n-FORA-0', 'di', { delay:30 }); await p.waitForTimeout(500);
+  await p.click('.sug [data-fid="f3"]'); await p.fill('#p-FORA-i3-0', '800'); await p.click('#k-FORA-i3-0');
+  await p.fill('#f-FORA-0', '0'); await p.fill('#z-FORA-0', '10'); await p.fill('#c-FORA-0', 'À vista'); await p.waitForTimeout(1500);
+  await p.click('#bt-enviar'); await p.waitForTimeout(300);
+  ok('7 envio diz que é fornecedor único', /Fornecedor único/.test(await txt(p, '#modal .unico-envio')));
+  ok('7 fornecedor único não pede 3 cotações', !/O aprovador vai ver estes pontos/.test(await txt(p, '#modal')) && /opcional/.test(await txt(p, '#modal label[for="dlg-obs"]')));
+  await p.click('#dlg-ok'); await p.waitForTimeout(1200);
+  ok('7 fornecedor único enviado', ch(p, 'enviar_mapa').length === 1 && p.B.pedidos[1].etapa_atual === 'gerencial');
   await p.close(); }
 
 /* 8 — orçamentos */
@@ -326,6 +338,38 @@ const b = await chromium.launch();
   await p.fill('#p-MG-i1-0', '33');
   await p.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted:false }))); await p.waitForTimeout(600);
   ok('10 pagehide salva a mudança', ch(p, 'salvar_mapa').some(x => x.c.p_mapa.precos.some(y => y.preco === 33)));
+  await p.close(); }
+
+/* 12 — um fornecedor basta: envia sem observação (29/09) */
+{ const p = await abrir(b, '?t=' + TOKEN);
+  await p.click('[data-open="C2609-03001"]'); await p.waitForTimeout(700);
+  await p.click('#n-MG-0'); await p.type('#n-MG-0', 'ro', { delay:30 }); await p.waitForTimeout(500);
+  await p.click('.sug [data-fid="f1"]');
+  await p.fill('#p-MG-i1-0', '100'); await p.fill('#p-MG-i2-0', '50');
+  await p.click('#k-MG-i1-0'); await p.click('#k-MG-i2-0');
+  await p.fill('#f-MG-0', '0'); await p.fill('#z-MG-0', '5'); await p.fill('#c-MG-0', '28 dias');
+  await p.waitForTimeout(1600);
+  await p.click('#bt-enviar'); await p.waitForTimeout(300);
+  ok('12 aviso de 1 de 3 aparece para o aprovador', /O aprovador vai ver estes pontos/.test(await txt(p, '#modal')) && /1 de 3/.test(await txt(p, '#modal')));
+  ok('12 observação opcional', /opcional/.test(await txt(p, '#modal label[for="dlg-obs"]')));
+  await p.click('#dlg-ok'); await p.waitForTimeout(1200);
+  const env = ch(p, 'enviar_mapa');
+  ok('12 enviou sem observação', env.length === 1 && env[0].c.p_observacao === null && p.B.pedidos[0].etapa_atual === 'gerencial', env);
+  await p.close(); }
+
+/* 13 — a fila se atualiza sozinha quando a liderança aprova um pedido novo */
+{ const p = await abrir(b, '?t=' + TOKEN);
+  ok('13 antes: 2 para cotar', /Paracotar2/.test((await txt(p, '[data-tab="cotar"]')).replace(/\s+/g, '')));
+  const novo = JSON.parse(JSON.stringify(p.B.pedidos[0])); Object.assign(novo, { id:'u9', numero:'C2609-03009', motivo:'Chegou agora', mapa:null });
+  p.B.pedidos.push(novo);
+  await p.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); await p.waitForTimeout(700);
+  ok('13 pedido novo aparece sem clicar em Atualizar', await p.locator('tr[data-id="C2609-03009"]').count() === 1);
+  ok('13 avisa que chegou pedido novo', /1 pedido novo para cotar/.test(await txt(p, '#toast')));
+  /* com a busca em uso não redesenha por baixo */
+  await p.click('#f-q'); await p.type('#f-q', 'rol');
+  const n = ch(p, 'fila_do_comprador').length;
+  await p.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); await p.waitForTimeout(600);
+  ok('13 relê mas não tira o foco da busca', ch(p, 'fila_do_comprador').length === n + 1 && await p.evaluate(() => document.activeElement.id) === 'f-q' && (await p.inputValue('#f-q')) === 'rol');
   await p.close(); }
 
 /* 11 — celular */
