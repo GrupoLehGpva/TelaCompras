@@ -434,6 +434,18 @@
   table.fila tbody td:nth-child(10) > *{justify-content:center;margin-left:auto;margin-right:auto}
   table.hist tbody td:not(:nth-child(3)){text-align:center}
   table.hist tbody td:nth-child(3){text-align:left}
+  /* Tela cheia (Guilherme, 29/09): ocupa a largura toda do computador, como o funil.
+     Mesma margem de 24px dos dois lados em todas as telas (16px no celular). */
+  .envelope{max-width:none;margin:0;padding-left:24px;padding-right:24px}
+  @media (max-width:600px){ .envelope{padding-left:16px;padding-right:16px} }
+  /* Caixas padronizadas (29/09): toda caixa de digitar tem o mesmo contorno (1px, canto de
+     6px), a mesma altura e o mesmo foco, igual à Mesa de Cotação. */
+  input[type=search],input[type=text],select{height:36px;padding:0 12px;border:1px solid var(--borda);border-radius:6px;
+    background:var(--card);color:var(--texto);font:inherit;font-size:13.5px;box-sizing:border-box}
+  textarea{border:1px solid var(--borda);border-radius:6px;font:inherit;font-size:13.5px;box-sizing:border-box}
+  input[type=search]:focus,input[type=text]:focus,select:focus,textarea:focus{outline:none;border-color:var(--verde);box-shadow:0 0 0 2px var(--verde-claro, rgba(0,114,122,.15))}
+  /* barra do topo na mesma margem do conteúdo */
+  @media (min-width:601px){ .topo{padding-left:24px;padding-right:24px} }
 </style>
 </head>
 <body>
@@ -516,7 +528,7 @@
     <div class="em-edicao" id="emEdicao" hidden>
       <b>Em edição pelo facilitador</b>
       <ul id="listaEdicao"></ul>
-      <p>Voltam para a sua fila quando o facilitador salvar, ou sozinhos no horário indicado.</p>
+      <p>Voltam para a sua fila assim que o facilitador salvar ou sair da edição.</p>
     </div>
     </div><!-- /painelFila -->
 
@@ -702,7 +714,7 @@ function desenharEdicao(){
   $('emEdicao').hidden = lista.length === 0;
   $('listaEdicao').innerHTML = lista.map(e =>
     '<li><b>' + esc(e.numero || '—') + '</b> · ' + esc(e.facilitador || '—') +
-    ' · editando desde ' + horaBR(e.em_edicao_desde) + ', volta até ' + horaBR(e.volta_ate) + '</li>').join('');
+    ' · editando desde ' + horaBR(e.em_edicao_desde) + '</li>').join('');
 }
 
 /* ============================================================================

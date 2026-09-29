@@ -42,7 +42,7 @@ r=run([{...base,id:11,acao:'edicao_salva',etapa:'edicao',etapa_seguinte:'lider',
 t('edição salva urgente: aprovador vê o que mudou', r[0].texto.includes('Mudou: motivo, itens'), r);
 // 12 edicao expirada -> facilitador
 r=run([{...base,id:12,acao:'edicao_expirada',etapa:'edicao',etapa_seguinte:'lider',urgente:false,para:[P('facilitador','ed')]}]);
-t('edição expirada: facilitador avisado que já usou', r[0].texto.includes('30 minutos') && r[0].texto.includes('já foi usada'), r);
+t('edição esquecida: facilitador avisado que pode editar de novo (29/09)', r[0].texto.includes('ainda pode editar') && !r[0].texto.includes('minutos') && !r[0].texto.includes('já foi usada'), r);
 // 13 sem slack
 r=run([{...base,id:13,acao:'criado',etapa:null,etapa_seguinte:'lider',urgente:false,para:[P('facilitador','zz',null)]}]);
 t('sem Slack: registrado e não enviado', r.length===1 && r[0].enviar===false && r[0].motivo.includes('Slack'), r);

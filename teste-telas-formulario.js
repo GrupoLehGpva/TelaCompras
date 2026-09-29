@@ -131,7 +131,8 @@ const b = await chromium.launch();
   ok('4 leu o pedido', pt && pt.corpo.p_id === ID && pt.corpo.p_token === 'fc-ana');
   ok('4 título', (await p.textContent('h1')) === 'Editar solicitação');
   ok('4 número no topo', (await p.textContent('#autoNumero')) === 'C2609-02010');
-  ok('4 faixa com prazo', await p.locator('#faixaEdicao').isVisible() && /salve até \d\d:\d\d \(faltam (24|25) minutos\)/.test(await p.textContent('#textoEdicao')), await p.textContent('#textoEdicao'));
+  ok('4 faixa sem prazo nem relógio (29/09)', await p.locator('#faixaEdicao').isVisible() && /Editando/.test(await p.textContent('#textoEdicao')) &&
+     !/salve até|minuto|prazo/i.test(await p.textContent('#textoEdicao')), await p.textContent('#textoEdicao'));
   ok('4 faixa avisa que é única', /não dá para editar de novo/.test(await p.textContent('#textoEdicao')));
   const est = await p.evaluate(() => JSON.parse(JSON.stringify(estado)));
   ok('4 lista com 2 itens', est.tipo === 'lista' && est.itensLista.length === 2, JSON.stringify(est.itensLista));
@@ -208,17 +209,16 @@ const b = await chromium.launch();
   ok('9 um clique depois ainda não desiste', chamou(p,'desistir_edicao').length === 0);
   await p.close(); }
 
-/* 10 — prazo vencido na abertura */
+/* 10 — sem relógio na tela (29/09): quem decide se a edição ainda vale é o banco, ao salvar */
 { const p = await abrir(b, '?t=fc-ana&editar=' + ID, {ped:()=>({ok:true, pedido:PEDIDO({edicao_expira_em:emMin(-1)}), itens:ITENS_LISTA})});
-  ok('10 diz que passou o prazo', /Passou o prazo/.test(await p.textContent('#textoEdicao')));
-  ok('10 faixa vermelha', await p.locator('#faixaEdicao.vencida').count() === 1);
-  ok('10 sem formulário', !(await p.locator('#nav').isVisible()));
+  await p.waitForTimeout(500);
+  ok('10 não fecha sozinho pela hora', await p.locator('#nav').isVisible() && !(await p.locator('#faixaEdicao.vencida').count()));
   await p.close(); }
 
 /* 11 — servidor diz que venceu ao salvar */
 { const p = await abrir(b, '?t=fc-ana&editar=' + ID, {rpc:{salvar_edicao:()=>({ok:false, erro:'edicao_expirou', mensagem:'Passaram os 30 minutos: a edição foi descartada.'})}});
   await enviarPagina(p);
-  ok('11 mostra a mensagem', /Passaram os 30 minutos/.test(await p.textContent('#textoEdicao')));
+  ok('11 diz que a edição foi encerrada', /Esta edição foi encerrada/.test(await p.textContent('#textoEdicao')) && !/minuto/.test(await p.textContent('#textoEdicao')));
   ok('11 sem confirmação de salvo', !(await p.locator('.passo.ok').isVisible()));
   await p.close(); }
 

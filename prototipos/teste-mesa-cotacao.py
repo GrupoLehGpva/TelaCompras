@@ -21,7 +21,7 @@ with sync_playwright() as p:
     R.append('ordem: '+str([x.split()[0] for x in first]))
     # 24/09: padrão das telas — largura 1300, cabeçalho centralizado, sem o ponto na etapa,
     # só a data em "Precisa até" e a coluna Tipo (item único, lista de itens ou serviço).
-    check(pg.evaluate("getComputedStyle(document.querySelector('.wrap')).maxWidth")=='1300px','largura padrão 1300px')
+    check(pg.evaluate("getComputedStyle(document.querySelector('.wrap')).maxWidth")=='none','tela cheia (29/09), como o funil')
     check(pg.evaluate("[...document.querySelectorAll('table.fila thead th')].slice(0,-1).every(t=>getComputedStyle(t).textAlign==='center')"),'cabeçalho centralizado')
     check(pg.locator('table.fila .dot').count()==0,'sem o ponto na coluna Na etapa')
     cab=pg.locator('table.fila thead th').all_inner_texts()
@@ -192,8 +192,15 @@ with sync_playwright() as p:
     check(pk['height']>=18, f"caixa do ✓ no tamanho de planilha ({round(pk['height'])}px)")
     cel = pg.locator('#k-IA-i0-0').evaluate("e=>e.closest('td').getBoundingClientRect().height")
     check(cel>=30, f"a célula inteira do ✓ é clicável ({round(cel)}px)")
-    alt = [pg.locator(i).bounding_box()['x'] for i in ['#d-IA-0','#f-IA-0','#z-IA-0']]
-    check(max(alt)-min(alt) < 1,'desconto, frete e prazo alinhados na mesma coluna')
+    # 29/09: caixas padronizadas — nome do fornecedor e as quatro condições com as mesmas bordas
+    cxs = pg.evaluate("""() => ['#n-IA-0','#d-IA-0','#f-IA-0','#z-IA-0','#c-IA-0'].map(id => {
+        const i = document.querySelector(id); const b = id === '#n-IA-0' ? i : i.closest('.campo');
+        const r = b.getBoundingClientRect(), c = getComputedStyle(b);
+        return {x:Math.round(r.left), dir:Math.round(r.right), h:Math.round(r.height), borda:c.borderTopWidth + ' ' + c.borderTopStyle, canto:c.borderTopLeftRadius}; })""")
+    check(len({c['x'] for c in cxs})==1 and len({c['dir'] for c in cxs})==1, f'fornecedor, desconto, frete, prazo e pagamento com as mesmas bordas {cxs}')
+    check(len({(c['h'],c['borda'],c['canto']) for c in cxs})==1 and cxs[0]['canto']=='6px', f'todas as caixas com a mesma altura, contorno e canto {cxs}')
+    up = pg.locator('#p-IA-i0-0').evaluate("e=>{const c=getComputedStyle(e);return c.borderTopWidth+' '+c.borderTopLeftRadius}")
+    check(up=='1px 6px', f'caixa de preço no mesmo contorno ({up})')
     check(pg.locator('#dl-forn option').count()>=100,'lista de fornecedores reais carregada')
     pg.click('#bt-back')
 

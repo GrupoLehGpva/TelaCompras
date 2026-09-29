@@ -70,7 +70,7 @@ const b = await chromium.launch();
   ok('2 caixa em edição visível', await p.locator('#emEdicao').isVisible(), 'escondida');
   const t = await p.locator('#listaEdicao').textContent() || '';
   ok('2 caixa mostra número e facilitador', /C2609-02009/.test(t) && /Joana Lima/.test(t), t);
-  ok('2 caixa mostra horários', /editando desde \d\d:\d\d, volta até \d\d:\d\d/.test(t), t);
+  ok('2 caixa diz desde quando, sem prazo (29/09)', /editando desde \d\d:\d\d/.test(t) && !/volta até/.test(t), t);
   await p.close(); }
 
 /* 2.5 — os três botões cabem na célula (em tela de notebook e larga) */

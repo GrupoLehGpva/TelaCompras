@@ -2246,8 +2246,8 @@ async function prepararTelas(){
   }
   if(!r.pedido.em_edicao){
     bloquearTelas('Este pedido não está em edição.',
-      'A edição começa pelo botão Editar, na tela de acompanhamento. Se você saiu da tela de edição sem salvar ' +
-      'ou o prazo passou, o pedido já voltou para a liderança como estava.');
+      'A edição começa pelo botão Editar, na tela de acompanhamento. Se você saiu da tela de edição sem salvar, ' +
+      'o pedido já voltou para a liderança como estava.');
     return;
   }
   EDICAO = r.pedido;
@@ -2307,26 +2307,12 @@ function preencherDoPedido(p, itens){
 }
 
 function iniciarRelogio(){
-  const expira = EDICAO && EDICAO.edicao_expira_em ? new Date(EDICAO.edicao_expira_em) : null;
-  const tique = () => {
-    if(!expira || isNaN(expira)){
-      $('textoEdicao').innerHTML = '<b>Editando ' + escT(EDICAO.numero) + '</b>Salve antes de sair desta tela: sair sem salvar descarta a edição.';
-    } else {
-      const falta = Math.ceil((expira.getTime() - Date.now()) / 60000);
-      if(falta <= 0){
-        encerrarEdicao('Passou o prazo da edição.',
-          'O que foi mudado aqui não vale: o pedido voltou para a liderança como estava. A edição deste pedido já foi usada.', true);
-        return;
-      }
-      $('textoEdicao').innerHTML = '<b>Editando ' + escT(EDICAO.numero) + ' — salve até ' + horaT(expira) +
-        ' (falta' + (falta === 1 ? ' 1 minuto' : 'm ' + falta + ' minutos') + ')</b>' +
-        'Só os itens podem mudar. Se sair desta tela sem salvar, desistir ou o prazo passar, o pedido volta para a liderança como estava, e não dá para editar de novo.';
-    }
-  };
+  /* 29/09: sem prazo na tela — a edição vale enquanto este formulário estiver aberto.
+     O banco ainda descarta uma edição esquecida (aba que travou), como rede de segurança. */
+  $('textoEdicao').innerHTML = '<b>Editando ' + escT(EDICAO.numero) + '</b>' +
+    'Só os itens podem mudar. Se sair desta tela sem salvar ou desistir, o pedido volta para a liderança como estava, e não dá para editar de novo.';
   $('faixaEdicao').hidden = false;
   edicaoAberta = true;
-  tique();
-  relogioEdicao = setInterval(tique, 15000);
 }
 function pararRelogio(){ if(relogioEdicao){ clearInterval(relogioEdicao); relogioEdicao = null; } }
 
@@ -2392,7 +2378,7 @@ async function enviarTelas(cabecalho, itens, botao){
   try{
     if(EDICAO){
       const r = await apiRpc('salvar_edicao', { p_token: TOKEN_TELAS, p_id: EDICAO.id, p_cabecalho: cab, p_itens: its });
-      if(r && r.erro === 'edicao_expirou'){ encerrarEdicao('Passou o prazo da edição.', r.mensagem, true); return; }
+      if(r && r.erro === 'edicao_expirou'){ encerrarEdicao('Esta edição foi encerrada.', 'O pedido já tinha voltado para a liderança como estava. A edição deste pedido já foi usada.', true); return; }
       if(!r || r.ok !== true) throw new Error((r && r.mensagem) || 'o banco recusou a gravação');
       edicaoAberta = false;
       pararRelogio();

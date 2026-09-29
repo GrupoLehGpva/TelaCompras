@@ -703,3 +703,25 @@ $b$'C9 salva edição: só os itens mudam, volta à liderança e registra o que 
   if d = antes then raise exception 'bateria: C9 não encontrado'; end if;
   execute d;
 end $$;
+
+-- 29/09 · bateria: edição esquecida devolve a chance (C16, C16b).
+do $$
+declare d text; antes text;
+begin
+  d := pg_get_functiondef('public._teste_caminho_telas()'::regprocedure);
+  antes := d;
+  d := replace(d, $a$(select etapa_atual='lider' and edicao_usada and motivo='Teste automático' from solicitacoes where id=vS)$a$,
+                  $b$(select etapa_atual='lider' and not edicao_usada and motivo='Teste automático' from solicitacoes where id=vS)$b$);
+  if d = antes then raise exception 'C16 não achado'; end if;
+  antes := d;
+  d := replace(d, $a$  r := abrir_pedido_telas(tf, cab, itens); vT := (r->>'id')::uuid;
+  r := iniciar_edicao(tf, vT, 1);$a$, $b$  r := iniciar_edicao(tf, vS, (select versao from solicitacoes where id=vS));
+  res := res || jsonb_build_array(jsonb_build_object('c','C16b edição esquecida devolve a chance: edita de novo','ok', r->>'ok'='true','r',r));
+  r := desistir_edicao(tf, vS);
+  r := iniciar_edicao(tf, vS, (select versao from solicitacoes where id=vS));
+  res := res || jsonb_build_array(jsonb_build_object('c','C16c depois de desistir na segunda chance, acabou','ok', r->>'erro'='edicao_ja_usada','r',r));
+  r := abrir_pedido_telas(tf, cab, itens); vT := (r->>'id')::uuid;
+  r := iniciar_edicao(tf, vT, 1);$b$);
+  if d = antes then raise exception 'C16b: ponto de inserção não achado'; end if;
+  execute d;
+end $$;

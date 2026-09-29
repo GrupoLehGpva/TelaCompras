@@ -72,8 +72,8 @@ const b = await chromium.launch();
   ok('1 t1 editar e cancelar', await linha(p,'03001').locator('button[data-acao=editar]').count() === 1 &&
      await linha(p,'03001').locator('button[data-acao=cancelar]').count() === 1);
   const t2 = await linha(p,'03002').textContent();
-  ok('1 t2 em edição com você', /Em edição/.test(t2) && /com você/.test(t2), t2);
-  ok('1 t2 sem prazo nem continuar (24/09: não fica parado em edição)', !/Salve até|Continuar/.test(t2), t2);
+  ok('1 t2 sem "em edição" (29/09): aparece esperando a liderança', /Esperando a liderança/.test(t2) && !/Em edição|Salve até|Continuar/.test(t2), t2);
+  ok('1 t2 diz que a edição já foi usada', /edição deste pedido já foi usada/.test(t2), t2);
   ok('1 t2 sem botões', await linha(p,'03002').locator('button[data-acao], a.continuar').count() === 0);
   ok('1 t3 edição usada', /edição deste pedido já foi usada/.test(await linha(p,'03003').textContent()) &&
      await linha(p,'03003').locator('button[data-acao=editar]').count() === 0);
@@ -81,6 +81,8 @@ const b = await chromium.launch();
   const al = await linha(p,'03001').evaluate(tr => [...tr.children].map(td => getComputedStyle(td).textAlign));
   ok('1 motivo e centro de custo à esquerda, o resto centralizado (24/09)', al[1] === 'left' && al[2] === 'left' &&
      al.filter((x,i) => i !== 1 && i !== 2).every(x => x === 'center'), JSON.stringify(al));
+  const bt = await linha(p,'03001').locator('button[data-acao=editar]').evaluate(e => { const c = getComputedStyle(e); return {f:parseFloat(c.fontSize), w:c.fontWeight}; });
+  ok('1 Editar e Cancelar com letra pequena (29/09)', bt.f <= 12.5 && Number(bt.w) <= 500, JSON.stringify(bt));
   ok('1 ClickUp: nada', await linha(p,'01001').locator('button[data-acao], a.continuar').count() === 0);
   ok('1 aviso de leitura explica', /editar uma vez ou cancelar/.test(await p.textContent('#avisoLeitura')));
   /* cancelado vai para encerradas, vermelho */
@@ -94,7 +96,7 @@ const b = await chromium.launch();
   await linha(p,'03001').locator('button[data-acao=editar]').click();
   ok('2 modal aberto', await p.locator('#fundoAcao').isVisible());
   const tx = await p.textContent('#textoAcao');
-  ok('2 diz que é uma vez só', /uma vez só/.test(tx) && /30 minutos/.test(tx) && /não dá para editar de novo/.test(tx), tx);
+  ok('2 diz que é uma vez só', /uma vez só/.test(tx) && !/minuto/.test(tx) && /sair da tela sem salvar/.test(tx) && /não dá para editar de novo/.test(tx), tx);
   ok('2 sem campo de motivo', !(await p.locator('#motivoAcao').isVisible()));
   ok('2 nada chamado ainda', qtas(p,'iniciar_edicao').length === 0);
   await Promise.all([ p.waitForURL(/index\.html/, {timeout:5000}).catch(()=>{}), p.click('#btnConfirmarAcao') ]);

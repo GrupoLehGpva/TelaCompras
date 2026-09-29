@@ -61,8 +61,8 @@ function texto(a, d) {
                                                   : num + ' foi aprovada em todas as etapas. A ordem de compra será emitida.';
     if (a.acao === 'reprovado')       frase = num + ' foi reprovada na ' + (ETAPA[a.etapa] || a.etapa) + '.\nMotivo: ' + limpa(a.motivo);
     if (a.acao === 'cotacao_enviada') frase = num + ' teve a cotação concluída e agora ' + (PROXIMO[seg] || 'segue.');
-    if (a.acao === 'edicao_expirada') frase = 'A edição de ' + num + ' passou de 30 minutos sem ser salva e foi descartada. ' +
-                                              'O pedido voltou para a liderança como estava. A edição deste pedido já foi usada.';
+    if (a.acao === 'edicao_expirada') frase = 'A edição de ' + num + ' ficou aberta sem ser salva e foi desfeita. ' +
+                                              'O pedido voltou para a liderança como estava. Você ainda pode editar uma vez, enquanto a liderança não decidir.';
     if (!frase) return null;
     return frase + (url ? '\n\n👉 Acompanhar: ' + url + '\n_Este link é seu e mostra todas as suas solicitações._' : '');
   }

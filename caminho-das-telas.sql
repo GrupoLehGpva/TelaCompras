@@ -1948,3 +1948,35 @@ $r$-- Só os itens mudam na edição: o cabeçalho é o que já está gravado.
   if d = antes then raise exception 'salvar_edicao: ponto de troca não encontrado'; end if;
   execute d;
 end $$;
+
+-- 29/09 · telas_8 · Edição esquecida devolve a chance (Guilherme).
+-- Quando o sistema NÃO percebe a saída do formulário (aba travou, celular
+-- descartou a página) e a rede de segurança do banco descarta a edição, a
+-- edição não conta: o pedido volta à liderança como estava e o facilitador pode
+-- editar de novo, enquanto a liderança não decidir. Sair da tela sem salvar
+-- (percebido) e desistir continuam gastando a edição.
+-- E a mensagem ao aprovador deixa de citar hora limite.
+do $$
+declare d text; n int;
+begin
+  d := pg_get_functiondef('public._telas_expirar_um(uuid)'::regprocedure); n := length(d);
+  d := replace(d, $a$update solicitacoes set em_edicao_desde = null where id = s.id;$a$,
+                  $b$update solicitacoes set em_edicao_desde = null, edicao_usada = false where id = s.id;$b$);
+  d := replace(d, $a$'prazo_minutos', extract(epoch from _telas_prazo_edicao()) / 60)$a$,
+                  $b$'prazo_minutos', extract(epoch from _telas_prazo_edicao()) / 60,
+                       'pode_editar_de_novo', true)$b$);
+  if length(d) = n or position('edicao_usada = false' in d) = 0 or position('pode_editar_de_novo' in d) = 0 then
+    raise exception '_telas_expirar_um: substituição não bateu';
+  end if;
+  execute d;
+
+  d := pg_get_functiondef('public.decidir_pedido(text,uuid,integer,text,text)'::regprocedure); n := length(d);
+  d := replace(d, $a$'. Espere ele terminar (no máximo até ' ||
+        to_char((s.em_edicao_desde + _telas_prazo_edicao()) at time zone 'America/Sao_Paulo', 'HH24:MI') || ').');$a$,
+                  $b$'. Ele volta para a sua fila assim que o facilitador salvar ou sair da edição.');$b$);
+  if length(d) = n then raise exception 'decidir_pedido: substituição não bateu'; end if;
+  execute d;
+end $$;
+
+comment on column public.solicitacoes.edicao_usada is
+  'Verdadeiro depois que o facilitador usou a única edição (conta ao clicar em Editar; salvar, desistir ou sair da tela gastam). Se a edição for descartada pelo banco por esquecimento (a tela não avisou a saída), volta a falso: ele pode editar de novo enquanto a liderança não decidir.';
