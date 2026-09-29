@@ -31,6 +31,12 @@ for b in bateria-tela.js teste-centros.js teste-pedido.js teste-decisao.js \
 done
 
 echo
+echo "== teste-compras-virada.js (/compras da virada, preparado) =="
+saida=$(node teste-compras-virada.js 2>&1) || falhou=1
+echo "$saida" | tail -1
+echo "$saida" | grep -q "falhou 0" || falhou=1
+
+echo
 echo "== teste-avisos-telas.js (mensagens do Slack, caminho das telas) =="
 saida=$(node teste-avisos-telas.js 2>&1) || falhou=1
 echo "$saida" | tail -1

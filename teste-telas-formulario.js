@@ -30,7 +30,7 @@ const ITENS_LISTA = [
   { id:'i1', codigo:'1201', descricao:'ROLAMENTO 6205', unidade:'UNID', quantidade:4, fora_catalogo:false },
   { id:'i2', codigo:'7360', descricao:'SABAO EM PO 1KG', unidade:'UNID', quantidade:10, fora_catalogo:false }];
 
-async function abrir(b, qs, {eu=EU, ped=()=>({ok:true, pedido:PEDIDO(), itens:ITENS_LISTA}), rpc={}}={}){
+async function abrir(b, qs, {eu=EU, ped=()=>({ok:true, pedido:PEDIDO(), itens:ITENS_LISTA}), rpc={}, url=URL_}={}){
   const p = await b.newPage({viewport:{width:1000,height:1000}});
   p.on('pageerror', e => falhas.push('ERRO DE PÁGINA (' + qs + '): ' + e.message));
   p.__rpc = []; p.__hook = [];
@@ -61,7 +61,7 @@ async function abrir(b, qs, {eu=EU, ped=()=>({ok:true, pedido:PEDIDO(), itens:IT
     return j([]);
   });
   await p.route('**n8n.cloud/**', r => { p.__hook.push(r.request().url()); r.fulfill({status:200,contentType:'application/json',body:'{"ok":true}'}); });
-  await p.goto(URL_ + qs, {waitUntil:'load'});
+  await p.goto(url + qs, {waitUntil:'load'});
   await p.waitForTimeout(1200);
   return p;
 }
@@ -106,6 +106,37 @@ const b = await chromium.launch();
   ok('1 rodapé sem "protótipo" nas telas', !/Protótipo|dados de exemplo/.test(await p.textContent('#rodapeNota')), await p.textContent('#rodapeNota'));
   ok('1 link para acompanhar', (await p.getAttribute('.ir-acompanhar','href')) === 'acompanhar.html?t=fc-ana');
   await p.close(); }
+
+/* 1.6 — compra mensal: ligada nas telas, desligada no caminho do ClickUp (29/09) */
+{ const p = await abrir(b, '?t=fc-ana');
+  ok('1.6 mensal liberada nas telas', await p.locator('input[name=tipoCompra][value=mensal]').isEnabled() &&
+     !/indisponível/.test(await p.textContent('#tipoCompraOpcoes')), await p.textContent('#tipoCompraOpcoes'));
+  await preencherNovo(p);
+  await p.evaluate(() => marcarRadio('tipoCompra', 'mensal'));
+  await enviarPagina(p);
+  const a = chamou(p,'abrir_pedido_telas')[0];
+  ok('1.6 pedido mensal sai pelas telas', a && a.corpo.p_cabecalho.tipo_compra === 'mensal', JSON.stringify(a && a.corpo.p_cabecalho));
+  await p.close(); }
+{ const p = await abrir(b, '?uid=' + mock.UID_EXEMPLO);
+  ok('1.6 mensal continua desligada no ClickUp', await p.locator('input[name=tipoCompra][value=mensal]').isDisabled());
+  await p.close(); }
+
+/* 1.7 — chave da virada: com CAMINHO_CLICKUP_ABERTO = false o link antigo não abre pedido (29/09) */
+{ const fs = require('fs'), path = require('path');
+  const tmp = path.join(__dirname, 'index-virada-teste.html');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  ok('1.7 a chave existe e hoje está aberta', /const CAMINHO_CLICKUP_ABERTO = true;/.test(src));
+  fs.writeFileSync(tmp, src.replace('const CAMINHO_CLICKUP_ABERTO = true;', 'const CAMINHO_CLICKUP_ABERTO = false;'));
+  try {
+    const p = await abrir(b, '?uid=' + mock.UID_EXEMPLO, { url:'file://' + tmp });
+    ok('1.7 link antigo bloqueado', /não vale mais/.test(await p.textContent('#alerta')) && /\/compras no Slack/.test(await p.textContent('#alerta')));
+    ok('1.7 sem formulário e sem "Ver minhas solicitações"', await p.locator('.passo:not([hidden])').count() === 0 && !(await p.locator('#nav').isVisible()) &&
+       !/Ver minhas solicitações/.test(await p.textContent('#alerta')));
+    await p.close();
+    const q = await abrir(b, '?t=fc-ana', { url:'file://' + tmp });
+    ok('1.7 com token continua abrindo', await q.locator('#nav').isVisible() && !(await q.locator('#alerta').isVisible()));
+    await q.close();
+  } finally { fs.unlinkSync(tmp); } }
 
 /* 1.5 — campo travado diz de onde veio: do cadastro */
 { const p = await abrir(b, '?t=fc-ana');

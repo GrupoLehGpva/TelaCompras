@@ -1088,6 +1088,9 @@ async function iniciar(){
   await Promise.all([carregarCatalogo(), carregarCentrosCusto(), carregarEmpresas(),
                      carregarFacilitador(SLACK_UID)]);
   if(TOKEN_TELAS) await prepararTelas();
+  else if(!CAMINHO_CLICKUP_ABERTO && !MODO_DEMO)
+    bloquearTelas('Este link de formulário não vale mais.',
+      'Os pedidos de compra agora são feitos pelo seu link pessoal. Digite /compras no Slack para receber o seu.', true);
 }
 
 async function carregarCatalogo(){
@@ -2220,6 +2223,11 @@ function concluir(cabecalho, itens, nota, cardCriado, anexos){
                      Salva por salvar_edicao; tem prazo (30 min) e pode ser
                      abandonada — o que também gasta a edição.
    ========================================================================== */
+/* VIRADA (quinta, 01/10): trocar para false. Com false, o link antigo do
+   formulário (sem ?t=, o do ClickUp) não abre mais pedido: manda a pessoa
+   pegar o link pessoal com /compras. Até lá fica true — o caminho do ClickUp
+   segue funcionando como sempre. */
+const CAMINHO_CLICKUP_ABERTO = true;
 const PARAMS_TELAS = new URLSearchParams(location.search);
 const TOKEN_TELAS  = (PARAMS_TELAS.get('t') || '').trim();
 const EDITAR_ID    = (PARAMS_TELAS.get('editar') || '').trim();
@@ -2259,6 +2267,16 @@ async function prepararTelas(){
     return;
   }
   FACILITADOR_TELAS = eu;
+  /* Compra mensal: ligada só no caminho das telas (29/09). O link com token só é
+     entregue pelo /compras a partir da virada, então até lá ninguém a vê; o
+     formulário do ClickUp continua com ela desligada. */
+  const mensal = DADOS.tiposCompra.find(o => o.id === 'mensal');
+  if(mensal && mensal.desabilitado){
+    delete mensal.desabilitado; delete mensal.selo;
+    mensal.ajuda = 'Compra que se repete todo mês: material de limpeza, copa e cozinha, escritório. A gerência aprova a necessidade antes da cotação';
+    montarOpcoes('tipoCompraOpcoes','tipoCompra',DADOS.tiposCompra);
+    if(estado.tipoCompra) marcarRadio('tipoCompra', estado.tipoCompra);
+  }
   /* Caminho das telas: sem o aviso de protótipo (o caminho do ClickUp fica como está). */
   $('rodapeNota').textContent = 'Este formulário não pede valor — o preço é apurado pelo setor de compras na cotação.';
   FACILITADOR = { nome: eu.nome, email: eu.email || '', unidade: eu.unidade || '' };
