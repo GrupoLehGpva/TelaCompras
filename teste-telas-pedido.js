@@ -140,10 +140,10 @@ const b = await chromium.launch();
   ok('1.3 escapa', await p.locator('#cotacaoCorpo img').count() === 0 && await p.locator('.cot-mapa th.item b').count() === 0 && !(await p.evaluate(()=>window.__x)));
   await p.close(); }
 
-/* 1.5 — ordem: resumo, motivo, cotação, itens (o que e por quê, depois por quanto) */
+/* 1.5 — ordem: resumo, motivo, o que mudou na edição (29/09), cotação, itens */
 { const p = await abrir(b);
   const ordem = await p.evaluate(() => [...document.querySelectorAll('main > section')].map(s => s.id || 'resumo'));
-  ok('1.5 cotação depois do motivo e antes dos itens', ordem.indexOf('cartaoMotivo') === 1 && ordem.indexOf('cartaoCotacao') === 2 && ordem.indexOf('cartaoCotacao') < ordem.indexOf('cartaoItens'), ordem.join(','));
+  ok('1.5 cotação depois do motivo e antes dos itens', ordem.indexOf('cartaoMotivo') === 1 && ordem.indexOf('cartaoEdicao') === 2 && ordem.indexOf('cartaoCotacao') === 3 && ordem.indexOf('cartaoCotacao') < ordem.indexOf('cartaoItens'), ordem.join(','));
   await p.close(); }
 
 /* 2 — aprovar: pelo banco, com a versão */
@@ -255,6 +255,33 @@ const b = await chromium.launch();
 { const p = await abrir(b, {token:''});
   ok('12 sem barra', !(await p.locator('#barraAprova').isVisible()));
   ok('12 sem cotação', !(await p.locator('#cartaoCotacao').isVisible()));
+  await p.close(); }
+
+/* Piloto 29/09: o que mudou na edição, razão social do fornecedor e selo depois de decidir */
+{ const m = JSON.parse(JSON.stringify(MAPA));
+  m.mapa.resumo.familias[0].fornecedores[1].nome = 'GUARAPUAVA';
+  m.mapa.resumo.familias[0].fornecedores[1].razao_social = 'COAMO AGROINDUSTRIAL COOPERATIVA';
+  m.mapa.resumo.familias[0].fornecedores[1].cidade = 'GUARAPUAVA/PR';
+  m.mapa.resumo.familias[0].fornecedores[0].razao_social = 'ROLAMAX';
+  m.linha_do_tempo = [ {acao:'criado', em:'2026-09-20T13:00:00Z'},
+    {acao:'edicao_salva', quem:'Ana Paula', em:'2026-09-20T14:05:00Z', mudou:{ itens:{
+      antes:[{descricao:'ROLAMENTO 6205', unidade:'UNID', quantidade:2}, {descricao:'CORREIA <b>A40</b>', unidade:'UNID', quantidade:1}],
+      depois:[{descricao:'ROLAMENTO 6205', unidade:'UNID', quantidade:4}, {descricao:'RETENTOR 35X52X7', unidade:'UNID', quantidade:4}] } } } ];
+  const p = await abrir(b, { mapa:m });
+  ok('10 cartão da edição aparece', await p.locator('#cartaoEdicao').isVisible());
+  const e = await p.locator('#edicaoCorpo').textContent() || '';
+  ok('10 quem e quando', /Ana Paula alterou o pedido em 20\/09\/2026/.test(e), e);
+  ok('10 quantidade mudou', /ROLAMENTO 6205: 2 UNID → 4 UNID/.test(e), e);
+  ok('10 incluído e retirado', /Incluído: RETENTOR 35X52X7 — 4 UNID/.test(e) && /Retirado: CORREIA <b>A40<\/b> — 1 UNID/.test(e), e);
+  ok('10 sem HTML vindo do banco', await p.locator('#edicaoCorpo b', {hasText:'A40'}).count() === 0);
+  const cab = await p.locator('.cot-mapa thead th.forn').allTextContents();
+  ok('10 razão social e cidade embaixo do nome curto', /GUARAPUAVA/.test(cab[1]) && /COAMO AGROINDUSTRIAL COOPERATIVA · GUARAPUAVA\/PR/.test(cab[1]), JSON.stringify(cab));
+  ok('10 razão igual ao nome não repete', (cab[0].match(/ROLAMAX/g) || []).length === 1, cab[0]);
+  await p.click('#btnAprovar'); await p.waitForTimeout(500);
+  ok('10 selo do topo muda depois de aprovar', (await p.locator('#seloStatus').textContent()) === 'Aprovado por você', await p.locator('#seloStatus').textContent());
+  await p.close(); }
+{ const p = await abrir(b);
+  ok('11 sem edição, sem cartão', await p.locator('#cartaoEdicao').isHidden());
   await p.close(); }
 
 await b.close();

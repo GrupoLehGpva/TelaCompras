@@ -2094,3 +2094,18 @@ begin
   if length(d) = n or position('movimentos_compra m' in d) = 0 then raise exception 'painel_diretoria: troca não bateu'; end if;
   execute d;
 end $$;
+
+-- 29/09 · telas_12 · Achado no piloto: no comparativo do aprovador aparecia só o
+-- nome curto do fornecedor ("GUARAPUAVA" é uma unidade da Coamo). O resumo do
+-- mapa passa a levar razão social e cidade (o que a regra de LGPD permite na tela).
+do $$
+declare d text; n int;
+begin
+  d := pg_get_functiondef('public._telas_resumo_mapa(uuid)'::regprocedure); n := length(d);
+  d := replace(d, $a$'nome', mf.fornecedor_nome,$a$,
+                  $b$'nome', mf.fornecedor_nome,
+          'razao_social', (select fo.razao_social from fornecedores fo where fo.id = mf.fornecedor_id),
+          'cidade', (select nullif(concat_ws('/', fo.cidade, fo.uf), '') from fornecedores fo where fo.id = mf.fornecedor_id),$b$);
+  if length(d) = n or position('razao_social' in d) = 0 then raise exception '_telas_resumo_mapa: troca não bateu'; end if;
+  execute d;
+end $$;

@@ -613,7 +613,9 @@ const qtd = v => Number(v).toLocaleString('pt-BR',{maximumFractionDigits:3});
 const dt = d => d ? d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
 const dth = d => d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}) + ' · ' + d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
 const hm = d => d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-function dias(d){ if (d < 1){ const h = Math.max(1, Math.round(d*24)); return h + (h === 1 ? ' hora' : ' horas'); } const n = Math.floor(d); return n + (n === 1 ? ' dia' : ' dias'); }
+/* Menos de 1 hora mostra minutos (piloto 29/09: pedido de minutos aparecia "1 hora"). */
+function dias(d){ if (d < 1/24){ const m = Math.max(1, Math.round(d*1440)); return m + ' min'; }
+  if (d < 1){ const h = Math.round(d*24); return h + (h === 1 ? ' hora' : ' horas'); } const n = Math.floor(d); return n + (n === 1 ? ' dia' : ' dias'); }
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const $ = id => document.getElementById(id);
 const plural = (n, a, b) => n + ' ' + (n === 1 ? a : b);

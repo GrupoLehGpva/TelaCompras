@@ -292,6 +292,12 @@
   input[type=search]:focus,input[type=text]:focus,select:focus,textarea:focus{outline:none;border-color:var(--verde);box-shadow:0 0 0 2px var(--verde-claro, rgba(0,114,122,.15))}
   /* barra do topo na mesma margem do conteúdo */
   @media (min-width:601px){ .topo{padding-left:24px;padding-right:24px} }
+  .edi-quando{margin:0 0 10px;font-size:13px;color:var(--muted)}
+  .edi-lista{margin:0;padding-left:18px;font-size:13.5px;line-height:1.7}
+  .edi-lista .antes{color:var(--muted);text-decoration:line-through}
+  .edi-lista .novo{color:var(--ok-txt, #007A53);font-weight:700}
+  .edi-lista .saiu{color:var(--erro, #B3261E);font-weight:700}
+  .forn-razao{display:block;font-weight:400;font-size:11px;color:var(--muted);text-transform:none;letter-spacing:0}
   .cot-unico{margin:0 0 14px;padding:10px 14px;border-radius:8px;background:var(--demo-bg);color:var(--demo);font-size:13px;line-height:1.5}
   .cot-unico-just{display:block;color:var(--texto);margin-top:4px}
 </style>
@@ -331,6 +337,12 @@
     <section class="cartao" id="cartaoMotivo" hidden>
       <h2>Motivo da compra</h2>
       <p class="escopo" id="motivoTexto"></p>
+    </section>
+
+    <!-- Pedido editado pelo solicitante (piloto 29/09): quem aprova vê o que mudou. -->
+    <section class="cartao" id="cartaoEdicao" hidden>
+      <h2>Editado pelo solicitante</h2>
+      <div id="edicaoCorpo"></div>
     </section>
 
     <!-- Só no caminho das telas (sem ClickUp): a cotação que o comprador indicou.
@@ -938,8 +950,41 @@ function podeDevolver(){
    Só aprovador e comprador recebem o mapa (pedido_telas não manda preço ao
    facilitador).
    --------------------------------------------------------------------------- */
+/* O que o solicitante mudou na edição (a última, que é a única permitida). */
+function desenharEdicao(r){
+  const ed = (Array.isArray(r.linha_do_tempo) ? r.linha_do_tempo : []).filter(l => l && l.acao === 'edicao_salva').slice(-1)[0];
+  if(!ed) return;
+  const mud = ed.mudou && typeof ed.mudou === 'object' ? ed.mudou : {};
+  const qtdF = q => Number(q || 0).toLocaleString('pt-BR', { maximumFractionDigits: 3 });
+  const linhas = [];
+  if(mud.itens && (Array.isArray(mud.itens.antes) || Array.isArray(mud.itens.depois))){
+    const antes = Array.isArray(mud.itens.antes) ? mud.itens.antes : [];
+    const depois = Array.isArray(mud.itens.depois) ? mud.itens.depois : [];
+    const chave = i => String(i.descricao || '').trim().toLowerCase();
+    const mapaAntes = {}; antes.forEach(i => { mapaAntes[chave(i)] = i; });
+    const vistos = {};
+    depois.forEach(i => {
+      const a = mapaAntes[chave(i)]; vistos[chave(i)] = true;
+      if(!a) linhas.push('<li><span class="novo">Incluído:</span> ' + esc(i.descricao || '—') + ' — ' + qtdF(i.quantidade) + ' ' + esc(i.unidade || '') + '</li>');
+      else if(Number(a.quantidade) !== Number(i.quantidade) || String(a.unidade||'') !== String(i.unidade||''))
+        linhas.push('<li>' + esc(i.descricao || '—') + ': <span class="antes">' + qtdF(a.quantidade) + ' ' + esc(a.unidade || '') + '</span> → <b>' + qtdF(i.quantidade) + ' ' + esc(i.unidade || '') + '</b></li>');
+    });
+    antes.forEach(a => { if(!vistos[chave(a)]) linhas.push('<li><span class="saiu">Retirado:</span> <span class="antes">' + esc(a.descricao || '—') + ' — ' + qtdF(a.quantidade) + ' ' + esc(a.unidade || '') + '</span></li>'); });
+  }
+  Object.keys(mud).filter(k => k !== 'itens').forEach(k => {
+    const m = mud[k] || {};
+    linhas.push('<li>' + esc(k) + ': <span class="antes">' + esc(m.antes == null ? '—' : m.antes) + '</span> → <b>' + esc(m.depois == null ? '—' : m.depois) + '</b></li>');
+  });
+  const quando = ed.em ? new Date(ed.em) : null;
+  $('edicaoCorpo').innerHTML = '<p class="edi-quando">' + esc(ed.quem || 'O solicitante') + ' alterou o pedido' +
+    (quando && !isNaN(quando) ? ' em ' + quando.toLocaleDateString('pt-BR') + ' às ' + quando.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : '') +
+    '. Confira antes de decidir.</p>' + (linhas.length ? '<ul class="edi-lista">' + linhas.join('') + '</ul>' : '<p class="edi-quando">Nada foi alterado.</p>');
+  $('cartaoEdicao').hidden = false;
+}
+
 async function carregarCotacao(){
   const r = await rpc('pedido_telas', { p_token: TOKEN_APROVADOR, p_id: SOLICITACAO.id });
+  if(r && r.ok === true) desenharEdicao(r);
   if(!r || r.ok !== true || !r.mapa || !r.mapa.resumo) return;
   const m = r.mapa, res = m.resumo;
   const itens = Array.isArray(r.itens) ? r.itens : [];
@@ -961,7 +1006,10 @@ async function carregarCotacao(){
       const desc = Number(f.desconto_pct || 0), frete = Number(f.frete || 0);
       return { f, cotados, sub, tudo: cotados ? sub * (1 - desc / 100) + frete : null, ganhos: Number(f.itens_ganhos || 0) };
     });
-    const cab = cont.map(c => '<th class="forn">' + esc(c.f.nome || ('Fornecedor ' + c.f.coluna)) +
+    /* Nome curto e, embaixo, razão social e cidade (piloto 29/09: "GUARAPUAVA" era uma unidade da Coamo). */
+    const razao = f => { const r2 = [f.razao_social && f.razao_social !== f.nome ? f.razao_social : '', f.cidade || ''].filter(Boolean).join(' · ');
+      return r2 ? '<span class="forn-razao">' + esc(r2) + '</span>' : ''; };
+    const cab = cont.map(c => '<th class="forn">' + esc(c.f.nome || ('Fornecedor ' + c.f.coluna)) + razao(c.f) +
       (c.ganhos ? '<span class="selo-escolha">escolhido para ' + plural(c.ganhos, 'item', 'itens') + '</span>' : '') + '</th>').join('');
     const linhas = its.map(i => '<tr><th class="item" scope="row">' + esc(i.descricao || '—') +
       '<span class="qtd-item">' + qtd(i.quantidade) + ' ' + esc(i.unidade || '') + '</span></th>' +
@@ -1011,6 +1059,12 @@ function mostrarBarra(titulo, sub, classe, comBotoes, girando){
   $('barraAprova').hidden = false;
 }
 
+/* Depois de decidir, o selo do topo deixa de dizer "Aguardando aprovação" (piloto 29/09). */
+function seloDepois(decisao){
+  const t = { aprovado:'Aprovado por você', reprovado:'Reprovado', devolvido:'Devolvido ao comprador' }[decisao];
+  if(t){ $('seloStatus').textContent = t; $('seloStatus').hidden = false; }
+}
+
 async function decidir(decisao, motivo){
   if(decidindo || !NA_FILA) return;
   decidindo = true;
@@ -1030,6 +1084,7 @@ async function decidir(decisao, motivo){
       });
       if(j && j.ok){
         NA_FILA = null;
+        seloDepois(decisao);
         mostrarBarra(decisao === 'aprovado' ? 'Aprovado.' : (decisao === 'devolvido' ? 'Devolvido ao comprador.' : 'Reprovado.'),
           j.mensagem || '', decisao === 'aprovado' ? 'ok' : 'nao-ok', false);
       } else if(j && j.erro === 'versao_mudou'){
@@ -1058,6 +1113,7 @@ async function decidir(decisao, motivo){
     const j = await r.json().catch(()=>({}));
     if(r.ok && j.ok){
       NA_FILA = null;
+      seloDepois(decisao);
       mostrarBarra(decisao === 'aprovado' ? 'Aprovado.'
                    : SO_REPROVA ? 'Compra reprovada.' : 'Reprovado.',
         decisao === 'aprovado'

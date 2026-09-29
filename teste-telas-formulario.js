@@ -101,6 +101,9 @@ const b = await chromium.launch();
   ok('1 confirmação', /Solicitação enviada/.test(await p.textContent('#okTitulo')) && /C2609-02011/.test(await p.textContent('#okNumero')));
   ok('1 diz com quem está', /Esperando a liderança · com Brandão/.test(await p.textContent('#okNumero')));
   ok('1 confirmação não fala de ClickUp', !/ClickUp|card/i.test(await p.locator('.passo.ok ol').textContent()));
+  ok('1 confirmação sem "valor total define" (piloto 29/09)', !/valor total define/i.test(await p.locator('.passo.ok ol').textContent()) &&
+     /Gerência e financeiro/.test(await p.locator('.passo.ok ol').textContent()));
+  ok('1 rodapé sem "protótipo" nas telas', !/Protótipo|dados de exemplo/.test(await p.textContent('#rodapeNota')), await p.textContent('#rodapeNota'));
   ok('1 link para acompanhar', (await p.getAttribute('.ir-acompanhar','href')) === 'acompanhar.html?t=fc-ana');
   await p.close(); }
 
@@ -122,12 +125,14 @@ const b = await chromium.launch();
   ok('2 criar_solicitacao', chamou(p,'criar_solicitacao').length === 1, JSON.stringify(p.__rpc.map(x=>x.nome)));
   ok('2 webhook do ClickUp', p.__hook.length >= 1);
   ok('2 nada das telas', chamou(p,'abrir_pedido_telas').length === 0);
+  ok('2 caminho do ClickUp: rodapé como era', /Protótipo para validação/.test(await p.textContent('#rodapeNota')));
   await p.close(); }
 
 /* 3 — token não reconhecido: não deixa pedir */
 { const p = await abrir(b, '?t=fc-velho', {eu:{ok:false, erro:'token_invalido', mensagem:'Este link não vale mais. Peça um novo com /compras no Slack.'}});
   ok('3 avisa', /Não reconheci este link/.test(await p.textContent('#alerta')) && /Peça um novo/.test(await p.textContent('#alerta')));
   ok('3 sem formulário', !(await p.locator('#nav').isVisible()) && await p.locator('.passo:not([hidden])').count() === 0);
+  ok('3 sem "Ver minhas solicitações" para link recusado (piloto 29/09)', !/Ver minhas solicitações/.test(await p.textContent('#alerta')));
   await p.evaluate(()=> render());
   ok('3 render não traz de volta', await p.locator('.passo:not([hidden])').count() === 0);
   await p.close(); }

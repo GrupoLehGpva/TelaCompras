@@ -75,6 +75,9 @@ ok('5 modal do cancelado', /Cancelada/.test(mc) && /Comprei de outro jeito/.test
 ok('5 nenhuma etapa marcada como atual', await p.locator('#modal .step.cur').count() === 0);
 await p.keyboard.press('Escape');
 
+{ const t = await p.evaluate(() => [dias(5/1440), dias(0.5), dias(2)]).catch(e => String(e));
+  ok('6 tempo na etapa em minutos (piloto 29/09)', JSON.stringify(t) === JSON.stringify(['5 min','12 horas','2 dias']), JSON.stringify(t)); }
+
 await b.close();
 console.log('\n===== FALHAS (' + falhas.length + ') =====');
 falhas.forEach(f => console.log(' ✗ ' + f));

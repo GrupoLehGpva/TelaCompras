@@ -648,7 +648,7 @@
   </div>
 </nav>
 
-<p class="rodape-nota">
+<p class="rodape-nota" id="rodapeNota">
   Protótipo para validação. Locais de entrega e centros de custo ainda são dados de exemplo.
   Este formulário não pede valor — o preço é apurado pelo setor de compras depois da primeira aprovação.
 </p>
@@ -2237,10 +2237,12 @@ const horaT = d => d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-dig
 const linkAcompanhar = () => 'acompanhar.html?t=' + encodeURIComponent(TOKEN_TELAS);
 function textoEnviar(){ return EDICAO ? 'Salvar alterações' : 'Enviar solicitação'; }
 
-function bloquearTelas(titulo, detalhe){
+function bloquearTelas(titulo, detalhe, semLink){
   TELAS_BLOQUEADA = true;
+  /* Link que não é de facilitador: não oferece "Ver minhas solicitações", que abriria
+     o acompanhamento com o mesmo link recusado (piloto 29/09). */
   mostrarAlerta('<b>' + escT(titulo) + '</b> ' + escT(detalhe || '') +
-    (TOKEN_TELAS ? '<br><br><a href="' + escT(linkAcompanhar()) + '">Ver minhas solicitações →</a>' : ''));
+    (TOKEN_TELAS && !semLink ? '<br><br><a href="' + escT(linkAcompanhar()) + '">Ver minhas solicitações →</a>' : ''));
   document.querySelectorAll('.passo').forEach(x => x.hidden = true);
   $('nav').hidden = true; $('progresso').hidden = true; $('auto').hidden = true;
   $('faixaEdicao').hidden = true;
@@ -2253,10 +2255,12 @@ async function prepararTelas(){
   try{ eu = await apiRpc('eu_facilitador', { p_token: TOKEN_TELAS }); }catch(e){ eu = null; }
   if(!eu || eu.ok !== true){
     bloquearTelas('Não reconheci este link.',
-      (eu && eu.mensagem) || 'Não consegui confirmar quem é você agora. Tente de novo em instantes.');
+      (eu && eu.mensagem) || 'Não consegui confirmar quem é você agora. Tente de novo em instantes.', !!(eu && eu.ok === false));
     return;
   }
   FACILITADOR_TELAS = eu;
+  /* Caminho das telas: sem o aviso de protótipo (o caminho do ClickUp fica como está). */
+  $('rodapeNota').textContent = 'Este formulário não pede valor — o preço é apurado pelo setor de compras na cotação.';
   FACILITADOR = { nome: eu.nome, email: eu.email || '', unidade: eu.unidade || '' };
   aplicarFacilitador();
 
@@ -2433,8 +2437,8 @@ function concluirTelas(titulo, numero, nota, detalhe, anexos){
   if(lista) lista.innerHTML = EDICAO
     ? '<li>A liderança recebe o pedido de volta e vê o que mudou</li><li>Daqui em diante ele segue o caminho normal</li>' +
       '<li>Este pedido não pode mais ser editado</li>'
-    : '<li>Quem aprova recebe o pedido na lista dele</li><li>Compras monta a cotação</li>' +
-      '<li>O valor total define quem dá a aprovação final</li><li>Você acompanha tudo pelo seu link</li>';
+    : '<li>Quem aprova recebe o pedido na lista dele</li><li>Compras faz a cotação</li>' +
+      '<li>Gerência e financeiro dão as aprovações seguintes</li><li>Você acompanha tudo pelo seu link</li>';
   const aviso = $('okAviso');
   aviso.hidden = true; aviso.innerHTML = '';
   if(detalhe){ aviso.hidden = false; aviso.textContent = detalhe; aviso.classList.add('neutro'); }

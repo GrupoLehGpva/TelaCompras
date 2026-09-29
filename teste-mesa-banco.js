@@ -377,6 +377,11 @@ const b = await chromium.launch();
   ok('11 celular: fila sem rolagem lateral', await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   await p.close(); }
 
+{ const p = await abrir(b, '?t=' + TOKEN);
+  const t = await p.evaluate(() => [dias(5/1440), dias(0.4/1440), dias(0.5), dias(1/24), dias(2)]);
+  ok('14 tempo na etapa: minutos, horas, dias (piloto 29/09)', JSON.stringify(t) === JSON.stringify(['5 min','1 min','12 horas','1 hora','2 dias']), JSON.stringify(t));
+  await p.close(); }
+
 await b.close();
 console.log('\n===== FALHAS (' + falhas.length + ') =====');
 falhas.forEach(f => console.log(' ✗ ' + f));

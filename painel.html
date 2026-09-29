@@ -516,7 +516,8 @@ const brl = v => v === null || v === undefined ? '—' : BRL.format(v);
 function brlC(v){ if (v >= 1e6) return 'R$ ' + (v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:1}) + ' mi'; if (v >= 1e3) return 'R$ ' + (v/1e3).toLocaleString('pt-BR',{maximumFractionDigits:1}) + ' mil'; return BRL.format(v); }
 const dt = d => d ? d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
 const dth = d => d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}) + ' · ' + d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-function dias(d){ if (d < 1) { const h = Math.max(1, Math.round(d*24)); return h + (h === 1 ? ' hora' : ' horas'); } const n = Math.floor(d); return n + (n === 1 ? ' dia' : ' dias'); }
+function dias(d){ if (d < 1/24) { const m = Math.max(1, Math.round(d*1440)); return m + ' min'; }
+  if (d < 1) { const h = Math.round(d*24); return h + (h === 1 ? ' hora' : ' horas'); } const n = Math.floor(d); return n + (n === 1 ? ' dia' : ' dias'); }
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const chaveMes = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');

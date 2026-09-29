@@ -225,6 +225,29 @@ for(const w of [1366, 1440, 1920]){
   ok('13 escapa HTML', await p.locator('#listaEdicao img').count() === 0 && await p.evaluate(()=>!window.__x), 'injetou');
   await p.close(); }
 
+/* Selos do piloto (29/09): urgente (telas e ClickUp) e editado pelo solicitante */
+{ const p = await b.newPage();
+  const fila = FILA(); fila[2].tipo_compra = 'urgente';
+  await p.route('**/rest/v1/rpc/**', r => {
+    const nome = r.request().url().split('/rpc/')[1].split('?')[0];
+    const j = x => r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(x)});
+    if(nome === 'aprovador_do_token') return j([{id:'g', nome:'Gerente', etapas:['lider','gerencial']}]);
+    if(nome === 'fila_de_aprovacao') return j(fila);
+    if(nome === 'fila_do_aprovador') return j({ ok:true, pedidos:[
+      {id:'t1', canal:'telas', versao:7, pode_devolver:true, definicao_fornecedor:'unico'},
+      {id:'t2', canal:'telas', versao:3, pode_devolver:false, urgente:true, editado:true},
+      {id:'c1', canal:'clickup', versao:1}], em_edicao:[] });
+    return j([]);
+  });
+  await p.goto(base + '?t=ap-teste', {waitUntil:'load'}); await p.waitForTimeout(600);
+  ok('9 urgente das telas marcado', await linha(p,'C2609-02002').locator('.selo-urgente').count() === 1, 'sem selo');
+  ok('9 urgente do ClickUp marcado', await linha(p,'C2609-01001').locator('.selo-urgente').count() === 1, 'sem selo');
+  ok('9 normal sem selo urgente', await linha(p,'C2609-02001').locator('.selo-urgente').count() === 0, 'selo sobrando');
+  ok('9 editado marcado', await linha(p,'C2609-02002').locator('.selo-editado').count() === 1 &&
+     await linha(p,'C2609-02001').locator('.selo-editado').count() === 0, 'selo editado');
+  ok('9 fornecedor único continua', await linha(p,'C2609-02001').locator('.selo-unico').count() === 1, 'sumiu');
+  await p.close(); }
+
 await b.close();
 console.log('\n===== FALHAS (' + falhas.length + ') =====');
 falhas.forEach(f=>console.log(' ✗ ' + f));

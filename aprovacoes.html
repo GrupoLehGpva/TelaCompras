@@ -447,6 +447,8 @@
   /* barra do topo na mesma margem do conteúdo */
   @media (min-width:601px){ .topo{padding-left:24px;padding-right:24px} }
   .selo-unico{display:inline-block;margin-top:4px;padding:1px 8px;border-radius:999px;background:var(--demo-bg);color:var(--demo);font-size:11px;font-weight:700}
+  .selo-urgente{display:inline-block;margin-top:4px;margin-right:4px;padding:1px 8px;border-radius:999px;background:var(--erro-bg);color:var(--erro);font-size:11px;font-weight:700}
+  .selo-editado{display:inline-block;margin-top:4px;margin-right:4px;padding:1px 8px;border-radius:999px;background:var(--verde-claro);color:var(--verde-mata);font-size:11px;font-weight:700}
 </style>
 </head>
 <body>
@@ -697,7 +699,8 @@ async function carregarFila(){
     extra.pedidos.forEach(x => { if(x && x.id) por[x.id] = x; });
     (fila || []).forEach(s => {
       const x = por[s.id];
-      if(x){ s.canal = x.canal; s.versao = x.versao; s.pode_devolver = x.pode_devolver === true; s.definicao_fornecedor = x.definicao_fornecedor || s.definicao_fornecedor; }
+      if(x){ s.canal = x.canal; s.versao = x.versao; s.pode_devolver = x.pode_devolver === true; s.definicao_fornecedor = x.definicao_fornecedor || s.definicao_fornecedor;
+             s.editado = x.editado === true; if(x.urgente === true) s.tipo_compra = 'urgente'; }
     });
     EM_EDICAO = Array.isArray(extra.em_edicao) ? extra.em_edicao : [];
   }
@@ -760,7 +763,11 @@ function desenhar(){
     };
     const tdM = cel(s.motivo || '—', 'assunto-cel');
     /* Fornecedor único fica explícito já na fila: quem aprova sabe que não houve cotação com outros. */
-    if(s.definicao_fornecedor === 'unico'){ const u = document.createElement('span'); u.className = 'selo-unico'; u.textContent = 'Fornecedor único'; tdM.appendChild(u); }
+    /* Selos embaixo do motivo (piloto 29/09): urgente, editado pelo solicitante e fornecedor único. */
+    const selo = (cls, txt, dica) => { const u = document.createElement('span'); u.className = cls; u.textContent = txt; if(dica) u.title = dica; tdM.appendChild(u); };
+    if(s.tipo_compra === 'urgente') selo('selo-urgente', 'Urgente');
+    if(s.editado) selo('selo-editado', 'Editado pelo solicitante', 'O pedido foi alterado depois de aberto. Abra para ver o que mudou.');
+    if(s.definicao_fornecedor === 'unico') selo('selo-unico', 'Fornecedor único');
     tr.appendChild(tdM);
 
     /* Quem pediu e centro de custo dividem uma coluna, em duas linhas.
