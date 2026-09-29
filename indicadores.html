@@ -1,0 +1,1030 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="robots" content="noindex, nofollow">
+<title>Indicadores de Compras LEH</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* ============ TOKENS · identidade Grupo Leh ============
+   Mesmos tokens do painel.html (funil da diretoria) — as duas telas são irmãs.
+   Paleta oficial (Pantone -> hex), marca/paleta-de-cores.pdf:
+   2965 C #00263d · 2955 C #003865 · 330 C #00524c · 341 C #007A53
+   321 C #008c95 · 468 C #ddcba3 · Warm Gray 1 C #d7d2cc
+   Tipografia: Goldplay, com Figtree como substituta; números em IBM Plex Mono.
+   O vermelho (#A82A1F) não está na paleta: aqui só marca pedido reprovado.
+
+   CORES DOS GRÁFICOS (validadas com o validador de paleta, claro e escuro):
+   · etapas em andamento = uma rampa só do turquesa 321 C, clara → escura na
+     ordem do fluxo (liderança → financeiro); aprovado = verde 341 C;
+     reprovado = vermelho de bloqueio; cancelado = cinza.
+   · tipo de compra (3 categorias, ordem fixa): Normal turquesa, Urgente areia
+     escurecida, Mensal azul — derivados da paleta, com contraste e separação
+     para daltonismo conferidos.
+   ======================================================== */
+:root{
+  color-scheme:light;
+  --marca:#00263d; --marca-2:#003865;
+  --bg:#F1F4F5; --surface:#FFFFFF; --surface-2:#E7ECEE; --line:#D7DCDE;
+  --ink:#00263d; --ink-2:#3D586B; --ink-3:#6C818F;
+  --accent:#00727A; --accent-soft:#DCEFF1; --accent-ink:#FFFFFF;
+  --ok:#007A53; --ok-soft:#DCEFE6; --warn:#7A5A18; --warn-soft:#F3E9D5; --crit:#A82A1F; --crit-soft:#F8E2DF;
+  --shadow:0 1px 2px rgba(0,38,61,.07),0 4px 14px rgba(0,38,61,.07);
+  --overlay:rgba(0,38,61,.55);
+  --f-display:"Goldplay","Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-body:"Goldplay","Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --bar:#008c95; --grid:#E3E8EA;
+  --st1:#70BEC4; --st2:#35A0A8; --st3:#007C86; --st4:#00545C;
+  --st-ok:#007A53; --st-rep:#A82A1F; --st-can:#9AA5AD;
+  --tp-normal:#009AA3; --tp-urgente:#B8832A; --tp-mensal:#2F6DA6;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --marca:#08192a; --marca-2:#0d2a45;
+    --bg:#08192a; --surface:#0E2438; --surface-2:#143047; --line:#23455D;
+    --ink:#E7EEF2; --ink-2:#AFC2CF; --ink-3:#8296A4;
+    --accent:#4FC0C8; --accent-soft:#0C3138; --accent-ink:#052028;
+    --ok:#4FB98A; --ok-soft:#0D2E24; --warn:#DDCBA3; --warn-soft:#332B1A; --crit:#F0938A; --crit-soft:#3B1D1A;
+    --shadow:0 1px 2px rgba(0,0,0,.35),0 6px 18px rgba(0,0,0,.3);
+    --overlay:rgba(0,10,18,.65);
+    --bar:#2FB3BC; --grid:#1B3A50;
+    --st1:#1C5A63; --st2:#23868F; --st3:#45B3BB; --st4:#9AD9DE;
+    --st-ok:#4FB98A; --st-rep:#E0766B; --st-can:#5E7384;
+    --tp-normal:#1FA0A9; --tp-urgente:#B98A33; --tp-mensal:#5B8FD6;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --marca:#08192a; --marca-2:#0d2a45;
+  --bg:#08192a; --surface:#0E2438; --surface-2:#143047; --line:#23455D;
+  --ink:#E7EEF2; --ink-2:#AFC2CF; --ink-3:#8296A4;
+  --accent:#4FC0C8; --accent-soft:#0C3138; --accent-ink:#052028;
+  --ok:#4FB98A; --ok-soft:#0D2E24; --warn:#DDCBA3; --warn-soft:#332B1A; --crit:#F0938A; --crit-soft:#3B1D1A;
+  --shadow:0 1px 2px rgba(0,0,0,.35),0 6px 18px rgba(0,0,0,.3);
+  --overlay:rgba(0,10,18,.65);
+  --bar:#2FB3BC; --grid:#1B3A50;
+  --st1:#1C5A63; --st2:#23868F; --st3:#45B3BB; --st4:#9AD9DE;
+  --st-ok:#4FB98A; --st-rep:#E0766B; --st-can:#5E7384;
+  --tp-normal:#1FA0A9; --tp-urgente:#B98A33; --tp-mensal:#5B8FD6;
+}
+
+/* ============ BARRA DA MARCA ============ */
+.brandbar{background:var(--marca);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.brandbar img{height:30px;width:auto;display:block;flex:none}
+.brandbar .titulo{border-left:1px solid rgba(255,255,255,.28);padding-left:16px;min-width:0}
+.brandbar .marca{font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.72;font-weight:600}
+.brandbar h1{font-size:17px;font-weight:700;letter-spacing:-.01em;margin:2px 0 0;color:#fff}
+.brandbar .nav-telas{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.bb-link{display:inline-flex;align-items:center;gap:6px;color:#fff;text-decoration:none;font-size:13px;font-weight:600;border:1px solid rgba(255,255,255,.35);border-radius:6px;padding:6px 12px;min-height:34px}
+.bb-link:hover{background:rgba(255,255,255,.12)}
+.bb-link[aria-current="page"]{background:#fff;color:var(--marca);border-color:#fff}
+@media (max-width:480px){.brandbar{padding:12px 16px;gap:12px}.brandbar img{height:24px}.brandbar .titulo{padding-left:12px}.brandbar .nav-telas{margin-left:0;width:100%}}
+
+/* ============ BASE ============ */
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45}
+.wrap{padding:20px 24px 48px}
+@media (max-width:600px){.wrap{padding:14px 16px 40px}}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:var(--f-mono)}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.muted{color:var(--ink-3)}
+
+/* ============ STATUS + FILTROS (iguais ao funil) ============ */
+.live{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:16px;color:var(--ink-2)}
+.live .dot{width:8px;height:8px;border-radius:50%;background:currentColor;color:var(--ok)}
+.live.err .dot{color:var(--crit)}
+.live.load .dot{color:var(--warn)}
+.live .acoes{margin-left:auto;display:flex;gap:6px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:7px 12px;cursor:pointer;min-height:36px;font-size:13px}
+.btn:hover{background:var(--surface-2)}
+.btn:disabled{opacity:.55;cursor:default}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--accent);font-weight:500}
+.btn.ghost:hover{background:var(--accent-soft)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.sm{min-height:28px;padding:3px 10px;font-size:12px}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:18px}
+.field{display:flex;flex-direction:column;gap:3px;min-width:160px}
+.field label{font-size:11px;color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+.ctl{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 10px;min-height:36px}
+.align-end{align-self:flex-end}
+@media (max-width:600px){.field{flex:1 1 45%}.ctl{width:100%}}
+
+/* ============ SEÇÕES E CARTÕES ============ */
+.sec{margin-bottom:26px}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.sec-h h2{font-size:18px;font-weight:600}
+.sec-h .hint{font-size:12.5px;color:var(--ink-3)}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g-pos{grid-template-columns:minmax(260px,1fr) minmax(0,2.6fr)}
+@media (max-width:1100px){.g3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:900px){.g2,.g3,.g-pos{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px;min-width:0;display:flex;flex-direction:column;gap:12px}
+.card-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.card-h h3{font-size:14.5px;font-weight:600}
+.card-h .sub{font-size:12.5px;color:var(--ink-3);margin-top:2px}
+.card-h .tgl{flex:none}
+.card .rodape{font-size:12px;color:var(--ink-3);margin-top:auto}
+
+/* ============ NÚMEROS ============ */
+.hero .lbl{font-size:12.5px;color:var(--ink-2);font-weight:500}
+.hero .val{font-family:var(--f-display);font-size:44px;font-weight:700;line-height:1.05;letter-spacing:-.02em}
+.hero .det{font-size:13px;color:var(--ink-2)}
+.hero .det b{color:var(--ink)}
+.tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+@media (max-width:1300px){.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:640px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.tile .lbl{font-size:12px;color:var(--ink-2);font-weight:500}
+.tile .val{font-family:var(--f-display);font-size:26px;font-weight:700;line-height:1.15;overflow-wrap:anywhere}
+.tile .sub{font-size:12px;color:var(--ink-3)}
+.delta{font-size:11.5px;font-weight:600;border-radius:999px;padding:1px 7px;margin-left:4px;white-space:nowrap}
+.delta.up{background:var(--ok-soft);color:var(--ok)}
+.delta.down{background:var(--crit-soft);color:var(--crit)}
+.delta.flat{background:var(--surface-2);color:var(--ink-2)}
+
+/* ============ LEITURAS ============ */
+.leituras{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.leituras li{display:grid;grid-template-columns:22px 1fr;gap:8px;font-size:13.5px;line-height:1.45}
+.leituras .ic{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.leituras .ic.crit{background:var(--crit-soft);color:var(--crit)}
+.leituras .ic.warn{background:var(--warn-soft);color:var(--warn)}
+.leituras .ic.info{background:var(--accent-soft);color:var(--accent)}
+.leituras .ic.ok{background:var(--ok-soft);color:var(--ok)}
+
+/* ============ GRÁFICOS ============ */
+/* barra empilhada (situação, tipo de compra) — 2px de respiro entre as partes */
+.stack{display:flex;gap:2px;height:22px;border-radius:4px;overflow:hidden;background:var(--surface-2)}
+.stack .seg{height:100%;min-width:3px;border:0;padding:0;cursor:default;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:600;color:#fff}
+.stack .seg.claro{color:#00263d}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--ink-2);margin-top:10px}
+.legend .it{display:inline-flex;align-items:center;gap:6px}
+.sw{display:inline-block;width:10px;height:10px;border-radius:3px;flex:none}
+
+/* barras deitadas — no máximo 16px de espessura, ponta arredondada, base reta */
+.hb{display:flex;flex-direction:column;gap:6px}
+.hb-row{display:grid;grid-template-columns:minmax(110px,34%) minmax(0,1fr);gap:10px;align-items:center;border:0;background:none;padding:3px 4px;margin:0 -4px;border-radius:6px;text-align:left;width:calc(100% + 8px)}
+button.hb-row{cursor:pointer}
+button.hb-row:hover{background:var(--surface-2)}
+.hb-row .rot{font-size:12.5px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hb-row .trk{display:grid;grid-template-columns:minmax(40px,1fr) auto;align-items:center;gap:10px;min-width:0}
+.hb-row .bw{min-width:0;display:flex;align-items:center}
+.hb-row .bar{height:14px;border-radius:0 4px 4px 0;background:var(--bar);flex:none;min-width:2px}
+.hb-row .v{font-size:12.5px;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+@media (max-width:600px){.hb-row{grid-template-columns:minmax(0,1fr)}.hb-row .rot{white-space:normal}}
+.hb-row .v small{color:var(--ink-3);font-size:11.5px;margin-left:4px}
+
+/* colunas no tempo — até 24px de largura, topo arredondado */
+.cols{position:relative;height:170px;display:flex;align-items:flex-end;gap:2px;padding-left:44px;border-bottom:1px solid var(--line)}
+.cols .gl{position:absolute;left:44px;right:0;height:1px;background:var(--grid)}
+.cols .gl span{position:absolute;right:calc(100% + 6px);top:-7px;font-size:10.5px;color:var(--ink-3);font-variant-numeric:tabular-nums;white-space:nowrap}
+.cols .c{flex:1 1 0;display:flex;justify-content:center;align-items:flex-end;height:100%;border:0;background:none;padding:0;position:relative;z-index:1;min-width:0}
+.cols .c i{display:block;width:100%;max-width:24px;background:var(--bar);border-radius:4px 4px 0 0;min-height:0}
+.cols .c:hover i,.cols .c:focus-visible i{background:var(--accent)}
+.xlab{display:flex;gap:2px;padding-left:44px;margin-top:4px}
+.xlab span{flex:1 1 0;text-align:center;font-size:10.5px;color:var(--ink-3);white-space:nowrap;overflow:visible;min-width:0}
+
+/* funil de conversão */
+.fn{display:flex;flex-direction:column;gap:6px}
+.fn-row{display:grid;grid-template-columns:minmax(120px,30%) minmax(0,1fr) 64px;gap:10px;align-items:center}
+.fn-row .rot{font-size:12.5px;color:var(--ink-2)}
+.fn-row .trk{height:18px;display:flex;align-items:center;gap:8px}
+.fn-row .bar{height:18px;border-radius:0 4px 4px 0;min-width:2px}
+.fn-row .n{font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.fn-row .pct{font-size:12px;color:var(--ink-3);text-align:right;font-variant-numeric:tabular-nums}
+
+/* tabelas */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%}
+th,td{padding:8px 10px;text-align:center;border-bottom:1px solid var(--line);font-size:12.5px;vertical-align:middle}
+th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:600;background:var(--surface-2);white-space:nowrap}
+td.l,th.l{text-align:left}
+td .mono{white-space:nowrap}
+td.r,th.r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+tr.link{cursor:pointer}
+tr.link:hover{background:var(--surface-2)}
+.pill{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:2px 8px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.crit{background:var(--crit-soft);color:var(--crit)}
+.pill.neutral{background:var(--surface-2);color:var(--ink-2)}
+.vazio{font-size:13px;color:var(--ink-3);text-align:center;padding:22px 10px;border:1px dashed var(--line);border-radius:8px}
+.state{background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:28px 18px;text-align:center;color:var(--ink-2)}
+.state h3{font-size:17px;color:var(--ink);margin-bottom:6px}
+.state p{max-width:60ch;margin:0 auto 12px}
+.motivos{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.motivos li{font-size:12.5px;border-left:3px solid var(--line);padding:2px 0 2px 10px}
+.motivos li b{font-weight:600}
+
+/* dica ao passar o mouse */
+.tip{position:fixed;z-index:70;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;line-height:1.4;padding:7px 10px;border-radius:6px;max-width:280px;box-shadow:var(--shadow)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:13px;z-index:60;box-shadow:var(--shadow);max-width:calc(100% - 32px)}
+@media print{.brandbar .nav-telas,.live .acoes,.filters .btn,.tgl{display:none!important}.card{break-inside:avoid}}
+</style>
+</head><body>
+
+<!-- ============ BARRA DA MARCA ============ -->
+<header class="brandbar">
+  <img src="data:image/png;base64,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" alt="Grupo Leh">
+  <div class="titulo">
+    <div class="marca">Compras · Visão da diretoria</div>
+    <h1>Indicadores de compras</h1>
+  </div>
+  <nav class="nav-telas" aria-label="Telas da diretoria">
+    <a class="bb-link" id="lnk-funil" href="painel.html">Funil de aprovação</a>
+    <a class="bb-link" href="#" aria-current="page">Indicadores</a>
+  </nav>
+</header>
+
+<div class="wrap">
+
+  <div class="live load" id="live" role="status">
+    <span class="dot"></span>
+    <span id="live-txt">Carregando pedidos do banco de compras…</span>
+    <span class="acoes">
+      <button class="btn" id="btn-csv" type="button" disabled>Baixar planilha (CSV)</button>
+      <button class="btn" id="btn-refresh" type="button" disabled>Atualizar</button>
+    </span>
+  </div>
+
+  <!-- ============ FILTROS — valem para a tela toda ============ -->
+  <section class="filters" aria-label="Filtros">
+    <div class="field"><label for="f-per">Período</label><select id="f-per" class="ctl"></select></div>
+    <div class="field"><label for="f-emp">Empresa</label><select id="f-emp" class="ctl"><option value="">Todas</option></select></div>
+    <div class="field"><label for="f-und">Unidade de negócio</label><select id="f-und" class="ctl"><option value="">Todas</option></select></div>
+    <div class="field"><label for="f-cc">Centro de custo</label><select id="f-cc" class="ctl"><option value="">Todos</option></select></div>
+    <div class="field"><label for="f-tipo">Tipo de compra</label>
+      <select id="f-tipo" class="ctl">
+        <option value="">Todos</option>
+        <option value="normal">Normal</option>
+        <option value="urgente">Urgente</option>
+        <option value="mensal">Mensal</option>
+      </select></div>
+    <div class="field"><label for="f-fam">Família</label><select id="f-fam" class="ctl"><option value="">Todas</option></select></div>
+    <button class="btn ghost align-end" id="f-clear" type="button">Limpar filtros</button>
+  </section>
+
+  <div id="conteudo">
+    <div class="state"><h3>Carregando…</h3><p>Lendo os pedidos no banco de compras.</p></div>
+  </div>
+</div>
+
+<div class="tip" id="tip" role="tooltip" hidden></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+/* =====================================================================
+   INDICADORES DE COMPRAS — tela irmã do funil (painel.html)
+   Fonte: a mesma função painel_diretoria(token) do funil, com o mesmo
+   acesso (tabela painel_acesso). Nada é gravado: a tela só lê e calcula.
+   Os cálculos moram aqui, no navegador, para não mexer em nenhuma função
+   do banco que o fluxo usa.
+   ===================================================================== */
+const SUPABASE_URL = 'https://mbwaqnlmscxbacmxdopr.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_AR4D1JlHB-Z12--QbzwYWQ_URZzmVwl';
+const TOKEN = (new URLSearchParams(location.search).get('t') || '').trim();
+async function rpc(nome, corpo){
+  const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + nome, {
+    method:'POST',
+    headers:{ apikey:SUPABASE_KEY, Authorization:'Bearer ' + SUPABASE_KEY, 'Content-Type':'application/json' },
+    body: JSON.stringify(corpo)
+  });
+  if (!r.ok){ let msg = ''; try { msg = (await r.json()).message || ''; } catch(_){} throw { code:'http_' + r.status, message: msg || ('HTTP ' + r.status) }; }
+  return r.json();
+}
+const linkFunil = q => 'painel.html?t=' + encodeURIComponent(TOKEN) + (q ? '&q=' + encodeURIComponent(q) : '');
+
+/* =====================================================================
+   ETAPAS — as mesmas do funil. Compra mensal: liderança → gerencial →
+   cotação → financeiro → OC; as outras: liderança → cotação → gerencial →
+   financeiro → OC. A regra mora no banco (passo_da_compra); aqui é só a ordem.
+   ===================================================================== */
+const ETAPAS = [
+  { id:'lid', nome:'Liderança imediata',   curto:'Liderança',  cor:'--st1' },
+  { id:'cot', nome:'Compras · cotação',    curto:'Cotação',    cor:'--st2' },
+  { id:'ger', nome:'Aprovação gerencial',  curto:'Gerencial',  cor:'--st3' },
+  { id:'fin', nome:'Aprovação financeiro', curto:'Financeiro', cor:'--st4' },
+];
+const FLUXO_PADRAO = ['lid','cot','ger','fin','oc'];
+const FLUXO_MENSAL = ['lid','ger','cot','fin','oc'];
+const SITUACOES = [
+  ...ETAPAS.map(e => ({ id:e.id, nome:'Em ' + e.curto.toLowerCase(), cor:e.cor })),
+  { id:'oc',  nome:'Aprovado · ordem de compra', cor:'--st-ok' },
+  { id:'rep', nome:'Reprovado', cor:'--st-rep' },
+  { id:'can', nome:'Cancelado', cor:'--st-can' },
+];
+const TIPOS = [
+  { id:'normal',  nome:'Normal',  cor:'--tp-normal' },
+  { id:'urgente', nome:'Urgente', cor:'--tp-urgente' },
+  { id:'mensal',  nome:'Mensal',  cor:'--tp-mensal' },
+];
+const TIPOS_COMPRA = { normal:'Normal', programada:'Programada', urgente:'Urgente', mensal:'Mensal' };
+const NOME_ETAPA_DECISAO = { lider:'liderança imediata', compras:'cotação (comprador)', cotacao:'cotação (comprador)', gerencial:'aprovação gerencial', financeiro:'aprovação financeiro' };
+const ETAPA_DB = { lider:'lid', cotacao:'cot', compras:'cot', gerencial:'ger', financeiro:'fin' };
+const NOME_CURTO = { lid:'Liderança', cot:'Cotação', ger:'Gerencial', fin:'Financeiro', oc:'Ordem de compra' };
+
+/* =====================================================================
+   NORMALIZAÇÃO — mesma leitura do funil (etapa, valor), para os números
+   das duas telas baterem entre si.
+   ===================================================================== */
+const D = v => v ? new Date(String(v).replace(' ', 'T').replace(/\+00$/, '+00:00')) : null;
+const num = v => v === null || v === undefined || v === '' ? null : Number(v);
+
+function etapaDaLinha(r){
+  if (r.status === 'reprovado' || r.decisoes.some(d => d.resp === 'reprovado')) return 'rep';
+  if (r.status === 'cancelado') return 'can';
+  if (r.etapa_atual && ETAPA_DB[r.etapa_atual]) return ETAPA_DB[r.etapa_atual];
+  const oc = r.ordens.filter(o => o.situacao !== 'cancelada').slice(-1)[0];
+  if (oc) return 'oc';
+  if (r.status === 'aprovado') return 'oc';
+  if (r.status === 'em cotacao') return 'cot';
+  return 'lid';
+}
+function valorDaLinha(r){
+  const dec = r.decisoes.filter(d => num(d.valor) !== null).slice(-1)[0];
+  if (dec) return { v:num(dec.valor), fonte:'valor aprovado' };
+  const oc = r.ordens.filter(o => num(o.total) !== null).slice(-1)[0];
+  if (oc) return { v:num(oc.total), fonte:'ordem de compra' };
+  const cots = r.cotacoes.filter(c => num(c.total) !== null).map(c => num(c.total));
+  if (cots.length) return { v:Math.min(...cots), fonte:'menor cotação' };
+  if (num(r.valor_cotado) !== null) return { v:num(r.valor_cotado), fonte:'valor cotado' };
+  const itens = r.itens.map(i => { const ps = [i.p1,i.p2,i.p3].map(num).filter(x => x !== null); return ps.length ? Math.min(...ps) * num(i.qtd) : null; });
+  if (itens.length && itens.every(x => x !== null)) return { v:itens.reduce((a,b)=>a+b,0), fonte:'preços informados' };
+  return { v:null, fonte:null };
+}
+
+/* Marcos = cada vez que o pedido saiu de uma etapa (decisão, cotação enviada,
+   devolução). O tempo de cada marco é a distância para o marco anterior —
+   é assim que sai o "tempo médio em cada etapa". */
+function marcosDe(r, criada, comprador){
+  const m = [];
+  r.decisoes.forEach(d => { const em = D(d.em); if (em) m.push({ et:ETAPA_DB[d.etapa] || d.etapa, em, por:d.por || null, resp:d.resp, motivo:d.motivo || null }); });
+  if (r.canal !== 'telas' && r.cotacao_em) m.push({ et:'cot', em:D(r.cotacao_em), por:comprador || null, resp:'cotado' });
+  r.movimentos.forEach(mv => {
+    const em = D(mv.em); if (!em) return;
+    if (mv.acao === 'cotacao_enviada') m.push({ et:'cot', em, por:mv.por || comprador || null, resp:'cotado' });
+    if (mv.acao === 'devolvido') m.push({ et:ETAPA_DB[mv.etapa] || mv.etapa, em, por:mv.por || null, resp:'devolvido', motivo:mv.motivo || null });
+  });
+  m.sort((a,b) => a.em - b.em);
+  let ant = criada;
+  m.forEach(x => { x.dur = ant ? Math.max(0, (x.em - ant) / 864e5) : null; ant = x.em; });
+  return m;
+}
+
+function normalizar(r){
+  r.itens = r.itens || []; r.decisoes = r.decisoes || []; r.cotacoes = r.cotacoes || []; r.ordens = r.ordens || []; r.movimentos = r.movimentos || [];
+  const status = etapaDaLinha(r);
+  const criada = D(r.aberto_em);
+  const val = valorDaLinha(r);
+  const primeiro = r.itens[0];
+  const titulo = primeiro ? (primeiro.desc.length > 70 ? primeiro.desc.slice(0, 68) + '…' : primeiro.desc) + (r.itens.length > 1 ? ` + ${r.itens.length - 1} ${r.itens.length === 2 ? 'item' : 'itens'}` : '') : 'Sem itens';
+  const marcos = marcosDe(r, criada, r.comprador_nome);
+  const ultimo = marcos[marcos.length - 1];
+  const tipo = String(r.tipo_compra || '').toLowerCase();
+  const aprovEm = status === 'oc'
+    ? (D(r.decidido_em) || (r.decisoes.filter(d => d.resp === 'aprovado').map(d => D(d.em)).filter(Boolean).sort((a,b)=>a-b).slice(-1)[0]) || (r.ordens[0] && D(r.ordens[0].criada)) || null)
+    : null;
+  const fechadoEm = status === 'rep' ? ((r.decisoes.find(d => d.resp === 'reprovado') && D(r.decisoes.find(d => d.resp === 'reprovado').em)) || D(r.decidido_em))
+                  : status === 'can' ? (D(r.cancelado_em) || D(((r.movimentos.find(m => m.acao === 'cancelado')) || {}).em))
+                  : status === 'oc' ? aprovEm : null;
+  const repDec = r.decisoes.find(d => d.resp === 'reprovado') || {};
+  const canMov = r.movimentos.find(m => m.acao === 'cancelado') || {};
+  return {
+    id:r.numero, titulo, status, raw:r, canal:r.canal || null,
+    empresa:r.empresa || '—', ccNome:r.cc_nome || r.centro_custo || '—', ccCod:r.centro_custo || '',
+    unidadeNegocio:r.cc_unidade || r.unidade || '—',
+    solicitante:r.solicitante_nome || r.facilitador || '—', comprador:r.comprador_nome || null, aprovador:r.aprovador_atual_nome || null,
+    tipo, tipoNome:TIPOS_COMPRA[tipo] || (r.tipo_compra || '—'),
+    urgente:tipo === 'urgente' || r.prioridade === 'urgente',
+    familias:[...new Set(r.itens.map(i => i.fam || (i.fora ? 'Fora do catálogo' : null)).filter(Boolean))],
+    nItens:r.itens.length,
+    valor:val.v, valorFonte:val.fonte,
+    fornecedor:(r.ordens.slice(-1)[0] || {}).forn || r.fornecedor_cotado || null,
+    unico:r.definicao_fornecedor === 'unico',
+    necessidade:r.data_necessidade ? new Date(r.data_necessidade + 'T23:59:59') : null,
+    criada, marcos, aprovEm, fechadoEm,
+    etapaRep:status === 'can' ? 'cancelado' : (repDec.etapa || null),
+    motivoRep:status === 'can' ? (canMov.motivo || null) : (repDec.motivo || null),
+    porRep:status === 'can' ? (canMov.por || r.facilitador || null) : (repDec.por || null),
+    cotacoes:r.cotacoes,
+    entradaEtapa:(status !== 'rep' && status !== 'can' && r.entrou_na_etapa_em) ? D(r.entrou_na_etapa_em) : (ultimo ? ultimo.em : criada),
+  };
+}
+
+/* =====================================================================
+   FORMATOS
+   ===================================================================== */
+const BRL = new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
+const brl = v => v === null || v === undefined ? '—' : BRL.format(v);
+function brlC(v){ if (v === null || v === undefined) return '—'; const a = Math.abs(v);
+  if (a >= 1e6) return 'R$ ' + (v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:1}) + ' mi';
+  if (a >= 1e5) return 'R$ ' + (v/1e3).toLocaleString('pt-BR',{maximumFractionDigits:0}) + ' mil';
+  if (a >= 1e3) return 'R$ ' + (v/1e3).toLocaleString('pt-BR',{maximumFractionDigits:1}) + ' mil';
+  return BRL.format(v); }
+const inteiro = n => Number(n).toLocaleString('pt-BR');
+const pct = (a, b) => b ? Math.round(a / b * 100) : null;
+const pctTxt = (a, b) => b ? pct(a, b) + '%' : '—';
+const dt = d => d ? d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
+const dtc = d => d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+function dias(d){ if (d === null || d === undefined || isNaN(d)) return '—';
+  if (d < 1/24) { const m = Math.max(1, Math.round(d*1440)); return m + ' min'; }
+  if (d < 1) { const h = Math.round(d*24); return h + (h === 1 ? ' hora' : ' horas'); }
+  const n = Math.round(d*10)/10; return n.toLocaleString('pt-BR') + (n === 1 ? ' dia' : ' dias'); }
+function diasInt(d){ const n = Math.floor(d); return n < 1 ? 'hoje' : n + (n === 1 ? ' dia' : ' dias'); }
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const chaveMes = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+const nomeMes = k => MESES[+k.slice(5)-1] + '/' + k.slice(0,4);
+const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+const media = a => a.length ? a.reduce((x,y) => x + y, 0) / a.length : null;
+const soma = a => a.reduce((x,y) => x + y, 0);
+const plural = (n, um, varios) => inteiro(n) + ' ' + (n === 1 ? um : varios);
+const chavePessoa = s => String(s || '').trim().toLocaleUpperCase('pt-BR');
+
+/* =====================================================================
+   ESTADO, PERÍODO E FILTROS
+   ===================================================================== */
+let SOLICITACOES = [];
+let AGORA = new Date();
+const state = { per:'d30', emp:'', und:'', cc:'', tipo:'', fam:'', carregou:false, vistas:{} };
+const $ = id => document.getElementById(id);
+const DIA = 864e5;
+
+const PERIODOS_FIXOS = [
+  { v:'d7', t:'Últimos 7 dias' }, { v:'d30', t:'Últimos 30 dias' }, { v:'d90', t:'Últimos 90 dias' },
+  { v:'mes', t:'Este mês' }, { v:'ano', t:'Este ano' }, { v:'all', t:'Todo o período' },
+];
+function janela(){
+  const p = state.per, hoje0 = new Date(AGORA.getFullYear(), AGORA.getMonth(), AGORA.getDate());
+  const fimAberto = new Date(AGORA.getTime() + 60000);
+  if (/^d\d+$/.test(p)){ const n = +p.slice(1); const ini = new Date(hoje0.getTime() - (n - 1) * DIA);
+    return { ini, fim:fimAberto, pIni:new Date(ini.getTime() - n * DIA), pFim:ini, rot:'nos últimos ' + n + ' dias', comp:'vs. ' + n + ' dias anteriores' }; }
+  if (p === 'mes'){ const ini = new Date(AGORA.getFullYear(), AGORA.getMonth(), 1); const pIni = new Date(AGORA.getFullYear(), AGORA.getMonth() - 1, 1);
+    return { ini, fim:fimAberto, pIni, pFim:new Date(pIni.getTime() + (AGORA - ini)), rot:'neste mês', comp:'vs. mesmo trecho do mês anterior' }; }
+  if (p === 'ano') return { ini:new Date(AGORA.getFullYear(), 0, 1), fim:fimAberto, rot:'neste ano' };
+  if (p.startsWith('m:')){ const [y, m] = p.slice(2).split('-').map(Number); const ini = new Date(y, m - 1, 1), fim = new Date(y, m, 1);
+    return { ini, fim, pIni:new Date(y, m - 2, 1), pFim:ini, rot:'em ' + nomeMes(p.slice(2)), comp:'vs. mês anterior' }; }
+  return { ini:new Date(-8.64e15), fim:fimAberto, rot:'em todo o período' };
+}
+const dentro = (d, ini, fim) => !!d && d >= ini && d < fim;
+
+function passaFiltros(s){
+  if (state.emp && s.empresa !== state.emp) return false;
+  if (state.und && s.unidadeNegocio !== state.und) return false;
+  if (state.cc && s.ccNome !== state.cc) return false;
+  if (state.tipo && s.tipo !== state.tipo) return false;
+  if (state.fam && !s.familias.includes(state.fam)) return false;
+  return true;
+}
+
+function opcoes(sel, valores, todos){
+  const atual = sel.value;
+  sel.innerHTML = `<option value="">${todos}</option>` + valores.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+  if ([...sel.options].some(o => o.value === atual)) sel.value = atual;
+}
+function montarOpcoes(){
+  const sel = $('f-per'), atual = sel.value || state.per;
+  const meses = [...new Set(SOLICITACOES.map(s => s.criada && chaveMes(s.criada)).filter(Boolean))].sort().reverse();
+  sel.innerHTML = PERIODOS_FIXOS.map(o => `<option value="${o.v}">${o.t}</option>`).join('') +
+    (meses.length ? '<optgroup label="Mês fechado">' + meses.map(k => `<option value="m:${k}">${nomeMes(k)}</option>`).join('') + '</optgroup>' : '');
+  sel.value = [...sel.options].some(o => o.value === atual) ? atual : 'd30';
+  state.per = sel.value;
+  const uniq = f => [...new Set(SOLICITACOES.map(f).flat())].filter(x => x && x !== '—').sort((a,b) => a.localeCompare(b,'pt-BR'));
+  opcoes($('f-emp'), uniq(s => s.empresa), 'Todas'); state.emp = $('f-emp').value;
+  opcoes($('f-und'), uniq(s => s.unidadeNegocio), 'Todas'); state.und = $('f-und').value;
+  opcoes($('f-cc'), uniq(s => s.ccNome), 'Todos'); state.cc = $('f-cc').value;
+  opcoes($('f-fam'), uniq(s => s.familias), 'Todas'); state.fam = $('f-fam').value;
+}
+const FILTROS = { per:'f-per', emp:'f-emp', und:'f-und', cc:'f-cc', tipo:'f-tipo', fam:'f-fam' };
+function initFiltros(){
+  Object.entries(FILTROS).forEach(([k, id]) => $(id).addEventListener('change', e => { state[k] = e.target.value; render(); }));
+  $('f-clear').addEventListener('click', limparFiltros);
+  $('btn-refresh').addEventListener('click', () => carregar(true));
+  $('btn-csv').addEventListener('click', baixarCSV);
+  $('lnk-funil').href = linkFunil();
+}
+function limparFiltros(){
+  Object.assign(state, { per:'d30', emp:'', und:'', cc:'', tipo:'', fam:'' });
+  Object.entries(FILTROS).forEach(([k, id]) => { $(id).value = state[k]; });
+  render(); toast('Filtros limpos');
+}
+/* clique num gráfico = aplicar aquele recorte como filtro (como num BI) */
+function aplicarFiltro(k, v, rotulo){
+  const sel = $(FILTROS[k]);
+  if (![...sel.options].some(o => o.value === v)) return;
+  if (state[k] === v){ state[k] = ''; sel.value = ''; toast('Filtro retirado: ' + rotulo); }
+  else { state[k] = v; sel.value = v; toast('Filtro aplicado: ' + rotulo + ' = ' + v); }
+  render();
+}
+
+/* =====================================================================
+   CARREGAMENTO — igual ao funil
+   ===================================================================== */
+function estadoLive(tipo, html){ $('live').className = 'live ' + tipo; $('live-txt').innerHTML = html; }
+const MSG_ERRO = {
+  sem_token:  'Este endereço precisa do seu link de acesso. Abra pelo botão "Indicadores" no funil de aprovação.',
+  sem_acesso: 'Este link não dá acesso aos indicadores. Peça um link novo para quem administra as compras.',
+  rede:       'Não foi possível falar com o banco agora. Verifique a internet e tente de novo.',
+  http_404:   'A função do painel ainda não existe no banco (painel_diretoria).',
+  formato:    'A resposta do banco veio em formato inesperado.',
+};
+let carregando = false;
+async function carregar(manual){
+  if (carregando) return;
+  if (!TOKEN){ mostrarErroGeral('sem_token'); return; }
+  carregando = true; $('btn-refresh').disabled = true;
+  estadoLive('load', manual ? 'Atualizando…' : 'Carregando pedidos do banco de compras…');
+  try {
+    let res;
+    try { res = await rpc('painel_diretoria', { p_token: TOKEN }); }
+    catch (e) { if (!e || !e.code) throw { code:'rede', message:String(e && e.message || e) }; throw e; }
+    if (!res || res.ok === false) throw { code:(res && res.erro) || 'formato', message:res && res.mensagem };
+    if (!Array.isArray(res.solicitacoes)) throw { code:'formato' };
+    AGORA = new Date();
+    SOLICITACOES = res.solicitacoes.map(normalizar).filter(s => s.criada);
+    montarOpcoes();
+    state.carregou = true;
+    $('btn-csv').disabled = false;
+    estadoLive('', `${res.quem ? esc(res.quem) + ' · ' : ''}${plural(SOLICITACOES.length, 'pedido', 'pedidos')} no banco · atualizado às ${AGORA.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`);
+    render();
+    if (manual) toast('Dados atualizados');
+  } catch (e) {
+    const code = (e && e.code) || 'rede';
+    if (state.carregou && code !== 'sem_acesso'){
+      estadoLive('err', `Não foi possível atualizar agora. Mostrando os dados de ${AGORA.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}.`);
+    } else { SOLICITACOES = []; state.carregou = false; $('btn-csv').disabled = true; mostrarErroGeral(code, e); }
+  } finally { carregando = false; $('btn-refresh').disabled = false; }
+}
+function mostrarErroGeral(code, e){
+  const msg = MSG_ERRO[code] || ('Erro ao ler o banco: ' + esc(e?.message || code));
+  estadoLive('err', code === 'sem_acesso' || code === 'sem_token' ? 'Sem acesso.' : 'Sem conexão com o banco de compras.');
+  $('conteudo').innerHTML = `<div class="state"><h3>Não consegui abrir os indicadores</h3><p>${msg}</p>${code === 'sem_token' || code === 'sem_acesso' ? '' : '<button class="btn primary" type="button" id="err-retry">Tentar de novo</button>'}</div>`;
+  $('err-retry')?.addEventListener('click', () => carregar(true));
+}
+
+/* =====================================================================
+   PEÇAS DE GRÁFICO (HTML puro, sem biblioteca)
+   ===================================================================== */
+function corDe(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim() || '#888'; }
+function claro(hex){ const m = /^#?([0-9a-f]{6})$/i.exec(hex); if (!m) return false; const n = parseInt(m[1], 16);
+  const c = [n >> 16 & 255, n >> 8 & 255, n & 255].map(x => { x /= 255; return x <= .03928 ? x / 12.92 : Math.pow((x + .055) / 1.055, 2.4); });
+  return .2126*c[0] + .7152*c[1] + .0722*c[2] > .36; }
+
+/* Barra empilhada: segs = [{id, nome, n, cor, tip, filtro?}] */
+function stackHTML(segs, { total, filtroChave, rotuloFiltro } = {}){
+  const tot = total ?? soma(segs.map(s => s.n));
+  if (!tot) return '<div class="vazio">Nenhum pedido neste recorte.</div>';
+  const vis = segs.filter(s => s.n > 0);
+  const barras = vis.map(s => {
+    const p = s.n / tot * 100, hex = corDe(s.cor);
+    const txt = p >= 7 ? inteiro(s.n) : '';
+    const tag = filtroChave ? 'button' : 'span';
+    return `<${tag} class="seg${claro(hex) ? ' claro' : ''}" ${filtroChave ? `type="button" data-filtro="${filtroChave}" data-valor="${esc(s.id)}" data-rot="${esc(rotuloFiltro)}" style="cursor:pointer;` : 'style="'}flex:${s.n} 1 0;background:var(${s.cor})" data-tip="${esc(s.nome + ': ' + plural(s.n, 'pedido', 'pedidos') + ' (' + pctTxt(s.n, tot) + ')' + (s.tip ? '\n' + s.tip : ''))}" aria-label="${esc(s.nome + ': ' + s.n)}">${txt}</${tag}>`;
+  }).join('');
+  const leg = segs.map(s => `<span class="it"><span class="sw" style="background:var(${s.cor})"></span>${esc(s.nome)} · ${inteiro(s.n)} <span class="muted">(${pctTxt(s.n, tot)})</span></span>`).join('');
+  return `<div class="stack" role="img" aria-label="${esc(segs.map(s => s.nome + ' ' + s.n).join(', '))}">${barras}</div><div class="legend">${leg}</div>`;
+}
+
+/* Barras deitadas: rows = [{rot, v, vTxt, sub, tip, filtro:{k,v,rot}}] */
+function hbarsHTML(rows, { vazio = 'Nenhum pedido neste recorte.', cor = '--bar' } = {}){
+  if (!rows.length) return `<div class="vazio">${vazio}</div>`;
+  const max = Math.max(...rows.map(r => r.v || 0), 0);
+  return '<div class="hb">' + rows.map(r => {
+    const w = max ? Math.max(1, (r.v || 0) / max * 100) : 0;
+    const f = r.filtro;
+    const tag = f ? 'button' : 'div';
+    return `<${tag} class="hb-row" ${f ? `type="button" data-filtro="${f.k}" data-valor="${esc(f.v)}" data-rot="${esc(f.rot)}"` : ''} data-tip="${esc(r.tip || (r.rot + ': ' + r.vTxt))}">
+      <span class="rot" title="${esc(r.rot)}">${esc(r.rot)}</span>
+      <span class="trk"><span class="bw"><span class="bar" style="width:${w}%;background:var(${r.cor || cor})"></span></span><span class="v">${r.vTxt}${r.sub ? `<small>${r.sub}</small>` : ''}</span></span>
+    </${tag}>`;
+  }).join('') + '</div>';
+}
+
+/* Colunas no tempo: buckets = [{rot, v, tip}] */
+function niceMax(v){ if (v <= 0) return 1; const e = Math.pow(10, Math.floor(Math.log10(v))); const f = v / e; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * e; }
+function colsHTML(buckets, { fmt = inteiro, vazio = 'Nenhum pedido neste recorte.' } = {}){
+  if (!buckets.length || buckets.every(b => !b.v)) return `<div class="vazio">${vazio}</div>`;
+  const top = niceMax(Math.max(...buckets.map(b => b.v)));
+  const gl = [0, .5, 1].map(f => `<span class="gl" style="bottom:${f*100}%"><span>${f ? fmt(top * f) : '0'}</span></span>`).join('');
+  const passo = Math.max(1, Math.ceil(buckets.length / 10));
+  const cs = buckets.map(b => `<button type="button" class="c" data-tip="${esc(b.tip)}" aria-label="${esc(b.tip)}"><i style="height:${b.v / top * 100}%"></i></button>`).join('');
+  const xl = buckets.map((b, i) => `<span>${i % passo === 0 ? esc(b.rot) : ''}</span>`).join('');
+  return `<div class="cols">${gl}${cs}</div><div class="xlab">${xl}</div>`;
+}
+
+function tabelaHTML(cab, linhas, { vazio = 'Sem dados neste recorte.' } = {}){
+  if (!linhas.length) return `<div class="vazio">${vazio}</div>`;
+  return `<div class="tbl-wrap"><table><thead><tr>${cab.map(c => `<th class="${c.cls || ''}">${c.t}</th>`).join('')}</tr></thead>
+    <tbody>${linhas.map(l => `<tr${l.attrs ? ' ' + l.attrs : ''}>${l.cels.map((v, i) => `<td class="${cab[i].cls || ''}">${v}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+
+/* Cartão com gráfico e a mesma informação em tabela (botão Ver tabela) */
+function cartao(id, titulo, sub, viz, tabela, rodape){
+  const tv = state.vistas[id] === 'tabela';
+  return `<article class="card" id="${id}">
+    <div class="card-h"><div><h3>${titulo}</h3>${sub ? `<div class="sub">${sub}</div>` : ''}</div>
+      ${tabela ? `<button class="btn ghost sm tgl" type="button" data-vista="${id}" aria-pressed="${tv}">${tv ? 'Ver gráfico' : 'Ver tabela'}</button>` : ''}</div>
+    <div class="viz"${tv ? ' hidden' : ''}>${viz}</div>
+    ${tabela ? `<div class="tab"${tv ? '' : ' hidden'}>${tabela}</div>` : ''}
+    ${rodape ? `<div class="rodape">${rodape}</div>` : ''}
+  </article>`;
+}
+
+/* =====================================================================
+   CÁLCULOS
+   ===================================================================== */
+const abertoAgora = s => ['lid','cot','ger','fin'].includes(s.status);
+const diasNaEtapa = s => (AGORA - s.entradaEtapa) / DIA;
+function comQuem(s){
+  switch (s.status){
+    case 'lid': return s.aprovador || 'Liderança imediata';
+    case 'cot': return s.comprador || 'Compras';
+    case 'ger': return s.aprovador || 'Aprovação gerencial';
+    case 'fin': return s.aprovador || 'Financeiro';
+    default: return '—';
+  }
+}
+function fluxoDe(s){ return s.tipo === 'mensal' ? FLUXO_MENSAL : FLUXO_PADRAO; }
+/* passou por um portão? (liderança aprovou, cotação enviada, gerência aprovou, financeiro aprovou) */
+function passou(s, et){
+  if (s.status === 'oc') return true;
+  const fl = fluxoDe(s);
+  const onde = s.status === 'rep' ? (ETAPA_DB[s.etapaRep] || 'lid') : s.status === 'can' ? 'lid' : s.status;
+  return fl.indexOf(et) < fl.indexOf(onde);
+}
+function agrupar(lst, chave){
+  const m = new Map();
+  lst.forEach(s => { const ks = [].concat(chave(s)); ks.forEach(k => { if (!k || k === '—') return; if (!m.has(k)) m.set(k, []); m.get(k).push(s); }); });
+  return m;
+}
+const somaValor = lst => soma(lst.filter(s => s.valor !== null).map(s => s.valor));
+const semValor = lst => lst.filter(s => s.valor === null).length;
+
+function calcular(){
+  const J = janela();
+  const base = SOLICITACOES.filter(passaFiltros);
+  const noPer = base.filter(s => dentro(s.criada, J.ini, J.fim));
+  const noAnt = J.pIni ? base.filter(s => dentro(s.criada, J.pIni, J.pFim)) : null;
+  const aprov = base.filter(s => s.status === 'oc' && dentro(s.aprovEm, J.ini, J.fim));
+  const aprovAnt = J.pIni ? base.filter(s => s.status === 'oc' && dentro(s.aprovEm, J.pIni, J.pFim)) : null;
+  const encerr = base.filter(s => ['oc','rep','can'].includes(s.status) && dentro(s.fechadoEm, J.ini, J.fim));
+  const carteira = base.filter(abertoAgora);
+  const marcos = base.flatMap(s => s.marcos.map(m => Object.assign({ s }, m))).filter(m => dentro(m.em, J.ini, J.fim));
+  return { J, base, noPer, noAnt, aprov, aprovAnt, encerr, carteira, marcos };
+}
+
+/* =====================================================================
+   RENDER
+   ===================================================================== */
+function render(){
+  if (!state.carregou) return;
+  const C = calcular();
+  if (!SOLICITACOES.length){
+    $('conteudo').innerHTML = '<div class="state"><h3>Nenhum pedido no banco ainda</h3><p>Quando alguém abrir um pedido pelo /compras, os indicadores começam a aparecer aqui.</p></div>';
+    return;
+  }
+  const semNada = !C.base.length;
+  $('conteudo').innerHTML =
+    (semNada ? `<div class="state" style="margin-bottom:18px"><h3>Nenhum pedido com esses filtros</h3><p>Tente outra empresa, unidade ou centro de custo, ou limpe os filtros.</p><button class="btn primary" type="button" id="empty-clear">Limpar filtros</button></div>` : '') +
+    secPosicao(C) + secPeriodo(C) + secGargalos(C) + secDinheiro(C) + secRitmo(C) + secDecisoes(C);
+  ligar();
+}
+
+/* ---------- 1. Posição da carteira agora ---------- */
+function secPosicao(C){
+  const cart = C.carteira;
+  const parados3 = cart.filter(s => diasNaEtapa(s) > 3);
+  const vencidos = cart.filter(s => s.necessidade && s.necessidade < AGORA);
+  const segs = ETAPAS.map(e => { const l = cart.filter(s => s.status === e.id);
+    return { id:e.id, nome:'Em ' + e.curto.toLowerCase(), n:l.length, cor:e.cor, tip:somaValor(l) ? brl(somaValor(l)) + (semValor(l) ? ' · ' + semValor(l) + ' sem valor' : '') : 'sem valor ainda' }; });
+  const hero = `<article class="card hero" id="c-hero">
+      <div class="lbl">Valor em andamento agora</div>
+      <div class="val" id="v-carteira">${brl(somaValor(cart))}</div>
+      <div class="det">${plural(cart.length, 'pedido em andamento', 'pedidos em andamento')}${semValor(cart) ? ` · <span class="muted">${semValor(cart)} ainda sem preço (antes da cotação)</span>` : ''}</div>
+      <div class="det"><b>${parados3.length}</b> parado${parados3.length === 1 ? '' : 's'} há mais de 3 dias · <b>${vencidos.length}</b> já passou${vencidos.length === 1 ? '' : 'ram'} da data de necessidade</div>
+    </article>`;
+  const tab = tabelaHTML([{t:'Etapa',cls:'l'},{t:'Pedidos'},{t:'Valor',cls:'r'},{t:'Parados + de 3 dias'}],
+    ETAPAS.map(e => { const l = cart.filter(s => s.status === e.id); return { cels:[esc(e.nome), inteiro(l.length), brl(somaValor(l)), inteiro(l.filter(s => diasNaEtapa(s) > 3).length)] }; }));
+  const onde = cartao('c-onde', 'Onde estão os pedidos em andamento', 'Quantos pedidos esperam em cada etapa hoje', stackHTML(segs), tab);
+  return `<section class="sec" id="s-posicao">
+    <div class="sec-h"><h2>Posição da carteira em ${dt(AGORA)}</h2><span class="hint">Retrato de agora — o período não se aplica aqui; os demais filtros, sim</span></div>
+    <div class="grid g-pos">${hero}${onde}</div>
+    <div style="margin-top:14px">${cartaoLeituras(C)}</div>
+  </section>`;
+}
+
+/* Leituras automáticas: fatos que pedem atenção, sem opinião */
+function cartaoLeituras(C){
+  const L = [];
+  const cart = C.carteira;
+  const parados7 = cart.filter(s => diasNaEtapa(s) > 7), parados3 = cart.filter(s => diasNaEtapa(s) > 3);
+  if (parados3.length){
+    const porEt = agrupar(parados3, s => s.status); const [et, l] = [...porEt.entries()].sort((a,b) => b[1].length - a[1].length)[0];
+    const pessoas = agrupar(l, s => comQuem(s)); const [pes, lp] = [...pessoas.entries()].sort((a,b) => b[1].length - a[1].length)[0];
+    L.push({ c:parados7.length ? 'crit' : 'warn', t:`<b>${plural(parados3.length, 'pedido parado', 'pedidos parados')} há mais de 3 dias</b>${parados7.length ? ` (${parados7.length} há mais de 7)` : ''}, somando ${brl(somaValor(parados3))}. A maior parte está em ${esc(NOME_CURTO[et].toLowerCase())}${lp.length > 1 ? `, ${lp.length} com ${esc(pes)}` : ''}.` });
+  }
+  const venc = cart.filter(s => s.necessidade && s.necessidade < AGORA);
+  if (venc.length) L.push({ c:'crit', t:`<b>${plural(venc.length, 'pedido em andamento já passou', 'pedidos em andamento já passaram')} da data de necessidade</b> informada por quem pediu.` });
+  const tempos = ETAPAS.map(e => ({ e, m:media(C.marcos.filter(m => m.et === e.id && m.dur !== null).map(m => m.dur)) })).filter(x => x.m !== null).sort((a,b) => b.m - a.m);
+  if (tempos.length > 1) L.push({ c:'info', t:`Etapa mais demorada ${C.J.rot}: <b>${esc(tempos[0].e.nome.toLowerCase())}</b>, com média de ${dias(tempos[0].m)} por pedido.` });
+  const vTot = somaValor(C.noPer);
+  if (vTot > 0){
+    const und = [...agrupar(C.noPer, s => s.unidadeNegocio).entries()].map(([k,l]) => [k, somaValor(l)]).sort((a,b) => b[1] - a[1]);
+    if (und.length > 1 && und[0][1] / vTot >= .5) L.push({ c:'info', t:`<b>${esc(und[0][0])}</b> concentra ${pct(und[0][1], vTot)}% do valor dos pedidos abertos ${C.J.rot}.` });
+    else if (und.length === 1) L.push({ c:'info', t:`Todo o valor dos pedidos abertos ${C.J.rot} é de <b>${esc(und[0][0])}</b>.` });
+  }
+  const urg = C.noPer.filter(s => s.urgente).length;
+  if (C.noPer.length >= 3 && urg / C.noPer.length >= .3) L.push({ c:'warn', t:`<b>${pct(urg, C.noPer.length)}% dos pedidos ${C.J.rot} foram urgentes</b> (${urg} de ${C.noPer.length}).` });
+  const vAp = somaValor(C.aprov), vUn = somaValor(C.aprov.filter(s => s.unico));
+  if (vAp > 0 && vUn / vAp >= .3) L.push({ c:'warn', t:`<b>${pct(vUn, vAp)}% do valor aprovado ${C.J.rot} foi com fornecedor único</b>, sem disputa de preço.` });
+  const rep = C.encerr.filter(s => s.status === 'rep').length, ap = C.encerr.filter(s => s.status === 'oc').length;
+  if (rep + ap >= 3) L.push({ c:rep / (rep + ap) >= .25 ? 'warn' : 'ok', t:`Taxa de aprovação ${C.J.rot}: <b>${pctTxt(ap, ap + rep)}</b> (${plural(ap, 'aprovado', 'aprovados')}, ${plural(rep, 'reprovado', 'reprovados')}).` });
+  if (!L.length) L.push({ c:'ok', t:'Nada fora do normal com os filtros atuais.' });
+  const ic = { crit:'!', warn:'!', info:'i', ok:'✓' };
+  return `<article class="card" id="c-leituras"><div class="card-h"><div><h3>O que chama atenção</h3><div class="sub">Leituras automáticas dos números abaixo</div></div></div>
+    <ul class="leituras">${L.map(x => `<li><span class="ic ${x.c}" aria-hidden="true">${ic[x.c]}</span><span>${x.t}</span></li>`).join('')}</ul></article>`;
+}
+
+/* ---------- 2. Totais do período ---------- */
+function delta(cur, ant, comp){
+  if (ant === null || ant === undefined || !comp) return '';
+  if (!ant) return cur ? `<span class="delta flat" title="${esc(comp)}">novo</span>` : '';
+  const p = Math.round((cur - ant) / ant * 100);
+  return `<span class="delta flat" title="${esc(comp)}: ${p > 0 ? '+' : ''}${p}%">${p > 0 ? '▲' : p < 0 ? '▼' : '='} ${Math.abs(p)}%</span>`;
+}
+function tile(id, lbl, val, sub, extra = ''){ return `<div class="tile" id="${id}"><div class="lbl">${lbl}</div><div class="val">${val}${extra}</div><div class="sub">${sub}</div></div>`; }
+function secPeriodo(C){
+  const n = C.noPer.length, nAnt = C.noAnt ? C.noAnt.length : null;
+  const vAp = somaValor(C.aprov), vApAnt = C.aprovAnt ? somaValor(C.aprovAnt) : null;
+  const ticket = C.aprov.length ? vAp / C.aprov.length : null;
+  const ap = C.encerr.filter(s => s.status === 'oc').length, rp = C.encerr.filter(s => s.status === 'rep').length, cn = C.encerr.filter(s => s.status === 'can').length;
+  const lead = media(C.aprov.filter(s => s.aprovEm).map(s => (s.aprovEm - s.criada) / DIA));
+  const urg = C.noPer.filter(s => s.urgente).length;
+  const tiles = `<div class="tiles">
+    ${tile('t-pedidos', 'Pedidos abertos', inteiro(n), C.noAnt ? `${nAnt} no período anterior` : C.J.rot, delta(n, nAnt, C.J.comp))}
+    ${tile('t-aprovado', 'Valor aprovado', brlC(vAp), plural(C.aprov.length, 'pedido aprovado', 'pedidos aprovados'), delta(vAp, vApAnt, C.J.comp))}
+    ${tile('t-ticket', 'Valor médio por pedido aprovado', ticket === null ? '—' : brlC(ticket), 'valor aprovado ÷ pedidos aprovados')}
+    ${tile('t-taxa', 'Taxa de aprovação', pctTxt(ap, ap + rp), `${plural(ap, 'aprovado', 'aprovados')} · ${plural(rp, 'reprovado', 'reprovados')}${cn ? ' · ' + plural(cn, 'cancelado', 'cancelados') : ''}`)}
+    ${tile('t-lead', 'Tempo até a aprovação final', lead === null ? '—' : dias(lead), 'média, da abertura ao financeiro')}
+    ${tile('t-urg', 'Pedidos urgentes', pctTxt(urg, n), `${urg} de ${n} pedidos abertos`)}
+  </div>`;
+  const segs = SITUACOES.map(x => ({ id:x.id, nome:x.nome, n:C.noPer.filter(s => s.status === x.id).length, cor:x.cor }));
+  const tabSit = tabelaHTML([{t:'Situação',cls:'l'},{t:'Pedidos'},{t:'%'},{t:'Valor',cls:'r'}],
+    SITUACOES.map(x => { const l = C.noPer.filter(s => s.status === x.id); return { cels:[esc(x.nome), inteiro(l.length), pctTxt(l.length, n), brl(somaValor(l))] }; }));
+  const sit = cartao('c-situacao', 'Situação dos pedidos abertos no período', `Onde cada pedido aberto ${C.J.rot} está hoje`, stackHTML(segs), tabSit);
+  /* funil de conversão */
+  const portoes = [
+    { rot:'Pedidos abertos', n:n, cor:'--st1' },
+    { rot:'Aprovados pela liderança', n:C.noPer.filter(s => passou(s, 'lid')).length, cor:'--st2' },
+    { rot:'Cotação enviada', n:C.noPer.filter(s => passou(s, 'cot')).length, cor:'--st3' },
+    { rot:'Aprovados pela gerência', n:C.noPer.filter(s => passou(s, 'ger')).length, cor:'--st4' },
+    { rot:'Aprovados pelo financeiro', n:C.noPer.filter(s => passou(s, 'fin')).length, cor:'--st-ok' },
+  ];
+  const fn = n ? '<div class="fn">' + portoes.map(p => `<div class="fn-row" data-tip="${esc(p.rot + ': ' + p.n + ' (' + pctTxt(p.n, n) + ' dos abertos)')}">
+      <span class="rot">${p.rot}</span>
+      <span class="trk"><span class="bar" style="width:${Math.max(.5, p.n / n * 80)}%;background:var(${p.cor})"></span><span class="n">${inteiro(p.n)}</span></span>
+      <span class="pct">${pctTxt(p.n, n)}</span></div>`).join('') + '</div>' : '<div class="vazio">Nenhum pedido aberto no período.</div>';
+  const tabFn = tabelaHTML([{t:'Etapa vencida',cls:'l'},{t:'Pedidos'},{t:'% dos abertos'}], portoes.map(p => ({ cels:[p.rot, inteiro(p.n), pctTxt(p.n, n)] })));
+  const funil = cartao('c-funil', 'Funil de conversão', 'Dos pedidos abertos no período, quantos já passaram de cada aprovação', fn, tabFn,
+    'Pedido em andamento ainda não passou das etapas seguintes; por isso o funil afina também com o tempo.');
+  return `<section class="sec" id="s-periodo">
+    <div class="sec-h"><h2>Totais do período</h2><span class="hint" id="rot-periodo">${cap(C.J.rot)}${C.J.comp ? ' · comparação ' + C.J.comp : ''}</span></div>
+    ${tiles}
+    <div class="grid g2" style="margin-top:14px">${sit}${funil}</div>
+  </section>`;
+}
+
+/* ---------- 3. Onde o fluxo demora ---------- */
+function secGargalos(C){
+  const rows = ETAPAS.map(e => { const ds = C.marcos.filter(m => m.et === e.id && m.dur !== null).map(m => m.dur);
+    return { e, m:media(ds), n:ds.length, max:ds.length ? Math.max(...ds) : null }; });
+  const hb = hbarsHTML(rows.filter(r => r.m !== null).map(r => ({ rot:r.e.nome, v:r.m, vTxt:dias(r.m), sub:plural(r.n, 'passagem', 'passagens'), cor:r.e.cor,
+    tip:`${r.e.nome}: média ${dias(r.m)} · maior ${dias(r.max)} · ${plural(r.n, 'passagem', 'passagens')}` })), { vazio:'Nenhuma etapa concluída no período.' });
+  const tab = tabelaHTML([{t:'Etapa',cls:'l'},{t:'Média'},{t:'Maior'},{t:'Passagens'}],
+    rows.map(r => ({ cels:[esc(r.e.nome), dias(r.m), dias(r.max), inteiro(r.n)] })));
+  const tempo = cartao('c-tempo', 'Tempo médio em cada etapa', `Do momento em que o pedido chega até a decisão, nas etapas concluídas ${C.J.rot}`, hb, tab);
+  const par = C.carteira.slice().sort((a,b) => diasNaEtapa(b) - diasNaEtapa(a)).slice(0, 10);
+  const tabPar = tabelaHTML([{t:'Nº'},{t:'Pedido',cls:'l'},{t:'Etapa'},{t:'Com quem',cls:'l'},{t:'Parado há'},{t:'Valor',cls:'r'}],
+    par.map(s => { const d = diasNaEtapa(s), cls = d > 7 ? 'crit' : d > 3 ? 'warn' : 'neutral';
+      return { attrs:`class="link" tabindex="0" data-href="${esc(linkFunil(s.id))}" data-tip="${esc('Abrir ' + s.id + ' no funil')}"`,
+        cels:[`<span class="mono">${esc(s.id)}</span>`, esc(s.titulo) + (s.urgente ? ' <span class="pill warn">Urgente</span>' : ''), esc(NOME_CURTO[s.status]), esc(comQuem(s)), `<span class="pill ${cls}">${diasInt(d)}</span>`, brl(s.valor)] }; }),
+    { vazio:'Nenhum pedido em andamento.' });
+  const parados = `<article class="card" id="c-parados"><div class="card-h"><div><h3>Pedidos parados há mais tempo</h3><div class="sub">Em andamento agora · clique para abrir no funil</div></div></div>${tabPar}</article>`;
+  return `<section class="sec" id="s-gargalos"><div class="sec-h"><h2>Onde o fluxo demora</h2><span class="hint">Dias corridos; amarelo acima de 3 dias parado, vermelho acima de 7</span></div>
+    <div class="grid g2">${tempo}${parados}</div></section>`;
+}
+
+/* ---------- 4. Para onde vai o dinheiro ---------- */
+function linhasPor(lst, chave, k, rotFiltro, lim){
+  const g = [...agrupar(lst, chave).entries()].map(([nome, l]) => ({ nome, l, v:somaValor(l) }))
+    .sort((a,b) => b.v - a.v || b.l.length - a.l.length || a.nome.localeCompare(b.nome,'pt-BR'));
+  const tot = somaValor(lst);
+  let vis = g, resto = null;
+  if (lim && g.length > lim){ vis = g.slice(0, lim - 1); const r = g.slice(lim - 1); resto = { nome:`Outros (${r.length})`, l:r.flatMap(x => x.l), v:soma(r.map(x => x.v)) }; }
+  const rows = vis.map(x => ({ rot:x.nome, v:x.v, vTxt:x.v ? brlC(x.v) : '—', sub:plural(x.l.length, 'pedido', 'pedidos') + (tot ? ' · ' + pctTxt(x.v, tot) : ''),
+    tip:`${x.nome}\n${brl(x.v)} · ${plural(x.l.length, 'pedido', 'pedidos')}${semValor(x.l) ? ' (' + semValor(x.l) + ' sem valor)' : ''}\nClique para filtrar`, filtro:{ k, v:x.nome, rot:rotFiltro } }));
+  if (resto) rows.push({ rot:resto.nome, v:resto.v, vTxt:resto.v ? brlC(resto.v) : '—', sub:plural(resto.l.length, 'pedido', 'pedidos'), cor:'--st-can', tip:`${resto.nome}: ${brl(resto.v)}` });
+  const tab = tabelaHTML([{t:rotFiltro,cls:'l'},{t:'Pedidos'},{t:'Valor',cls:'r'},{t:'% do valor'},{t:'Em andamento'},{t:'Reprovados'},{t:'Tempo até aprovar'}],
+    g.map(x => ({ cels:[esc(x.nome), inteiro(x.l.length), brl(x.v), pctTxt(x.v, tot), inteiro(x.l.filter(abertoAgora).length), inteiro(x.l.filter(s => s.status === 'rep').length),
+      dias(media(x.l.filter(s => s.aprovEm).map(s => (s.aprovEm - s.criada) / DIA)))] })));
+  return { hb:hbarsHTML(rows), tab };
+}
+function secDinheiro(C){
+  const und = linhasPor(C.noPer, s => s.unidadeNegocio, 'und', 'Unidade de negócio');
+  const cc = linhasPor(C.noPer, s => s.ccNome, 'cc', 'Centro de custo', 10);
+  const emp = linhasPor(C.noPer, s => s.empresa, 'emp', 'Empresa');
+  const fams = [...agrupar(C.noPer, s => s.familias).entries()].map(([k, l]) => ({ k, l, it:soma(l.map(s => s.raw.itens.filter(i => (i.fam || (i.fora ? 'Fora do catálogo' : null)) === k).length)) }))
+    .sort((a,b) => b.l.length - a.l.length || b.it - a.it).slice(0, 10);
+  const hbFam = hbarsHTML(fams.map(f => ({ rot:f.k, v:f.l.length, vTxt:plural(f.l.length, 'pedido', 'pedidos'), sub:plural(f.it, 'item', 'itens'),
+    tip:`${f.k}: ${plural(f.l.length, 'pedido', 'pedidos')}, ${plural(f.it, 'item', 'itens')}\nClique para filtrar`, filtro:{ k:'fam', v:f.k, rot:'Família' } })));
+  const tabFam = tabelaHTML([{t:'Família',cls:'l'},{t:'Pedidos'},{t:'Itens'}], fams.map(f => ({ cels:[esc(f.k), inteiro(f.l.length), inteiro(f.it)] })));
+  const sub = `Pedidos abertos ${C.J.rot} · clique numa barra para filtrar a tela`;
+  return `<section class="sec" id="s-dinheiro"><div class="sec-h"><h2>Para onde vai o dinheiro</h2><span class="hint">Valor = aprovado, cotado ou menor cotação, o mesmo critério do funil; pedido antes da cotação ainda não tem valor</span></div>
+    <div class="grid g2">
+      ${cartao('c-unidade', 'Por unidade de negócio', sub, und.hb, und.tab)}
+      ${cartao('c-cc', 'Por centro de custo', 'Os 10 maiores em valor · ' + sub.toLowerCase(), cc.hb, cc.tab)}
+      ${cartao('c-empresa', 'Por empresa', sub, emp.hb, emp.tab)}
+      ${cartao('c-familia', 'Por família de itens', 'Quantos pedidos têm itens de cada família · clique para filtrar', hbFam, tabFam)}
+    </div></section>`;
+}
+
+/* ---------- 5. Ritmo e disciplina ---------- */
+function baldes(J, lst, dataDe, valorDe){
+  const datas = lst.map(dataDe).filter(Boolean);
+  const ini0 = J.ini.getTime() > 0 ? J.ini : (datas.length ? new Date(Math.min(...SOLICITACOES.map(s => s.criada))) : AGORA);
+  const ini = new Date(ini0.getFullYear(), ini0.getMonth(), ini0.getDate());
+  const fim = J.fim > AGORA ? AGORA : new Date(J.fim.getTime() - 1);
+  const nDias = Math.floor((fim - ini) / DIA) + 1;
+  const modo = nDias <= 45 ? 'dia' : nDias <= 400 ? 'semana' : 'mes';
+  const b = [];
+  if (modo === 'mes'){ for (let d = new Date(ini.getFullYear(), ini.getMonth(), 1); d <= fim; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) b.push({ a:d, z:new Date(d.getFullYear(), d.getMonth() + 1, 1), rot:MESES[d.getMonth()].slice(0,3) + '/' + String(d.getFullYear()).slice(2) }); }
+  else { const passo = modo === 'dia' ? 1 : 7; let d = new Date(ini); if (modo === 'semana'){ const w = (d.getDay() + 6) % 7; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() - w); }
+    for (; d <= fim; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + passo)) b.push({ a:d, z:new Date(d.getFullYear(), d.getMonth(), d.getDate() + passo), rot:dtc(d) }); }
+  b.forEach(x => { const l = lst.filter(s => dentro(dataDe(s), x.a, x.z)); x.n = l.length; x.v = valorDe ? somaValor(l) : l.length; });
+  return { b, modo };
+}
+function secRitmo(C){
+  const abertos = baldes(C.J, C.noPer, s => s.criada);
+  const unid = { dia:'dia', semana:'semana', mes:'mês' };
+  const colA = colsHTML(abertos.b.map(x => ({ rot:x.rot, v:x.n, tip:`${abertos.modo === 'semana' ? 'Semana de ' : ''}${x.rot}: ${plural(x.n, 'pedido aberto', 'pedidos abertos')}` })));
+  const tabA = tabelaHTML([{t:cap(unid[abertos.modo]),cls:'l'},{t:'Pedidos abertos'}], abertos.b.filter(x => x.n).map(x => ({ cels:[x.rot, inteiro(x.n)] })));
+  const ap = baldes(C.J, C.aprov, s => s.aprovEm, true);
+  const colV = colsHTML(ap.b.map(x => ({ rot:x.rot, v:x.v, tip:`${ap.modo === 'semana' ? 'Semana de ' : ''}${x.rot}: ${brl(x.v)} em ${plural(x.n, 'pedido aprovado', 'pedidos aprovados')}` })), { fmt:brlC, vazio:'Nenhum pedido aprovado no período.' });
+  const tabV = tabelaHTML([{t:cap(unid[ap.modo]),cls:'l'},{t:'Aprovados'},{t:'Valor',cls:'r'}], ap.b.filter(x => x.n).map(x => ({ cels:[x.rot, inteiro(x.n), brl(x.v)] })));
+  /* tipo de compra */
+  const n = C.noPer.length;
+  const segT = TIPOS.map(t => { const l = C.noPer.filter(s => s.tipo === t.id); return { id:t.id, nome:t.nome, n:l.length, cor:t.cor, tip:somaValor(l) ? brl(somaValor(l)) : '' }; });
+  const outros = C.noPer.filter(s => !TIPOS.some(t => t.id === s.tipo)).length;
+  if (outros) segT.push({ id:'', nome:'Outros', n:outros, cor:'--st-can' });
+  const tabT = tabelaHTML([{t:'Tipo',cls:'l'},{t:'Pedidos'},{t:'%'},{t:'Valor',cls:'r'}], segT.map(t => { const l = C.noPer.filter(s => t.id ? s.tipo === t.id : !TIPOS.some(x => x.id === s.tipo)); return { cels:[t.nome, inteiro(t.n), pctTxt(t.n, n), brl(somaValor(l))] }; }));
+  const tipoC = cartao('c-tipo', 'Tipo de compra', 'Pedidos abertos no período · clique para filtrar', stackHTML(segT, { filtroChave:'tipo', rotuloFiltro:'Tipo de compra' }), tabT);
+  /* fornecedor único */
+  const un = C.noPer.filter(s => s.unico), vAp = somaValor(C.aprov), vUn = somaValor(C.aprov.filter(s => s.unico));
+  const unicoC = `<article class="card" id="c-unico"><div class="card-h"><div><h3>Fornecedor único</h3><div class="sub">Compras sem disputa de preço</div></div></div>
+    <div class="hero"><div class="val" style="font-size:32px">${pctTxt(un.length, n)}</div><div class="det">dos pedidos abertos (${un.length} de ${n})</div></div>
+    <div class="det" style="font-size:13px;color:var(--ink-2)"><b style="color:var(--ink)">${pctTxt(vUn, vAp)}</b> do valor aprovado ${C.J.rot} (${brl(vUn)} de ${brl(vAp)})</div></article>`;
+  /* data de necessidade */
+  const comData = C.aprov.filter(s => s.necessidade && s.aprovEm);
+  const noPrazo = comData.filter(s => s.aprovEm <= s.necessidade).length;
+  const venc = C.carteira.filter(s => s.necessidade && s.necessidade < AGORA);
+  const prazoC = `<article class="card" id="c-necessidade"><div class="card-h"><div><h3>Data de necessidade</h3><div class="sub">A data que quem pediu informou no formulário</div></div></div>
+    <div class="hero"><div class="val" style="font-size:32px">${pctTxt(noPrazo, comData.length)}</div><div class="det">dos pedidos aprovados ${C.J.rot} saíram até a data pedida (${noPrazo} de ${comData.length})</div></div>
+    <div class="det" style="font-size:13px;color:var(--ink-2)">Agora: <b style="color:var(--ink)">${venc.length}</b> pedido${venc.length === 1 ? '' : 's'} em andamento com a data já vencida</div></article>`;
+  return `<section class="sec" id="s-ritmo"><div class="sec-h"><h2>Ritmo e disciplina</h2><span class="hint">Por ${unid[abertos.modo]} · ${C.J.rot}</span></div>
+    <div class="grid g2">
+      ${cartao('c-abertos', 'Pedidos abertos por ' + unid[abertos.modo], 'Quantos pedidos entraram', colA, tabA)}
+      ${cartao('c-valor', 'Valor aprovado por ' + unid[ap.modo], 'Pela data da aprovação final', colV, tabV)}
+    </div>
+    <div class="grid g3" style="margin-top:14px">${tipoC}${unicoC}${prazoC}</div></section>`;
+}
+
+/* ---------- 6. Quem decide e quanto tempo leva ---------- */
+function secDecisoes(C){
+  const dec = C.marcos.filter(m => m.et !== 'cot' || m.resp !== 'cotado');
+  const aprovadores = [...agrupar(dec.filter(m => ['lid','ger','fin'].includes(m.et) && m.por), m => chavePessoa(m.por)).entries()].map(([k, l]) => {
+    const nome = l[0].por; const et = [...new Set(l.map(m => NOME_CURTO[m.et]))].join(', ');
+    const fila = C.carteira.filter(s => ['lid','ger','fin'].includes(s.status) && chavePessoa(s.aprovador) === k).length;
+    return { nome, et, n:l.length, ap:l.filter(m => m.resp === 'aprovado').length, rp:l.filter(m => m.resp === 'reprovado').length, dv:l.filter(m => m.resp === 'devolvido').length,
+      t:media(l.filter(m => m.dur !== null).map(m => m.dur)), fila };
+  }).sort((a,b) => b.n - a.n);
+  const tabAp = tabelaHTML([{t:'Aprovador',cls:'l'},{t:'Etapa'},{t:'Decisões'},{t:'Aprovou'},{t:'Reprovou'},{t:'Devolveu'},{t:'Tempo médio'},{t:'Na fila'}],
+    aprovadores.map(a => ({ cels:[esc(a.nome), esc(a.et), inteiro(a.n), inteiro(a.ap), inteiro(a.rp), inteiro(a.dv), dias(a.t), inteiro(a.fila)] })),
+    { vazio:'Nenhuma decisão de aprovador no período.' });
+  const aprovC = `<article class="card" id="c-aprovadores"><div class="card-h"><div><h3>Aprovadores</h3><div class="sub">Decisões tomadas ${C.J.rot} · tempo médio = da chegada do pedido até a decisão</div></div></div>${tabAp}</article>`;
+  /* reprovações e cancelamentos */
+  const fech = C.encerr.filter(s => s.status === 'rep' || s.status === 'can');
+  const grupos = [['lider','Na liderança'],['compras','Na cotação'],['gerencial','Na gerência'],['financeiro','No financeiro'],['cancelado','Cancelados por quem pediu']]
+    .map(([k, r]) => ({ r, l:fech.filter(s => (s.etapaRep === 'cotacao' ? 'compras' : s.etapaRep) === k) }));
+  const hbRep = hbarsHTML(grupos.filter(g => g.l.length).map(g => ({ rot:g.r, v:g.l.length, vTxt:plural(g.l.length, 'pedido', 'pedidos'), sub:somaValor(g.l) ? brlC(somaValor(g.l)) : '', cor:g.r.startsWith('Cancel') ? '--st-can' : '--st-rep' })),
+    { vazio:'Nenhuma reprovação ou cancelamento no período.' });
+  const ult = fech.slice().sort((a,b) => (b.fechadoEm || 0) - (a.fechadoEm || 0)).slice(0, 5);
+  const lista = ult.length ? '<ul class="motivos">' + ult.map(s => `<li><b class="mono">${esc(s.id)}</b> · ${s.status === 'can' ? 'cancelado' : 'reprovado em ' + esc(NOME_ETAPA_DECISAO[s.etapaRep] || s.etapaRep || '—')}${s.porRep ? ' por ' + esc(s.porRep) : ''} · ${dt(s.fechadoEm)}<br>${esc(s.motivoRep || 'sem motivo registrado')}</li>`).join('') + '</ul>' : '';
+  const tabRep = tabelaHTML([{t:'Nº'},{t:'Onde',cls:'l'},{t:'Quem',cls:'l'},{t:'Data'},{t:'Motivo',cls:'l'},{t:'Valor',cls:'r'}],
+    fech.map(s => ({ cels:[`<span class="mono">${esc(s.id)}</span>`, s.status === 'can' ? 'Cancelado' : esc(cap(NOME_ETAPA_DECISAO[s.etapaRep] || s.etapaRep || '—')), esc(s.porRep || '—'), dt(s.fechadoEm), esc(s.motivoRep || '—'), brl(s.valor)] })));
+  const repC = cartao('c-reprovacoes', 'Reprovações e cancelamentos', `Pedidos encerrados sem compra ${C.J.rot}`, hbRep + (lista ? '<div style="margin-top:6px"><div class="sub" style="font-size:12px;color:var(--ink-3);margin-bottom:6px">Últimos motivos</div>' + lista + '</div>' : ''), tabRep);
+  /* cotação */
+  const cot = C.marcos.filter(m => m.et === 'cot' && m.resp === 'cotado');
+  const tCot = media(cot.filter(m => m.dur !== null).map(m => m.dur));
+  const devolv = C.marcos.filter(m => m.resp === 'devolvido').length;
+  const multi = C.noPer.filter(s => s.status === 'oc' && s.valor !== null && s.cotacoes.filter(c => num(c.total) !== null).length >= 2);
+  const economia = soma(multi.map(s => Math.max(...s.cotacoes.map(c => num(c.total)).filter(x => x !== null)) - s.valor).filter(x => x > 0));
+  const naFila = C.carteira.filter(s => s.status === 'cot');
+  const cotC = `<article class="card" id="c-cotacao"><div class="card-h"><div><h3>Cotação</h3><div class="sub">Trabalho do comprador ${C.J.rot}</div></div></div>
+    <div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+      ${tile('t-cotados', 'Cotações enviadas', inteiro(cot.length), 'para aprovação')}
+      ${tile('t-tcot', 'Tempo médio de cotação', dias(tCot), 'da chegada ao envio')}
+      ${tile('t-filacot', 'Na fila de cotação agora', inteiro(naFila.length), naFila.length ? 'mais antigo há ' + diasInt(Math.max(...naFila.map(diasNaEtapa))) : 'fila vazia')}
+      ${tile('t-devolv', 'Devolvidos ao comprador', inteiro(devolv), 'pelos aprovadores')}
+      ${tile('t-economia', 'Diferença para a maior proposta', multi.length ? brlC(economia) : '—', multi.length ? plural(multi.length, 'pedido com 2+ propostas', 'pedidos com 2+ propostas') : 'aparece quando houver pedido aprovado com 2 ou mais propostas registradas')}
+    </div></article>`;
+  return `<section class="sec" id="s-decisoes"><div class="sec-h"><h2>Quem decide e quanto tempo leva</h2></div>
+    <div class="grid g2">${aprovC}${repC}</div>
+    <div style="margin-top:14px">${cotC}</div></section>`;
+}
+
+/* =====================================================================
+   INTERAÇÃO: filtros por clique, alternar tabela, abrir no funil, dica
+   ===================================================================== */
+function ligar(){
+  $('empty-clear')?.addEventListener('click', limparFiltros);
+  document.querySelectorAll('#conteudo [data-filtro]').forEach(el => el.addEventListener('click', () => aplicarFiltro(el.dataset.filtro, el.dataset.valor, el.dataset.rot)));
+  document.querySelectorAll('#conteudo [data-vista]').forEach(bt => bt.addEventListener('click', () => {
+    const id = bt.dataset.vista, card = $(id), tabela = state.vistas[id] !== 'tabela';
+    state.vistas[id] = tabela ? 'tabela' : 'grafico';
+    card.querySelector('.viz').hidden = tabela; card.querySelector('.tab').hidden = !tabela;
+    bt.textContent = tabela ? 'Ver gráfico' : 'Ver tabela'; bt.setAttribute('aria-pressed', String(tabela));
+    esconderDica();
+  }));
+  document.querySelectorAll('#conteudo tr[data-href]').forEach(tr => {
+    const ir = () => { location.href = tr.dataset.href; };
+    tr.addEventListener('click', ir);
+    tr.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); ir(); } });
+  });
+}
+function mostrarDica(el, x, y){
+  const t = $('tip'); t.innerHTML = esc(el.dataset.tip).replace(/\n/g, '<br>'); t.hidden = false;
+  const r = t.getBoundingClientRect();
+  let left = x + 14, top = y + 14;
+  if (left + r.width > innerWidth - 8) left = x - r.width - 14;
+  if (top + r.height > innerHeight - 8) top = y - r.height - 14;
+  t.style.left = Math.max(8, left) + 'px'; t.style.top = Math.max(8, top) + 'px';
+}
+function esconderDica(){ $('tip').hidden = true; }
+document.addEventListener('mousemove', e => { const el = e.target.closest && e.target.closest('[data-tip]'); if (el) mostrarDica(el, e.clientX, e.clientY); else esconderDica(); });
+document.addEventListener('focusin', e => { const el = e.target.closest && e.target.closest('[data-tip]'); if (el){ const r = el.getBoundingClientRect(); mostrarDica(el, r.left + Math.min(r.width, 40), r.bottom); } else esconderDica(); });
+document.addEventListener('focusout', esconderDica);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') esconderDica(); });
+addEventListener('scroll', esconderDica, { passive:true });
+
+/* =====================================================================
+   PLANILHA (CSV) — os pedidos abertos no período, com os filtros da tela.
+   Separador ";" e vírgula decimal, que é como o Excel em português abre.
+   ===================================================================== */
+function celulaCSV(v){
+  let s = v === null || v === undefined ? '' : String(v);
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;            /* não deixar virar fórmula no Excel */
+  return /[;"\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function linhasCSV(){
+  const C = calcular();
+  const SIT = Object.fromEntries(SITUACOES.map(x => [x.id, x.nome]));
+  const cab = ['Número','Aberto em','Tipo de compra','Situação','Com quem','Dias na etapa','Empresa','Unidade de negócio','Centro de custo','Solicitante','Comprador','Fornecedor','Fornecedor único','Valor (R$)','Origem do valor','Precisa até','Aprovado em','Itens'];
+  const linhas = C.noPer.slice().sort((a,b) => a.criada - b.criada).map(s => [
+    s.id, dt(s.criada), s.tipoNome, SIT[s.status] || s.status, abertoAgora(s) ? comQuem(s) : '', abertoAgora(s) ? Math.floor(diasNaEtapa(s)) : '',
+    s.empresa, s.unidadeNegocio, s.ccNome, s.solicitante, s.comprador || '', s.fornecedor || '', s.unico ? 'Sim' : 'Não',
+    s.valor === null ? '' : s.valor.toFixed(2).replace('.', ','), s.valorFonte || '', s.necessidade ? dt(s.necessidade) : '', s.aprovEm ? dt(s.aprovEm) : '',
+    s.raw.itens.map(i => `${i.qtd ?? ''} ${i.un || ''} ${i.desc}`.trim()).join(' | ')]);
+  return [cab, ...linhas];
+}
+function baixarCSV(){
+  if (!state.carregou) return;
+  const L = linhasCSV();
+  const txt = '﻿' + L.map(l => l.map(celulaCSV).join(';')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([txt], { type:'text/csv;charset=utf-8' }));
+  a.download = 'indicadores-compras-' + AGORA.toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  toast(plural(L.length - 1, 'pedido baixado', 'pedidos baixados'));
+}
+
+let tt;
+function toast(msg){ const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2400); }
+
+/* =====================================================================
+   INÍCIO
+   ===================================================================== */
+initFiltros();
+carregar(false);
+/* atualiza sozinho a cada 5 min enquanto a página estiver visível (igual ao funil) */
+setInterval(() => { if (!document.hidden && state.carregou) carregar(false); }, 5*60*1000);
+/* tema claro/escuro mudou no sistema: as cores dos gráficos são lidas na hora do desenho */
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => render());
+</script>
+</body></html>
