@@ -2073,3 +2073,24 @@ begin
   if length(d) = n then raise exception 'fila_do_aprovador: troca não bateu'; end if;
   execute d;
 end $$;
+
+-- 29/09 · telas_11 · Funil da diretoria enxerga o caminho das telas. Achado no
+-- teste de todos os fluxos: pedido cancelado ficava parado em "Liderança" no
+-- funil, e pedido cotado na Mesa aparecia "sem valor" (o funil só lia a cotação
+-- do ClickUp). O painel passa a receber, além do que já recebia: canal, valor e
+-- fornecedor cotados, quando entrou na etapa, e os movimentos das telas
+-- (cotação enviada, devolução, cancelamento, edição). Só acrescenta campos: a
+-- tela antiga e o caminho do ClickUp leem o mesmo que antes.
+do $$
+declare d text; n int;
+begin
+  d := pg_get_functiondef('public.painel_diretoria(text)'::regprocedure); n := length(d);
+  d := replace(d, $a$      'ordens', coalesce($a$, $b$      'canal', s.canal, 'valor_cotado', s.valor_cotado, 'fornecedor_cotado', s.fornecedor_cotado,
+      'cotacao_em', s.cotacao_em, 'entrou_na_etapa_em', s.entrou_na_etapa_em, 'cancelado_em', s.cancelado_em,
+      'movimentos', case when s.canal = 'telas' then coalesce((select jsonb_agg(jsonb_build_object('acao',m.acao,'etapa',m.etapa,'por',m.quem_nome,'motivo',m.motivo,'em',m.em) order by m.em, m.id)
+                         from movimentos_compra m where m.solicitacao_id = s.id
+                          and m.acao in ('cotacao_enviada','devolvido','cancelado','edicao_salva')), '[]'::jsonb) else '[]'::jsonb end,
+      'ordens', coalesce($b$);
+  if length(d) = n or position('movimentos_compra m' in d) = 0 then raise exception 'painel_diretoria: troca não bateu'; end if;
+  execute d;
+end $$;

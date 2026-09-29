@@ -21,7 +21,7 @@ for b in bateria-tela.js teste-centros.js teste-pedido.js teste-decisao.js \
          teste-reprovar-compra.js \
          teste-cadastro-itens.js \
          teste-telas-aprovacoes.js teste-telas-pedido.js teste-telas-formulario.js \
-         teste-telas-acompanhar.js teste-painel-mensal.js teste-mesa-banco.js; do
+         teste-telas-acompanhar.js teste-painel-mensal.js teste-painel-telas.js teste-mesa-banco.js; do
   echo
   echo "== $b =="
   saida=$(node "$b" 2>&1) || { echo "$saida" | tail -20; falhou=1; continue; }

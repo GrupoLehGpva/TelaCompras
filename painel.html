@@ -285,7 +285,7 @@ td.r,th.r{text-align:right}
 
   <!-- ============ REPROVADAS ============ -->
   <div class="sec-h">
-    <h2>Reprovadas</h2>
+    <h2>Reprovadas e canceladas</h2>
     <span class="hint" id="closed-hint"></span>
   </div>
   <div id="closed-area"></div>
@@ -349,6 +349,7 @@ const num = v => v === null || v === undefined || v === '' ? null : Number(v);
 
 function etapaDaLinha(r){
   if (r.status === 'reprovado' || r.decisoes.some(d => d.resp === 'reprovado')) return 'rep';
+  if (r.status === 'cancelado') return 'can';   /* caminho das telas (29/09): o solicitante cancelou */
   if (r.etapa_atual && ETAPA_DB[r.etapa_atual]) return ETAPA_DB[r.etapa_atual];
   const oc = r.ordens.filter(o => o.situacao !== 'cancelada').slice(-1)[0];
   if (oc) return 'oc';
@@ -363,12 +364,13 @@ function valorDaLinha(r){
   if (oc) return { v:num(oc.total), fonte:'ordem de compra' };
   const cots = r.cotacoes.filter(c => num(c.total) !== null).map(c => num(c.total));
   if (cots.length) return { v:Math.min(...cots), fonte:'menor cotação' };
+  if (num(r.valor_cotado) !== null) return { v:num(r.valor_cotado), fonte:'valor cotado' };   /* Mesa de cotação */
   const itens = r.itens.map(i => { const ps = [i.p1,i.p2,i.p3].map(num).filter(x => x !== null); return ps.length ? Math.min(...ps) * num(i.qtd) : null; });
   if (itens.length && itens.every(x => x !== null)) return { v:itens.reduce((a,b)=>a+b,0), fonte:'preços informados' };
   return { v:null, fonte:null };
 }
 function normalizar(r){
-  r.itens = r.itens || []; r.decisoes = r.decisoes || []; r.cotacoes = r.cotacoes || []; r.ordens = r.ordens || [];
+  r.itens = r.itens || []; r.decisoes = r.decisoes || []; r.cotacoes = r.cotacoes || []; r.ordens = r.ordens || []; r.movimentos = r.movimentos || [];
   const status = etapaDaLinha(r);
   const criada = D(r.aberto_em);
   // histórico
@@ -377,6 +379,12 @@ function normalizar(r){
   r.cotacoes.forEach(c => {
     eventos.push({ data:D(c.enviada), titulo:'Cotação enviada a ' + c.forn, pessoa:null });
     if (c.respondida) eventos.push({ data:D(c.respondida), titulo:'Cotação respondida por ' + c.forn, pessoa:null });
+  });
+  /* caminho das telas: o que não vira decisão também aparece no histórico */
+  r.movimentos.forEach(m => {
+    const t = { cotacao_enviada:'Cotação enviada pelo comprador', devolvido:'Devolvido ao comprador em ' + (NOME_ETAPA_DECISAO[m.etapa] || m.etapa || ''),
+                cancelado:'Cancelado pelo solicitante', edicao_salva:'Pedido editado pelo solicitante' }[m.acao];
+    if (t) eventos.push({ data:D(m.em), titulo:t, pessoa:m.por, nota:m.motivo, rot:m.acao === 'cotacao_enviada' ? 'Observação' : 'Motivo', bad:m.acao === 'cancelado' });
   });
   r.ordens.forEach(o => {
     eventos.push({ data:D(o.criada), titulo:'Ordem de compra criada', pessoa:null });
@@ -400,13 +408,18 @@ function normalizar(r){
     unidadeNegocio: r.cc_unidade || r.unidade || '—',
     familias, itens: r.itens, anexos: r.anexos || [],
     valor: val.v, valorFonte: val.fonte,
-    fornecedor: ultimaOC?.forn || null,
+    fornecedor: ultimaOC?.forn || r.fornecedor_cotado || null,
+    canal: r.canal || null,
     cotacoes: r.cotacoes, motivo: r.motivo, observacao: r.observacao,
     necessidade: r.data_necessidade ? new Date(r.data_necessidade + 'T12:00:00') : null,
     local: r.local_entrega, defForn: r.definicao_fornecedor, justForn: r.justificativa_fornecedor,
-    motivoRep: (r.decisoes.find(d => d.resp === 'reprovado') || {}).motivo || null,
-    etapaRep: (r.decisoes.find(d => d.resp === 'reprovado') || {}).etapa || null,
-    criada, eventos, entradaEtapa: eventos[eventos.length - 1].data,
+    motivoRep: status === 'can' ? ((r.movimentos.find(m => m.acao === 'cancelado') || {}).motivo || null)
+                                : (r.decisoes.find(d => d.resp === 'reprovado') || {}).motivo || null,
+    etapaRep: status === 'can' ? 'cancelado' : (r.decisoes.find(d => d.resp === 'reprovado') || {}).etapa || null,
+    criada, eventos,
+    /* o banco sabe quando o pedido entrou na etapa atual (caminho das telas); sem isso, o último evento */
+    entradaEtapa: status !== 'rep' && status !== 'can' && r.entrou_na_etapa_em ? D(r.entrou_na_etapa_em)
+                : status === 'can' && r.cancelado_em ? D(r.cancelado_em) : eventos[eventos.length - 1].data,
   };
 }
 
@@ -475,7 +488,8 @@ let SOLICITACOES = [];
 let AGORA = new Date();
 const etapa = id => ETAPAS.find(e => e.id === id);
 const diasNaEtapa = s => (AGORA - s.entradaEtapa) / 864e5;
-const aberta = s => s.status !== 'rep';
+const fechada = s => s.status === 'rep' || s.status === 'can';
+const aberta = s => !fechada(s);
 function prazo(s){
   if (!aberta(s)) return null;
   const sla = etapa(s.status).sla, d = diasNaEtapa(s);
@@ -663,7 +677,7 @@ function renderQuadro(base){
   /* Sem resultado: o quadro aparece do mesmo jeito, com as colunas vazias (29/09 —
      o funil da mensal precisa estar à vista antes do primeiro pedido mensal). */
   let aviso = '';
-  if (!visiveis.length && !base.some(s => s.status === 'rep')){
+  if (!visiveis.length && !base.some(fechada)){
     const txt = mensal && !SOLICITACOES.some(s => s.tipoCompra === 'mensal')
       ? '<strong>Ainda não há compra mensal.</strong> O quadro já está pronto: o primeiro pedido mensal aparece aqui, na coluna Liderança imediata.'
       : '<strong>Nenhuma solicitação com esses filtros.</strong> Tente outro período, outra empresa ou limpe os filtros.';
@@ -681,14 +695,15 @@ function renderQuadro(base){
   if ($('empty-clear')) $('empty-clear').addEventListener('click', limparFiltros);
 }
 function renderReprovadas(base){
-  const lst = base.filter(s => s.status === 'rep').sort((a,b) => b.entradaEtapa - a.entradaEtapa);
-  $('closed-hint').textContent = lst.length ? `${lst.length} ${lst.length === 1 ? 'reprovada' : 'reprovadas'} no filtro atual` : '';
-  if (!lst.length){ $('closed-area').innerHTML = '<div class="state" style="padding:18px">Nenhuma solicitação reprovada com esses filtros.</div>'; return; }
+  const lst = base.filter(fechada).sort((a,b) => b.entradaEtapa - a.entradaEtapa);
+  const nc = lst.filter(s => s.status === 'can').length, nr = lst.length - nc;
+  $('closed-hint').textContent = lst.length ? [nr ? `${nr} ${nr === 1 ? 'reprovada' : 'reprovadas'}` : '', nc ? `${nc} ${nc === 1 ? 'cancelada' : 'canceladas'}` : ''].filter(Boolean).join(' · ') + ' no filtro atual' : '';
+  if (!lst.length){ $('closed-area').innerHTML = '<div class="state" style="padding:18px">Nenhuma solicitação reprovada ou cancelada com esses filtros.</div>'; return; }
   $('closed-area').innerHTML = `<div class="tbl-wrap"><table>
-    <thead><tr><th>Nº</th><th>Solicitação</th><th>Reprovada em</th><th>Motivo</th><th>Data</th><th class="r">Valor</th></tr></thead>
+    <thead><tr><th>Nº</th><th>Solicitação</th><th>Encerrada em</th><th>Motivo</th><th>Data</th><th class="r">Valor</th></tr></thead>
     <tbody>${lst.map(s => `<tr data-id="${esc(s.id)}" tabindex="0">
       <td class="mono">${esc(s.id)}</td><td>${esc(s.titulo)}<br><span class="muted" style="font-size:12px">${esc(s.ccNome)}</span></td>
-      <td>${esc(cap(NOME_ETAPA_DECISAO[s.etapaRep] || s.etapaRep || '—'))}</td>
+      <td>${s.status === 'can' ? 'Cancelada pelo solicitante' : esc(cap(NOME_ETAPA_DECISAO[s.etapaRep] || s.etapaRep || '—'))}</td>
       <td>${esc(s.motivoRep || '—')}</td><td>${dt(s.entradaEtapa)}</td><td class="r num">${brl(s.valor)}</td></tr>`).join('')}</tbody></table></div>`;
   $('closed-area').querySelectorAll('tbody tr').forEach(tr => {
     const open = () => abrirModal(tr.dataset.id, lst);
@@ -725,12 +740,13 @@ function pintarModal(){
   const s = SOLICITACOES.find(x => x.id === state.modalList[state.modalIdx]);
   if (!s){ fecharModal(); return; }
   const p = prazo(s);
-  const rep = s.status === 'rep';
+  const rep = s.status === 'rep', can = s.status === 'can';
   const FLUXO = fluxoDe(s);
-  const idxAtual = rep ? FLUXO.findIndex(e => e.id === (ETAPA_DB[s.etapaRep] || 'lid')) : FLUXO.findIndex(e => e.id === s.status);
+  const idxAtual = rep ? FLUXO.findIndex(e => e.id === (ETAPA_DB[s.etapaRep] || 'lid')) : can ? -1 : FLUXO.findIndex(e => e.id === s.status);
 
   let holder;
-  if (rep) holder = `<div class="holder crit"><strong>Reprovada</strong><span>em ${esc(NOME_ETAPA_DECISAO[s.etapaRep] || s.etapaRep || '—')} · ${dt(s.entradaEtapa)}</span>${s.motivoRep ? `<span>Motivo: ${esc(s.motivoRep)}</span>` : ''}</div>`;
+  if (can) holder = `<div class="holder crit"><strong>Cancelada</strong><span>pelo solicitante · ${dt(s.entradaEtapa)}</span>${s.motivoRep ? `<span>Motivo: ${esc(s.motivoRep)}</span>` : ''}</div>`;
+  else if (rep) holder = `<div class="holder crit"><strong>Reprovada</strong><span>em ${esc(NOME_ETAPA_DECISAO[s.etapaRep] || s.etapaRep || '—')} · ${dt(s.entradaEtapa)}</span>${s.motivoRep ? `<span>Motivo: ${esc(s.motivoRep)}</span>` : ''}</div>`;
   else holder = `<div class="holder ${p.cls}"><strong>${etapa(s.status).nome}</strong><span>com ${esc(comQuem(s))}</span><span>há <strong>${dias(p.d)}</strong> (prazo da etapa: ${p.sla} ${p.sla === 1 ? 'dia' : 'dias'})</span><span class="pill ${p.cls}"><span class="dot"></span>${p.txt}</span></div>`;
 
   const steps = FLUXO.map((e,i) => {
@@ -752,7 +768,7 @@ function pintarModal(){
   const tl = s.eventos.map((e,i) => {
     const last = i === s.eventos.length - 1;
     const cls = e.bad ? 'bad' : (last && aberta(s) ? 'now' : '');
-    return `<li class="${cls}"><span class="b"></span><div><div class="t">${esc(e.titulo)}</div><div class="d">${dth(e.data)}${e.pessoa ? ' · ' + esc(e.pessoa) : ''}</div>${e.nota ? `<div class="n">Motivo: ${esc(e.nota)}</div>` : ''}</div></li>`;
+    return `<li class="${cls}"><span class="b"></span><div><div class="t">${esc(e.titulo)}</div><div class="d">${dth(e.data)}${e.pessoa ? ' · ' + esc(e.pessoa) : ''}</div>${e.nota ? `<div class="n">${e.rot || 'Motivo'}: ${esc(e.nota)}</div>` : ''}</div></li>`;
   }).join('') + (aberta(s) ? `<li class="now"><span class="b" style="background:var(--surface-2);border:2px dashed var(--line)"></span><div><div class="t muted">Agora: ${etapa(s.status).nome}</div><div class="d">aguardando ${esc(comQuem(s))}</div></div></li>` : '');
 
   $('modal').innerHTML = `
@@ -776,7 +792,7 @@ function pintarModal(){
         ${kv('Comprador', esc(s.comprador || '—'))}
         ${kv('Setor / unidade', esc([s.setor, s.unidade].filter(Boolean).filter((v,i,a) => a.indexOf(v) === i).join(' · ') || '—'))}
         ${kv('Fornecedor', s.defForn === 'unico' ? 'Fornecedor único' : s.defForn === 'cotacao' ? 'Por cotação' : esc(s.defForn || '—'))}
-        ${kv('Cotações', s.cotacoes.length ? `${s.cotacoes.length} enviada${s.cotacoes.length > 1 ? 's' : ''} · ${respondidas} respondida${respondidas === 1 ? '' : 's'}` : '<span class="muted">nenhuma enviada ainda</span>')}
+        ${kv('Cotações', !s.cotacoes.length && s.canal === 'telas' ? (s.raw.cotacao_em ? 'Mesa de cotação' + (s.fornecedor ? ' · ' + esc(s.fornecedor) : '') : '<span class="muted">ainda na cotação</span>') : s.cotacoes.length ? `${s.cotacoes.length} enviada${s.cotacoes.length > 1 ? 's' : ''} · ${respondidas} respondida${respondidas === 1 ? '' : 's'}` : '<span class="muted">nenhuma enviada ainda</span>')}
         ${kv('Local de entrega', esc(s.local || '—'))}
       </div>
 
