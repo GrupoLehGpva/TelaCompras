@@ -260,15 +260,15 @@ td.r,th.r{text-align:right}
         <option value="">Todos</option>
         <option value="normal">Normal</option>
         <option value="urgente">Urgente</option>
-        <option value="mensal" disabled>Mensal (em breve)</option>
+        <option value="mensal">Mensal</option>
       </select></div>
     <button class="btn ghost align-end" id="f-clear" type="button">Limpar filtros</button>
   </section>
 
   <!-- ============ QUADRO ============ -->
   <div class="sec-h">
-    <h2>Solicitações por etapa</h2>
-    <span class="hint">Mesmas colunas do Kanban de Compras no ClickUp · clique num card para ver o detalhe</span>
+    <h2 id="quadro-titulo">Solicitações por etapa</h2>
+    <span class="hint" id="quadro-dica">Clique num card para ver o detalhe</span>
   </div>
   <div id="board-area"></div>
 
@@ -319,6 +319,13 @@ const ETAPAS = [
    está em ordem de compra já saiu do fluxo de aprovação. Pedido que o banco
    marca como no GR ou concluído continua aparecendo em Ordem de compra — some
    da tela nenhum. */
+/* Compra mensal (29/09): a gerência aprova a necessidade do mês ANTES da cotação.
+   Com o filtro Tipo = Mensal o quadro mostra as colunas nessa ordem; o modal
+   mostra a trilha pelo fluxo do próprio pedido. A regra dos dois fluxos mora no
+   banco (passo_da_compra); aqui é só a ordem das colunas. */
+const ETAPAS_MENSAL = ['lid','ger','cot','fin','oc'].map(id => ETAPAS.find(e => e.id === id));
+const fluxoDe = s => s && s.tipoCompra === 'mensal' ? ETAPAS_MENSAL : ETAPAS;
+const colunasDoQuadro = () => state.tipo === 'mensal' ? ETAPAS_MENSAL : ETAPAS;
 const TIPOS_COMPRA = { normal:'Normal', programada:'Programada', urgente:'Urgente', mensal:'Mensal' };
 const NOME_ETAPA_DECISAO = { lider:'liderança imediata', compras:'compras', gerencial:'aprovação gerencial', financeiro:'aprovação financeiro' };
 const ETAPA_DB = { lider:'lid', cotacao:'cot', compras:'cot', gerencial:'ger', financeiro:'fin' };
@@ -619,7 +626,8 @@ function somaValor(lst){
 }
 function cardHTML(s){
   const p = prazo(s);
-  const urg = s.urgencia === 'Urgente' ? '<span class="pill warn">Urgente</span>' : '';
+  const urg = (s.urgencia === 'Urgente' ? '<span class="pill warn">Urgente</span>' : '') +
+              (s.tipoCompra === 'mensal' && state.tipo !== 'mensal' ? ' <span class="pill neutral">Mensal</span>' : '');
   const tempo = p ? `<span class="pill ${p.cls}" title="Há ${dias(p.d)} nesta etapa · prazo ${p.sla} dias"><span class="dot"></span>${dias(p.d)}</span>`
                   : '';
   return `<button class="card" type="button" data-id="${esc(s.id)}" aria-label="Abrir ${esc(s.id)}">
@@ -631,7 +639,12 @@ function cardHTML(s){
   </button>`;
 }
 function renderQuadro(base){
-  const visiveis = ETAPAS.flatMap(e => ordenar(base.filter(s => s.status === e.id)));
+  const COLS = colunasDoQuadro();
+  const mensal = state.tipo === 'mensal';
+  $('quadro-titulo').textContent = 'Solicitações por etapa' + (mensal ? ' · compra mensal' : '');
+  $('quadro-dica').textContent = mensal ? 'Fluxo da compra mensal: a gerência aprova antes da cotação · clique num card para ver o detalhe'
+                                        : 'Clique num card para ver o detalhe';
+  const visiveis = COLS.flatMap(e => ordenar(base.filter(s => s.status === e.id)));
   if (!SOLICITACOES.length){
     $('board-area').innerHTML = `<div class="state"><h3>Nenhuma solicitação no banco ainda</h3><p>Quando alguém abrir um pedido pelo /compras, ele aparece aqui na coluna Liderança imediata.</p></div>`;
     return;
@@ -641,7 +654,7 @@ function renderQuadro(base){
     $('empty-clear').addEventListener('click', limparFiltros);
     return;
   }
-  $('board-area').innerHTML = `<div class="board-scroll"><div class="board">` + ETAPAS.map(e => {
+  $('board-area').innerHTML = `<div class="board-scroll"><div class="board">` + COLS.map(e => {
     const lst = ordenar(base.filter(s => s.status === e.id));
     return `<section class="col" aria-label="${e.nome}">
       <div class="col-h"><h3>${e.nome}</h3><span class="c num">${lst.length}</span></div>
@@ -697,13 +710,14 @@ function pintarModal(){
   if (!s){ fecharModal(); return; }
   const p = prazo(s);
   const rep = s.status === 'rep';
-  const idxAtual = rep ? ETAPAS.findIndex(e => e.id === (ETAPA_DB[s.etapaRep] || 'lid')) : ETAPAS.findIndex(e => e.id === s.status);
+  const FLUXO = fluxoDe(s);
+  const idxAtual = rep ? FLUXO.findIndex(e => e.id === (ETAPA_DB[s.etapaRep] || 'lid')) : FLUXO.findIndex(e => e.id === s.status);
 
   let holder;
   if (rep) holder = `<div class="holder crit"><strong>Reprovada</strong><span>em ${esc(NOME_ETAPA_DECISAO[s.etapaRep] || s.etapaRep || '—')} · ${dt(s.entradaEtapa)}</span>${s.motivoRep ? `<span>Motivo: ${esc(s.motivoRep)}</span>` : ''}</div>`;
   else holder = `<div class="holder ${p.cls}"><strong>${etapa(s.status).nome}</strong><span>com ${esc(comQuem(s))}</span><span>há <strong>${dias(p.d)}</strong> (prazo da etapa: ${p.sla} ${p.sla === 1 ? 'dia' : 'dias'})</span><span class="pill ${p.cls}"><span class="dot"></span>${p.txt}</span></div>`;
 
-  const steps = ETAPAS.map((e,i) => {
+  const steps = FLUXO.map((e,i) => {
     let cls = '';
     if (i < idxAtual) cls = 'done';
     if (i === idxAtual && !rep) cls = 'cur';
