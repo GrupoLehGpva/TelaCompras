@@ -725,3 +725,44 @@ begin
   if d = antes then raise exception 'C16b: ponto de inserção não achado'; end if;
   execute d;
 end $$;
+
+-- 29/09 · bateria ganha a seção O (Mesa ligada ao banco: fila completa e orçamentos).
+do $$
+declare d text; antes text;
+begin
+  d := pg_get_functiondef('public._teste_caminho_telas()'::regprocedure);
+  antes := d;
+  d := replace(d, $a$  -- N. CAMINHO ANTIGO INTACTO$a$, $b$  -- O. MESA LIGADA AO BANCO (29/09)
+  declare vO uuid; e jsonb;
+  begin
+    r := abrir_pedido_telas(tf, cab, itens); vO := (r->>'id')::uuid;
+    r := decidir_pedido(ta_br, vO, 1, 'aprovado', null);
+    r := fila_do_comprador(tc);
+    select el into e from jsonb_array_elements(r->'pedidos') el where (el->>'id')::uuid = vO;
+    res := res || jsonb_build_array(jsonb_build_object('c','O1 fila do comprador traz itens, motivo e solicitante','ok',
+       e is not null and jsonb_array_length(e->'itens') = jsonb_array_length(itens) and e->'itens'->0 ? 'familia'
+       and e->>'motivo' = 'Teste automático' and e ? 'solicitante_nome' and (e->>'orcamentos')::int = 0,'r',e));
+    r := registrar_orcamentos(tc, vO, jsonb_build_array(
+           jsonb_build_object('nome','orc-forn1.pdf','caminho', vO::text || '/orcamento-1.pdf','mime','application/pdf','tamanho',10),
+           jsonb_build_object('nome','fora-da-pasta.pdf','caminho','outro/orcamento-2.pdf')));
+    res := res || jsonb_build_array(jsonb_build_object('c','O2 orçamento registrado; caminho fora da pasta do pedido é ignorado','ok',
+       r->>'ok'='true' and (r->>'gravados')::int = 1 and r->'orcamentos'->0->>'nome' = 'Orçamento · orc-forn1.pdf','r',r));
+    r := registrar_orcamentos('cp-inventado', vO, '[]');
+    res := res || jsonb_build_array(jsonb_build_object('c','O3 orçamento com token inventado','ok', r->>'erro'='token_invalido','r',r));
+    r := registrar_orcamentos(tf, vO, '[]');
+    res := res || jsonb_build_array(jsonb_build_object('c','O4 facilitador não registra orçamento','ok', r->>'erro'='token_invalido','r',r));
+    r := abrir_pedido_telas(tf, cab, itens); vX := (r->>'id')::uuid;
+    r := registrar_orcamentos(tc, vX, jsonb_build_array(jsonb_build_object('nome','x.pdf','caminho', vX::text || '/orcamento-9.pdf')));
+    res := res || jsonb_build_array(jsonb_build_object('c','O5 orçamento fora da cotação é recusado','ok', r->>'erro'='fora_da_cotacao','r',r));
+    r := pedido_telas(ta_br, vO);
+    res := res || jsonb_build_array(jsonb_build_object('c','O6 aprovador vê o orçamento entre os anexos do pedido','ok',
+       exists (select 1 from jsonb_array_elements(r->'anexos') a where a->>'nome' = 'Orçamento · orc-forn1.pdf'),'r',r->'anexos'));
+    r := fila_do_comprador(tc);
+    select el into e from jsonb_array_elements(r->'pedidos') el where (el->>'id')::uuid = vO;
+    res := res || jsonb_build_array(jsonb_build_object('c','O7 fila conta os orçamentos','ok', (e->>'orcamentos')::int = 1,'r',e->'orcamentos'));
+  end;
+
+  -- N. CAMINHO ANTIGO INTACTO$b$);
+  if d = antes then raise exception 'seção O: ponto de inserção não achado'; end if;
+  execute d;
+end $$;

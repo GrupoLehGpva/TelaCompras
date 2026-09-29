@@ -1980,3 +1980,67 @@ end $$;
 
 comment on column public.solicitacoes.edicao_usada is
   'Verdadeiro depois que o facilitador usou a única edição (conta ao clicar em Editar; salvar, desistir ou sair da tela gastam). Se a edição for descartada pelo banco por esquecimento (a tela não avisou a saída), volta a falso: ele pode editar de novo enquanto a liderança não decidir.';
+
+-- 29/09 · telas_9 · Mesa de Cotação ligada ao banco (etapa 4). Só caminho das telas.
+-- 1) fila_do_comprador passa a trazer o que a Mesa mostra na lista e no detalhe
+--    (itens, motivo, solicitante, empresa...), para não ter uma chamada por pedido.
+-- 2) registrar_orcamentos: o comprador liga à solicitação os PDFs/fotos de
+--    orçamento que subiu para o espaço privado "anexos". Confere o token do
+--    comprador e que o pedido está em cotação. Os arquivos entram em
+--    solicitacao_anexos com o nome "Orçamento · …", e por isso aparecem para o
+--    aprovador na tela do pedido, pelo mesmo link seguro dos outros anexos.
+do $$
+declare d text; n int;
+begin
+  d := pg_get_functiondef('public.fila_do_comprador(text)'::regprocedure); n := length(d);
+  d := replace(d, $a$'assunto', coalesce(s.motivo, 'Solicitação de compra'),$a$,
+    $b$'assunto', coalesce(s.motivo, 'Solicitação de compra'),
+      'motivo', s.motivo, 'solicitante_nome', s.solicitante_nome, 'aberto_em', s.aberto_em,
+      'justificativa_fornecedor', s.justificativa_fornecedor, 'local_entrega', s.local_entrega,
+      'empresa_nome', (select e.nome from empresas e where e.id = s.empresa_id),
+      'centro_custo', s.centro_custo, 'setor', f.setor,
+      'itens', (select coalesce(jsonb_agg(jsonb_build_object(
+                  'id', i.id, 'codigo', i.codigo, 'descricao', i.descricao, 'unidade', i.unidade,
+                  'quantidade', i.quantidade, 'fora_catalogo', i.fora_catalogo, 'familia', _telas_familia(i.codigo))
+                  order by _telas_familia(i.codigo), i.descricao), '[]'::jsonb)
+                  from solicitacao_itens i where i.solicitacao_id = s.id),
+      'orcamentos', (select count(*) from solicitacao_anexos an where an.solicitacao_id = s.id and an.nome like 'Orçamento · %'),$b$);
+  if length(d) = n then raise exception 'fila_do_comprador: substituição não bateu'; end if;
+  execute d;
+end $$;
+
+create or replace function public.registrar_orcamentos(p_token text, p_id uuid, p_anexos jsonb)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare c compradores%rowtype; s solicitacoes%rowtype; a jsonb; v_n int := 0; v_nome text; v_cam text;
+begin
+  select * into c from compradores where token = p_token and ativo;
+  if c.id is null then
+    return jsonb_build_object('ok', false, 'erro', 'token_invalido', 'mensagem', 'Este link não vale mais.');
+  end if;
+  select * into s from solicitacoes where id = p_id;
+  if s.id is null then
+    return jsonb_build_object('ok', false, 'erro', 'nao_encontrado', 'mensagem', 'Pedido não encontrado.');
+  end if;
+  if s.canal <> 'telas' then
+    return jsonb_build_object('ok', false, 'erro', 'canal_clickup', 'mensagem', 'Este pedido anda pelo ClickUp.');
+  end if;
+  if s.etapa_atual is distinct from 'cotacao' then
+    return jsonb_build_object('ok', false, 'erro', 'fora_da_cotacao', 'mensagem', 'Este pedido não está em cotação. Atualize a tela.');
+  end if;
+  for a in select * from jsonb_array_elements(coalesce(p_anexos, '[]'::jsonb)) loop
+    v_cam := a->>'caminho'; v_nome := nullif(trim(a->>'nome'), '');
+    if v_cam is null or v_nome is null or v_cam not like (p_id::text || '/orcamento-%') then continue; end if;
+    insert into solicitacao_anexos (solicitacao_id, nome, mime, tamanho, caminho)
+    values (s.id, 'Orçamento · ' || left(v_nome, 180), coalesce(nullif(a->>'mime', ''), 'application/octet-stream'),
+            coalesce((a->>'tamanho')::bigint, 0), v_cam)
+    on conflict (caminho) do nothing;
+    if found then v_n := v_n + 1; end if;
+  end loop;
+  return jsonb_build_object('ok', true, 'gravados', v_n,
+    'orcamentos', (select coalesce(jsonb_agg(jsonb_build_object('id', an.id, 'nome', an.nome, 'mime', an.mime,
+                     'tamanho', an.tamanho, 'enviado_em', an.enviado_em) order by an.enviado_em), '[]'::jsonb)
+                     from solicitacao_anexos an where an.solicitacao_id = s.id and an.nome like 'Orçamento · %'));
+end $$;
+
+revoke execute on function public.registrar_orcamentos(text, uuid, jsonb) from public;
+grant execute on function public.registrar_orcamentos(text, uuid, jsonb) to anon, authenticated;
