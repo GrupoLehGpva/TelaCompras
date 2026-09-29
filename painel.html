@@ -227,6 +227,7 @@ td.r,th.r{text-align:right}
 .items td.r,.items th.r{white-space:nowrap}
 .card .ttl{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 @media (prefers-reduced-motion:no-preference){.card,.kpi{transition:background .12s,border-color .12s}}
+.aviso-vazio{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--ink-2)}
 </style>
 </head><body>
 
@@ -649,12 +650,16 @@ function renderQuadro(base){
     $('board-area').innerHTML = `<div class="state"><h3>Nenhuma solicitação no banco ainda</h3><p>Quando alguém abrir um pedido pelo /compras, ele aparece aqui na coluna Liderança imediata.</p></div>`;
     return;
   }
+  /* Sem resultado: o quadro aparece do mesmo jeito, com as colunas vazias (29/09 —
+     o funil da mensal precisa estar à vista antes do primeiro pedido mensal). */
+  let aviso = '';
   if (!visiveis.length && !base.some(s => s.status === 'rep')){
-    $('board-area').innerHTML = `<div class="state"><h3>Nenhuma solicitação com esses filtros</h3><p>Tente outro período, outra empresa ou limpe os filtros.</p><button class="btn primary" type="button" id="empty-clear">Limpar filtros</button></div>`;
-    $('empty-clear').addEventListener('click', limparFiltros);
-    return;
+    const txt = mensal && !SOLICITACOES.some(s => s.tipoCompra === 'mensal')
+      ? '<strong>Ainda não há compra mensal.</strong> O quadro já está pronto: o primeiro pedido mensal aparece aqui, na coluna Liderança imediata.'
+      : '<strong>Nenhuma solicitação com esses filtros.</strong> Tente outro período, outra empresa ou limpe os filtros.';
+    aviso = `<div class="aviso-vazio" role="status"><span>${txt}</span><button class="btn ghost" type="button" id="empty-clear">Limpar filtros</button></div>`;
   }
-  $('board-area').innerHTML = `<div class="board-scroll"><div class="board">` + COLS.map(e => {
+  $('board-area').innerHTML = aviso + `<div class="board-scroll"><div class="board">` + COLS.map(e => {
     const lst = ordenar(base.filter(s => s.status === e.id));
     return `<section class="col" aria-label="${e.nome}">
       <div class="col-h"><h3>${e.nome}</h3><span class="c num">${lst.length}</span></div>
@@ -663,6 +668,7 @@ function renderQuadro(base){
     </section>`;
   }).join('') + `</div></div>`;
   $('board-area').querySelectorAll('.card').forEach(c => c.addEventListener('click', () => abrirModal(c.dataset.id, visiveis)));
+  if ($('empty-clear')) $('empty-clear').addEventListener('click', limparFiltros);
 }
 function renderReprovadas(base){
   const lst = base.filter(s => s.status === 'rep').sort((a,b) => b.entradaEtapa - a.entradaEtapa);

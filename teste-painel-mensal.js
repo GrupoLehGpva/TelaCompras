@@ -61,6 +61,24 @@ await p.keyboard.press('Escape');
 await p.selectOption('#f-tipo', 'mensal'); await p.click('#f-clear'); await p.waitForTimeout(300);
 ok('4 limpar filtros volta à ordem normal', (await cols())[1] === 'Compras · cotação' && !/compra mensal/.test(await p.textContent('#quadro-titulo')));
 
+/* sem nenhum pedido mensal no banco: o quadro mensal aparece vazio, com aviso (29/09) */
+{ const q = await b.newPage({ viewport: { width: 1920, height: 1000 } });
+  q.on('pageerror', e => falhas.push('ERRO DE PÁGINA (vazio): ' + e.message));
+  await q.route('**/*', r => { const u = r.request().url(); if (u.startsWith('file:')) return r.continue();
+    if (u.includes('/rpc/painel_diretoria')) return r.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify({ ok: true, solicitacoes: LINHAS.filter(l => l.tipo_compra !== 'mensal') }) });
+    return r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }); });
+  await q.goto('file://' + __dirname + '/painel.html?t=pd-teste'); await q.waitForTimeout(900);
+  await q.selectOption('#f-tipo', 'mensal'); await q.waitForTimeout(300);
+  const c = await q.$$eval('#board-area .col h3', hs => hs.map(h => h.textContent.trim()));
+  ok('6 sem mensal: colunas da mensal aparecem vazias', JSON.stringify(c) === JSON.stringify(['Liderança imediata','Aprovação gerencial','Compras · cotação','Aprovação financeiro','Ordem de compra']), JSON.stringify(c));
+  ok('6 sem mensal: aviso de que ainda não há compra mensal', /Ainda não há compra mensal/.test(await q.textContent('#board-area')));
+  await q.selectOption('#f-tipo', 'urgente'); await q.fill('#f-q', 'zzzz-nada'); await q.waitForTimeout(400);
+  ok('6 filtro sem resultado: colunas + aviso com limpar', await q.locator('#board-area .col').count() === 5 && /Nenhuma solicitação com esses filtros/.test(await q.textContent('#board-area')));
+  await q.click('#empty-clear'); await q.waitForTimeout(300);
+  ok('6 limpar filtros pelo aviso', await q.locator('.card').count() === 3 && await q.$eval('#f-tipo', e => e.value) === '');
+  await q.close(); }
+
 /* celular */
 await p.setViewportSize({ width: 390, height: 800 }); await p.selectOption('#f-tipo', 'mensal'); await p.waitForTimeout(300);
 ok('5 celular sem rolagem lateral da página', await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
