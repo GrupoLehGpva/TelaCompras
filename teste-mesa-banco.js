@@ -397,6 +397,58 @@ const b = await chromium.launch();
   ok('14 salva o que foi digitado depois de reler', u && u.c.p_mapa.precos.some(x => x.preco === 3.73) && u.c.p_mapa.precos.some(x => x.preco === 2.91) && u.c.p_mapa.escolhas.length === 1, u && u.c.p_mapa);
   await p.close(); }
 
+/* 15 — pente fino 30/09: preço unitário com mais de 2 casas e "1.500" = mil e quinhentos */
+{ const p = await abrir(b, '?t=' + TOKEN);
+  await p.click('[data-open="C2609-03001"]'); await p.waitForTimeout(700);
+  await p.fill('#p-MG-i1-0', '0,035'); await p.press('#p-MG-i1-0', 'Tab');
+  ok('15 0,035 não vira 0,04', await p.inputValue('#p-MG-i1-0') === '0,035', await p.inputValue('#p-MG-i1-0'));
+  ok('15 total da linha usa 0,035 × 4', /0,14/.test(await txt(p, '#tl-MG-i1-0')), await txt(p, '#tl-MG-i1-0'));
+  await p.fill('#p-MG-i2-0', '1.500'); await p.press('#p-MG-i2-0', 'Tab');
+  ok('15 1.500 é mil e quinhentos', await p.inputValue('#p-MG-i2-0') === '1.500,00', await p.inputValue('#p-MG-i2-0'));
+  await p.fill('#p-MG-i2-1', '3.73'); await p.press('#p-MG-i2-1', 'Tab');
+  ok('15 3.73 continua 3,73', await p.inputValue('#p-MG-i2-1') === '3,73', await p.inputValue('#p-MG-i2-1'));
+  await p.fill('#f-MG-0', '4.000'); await p.press('#f-MG-0', 'Tab');
+  ok('15 frete 4.000 é quatro mil', await p.inputValue('#f-MG-0') === '4.000,00', await p.inputValue('#f-MG-0'));
+  await p.waitForTimeout(1600);
+  const sv = ch(p, 'salvar_mapa'); const u = sv[sv.length - 1].c.p_mapa;
+  ok('15 grava 0.035, 1500, 3.73 e frete 4000', u.precos.some(x => x.preco === 0.035) && u.precos.some(x => x.preco === 1500) && u.precos.some(x => x.preco === 3.73) && u.fornecedores.some(f => f.frete === 4000), u);
+  /* reabrir do banco mantém as 3 casas */
+  await p.click('#bt-salvar'); await p.waitForTimeout(900);
+  await p.click('[data-open="C2609-03001"]'); await p.waitForTimeout(700);
+  ok('15 reabrir mantém 0,035', await p.inputValue('#p-MG-i1-0') === '0,035', await p.inputValue('#p-MG-i1-0'));
+  await p.close(); }
+
+/* 16 — busca: a resposta atrasada de "ro" não pode cobrir a lista de "rol" */
+{ const p = await abrir(b, '?t=' + TOKEN);
+  await p.route('**/rpc/buscar_fornecedor', async r => {
+    const c = JSON.parse(r.request().postData() || '{}');
+    if (c.termo === 'ro') await new Promise(res => setTimeout(res, 1200));
+    const l = FORN.filter(f => f.nome.toLowerCase().includes(c.termo));
+    return r.fulfill({ status:200, contentType:'application/json', body:JSON.stringify(c.termo === 'ro' ? l : l.filter(f => f.id === 'f1')) });
+  });
+  await p.click('[data-open="C2609-03001"]'); await p.waitForTimeout(700);
+  await p.click('#n-MG-0'); await p.type('#n-MG-0', 'ro'); await p.waitForTimeout(350);
+  await p.type('#n-MG-0', 'l'); await p.waitForTimeout(1800);
+  ok('16 lista mostra só o que casa com "rol"', await p.locator('.sug [data-fid]').count() === 1, await p.locator('.sug [data-fid]').count());
+  await p.close(); }
+
+/* 17 — o pedido aberto sai da fila por fora (outra aba enviou/reprovou) */
+{ const p = await abrir(b, '?t=' + TOKEN);
+  await p.click('[data-open="C2609-03001"]'); await p.waitForTimeout(700);
+  p.B.pedidos[0].etapa_atual = null;
+  await p.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); await p.waitForTimeout(700);
+  ok('17 volta para a fila avisando', await p.locator('#map-wrap').count() === 0 && /C2609-03001<\/strong> saiu da sua fila/.test(await p.innerHTML('#view')), (await txt(p, '#view')).slice(0, 200));
+  await p.close(); }
+
+/* 18 — o pedido aberto foi enviado em outra aba: mapa vira só leitura */
+{ const p = await abrir(b, '?t=' + TOKEN);
+  await p.click('[data-open="C2609-03001"]'); await p.waitForTimeout(700);
+  Object.assign(p.B.pedidos[0], { etapa_atual:'gerencial', com_quem:'Gerente W', total:300 });
+  await p.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); await p.waitForTimeout(700);
+  ok('18 campos ficam bloqueados', await p.$eval('#p-MG-i1-0', e => e.disabled) && await p.locator('#bt-enviar').count() === 0);
+  ok('18 avisa', /só para leitura/.test(await txt(p, '#toast')), await txt(p, '#toast'));
+  await p.close(); }
+
 /* 11 — celular */
 { const p = await abrir(b, '?t=' + TOKEN, { vp:{ width:390, height:800 } });
   ok('11 celular: fila sem rolagem lateral', await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));

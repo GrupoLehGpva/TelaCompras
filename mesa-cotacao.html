@@ -521,6 +521,7 @@ function parseBR(v){
   let s = String(v).trim().replace(/R\$|\s|%/g,'');
   if (s === '') return null;
   if (s.includes(',')) s = s.replace(/\./g,'').replace(',','.');
+  else if (/^[1-9]\d{0,2}(\.\d{3})+$/.test(s)) s = s.replace(/\./g,'');   // 1.500 = mil e quinhentos (30/09)
   const n = Number(s);
   return Number.isFinite(n) ? n : NaN;
 }
@@ -609,6 +610,9 @@ function validar(s){
 const BRL = new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
 const brl = v => v === null || v === undefined || Number.isNaN(v) ? '—' : BRL.format(v);
 const n2 = v => Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+/* Preço unitário guarda até 4 casas (30/09): parafuso a R$ 0,035 não pode virar R$ 0,04. */
+const nPreco = v => Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:4});
+const brlUnit = v => v === null || v === undefined || Number.isNaN(v) ? '—' : 'R$ ' + nPreco(v);
 const qtd = v => Number(v).toLocaleString('pt-BR',{maximumFractionDigits:3});
 const dt = d => d ? d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
 const dth = d => d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}) + ' · ' + d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
@@ -812,7 +816,7 @@ function pintarDetalhe(){
   const linhaDe = it => { if (!C) return null; const fc = C.fams.find(f => f.k === famKey(it)); return fc.linhas.find(l => l.it.id === it.id); };
   const itens = s.itens.map(it => {
     const l = linhaDe(it), u = l && l.esc !== null && l.valido[l.esc] ? l.p[l.esc] : null;
-    return `<tr><td class="mono">${esc(it.cod || '—')}</td><td>${esc(it.desc)}${it.fora ? ' <span class="pill neutral">fora do catálogo</span>' : ''}</td><td>${esc(it.fam || '—')}</td><td class="r num">${qtd(it.qtd)} ${esc(it.un)}</td><td class="r num">${brl(u)}</td><td class="r num">${u !== null ? brl(u * it.qtd) : '—'}</td></tr>`;
+    return `<tr><td class="mono">${esc(it.cod || '—')}</td><td>${esc(it.desc)}${it.fora ? ' <span class="pill neutral">fora do catálogo</span>' : ''}</td><td>${esc(it.fam || '—')}</td><td class="r num">${qtd(it.qtd)} ${esc(it.un)}</td><td class="r num">${brlUnit(u)}</td><td class="r num">${u !== null ? brl(u * it.qtd) : '—'}</td></tr>`;
   }).join('');
   const valor = s.valor !== null ? s.valor : (C && C.escolhidos ? C.total : null);
   const origem = s.valor !== null ? 'Cotação enviada' : (C && C.escolhidos ? 'Rascunho da cotação' : '<span class="muted">Ainda sem preço — sai da cotação</span>');
@@ -1215,7 +1219,7 @@ async function buscarNoCampo(input){
   mostrarSug(input, '<div class="aviso">Procurando no cadastro…</div>');
   try {
     const achados = await buscarFornecedores(termo);
-    if (document.activeElement !== input) return;
+    if (document.activeElement !== input || input.value.trim() !== termo) return;
     if (!achados.length){ mostrarSug(input, `<div class="aviso">Nenhum fornecedor com “${esc(termo)}” no cadastro. Só vale fornecedor cadastrado: peça o cadastro ao GR antes de enviar.</div>`); return; }
     mostrarSug(input, achados.map((a,i) => `<button type="button" role="option" aria-selected="false" data-sug="${i}" data-nome="${esc(a.nome)}" data-fid="${esc(a.id)}">${esc(a.nome)}
         <span class="cid">${esc(a.razao_social !== a.nome ? a.razao_social + ' · ' : '')}${esc([a.cidade, a.uf].filter(Boolean).join('/'))}</span></button>`).join(''));
@@ -1245,7 +1249,7 @@ $('view').addEventListener('focusout', e => {
   const t = e.target, k = t.dataset && t.dataset.k;
   if (S.view !== 'mapa' || !(k === 'preco' || k === 'frete')) return;
   const n = parseBR(t.value); if (!ok(n) || n < 0) return;
-  const f = n2(n); if (f === t.value) return;
+  const f = k === 'preco' ? nPreco(n) : n2(n); if (f === t.value) return;
   t.value = f;
   const F = sol(S.solId).cot.fams[S.fam], j = +t.dataset.j;
   if (k === 'preco') F.precos[t.dataset.i][j] = f; else F.forn[j].frete = f;
@@ -1400,8 +1404,21 @@ async function carregarFila(manual, silencioso){
     S.comprador = r.comprador || '';
     $('quem-nome').textContent = S.comprador || '—';
     const velhos = new Map(SOLS.map(x => [x.uid, x]));
+    const aberto = S.view === 'mapa' ? sol(S.solId) : null;
     SOLS = (r.pedidos || []).filter(p => p.e_meu || !p.comprador_responsavel).map(p => deBanco(p, velhos.get(p.id)));
     S.carregado = true;
+    /* 30/09: o pedido aberto no mapa saiu da fila ou mudou de etapa em outro lugar
+       (outra aba, outra pessoa). Não deixa ele digitando num mapa que não vale mais. */
+    if (aberto){
+      const agora = sol(S.solId);
+      if (!agora){
+        clearTimeout(GRAVA.timer); fecharModal();
+        S.view = 'fila'; S.solId = null; S.mostrarErros = false;
+        S.flash = { cls:'warn', html:`<strong>${esc(aberto.id)}</strong> saiu da sua fila (foi enviado, reprovado ou passado a outro comprador em outro lugar).` };
+        render(); return;
+      }
+      if (agora.status !== aberto.status){ renderMapa(); toast(agora.status === 'cot' ? 'Este pedido voltou para a cotação.' : 'Este pedido já foi enviado. O mapa ficou só para leitura.'); }
+    }
     const digitando = document.activeElement && document.activeElement.id === 'f-q';
     if (S.view === 'fila' && !(silencioso && (digitando || !$('overlay').hidden))) render();
     if (manual) toast('Fila atualizada');
@@ -1492,7 +1509,7 @@ function mapaParaCot(s, m){
         cond:f.condicao || '' });
     });
   });
-  (m.precos || []).forEach(p => { const F = c.fams[famDoItem[p.item_id]]; if (F && F.precos[p.item_id]) F.precos[p.item_id][p.coluna - 1] = n2(Number(p.preco)); });
+  (m.precos || []).forEach(p => { const F = c.fams[famDoItem[p.item_id]]; if (F && F.precos[p.item_id]) F.precos[p.item_id][p.coluna - 1] = nPreco(Number(p.preco)); });
   (m.escolhas || []).forEach(e => { const F = c.fams[famDoItem[e.item_id]]; if (F) F.escolha[e.item_id] = e.coluna - 1; });
   c.obs = m.observacao || '';
   c.iniciada = true;
