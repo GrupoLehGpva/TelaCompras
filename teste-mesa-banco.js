@@ -372,6 +372,31 @@ const b = await chromium.launch();
   ok('13 relê mas não tira o foco da busca', ch(p, 'fila_do_comprador').length === n + 1 && await p.evaluate(() => document.activeElement.id) === 'f-q' && (await p.inputValue('#f-q')) === 'rol');
   await p.close(); }
 
+/* 14 — BUG do treino 30/09 (Herisson): a fila se relê sozinha (60 s ou ao voltar
+   para a aba) com o mapa aberto. Depois disso, preço digitado não calculava total,
+   o ✓ não marcava e nada era salvo. */
+{ const p = await abrir(b, '?t=' + TOKEN);
+  const erros = []; p.on('pageerror', e => erros.push(e.message));
+  await p.click('[data-open="C2609-03001"]'); await p.waitForTimeout(700);
+  await p.click('#n-MG-2'); await p.type('#n-MG-2', 'ro', { delay:30 }); await p.waitForTimeout(500);
+  await p.click('.sug [data-fid="f1"]');
+  await p.fill('#p-MG-i1-2', '2,75'); await p.waitForTimeout(1600);
+  /* ele sai para ver o orçamento no e-mail e volta: a fila se relê */
+  await p.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); await p.waitForTimeout(700);
+  await p.click('#n-MG-0'); await p.type('#n-MG-0', 'ro', { delay:30 }); await p.waitForTimeout(500);
+  const achou = await p.click('.sug [data-fid="f1"]', { timeout:3000 }).then(() => true, () => false);
+  ok('14 busca do fornecedor funciona depois de reler', achou);
+  await p.fill('#p-MG-i1-0', '3,73'); await p.fill('#p-MG-i1-2', '2,91'); await p.waitForTimeout(300);
+  ok('14 sem erro na página depois de reler a fila', erros.length === 0, erros);
+  ok('14 total do item calcula depois de reler', /1\s?\d|R\$/.test(await txt(p, '#tl-MG-i1-0')) && (await txt(p, '#tl-MG-i1-0')).trim() !== '', await txt(p, '#tl-MG-i1-0'));
+  ok('14 ✓ fica clicável', await p.$eval('#k-MG-i1-0', e => !e.disabled));
+  await p.click('#k-MG-i1-2', { timeout:3000 }).catch(() => {}); await p.waitForTimeout(200);
+  ok('14 ✓ marca', await p.$eval('#k-MG-i1-2', e => e.getAttribute('aria-pressed')) === 'true');
+  await p.waitForTimeout(1600);
+  const sv = ch(p, 'salvar_mapa'); const u = sv[sv.length - 1];
+  ok('14 salva o que foi digitado depois de reler', u && u.c.p_mapa.precos.some(x => x.preco === 3.73) && u.c.p_mapa.precos.some(x => x.preco === 2.91) && u.c.p_mapa.escolhas.length === 1, u && u.c.p_mapa);
+  await p.close(); }
+
 /* 11 — celular */
 { const p = await abrir(b, '?t=' + TOKEN, { vp:{ width:390, height:800 } });
   ok('11 celular: fila sem rolagem lateral', await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));

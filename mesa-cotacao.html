@@ -1428,8 +1428,16 @@ function deBanco(p, velho){
     eventos:[{ data:new Date(p.desde || p.aberto_em), titulo:'Chegou nesta etapa', pessoa:null }],
     orcamentosN:p.orcamentos || 0, anexos:[], cot:null, carregado:false, sujo:false
   };
-  // Mudança local ainda não gravada, do mesmo mapa: fica.
-  if (velho && velho.cot && velho.sujo && velho.versaoMapa === s.versaoMapa){ s.cot = velho.cot; s.sujo = true; }
+  /* 30/09 (treino do Herisson): a fila se relê sozinha (60 s ou ao voltar para a
+     aba). O mapa já carregado — salvo ou não — continua sendo o mesmo: antes, a
+     releitura trocava o pedido por um sem mapa, e o que se digitava depois não
+     calculava, não marcava ✓ e não salvava. Troca de versão por outra aba é pega
+     no próximo salvar (versao_mudou). */
+  if (velho && velho.cot){
+    Object.assign(s, { cot:velho.cot, sujo:velho.sujo, conflito:velho.conflito, erroSalvar:velho.erroSalvar,
+      versaoMapa:velho.versaoMapa, mapaEstado:velho.mapaEstado || s.mapaEstado, carregado:velho.carregado,
+      anexos:velho.anexos, eventos:velho.eventos, itens:velho.itens });
+  }
   return s;
 }
 
