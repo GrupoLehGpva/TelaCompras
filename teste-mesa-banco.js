@@ -463,7 +463,7 @@ const b = await chromium.launch();
   await p.click('[data-tab="env"]'); await p.waitForTimeout(200);
   const linhas = await p.$$eval('tr[data-id]', t => t.map(x => x.dataset.id));
   ok('19 Enviadas: em andamento primeiro, encerrados depois', linhas[0] === 'C2609-03004' && linhas.includes('C2609-00011') && linhas.includes('C2609-00008') && linhas.includes('C2609-00017'), JSON.stringify(linhas));
-  ok('19 aprovada do ClickUp com valor', /Aprovada · R\$\s?122\.400,00 · ClickUp/.test(await txt(p, 'tr[data-id="C2609-00011"]')), await txt(p, 'tr[data-id="C2609-00011"]'));
+  ok('19 aprovada do ClickUp com valor', /OC liberada · R\$\s?122\.400,00 · ClickUp/.test(await txt(p, 'tr[data-id="C2609-00011"]')), await txt(p, 'tr[data-id="C2609-00011"]'));
   ok('19 reprovadas marcadas', /Reprovada · ClickUp/.test(await txt(p, 'tr[data-id="C2609-00008"]')) && /Reprovada/.test(await txt(p, 'tr[data-id="C2609-00017"]')));
   const n = ch(p, 'pedido_telas').length;
   await p.click('tr[data-id="C2609-00011"] [data-det]'); await p.waitForTimeout(600);
@@ -474,8 +474,25 @@ const b = await chromium.launch();
   ok('19 detalhe: link do card no ClickUp', await p.getAttribute('#modal a[href="https://app.clickup.com/t/86e3abc"]', 'target') === '_blank');
   ok('19 trilha: aprovada fica em Ordem de compra', /OC/.test(await txt(p, '#modal .step.cur')), await txt(p, '#modal .steps'));
   await p.keyboard.press('Escape');
-  await p.click('[data-tipo="urgente"]'); await p.waitForTimeout(200);
-  ok('19 filtro de tipo vale nos encerrados', !/C2609-00011/.test(await txt(p, '#view')));
+  /* 30/09: nas Enviadas os botões são de status, não de tipo */
+  ok('19 coluna Status', /Status/.test(await txt(p, 'table.fila thead')) && !/Cotação/.test(await txt(p, 'table.fila thead')));
+  ok('19 botões de status no lugar do tipo', await p.locator('[data-tipo]').count() === 0 &&
+     JSON.stringify(await p.$$eval('[data-st]', bs => bs.map(b => b.textContent.replace(/\d+/g,'').trim()))) === JSON.stringify(['Todas','Esperando aprovação','OC liberada','Reprovadas']));
+  const conta = await p.$$eval('[data-st] .c', cs => cs.map(c => c.textContent));
+  ok('19 contagem por status', JSON.stringify(conta) === '["1","1","2"]', JSON.stringify(conta));
+  ok('19 esperando aprovação no selo', /Esperando aprovação gerencial/.test(await txt(p, 'tr[data-id="C2609-03004"]')));
+  await p.click('[data-st="oc"]'); await p.waitForTimeout(200);
+  ok('19 OC liberada: só as aprovadas', JSON.stringify(await p.$$eval('tr[data-id]', t => t.map(x => x.dataset.id))) === '["C2609-00011"]');
+  await p.click('[data-st="rep"]'); await p.waitForTimeout(200);
+  ok('19 Reprovadas: só as reprovadas', JSON.stringify((await p.$$eval('tr[data-id]', t => t.map(x => x.dataset.id))).sort()) === '["C2609-00008","C2609-00017"]');
+  await p.click('[data-st="aprov"]'); await p.waitForTimeout(200);
+  ok('19 Esperando aprovação: só as enviadas em aprovação', JSON.stringify(await p.$$eval('tr[data-id]', t => t.map(x => x.dataset.id))) === '["C2609-03004"]');
+  await p.click('[data-tab="cotar"]'); await p.waitForTimeout(200);
+  ok('19 Para cotar continua com os tipos', await p.locator('[data-tipo]').count() === 4 && await p.locator('[data-st]').count() === 0);
+  await p.click('[data-tab="env"]'); await p.waitForTimeout(200);
+  ok('19 volta às Enviadas com o status escolhido', await p.getAttribute('[data-st="aprov"]', 'aria-pressed') === 'true');
+  await p.click('[data-st=""]'); await p.waitForTimeout(200);
+  ok('19 Todas mostra tudo de novo', await p.locator('tr[data-id]').count() === 4);
   await p.close(); }
 
 /* 11 — celular */

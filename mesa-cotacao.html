@@ -627,7 +627,7 @@ const plural = (n, a, b) => n + ' ' + (n === 1 ? a : b);
 /* =====================================================================
    ESTADO DA TELA
    ===================================================================== */
-const S = { view:'fila', tab:'cotar', q:'', tipo:'', foco:null, soFalta:false, comprador:'', carregado:false, erro:null, solId:null, fam:null, mostrarErros:false,
+const S = { view:'fila', tab:'cotar', q:'', tipo:'', stEnv:'', foco:null, soFalta:false, comprador:'', carregado:false, erro:null, solId:null, fam:null, mostrarErros:false,
             modalList:[], modalIdx:-1, flash:null };
 const sol = id => SOLS.find(s => s.id === id);
 const etapa = id => ETAPAS.find(e => e.id === id);
@@ -673,18 +673,21 @@ function comQuem(s){
 function estadoCot(s){
   if (s.status === 'fim'){
     const origem = s.canal === 'clickup' ? ' · ClickUp' : '';
-    if (s.fim === 'aprovado') return { cls:'ok', txt:'Aprovada · ' + brl(s.valor) + origem };
+    if (s.fim === 'aprovado') return { cls:'ok', txt:'OC liberada · ' + brl(s.valor) + origem };
     if (s.fim === 'reprovado') return { cls:'crit', txt:'Reprovada' + origem };
     return { cls:'neutral', txt:(FIM_NOME[s.fim] || 'Encerrada') + origem };
   }
-  if (s.status === 'ger') return { cls:'accent', txt:'Enviada · gerencial · ' + brl(s.valor) };
-  if (s.status === 'fin') return { cls:'accent', txt:'Enviada · financeiro · ' + brl(s.valor) };
+  if (s.status === 'ger') return { cls:'accent', txt:'Esperando aprovação gerencial · ' + brl(s.valor) };
+  if (s.status === 'fin') return { cls:'accent', txt:'Esperando aprovação financeira · ' + brl(s.valor) };
   if (s.devolucao) return { cls:'crit', txt:'Devolvida pelo aprovador' };
   if (!s.cot && s.mapaEstado) return { cls:'warn', txt:'Rascunho salvo' };
   if (!s.cot || !s.cot.iniciada) return { cls:'neutral', txt:'Não iniciada' };
   const C = calcTudo(s);
   return { cls:'warn', txt:`Rascunho · ${C.escolhidos} de ${C.nItens} ${C.nItens === 1 ? 'item' : 'itens'}` };
 }
+/* Enviadas (30/09): em vez do tipo de compra, os botões separam pelo status. */
+const STATUS_ENV = [ { id:'aprov', nome:'Esperando aprovação' }, { id:'oc', nome:'OC liberada' }, { id:'rep', nome:'Reprovadas' } ];
+const statusEnv = s => s.status === 'ger' || s.status === 'fin' ? 'aprov' : s.status === 'fim' ? (s.fim === 'aprovado' ? 'oc' : 'rep') : null;
 const grupoTab = s => s.status !== 'cot' ? 'env' : (s.devolucao ? 'dev' : 'cotar');
 
 /* =====================================================================
@@ -718,7 +721,8 @@ function renderFila(){
     || (a.status === 'fim' && b.status === 'fim' ? b.criada - a.criada : 0)
     || (b.urgente?1:0) - (a.urgente?1:0) || a.necessidade - b.necessidade || a.criada - b.criada);
   const q = S.q.toLowerCase();
-  const lista = ordenar(grupos[S.tab]).filter(s => (!S.tipo || s.tipo === S.tipo)).filter(s => !q || [s.id, tituloSol(s), s.solicitante, s.ccNome, s.motivo, ...s.itens.map(i => i.desc + ' ' + (i.cod || ''))].join(' ').toLowerCase().includes(q));
+  const naEnv = S.tab === 'env';
+  const lista = ordenar(grupos[S.tab]).filter(s => naEnv ? (!S.stEnv || statusEnv(s) === S.stEnv) : (!S.tipo || s.tipo === S.tipo)).filter(s => !q || [s.id, tituloSol(s), s.solicitante, s.ccNome, s.motivo, ...s.itens.map(i => i.desc + ' ' + (i.cod || ''))].join(' ').toLowerCase().includes(q));
 
   let flash = '';
   if (S.flash){
@@ -732,12 +736,14 @@ function renderFila(){
   } else if (!lista.length){
     const vazio = { cotar:['Tudo cotado','Nenhuma solicitação esperando cotação agora.'], dev:['Nada devolvido','Quando um aprovador devolver uma cotação, ela aparece aqui com o motivo.'], env:['Nada enviado ainda','As cotações que você enviar para aprovação ficam aqui até virarem ordem de compra.'] }[S.tab];
     const rotuloTipo = (TIPOS.find(t => t.id === S.tipo) || {}).nome;
-    corpo = S.tipo && !q ? `<div class="state"><h3>Nenhuma compra ${esc((rotuloTipo || '').toLowerCase())} nesta aba</h3><p>Tire o filtro para ver as outras.</p><button class="btn primary" type="button" id="bt-limpa-tipo">Ver todas</button></div>`
+    const rotuloSt = (STATUS_ENV.find(t => t.id === S.stEnv) || {}).nome;
+    corpo = naEnv && S.stEnv && !q ? `<div class="state"><h3>Nada em “${esc(rotuloSt || '')}”</h3><p>Veja os outros status das enviadas.</p><button class="btn primary" type="button" id="bt-limpa-st">Ver todas</button></div>`
+      : !naEnv && S.tipo && !q ? `<div class="state"><h3>Nenhuma compra ${esc((rotuloTipo || '').toLowerCase())} nesta aba</h3><p>Tire o filtro para ver as outras.</p><button class="btn primary" type="button" id="bt-limpa-tipo">Ver todas</button></div>`
       : q ? `<div class="state"><h3>Nada encontrado para “${esc(S.q)}”</h3><p>Busque por número, item, solicitante ou centro de custo.</p><button class="btn primary" type="button" id="bt-limpa">Limpar busca</button></div>`
               : `<div class="state"><h3>${vazio[0]}</h3><p>${vazio[1]}</p></div>`;
   } else {
     corpo = `<div class="tbl-wrap"><table class="fila"><thead><tr>
-      <th>Nº</th><th>Solicitação</th><th>Tipo</th><th>Famílias</th><th>Precisa até</th><th>Na etapa</th><th>Cotação</th><th class="r"><span class="sr-only">Ação</span></th></tr></thead><tbody>
+      <th>Nº</th><th>Solicitação</th><th>Tipo</th><th>Famílias</th><th>Precisa até</th><th>Na etapa</th><th>Status</th><th class="r"><span class="sr-only">Ação</span></th></tr></thead><tbody>
       ${lista.map(s => {
         const p = prazoEtapa(s), e = estadoCot(s);
         const acao = s.status === 'cot' ? ((s.cot && s.cot.iniciada) || s.mapaEstado ? 'Continuar' : 'Cotar') : 'Ver';
@@ -756,12 +762,17 @@ function renderFila(){
     <div class="tabs" role="tablist">${tabBtn('cotar','Para cotar',grupos.cotar.length)}${tabBtn('dev','Devolvidas',grupos.dev.length,true)}${tabBtn('env','Enviadas',grupos.env.length)}</div>
     <div class="tools">
       <input id="f-q" class="ctl" type="search" placeholder="Buscar nº, item, solicitante…" value="${esc(S.q)}" aria-label="Buscar">
-      <div class="seg" role="group" aria-label="Tipo de compra">
+      ${naEnv
+        ? `<div class="seg" role="group" aria-label="Status das enviadas">
+        <button class="sgb" type="button" data-st="" aria-pressed="${!S.stEnv}">Todas</button>
+        ${STATUS_ENV.map(t => `<button class="sgb" type="button" data-st="${t.id}" aria-pressed="${S.stEnv === t.id}">${t.nome}<span class="c num">${grupos.env.filter(x => statusEnv(x) === t.id).length}</span></button>`).join('')}
+      </div>`
+        : `<div class="seg" role="group" aria-label="Tipo de compra">
         <button class="sgb" type="button" data-tipo="" aria-pressed="${S.tipo === ''}">Todas</button>
         ${TIPOS.map(t => t.ativo
           ? `<button class="sgb" type="button" data-tipo="${t.id}" aria-pressed="${S.tipo === t.id}">${t.nome}<span class="c num">${minhas.filter(x => grupoTab(x) === S.tab && x.tipo === t.id).length}</span></button>`
           : `<button class="sgb off" type="button" data-tipo="${t.id}" aria-disabled="true">${t.nome} <span class="soon">em breve</span></button>`).join('')}
-      </div>
+      </div>`}
     </div>
     ${S.tipo === 'mensal' ? '' : ''}
     ${corpo}`;
@@ -776,6 +787,8 @@ function renderFila(){
   const fq = $('f-q'); fq.oninput = () => { S.q = fq.value; const pos = fq.selectionStart; render(); const n = $('f-q'); n.focus(); n.setSelectionRange(pos,pos); };
   if ($('bt-limpa')) $('bt-limpa').onclick = () => { S.q = ''; render(); };
   if ($('bt-limpa-tipo')) $('bt-limpa-tipo').onclick = () => { S.tipo = ''; render(); };
+  if ($('bt-limpa-st')) $('bt-limpa-st').onclick = () => { S.stEnv = ''; render(); };
+  v.querySelectorAll('[data-st]').forEach(b => b.onclick = () => { S.stEnv = b.dataset.st; render(); });
   v.querySelectorAll('tr[data-id]').forEach(tr => {
     const abrir = () => abrirDetalhe(tr.dataset.id, lista.map(s => s.id));
     tr.onclick = abrir;
