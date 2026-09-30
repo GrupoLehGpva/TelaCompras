@@ -97,8 +97,35 @@ input.ctl{min-width:220px}
 .btn.ghost:hover{background:var(--accent-soft)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
 .align-end{align-self:flex-end}
-/* Tipo de compra: botões abaixo de "Solicitações por etapa" (30/09) */
-.tipos{display:flex;gap:8px;flex-wrap:wrap;margin:-4px 0 14px}
+/* Quadro | Lista (30/09) */
+.sec-dir{display:inline-flex;align-items:center;gap:12px;flex-wrap:wrap}
+.vista{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.vista button{border:0;background:transparent;color:var(--ink-2);padding:6px 14px;min-height:34px;cursor:pointer;font:inherit;font-weight:500}
+.vista button+button{border-left:1px solid var(--line)}
+.vista button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+/* Lista: tabela com rolagem própria e cabeçalho parado no topo */
+.lista-scroll{max-height:clamp(480px,calc(100vh - 200px),1200px);overflow:auto;margin-bottom:28px;overscroll-behavior:contain}
+.lista-scroll table{min-width:1080px}
+.lista-scroll thead th{position:sticky;top:0;z-index:2}
+.lista-scroll th button{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:4px}
+.lista-scroll th button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.lista-scroll th[aria-sort] button::after{content:'↕';opacity:.35;font-size:11px}
+.lista-scroll th[aria-sort="ascending"] button::after{content:'↑';opacity:1}
+.lista-scroll th[aria-sort="descending"] button::after{content:'↓';opacity:1}
+.lista-scroll tr.grupo td{background:var(--surface-2);font-weight:600;font-size:12.5px;cursor:default;position:sticky;top:37px;z-index:1}
+.lista-scroll tr.grupo:hover{background:none}
+.lista-scroll tr.grupo .g-sub{font-weight:500;color:var(--ink-3);margin-left:8px}
+.lista-scroll td .sub{display:block;font-size:12px;color:var(--ink-3);margin-top:2px}
+/* uma linha por pedido: texto longo corta com reticências (inteiro no título do mouse e no detalhe) */
+.lista-scroll td{vertical-align:middle;padding-top:8px;padding-bottom:8px}
+.lista-scroll .corta{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lista-scroll td.ttl .corta{max-width:270px}
+.lista-scroll td.quem .corta{max-width:170px}
+.lista-scroll td.forn .corta{max-width:150px}
+.lista-scroll td.nowrap,.lista-scroll th.nowrap{white-space:nowrap}
+.lista-scroll tfoot td{background:var(--surface-2);font-weight:600;position:sticky;bottom:0}
+/* Tipo de compra: botões acima de "Solicitações por etapa" (30/09) */
+.tipos{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
 .tipo-btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 14px;min-height:36px;cursor:pointer;font:inherit;font-weight:500}
 .tipo-btn:hover{background:var(--surface-2)}
 .tipo-btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
@@ -285,16 +312,21 @@ td.r,th.r{text-align:right}
   </section>
 
   <!-- ============ QUADRO ============ -->
-  <div class="sec-h">
-    <h2 id="quadro-titulo">Solicitações por etapa</h2>
-    <span class="hint" id="quadro-dica">Clique num card para ver o detalhe</span>
-  </div>
-  <!-- Tipo de compra: 3 botões logo abaixo do título (30/09). Clicar no que está
+  <!-- Tipo de compra: 3 botões logo ACIMA do título "Solicitações por etapa" (30/09). Clicar no que está
        marcado volta a mostrar todos. -->
   <div class="tipos" id="f-tipo" role="group" aria-label="Tipo de compra">
+    <button class="tipo-btn" type="button" data-tipo="" aria-pressed="true">Todos os tipos <span class="c num" data-conta=""></span></button>
     <button class="tipo-btn" type="button" data-tipo="normal" aria-pressed="false">Normal <span class="c num" data-conta="normal"></span></button>
     <button class="tipo-btn" type="button" data-tipo="urgente" aria-pressed="false">Urgente <span class="c num" data-conta="urgente"></span></button>
     <button class="tipo-btn" type="button" data-tipo="mensal" aria-pressed="false">Mensal <span class="c num" data-conta="mensal"></span></button>
+  </div>
+  <div class="sec-h">
+    <h2 id="quadro-titulo">Solicitações por etapa</h2>
+    <span class="sec-dir"><span class="hint" id="quadro-dica">Clique num card para ver o detalhe</span>
+      <span class="vista" id="f-vista" role="group" aria-label="Forma de ver">
+        <button type="button" data-vista="quadro" aria-pressed="true">Quadro</button>
+        <button type="button" data-vista="lista" aria-pressed="false">Lista</button>
+      </span></span>
   </div>
   <div id="board-area"></div>
 
@@ -544,7 +576,10 @@ const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 /* =====================================================================
    ESTADO + FILTROS
    ===================================================================== */
-const state = { q:'', per:'all', emp:'', und:'', cc:'', cat:'', tipo:'', modalList:[], modalIdx:-1, carregou:false };
+const state = { q:'', per:'all', emp:'', und:'', cc:'', cat:'', tipo:'', modalList:[], modalIdx:-1, carregou:false,
+                vista:'quadro', ord:null };   // vista: 'quadro' | 'lista'; ord: { col, dir } na lista
+/* A escolha Quadro/Lista fica guardada neste navegador (só conveniência). */
+try { const v = localStorage.getItem('funil.vista'); if (v === 'lista' || v === 'quadro') state.vista = v; } catch (e) {}
 const $ = id => document.getElementById(id);
 
 function initFiltros(){
@@ -556,10 +591,16 @@ function initFiltros(){
   $('f-cc').addEventListener('change', e => { state.cc = e.target.value; render(); });
   $('f-tipo').addEventListener('click', e => {
     const b = e.target.closest('[data-tipo]'); if (!b) return;
-    state.tipo = state.tipo === b.dataset.tipo ? '' : b.dataset.tipo;   // clicar no marcado mostra todos
+    state.tipo = state.tipo === b.dataset.tipo ? '' : b.dataset.tipo;   // "Todos os tipos", ou clicar no marcado, mostra todos
     render();
   });
   $('f-clear').addEventListener('click', limparFiltros);
+  $('f-vista').addEventListener('click', e => {
+    const b = e.target.closest('[data-vista]'); if (!b || b.dataset.vista === state.vista) return;
+    state.vista = b.dataset.vista;
+    try { localStorage.setItem('funil.vista', state.vista); } catch (err) {}
+    render();
+  });
   $('btn-refresh').addEventListener('click', () => carregar(true));
 }
 function opcoes(sel, valores, rotulo, todos){
@@ -596,8 +637,8 @@ function pintarTipos(){
   document.querySelectorAll('#f-tipo [data-tipo]').forEach(b => {
     const t = b.dataset.tipo;
     b.setAttribute('aria-pressed', String(state.tipo === t));
-    b.title = state.tipo === t ? 'Clique de novo para ver todos os tipos' : 'Mostrar só compra ' + b.textContent.trim().split(' ')[0].toLowerCase();
-    b.querySelector('[data-conta]').textContent = base.filter(s => s.tipoCompra === t).length;
+    b.title = !t ? 'Mostrar todos os tipos de compra' : state.tipo === t ? 'Clique de novo para ver todos os tipos' : 'Mostrar só compra ' + b.textContent.trim().split(' ')[0].toLowerCase();
+    b.querySelector('[data-conta]').textContent = t ? base.filter(s => s.tipoCompra === t).length : base.length;
   });
 }
 function filtradas(){
@@ -707,8 +748,10 @@ function renderQuadro(base){
   const mensal = state.tipo === 'mensal';
   $('quadro-titulo').textContent = 'Solicitações por etapa' + (mensal ? ' · compra mensal' : '');
   pintarTipos();
-  $('quadro-dica').textContent = mensal ? 'Fluxo da compra mensal: a gerência aprova antes da cotação · clique num card para ver o detalhe'
-                                        : 'Clique num card para ver o detalhe';
+  const peca = state.vista === 'lista' ? 'numa linha' : 'num card';
+  $('quadro-dica').textContent = mensal ? 'Fluxo da compra mensal: a gerência aprova antes da cotação · clique ' + peca + ' para ver o detalhe'
+                                        : 'Clique ' + peca + ' para ver o detalhe';
+  document.querySelectorAll('#f-vista [data-vista]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.vista === state.vista)));
   const visiveis = COLS.flatMap(e => ordenar(base.filter(s => s.status === e.id)));
   if (!SOLICITACOES.length){
     $('board-area').innerHTML = `<div class="state"><h3>Nenhuma solicitação no banco ainda</h3><p>Quando alguém abrir um pedido pelo /compras, ele aparece aqui na coluna Liderança imediata.</p></div>`;
@@ -723,6 +766,7 @@ function renderQuadro(base){
       : '<strong>Nenhuma solicitação com esses filtros.</strong> Tente outro período, outra empresa ou limpe os filtros.';
     aviso = `<div class="aviso-vazio" role="status"><span>${txt}</span><button class="btn ghost" type="button" id="empty-clear">Limpar filtros</button></div>`;
   }
+  if (state.vista === 'lista'){ renderLista(base, COLS, aviso); return; }
   $('board-area').innerHTML = aviso + `<div class="board-scroll"><div class="board">` + COLS.map(e => {
     const lst = ordenar(base.filter(s => s.status === e.id));
     return `<section class="col" aria-label="${e.nome}">
@@ -732,6 +776,93 @@ function renderQuadro(base){
     </section>`;
   }).join('') + `</div></div>`;
   $('board-area').querySelectorAll('.card').forEach(c => c.addEventListener('click', () => abrirModal(c.dataset.id, visiveis)));
+  if ($('empty-clear')) $('empty-clear').addEventListener('click', limparFiltros);
+}
+/* =====================================================================
+   LISTA (30/09) — o mesmo funil em linhas, para ver mais de uma vez.
+   Sem ordenação escolhida: agrupada por etapa, na ordem do fluxo, com o
+   subtotal de cada etapa (como as colunas do quadro). Clicando no título de
+   uma coluna: ordena por ela, sem grupos. Clicar de novo inverte; a terceira
+   vez volta ao agrupamento.
+   ===================================================================== */
+const COLS_LISTA = [
+  { id:'num',   nome:'Nº',            chave:s => s.id },
+  { id:'sol',   nome:'Solicitação',   chave:s => s.titulo.toLowerCase() },
+  { id:'tipo',  nome:'Tipo',          chave:s => s.tipoCompraNome },
+  { id:'etapa', nome:'Etapa',         chave:s => ETAPAS.findIndex(e => e.id === s.status) },
+  { id:'quem',  nome:'Com quem',      chave:s => quemNaLista(s).toLowerCase() },
+  { id:'na',    nome:'Na etapa',      chave:s => diasNaEtapa(s) },
+  { id:'valor', nome:'Valor',         chave:s => s.valor === null ? -1 : s.valor, r:true },
+  { id:'forn',  nome:'Fornecedor',    chave:s => (s.fornecedor || '').toLowerCase() },
+  { id:'prec',  nome:'Precisa até',   chave:s => s.necessidade ? +s.necessidade : Infinity },
+  { id:'aber',  nome:'Aberta em',     chave:s => +s.criada },
+];
+/* Na lista a etapa já tem coluna própria: "com quem" mostra só a pessoa. */
+function quemNaLista(s){
+  switch (s.status){
+    case 'lid': case 'ger': return s.aprovador || '—';
+    case 'cot': return s.comprador || 'Compras';
+    case 'fin': return s.aprovador || 'Financeiro';
+    case 'oc':  return 'Lançamento no GR';
+    default: return '—';
+  }
+}
+function linhaDaLista(s){
+  const p = prazo(s);
+  const tipo = s.tipoCompra === 'urgente' ? '<span class="pill warn">Urgente</span>'
+             : s.tipoCompra === 'mensal' ? '<span class="pill neutral">Mensal</span>' : esc(s.tipoCompraNome);
+  const et = etapa(s.status);
+  return `<tr data-id="${esc(s.id)}" tabindex="0">
+    <td class="mono nowrap">${esc(s.id)}</td>
+    <td class="ttl"><span class="corta" title="${esc(s.titulo)}">${esc(s.titulo)}</span><span class="sub corta" title="Pedido de ${esc(s.solicitante)} · ${esc(s.ccNome)} · ${esc(s.empresa)}">${esc(s.solicitante)} · ${esc(s.ccNome)}</span></td>
+    <td class="nowrap">${tipo}</td>
+    <td class="nowrap">${et ? esc(et.curto) : '—'}</td>
+    <td class="quem"><span class="corta" title="${esc(comQuem(s))}">${esc(quemNaLista(s))}</span></td>
+    <td class="nowrap">${p ? `<span class="pill ${p.cls}" title="Prazo da etapa: ${p.sla} ${p.sla === 1 ? 'dia' : 'dias'}"><span class="dot"></span>${dias(p.d)}</span>` : '—'}</td>
+    <td class="r num nowrap">${s.valor !== null ? brl(s.valor) : '<span class="muted">sem valor</span>'}</td>
+    <td class="forn"><span class="corta" title="${esc(s.fornecedor || '')}">${esc(s.fornecedor || '—')}</span></td>
+    <td class="num nowrap">${s.necessidade ? dt(s.necessidade) : '—'}</td>
+    <td class="num nowrap">${dt(s.criada)}</td>
+  </tr>`;
+}
+function renderLista(base, COLS, aviso){
+  const abertos = base.filter(s => COLS.some(e => e.id === s.status));
+  let corpo, ordem;
+  if (state.ord){
+    const c = COLS_LISTA.find(x => x.id === state.ord.col), sinal = state.ord.dir === 'asc' ? 1 : -1;
+    ordem = abertos.slice().sort((a,b) => { const va = c.chave(a), vb = c.chave(b); return (va < vb ? -1 : va > vb ? 1 : 0) * sinal; });
+    corpo = ordem.map(linhaDaLista).join('');
+  } else {
+    ordem = [];
+    corpo = COLS.map(e => {
+      const lst = ordenar(abertos.filter(s => s.status === e.id)); ordem.push(...lst);
+      const cab = `<tr class="grupo"><td colspan="${COLS_LISTA.length}">${esc(e.nome)} · ${lst.length}<span class="g-sub num">${somaValor(lst)}${e.sla ? ' · prazo ' + e.sla + (e.sla === 1 ? ' dia' : ' dias') : ''}</span></td></tr>`;
+      return cab + (lst.length ? lst.map(linhaDaLista).join('') : '');
+    }).join('');
+  }
+  const th = c => {
+    const sort = state.ord && state.ord.col === c.id ? (state.ord.dir === 'asc' ? 'ascending' : 'descending') : 'none';
+    return `<th class="${c.r ? 'r ' : ''}nowrap" aria-sort="${sort}"><button type="button" data-ord="${c.id}" title="Ordenar por ${c.nome.toLowerCase()}">${c.nome}</button></th>`;
+  };
+  const comValor = abertos.filter(s => s.valor !== null);
+  $('board-area').innerHTML = aviso + `<div class="tbl-wrap lista-scroll"><table class="lista">
+    <thead><tr>${COLS_LISTA.map(th).join('')}</tr></thead>
+    <tbody>${corpo}</tbody>
+    <tfoot><tr><td colspan="6">${abertos.length} ${abertos.length === 1 ? 'solicitação em andamento' : 'solicitações em andamento'}</td>
+      <td class="r num nowrap">${comValor.length ? brl(comValor.reduce((t,s) => t + s.valor, 0)) : '—'}</td>
+      <td colspan="3" class="muted" style="font-weight:500">${abertos.length - comValor.length ? (abertos.length - comValor.length) + ' sem valor ainda' : ''}</td></tr></tfoot>
+  </table></div>`;
+  $('board-area').querySelectorAll('tbody tr[data-id]').forEach(tr => {
+    const open = () => abrirModal(tr.dataset.id, ordem);
+    tr.addEventListener('click', open);
+    tr.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); open(); } });
+  });
+  $('board-area').querySelectorAll('[data-ord]').forEach(b => b.addEventListener('click', () => {
+    const col = b.dataset.ord, o = state.ord;
+    state.ord = !o || o.col !== col ? { col, dir:'asc' } : o.dir === 'asc' ? { col, dir:'desc' } : null;   // 3º clique: volta aos grupos
+    render();
+    const nb = document.querySelector(`[data-ord="${col}"]`); if (nb) nb.focus();
+  }));
   if ($('empty-clear')) $('empty-clear').addEventListener('click', limparFiltros);
 }
 function renderReprovadas(base){

@@ -32,11 +32,11 @@ const cols = () => p.$$eval('#board-area .col h3', hs => hs.map(h => h.textConte
 
 /* 30/09: tipo de compra virou 3 botões logo abaixo de "Solicitações por etapa" */
 ok('1 três botões de tipo, nenhum marcado', JSON.stringify(await p.$$eval('#f-tipo [data-tipo]', bs => bs.map(b => b.dataset.tipo + ':' + b.getAttribute('aria-pressed'))))
-   === JSON.stringify(['normal:false','urgente:false','mensal:false']));
+   === JSON.stringify([':true','normal:false','urgente:false','mensal:false']));
 ok('1 sem caixa de seleção de tipo', await p.locator('select#f-tipo').count() === 0 && await p.locator('.filters [data-tipo]').count() === 0);
-ok('1 botões logo abaixo do título', await p.evaluate(() => { const h = document.getElementById('quadro-titulo').closest('.sec-h'); return h.nextElementSibling && h.nextElementSibling.id === 'f-tipo'; }));
+ok('1 botões logo acima do título', await p.evaluate(() => { const h = document.getElementById('quadro-titulo').closest('.sec-h'); return h.previousElementSibling && h.previousElementSibling.id === 'f-tipo'; }));
 { const conta = await p.$$eval('#f-tipo [data-conta]', cs => cs.map(c => c.textContent));
-  ok('1 cada botão mostra quantos há', conta.every(c => /^\d+$/.test(c)) && Number(conta[2]) === 4, JSON.stringify(conta)); }
+  ok('1 cada botão mostra quantos há', conta.every(c => /^\d+$/.test(c)) && Number(conta[3]) === 4 && Number(conta[0]) === Number(conta[1]) + Number(conta[2]) + Number(conta[3]), JSON.stringify(conta)); }
 ok('1 todos: ordem normal', JSON.stringify(await cols()) === JSON.stringify(['Liderança imediata','Compras · cotação','Aprovação gerencial','Aprovação financeiro','Ordem de compra']), JSON.stringify(await cols()));
 ok('1 todos: card mensal com etiqueta', /Mensal/.test(await p.textContent('.card[data-id="M-02"]')) && !/Mensal/.test(await p.textContent('.card[data-id="N-03"]')));
 
@@ -61,7 +61,10 @@ ok('2b botão Mensal marcado', await p.getAttribute('#f-tipo [data-tipo=mensal]'
 await p.click('#f-tipo [data-tipo=mensal]'); await p.waitForTimeout(300);   /* clicar de novo = todos */
 ok('2b clicar de novo mostra todos', await p.getAttribute('#f-tipo [data-tipo=mensal]', 'aria-pressed') === 'false' && await p.locator('.card[data-id^="N-"]').count() > 0);
 await p.click('#f-tipo [data-tipo=normal]'); await p.waitForTimeout(300);
-ok('2c Normal: só normais, um botão marcado por vez', await p.locator('.card[data-id^="M-"]').count() === 0 && await p.locator('#f-tipo [aria-pressed=true]').count() === 1);
+ok('2c Normal: só normais, um botão marcado por vez', await p.locator('.card[data-id^="M-"]').count() === 0 && await p.locator('#f-tipo [aria-pressed=true]').count() === 1 && await p.getAttribute('#f-tipo [data-tipo=""]', 'aria-pressed') === 'false');
+await p.click('#f-tipo [data-tipo=""]'); await p.waitForTimeout(300);
+ok('2d "Todos os tipos" volta a mostrar tudo', await p.getAttribute('#f-tipo [data-tipo=""]', 'aria-pressed') === 'true' && await p.locator('.card[data-id^="M-"]').count() > 0 && await p.locator('.card[data-id^="N-"]').count() > 0);
+await p.click('#f-tipo [data-tipo=normal]'); await p.waitForTimeout(300);
 await p.click('#f-tipo [data-tipo=urgente]'); await p.waitForTimeout(300);
 ok('2c trocar de Normal para Urgente', await p.getAttribute('#f-tipo [data-tipo=urgente]', 'aria-pressed') === 'true' && await p.getAttribute('#f-tipo [data-tipo=normal]', 'aria-pressed') === 'false');
 await p.click('#f-tipo [data-tipo=urgente]'); await p.waitForTimeout(300);
@@ -89,7 +92,7 @@ ok('4 limpar filtros volta à ordem normal', (await cols())[1] === 'Compras · c
   await q.click('#f-tipo [data-tipo=urgente]'); await q.fill('#f-q', 'zzzz-nada'); await q.waitForTimeout(400);
   ok('6 filtro sem resultado: colunas + aviso com limpar', await q.locator('#board-area .col').count() === 5 && /Nenhuma solicitação com esses filtros/.test(await q.textContent('#board-area')));
   await q.click('#empty-clear'); await q.waitForTimeout(300);
-  ok('6 limpar filtros pelo aviso', await q.locator('.card').count() === 3 && await q.locator('#f-tipo [aria-pressed=true]').count() === 0);
+  ok('6 limpar filtros pelo aviso', await q.locator('.card').count() === 3 && await q.getAttribute('#f-tipo [data-tipo=""]', 'aria-pressed') === 'true');
   await q.close(); }
 
 /* quadro com tamanho fixo e rolagem própria, mesmo com muitos pedidos (29/09) */
