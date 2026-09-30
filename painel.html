@@ -97,6 +97,12 @@ input.ctl{min-width:220px}
 .btn.ghost:hover{background:var(--accent-soft)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
 .align-end{align-self:flex-end}
+/* Tipo de compra: botões abaixo de "Solicitações por etapa" (30/09) */
+.tipos{display:flex;gap:8px;flex-wrap:wrap;margin:-4px 0 14px}
+.tipo-btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 14px;min-height:36px;cursor:pointer;font:inherit;font-weight:500}
+.tipo-btn:hover{background:var(--surface-2)}
+.tipo-btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tipo-btn .c{font-size:12px;opacity:.8}
 
 /* ============ KPIs ============ */
 .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:22px}
@@ -275,13 +281,6 @@ td.r,th.r{text-align:right}
     <div class="field"><label for="f-und">Unidade de negócio</label><select id="f-und" class="ctl"><option value="">Todas</option></select></div>
     <div class="field"><label for="f-cc">Centro de custo</label><select id="f-cc" class="ctl"><option value="">Todos</option></select></div>
     <div class="field"><label for="f-cat">Família</label><select id="f-cat" class="ctl"><option value="">Todas</option></select></div>
-    <div class="field"><label for="f-tipo">Tipo de compra</label>
-      <select id="f-tipo" class="ctl">
-        <option value="">Todos</option>
-        <option value="normal">Normal</option>
-        <option value="urgente">Urgente</option>
-        <option value="mensal">Mensal</option>
-      </select></div>
     <button class="btn ghost align-end" id="f-clear" type="button">Limpar filtros</button>
   </section>
 
@@ -289,6 +288,13 @@ td.r,th.r{text-align:right}
   <div class="sec-h">
     <h2 id="quadro-titulo">Solicitações por etapa</h2>
     <span class="hint" id="quadro-dica">Clique num card para ver o detalhe</span>
+  </div>
+  <!-- Tipo de compra: 3 botões logo abaixo do título (30/09). Clicar no que está
+       marcado volta a mostrar todos. -->
+  <div class="tipos" id="f-tipo" role="group" aria-label="Tipo de compra">
+    <button class="tipo-btn" type="button" data-tipo="normal" aria-pressed="false">Normal <span class="c num" data-conta="normal"></span></button>
+    <button class="tipo-btn" type="button" data-tipo="urgente" aria-pressed="false">Urgente <span class="c num" data-conta="urgente"></span></button>
+    <button class="tipo-btn" type="button" data-tipo="mensal" aria-pressed="false">Mensal <span class="c num" data-conta="mensal"></span></button>
   </div>
   <div id="board-area"></div>
 
@@ -548,7 +554,11 @@ function initFiltros(){
   $('f-cat').addEventListener('change', e => { state.cat = e.target.value; render(); });
   $('f-und').addEventListener('change', e => { state.und = e.target.value; render(); });
   $('f-cc').addEventListener('change', e => { state.cc = e.target.value; render(); });
-  $('f-tipo').addEventListener('change', e => { state.tipo = e.target.value; render(); });
+  $('f-tipo').addEventListener('click', e => {
+    const b = e.target.closest('[data-tipo]'); if (!b) return;
+    state.tipo = state.tipo === b.dataset.tipo ? '' : b.dataset.tipo;   // clicar no marcado mostra todos
+    render();
+  });
   $('f-clear').addEventListener('click', limparFiltros);
   $('btn-refresh').addEventListener('click', () => carregar(true));
 }
@@ -574,8 +584,21 @@ function montarOpcoes(){
 function limparFiltros(){
   Object.assign(state, { q:'', per:'all', emp:'', und:'', cc:'', cat:'', tipo:'' });
   $('f-q').value=''; $('f-per').value='all'; $('f-emp').value=''; $('f-und').value='';
-  $('f-cc').value=''; $('f-cat').value=''; $('f-tipo').value='';
+  $('f-cc').value=''; $('f-cat').value='';
   render(); toast('Filtros limpos');
+}
+/* Botões de tipo: marca o escolhido e mostra quantos pedidos no quadro há de cada
+   tipo com os outros filtros aplicados (reprovadas e canceladas não contam). */
+function pintarTipos(){
+  const semTipo = state.tipo; state.tipo = '';
+  const base = filtradas().filter(s => s.status !== 'rep' && s.status !== 'can');
+  state.tipo = semTipo;
+  document.querySelectorAll('#f-tipo [data-tipo]').forEach(b => {
+    const t = b.dataset.tipo;
+    b.setAttribute('aria-pressed', String(state.tipo === t));
+    b.title = state.tipo === t ? 'Clique de novo para ver todos os tipos' : 'Mostrar só compra ' + b.textContent.trim().split(' ')[0].toLowerCase();
+    b.querySelector('[data-conta]').textContent = base.filter(s => s.tipoCompra === t).length;
+  });
 }
 function filtradas(){
   return SOLICITACOES.filter(s => {
@@ -683,6 +706,7 @@ function renderQuadro(base){
   const COLS = colunasDoQuadro();
   const mensal = state.tipo === 'mensal';
   $('quadro-titulo').textContent = 'Solicitações por etapa' + (mensal ? ' · compra mensal' : '');
+  pintarTipos();
   $('quadro-dica').textContent = mensal ? 'Fluxo da compra mensal: a gerência aprova antes da cotação · clique num card para ver o detalhe'
                                         : 'Clique num card para ver o detalhe';
   const visiveis = COLS.flatMap(e => ordenar(base.filter(s => s.status === e.id)));

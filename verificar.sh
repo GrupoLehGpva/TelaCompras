@@ -37,6 +37,12 @@ echo "$saida" | tail -1
 echo "$saida" | grep -q "falhou 0" || falhou=1
 
 echo
+echo "== teste-funil-diario.js (link diário do funil para a diretoria) =="
+saida=$(node teste-funil-diario.js 2>&1) || falhou=1
+echo "$saida" | tail -1
+echo "$saida" | grep -q "falhou 0" || falhou=1
+
+echo
 echo "== teste-avisos-telas.js (mensagens do Slack, caminho das telas) =="
 saida=$(node teste-avisos-telas.js 2>&1) || falhou=1
 echo "$saida" | tail -1

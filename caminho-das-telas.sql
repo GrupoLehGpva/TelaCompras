@@ -2314,3 +2314,12 @@ end $$;
 -- Se não houver, a bateria reabre um encerrado do ClickUp SÓ dentro do teste (tudo é
 -- desfeito no fim) para seguir provando que as telas recusam pedido do ClickUp.
 -- Aplicado logo após `select id into real_id from solicitacoes where canal='clickup' and etapa_atual='cotacao' ...`.
+
+-- ============================================================================
+-- telas_17 (30/09) — link diário do funil para a diretoria (aplicada como
+-- migração "telas_17_link_diario_do_funil").
+--   painel_acesso ganha slack_user_id e link_diario; entram com token pessoal
+--   (pa-…) Wienfried, Brandão, Elke e Rainer.
+--   funil_links_do_dia(): quem recebe hoje + resumo do funil. Traz TOKENS: só o
+--   service_role executa (n8n "Compras · Link do funil da diretoria", dias úteis 9h).
+-- ============================================================================
