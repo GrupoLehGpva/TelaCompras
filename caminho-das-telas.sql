@@ -2299,3 +2299,13 @@ begin$b$);
   if (select count(*) from regexp_matches(d, 'ja_decidido_pelo_grupo|v_ja record', 'g')) <> 2 then raise exception 'decidir_pedido telas_14'; end if;
   execute d;
 end $$;
+
+-- ============================================================================
+-- telas_15 (30/09) — bateria: o N4 passa a conferir só pedido COM card do ClickUp.
+-- Antes: "nenhum pedido antigo mudou de canal" — quebrava com qualquer pedido real
+-- das telas e com a migração dos abertos do ClickUp (migrar-clickup-para-telas.sql,
+-- que zera o card_id). Agora: pedido com card não sai do ClickUp, nem muda de versão.
+-- Aplicado trocando o trecho em pg_get_functiondef('_teste_caminho_telas'):
+--   de:   (canal<>'clickup' or versao<>1)
+--   para: ((card_id is not null and canal<>'clickup') or (canal='clickup' and versao<>1))
+-- ============================================================================
