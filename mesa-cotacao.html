@@ -661,12 +661,22 @@ function tituloSol(s){
   const t = p.desc.length > 90 ? p.desc.slice(0,88).trim() + '…' : p.desc;
   return t + (s.itens.length > 1 ? ` + ${s.itens.length - 1} ${s.itens.length === 2 ? 'item' : 'itens'}` : '');
 }
+/* 30/09: pedidos encerrados (status 'fim') aparecem nas Enviadas só para consulta,
+   inclusive os do ClickUp de antes da virada. s.fim = aprovado | reprovado | cancelado. */
+const FIM_NOME = { aprovado:'Aprovada', reprovado:'Reprovada', cancelado:'Cancelada' };
 function comQuem(s){
+  if (s.status === 'fim') return (FIM_NOME[s.fim] || 'Encerrada') + ' · encerrada';
   if (s.status === 'cot') return 'Comprador ' + (s.comprador || S.comprador);
   const nome = s.comQuemNome ? ' (' + s.comQuemNome + ')' : '';
   return ({ ger:'Aprovação gerencial', fin:'Aprovação financeira' }[s.status] || '—') + nome;
 }
 function estadoCot(s){
+  if (s.status === 'fim'){
+    const origem = s.canal === 'clickup' ? ' · ClickUp' : '';
+    if (s.fim === 'aprovado') return { cls:'ok', txt:'Aprovada · ' + brl(s.valor) + origem };
+    if (s.fim === 'reprovado') return { cls:'crit', txt:'Reprovada' + origem };
+    return { cls:'neutral', txt:(FIM_NOME[s.fim] || 'Encerrada') + origem };
+  }
   if (s.status === 'ger') return { cls:'accent', txt:'Enviada · gerencial · ' + brl(s.valor) };
   if (s.status === 'fin') return { cls:'accent', txt:'Enviada · financeiro · ' + brl(s.valor) };
   if (s.devolucao) return { cls:'crit', txt:'Devolvida pelo aprovador' };
@@ -704,7 +714,9 @@ function renderFila(){
   const minhas = SOLS;
   const grupos = { cotar:[], dev:[], env:[] };
   minhas.forEach(s => grupos[grupoTab(s)].push(s));
-  const ordenar = l => l.slice().sort((a,b) => (b.urgente?1:0) - (a.urgente?1:0) || a.necessidade - b.necessidade || a.criada - b.criada);
+  const ordenar = l => l.slice().sort((a,b) => (a.status === 'fim') - (b.status === 'fim')
+    || (a.status === 'fim' && b.status === 'fim' ? b.criada - a.criada : 0)
+    || (b.urgente?1:0) - (a.urgente?1:0) || a.necessidade - b.necessidade || a.criada - b.criada);
   const q = S.q.toLowerCase();
   const lista = ordenar(grupos[S.tab]).filter(s => (!S.tipo || s.tipo === S.tipo)).filter(s => !q || [s.id, tituloSol(s), s.solicitante, s.ccNome, s.motivo, ...s.itens.map(i => i.desc + ' ' + (i.cod || ''))].join(' ').toLowerCase().includes(q));
 
@@ -737,7 +749,7 @@ function renderFila(){
           <td class="num">${dt(s.necessidade)}</td>
           <td>${p ? `<span class="pill ${p.cls}" title="Prazo da etapa: ${p.sla} dias">${dias(p.d)}</span>` : '—'}</td>
           <td><span class="pill ${e.cls}">${esc(e.txt)}</span></td>
-          <td class="r"><button class="btn ${s.status === 'cot' ? 'primary' : ''}" type="button" data-open="${s.id}">${acao}</button></td></tr>`;
+          <td class="r"><button class="btn ${s.status === 'cot' ? 'primary' : ''}" type="button" ${s.status === 'fim' && !s.mapaEstado ? 'data-det' : 'data-open'}="${s.id}">${acao}</button></td></tr>`;
       }).join('')}</tbody></table></div>`;
   }
   v.innerHTML = `${flash}
@@ -770,6 +782,7 @@ function renderFila(){
     tr.onkeydown = e => { if (e.target === tr && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); abrir(); } };
   });
   v.querySelectorAll('[data-open]').forEach(b => b.onclick = e => { e.stopPropagation(); abrirMapa(b.dataset.open); });
+  v.querySelectorAll('[data-det]').forEach(b => b.onclick = e => { e.stopPropagation(); abrirDetalhe(b.dataset.det, lista.map(x => x.id)); });
 }
 
 /* =====================================================================
@@ -809,7 +822,9 @@ async function mostrarDetalhe(){
 const kv = (k, v, extra='') => `<div class="kv"><div class="k">${k}</div><div class="v ${extra}">${v}</div></div>`;
 function pintarDetalhe(){
   const s = sol(S.modalList[S.modalIdx]); if (!s){ fecharModal(); return; }
-  const p = prazoEtapa(s), FL = fluxoDe(s), idx = FL.findIndex(e => e.id === s.status);
+  const p = prazoEtapa(s), FL = fluxoDe(s);
+  /* encerrada: aprovada fica em Ordem de compra (a OC no GR é o passo seguinte); reprovada ou cancelada, sem etapa atual */
+  const idx = s.status === 'fim' ? (s.fim === 'aprovado' ? FL.findIndex(e => e.id === 'oc') : -1) : FL.findIndex(e => e.id === s.status);
   const holder = p ? `<div class="holder ${p.cls}"><strong>${etapa(s.status).nome}</strong><span>com ${esc(comQuem(s))}</span><span>há <strong>${dias(p.d)}</strong> (prazo da etapa: ${p.sla} dias)</span><span class="pill ${p.cls}">${p.txt}</span></div>` : '';
   const steps = FL.map((e,i) => `<div class="step ${i < idx ? 'done' : i === idx ? 'cur' : ''}"><span class="ln"></span>${e.curto}</div>`).join('');
   const C = s.cot && s.cot.iniciada ? calcTudo(s) : null;
@@ -819,12 +834,17 @@ function pintarDetalhe(){
     return `<tr><td class="mono">${esc(it.cod || '—')}</td><td>${esc(it.desc)}${it.fora ? ' <span class="pill neutral">fora do catálogo</span>' : ''}</td><td>${esc(it.fam || '—')}</td><td class="r num">${qtd(it.qtd)} ${esc(it.un)}</td><td class="r num">${brlUnit(u)}</td><td class="r num">${u !== null ? brl(u * it.qtd) : '—'}</td></tr>`;
   }).join('');
   const valor = s.valor !== null ? s.valor : (C && C.escolhidos ? C.total : null);
-  const origem = s.valor !== null ? 'Cotação enviada' : (C && C.escolhidos ? 'Rascunho da cotação' : '<span class="muted">Ainda sem preço — sai da cotação</span>');
+  const origem = s.status === 'fim' && s.canal === 'clickup' ? 'Cotação pelo ClickUp (planilha)'
+    : s.valor !== null ? 'Cotação enviada' : (C && C.escolhidos ? 'Rascunho da cotação' : '<span class="muted">Ainda sem preço — sai da cotação</span>');
   const anexos = (s.anexos || []).map(a => `<li><a href="${ANEXO_URL}?id=${encodeURIComponent(a.id)}" target="_blank" rel="noopener">${esc(a.nome)}</a> <span class="muted">· ${tamanho(a.tamanho)}</span></li>`).join('');
   const nCot = C ? C.fams.reduce((t,f) => t + f.F.forn.filter(x => x.nome.trim()).length, 0) : 0;
   const tl = s.eventos.map(e => `<li class="${e.bad ? 'bad' : ''}"><span class="b"></span><div><div class="t">${esc(e.titulo)}</div><div class="d">${dth(e.data)}${e.pessoa ? ' · ' + esc(e.pessoa) : ''}</div>${e.nota ? `<div class="n">${e.bad ? 'Motivo' : 'Obs.'}: ${esc(e.nota)}</div>` : ''}</div></li>`).join('')
-    + `<li class="now"><span class="b"></span><div><div class="t muted">Agora: ${etapa(s.status).nome}</div><div class="d">aguardando ${esc(comQuem(s))}</div></div></li>`;
+    + (s.status === 'fim'
+        ? `<li class="now"><span class="b"></span><div><div class="t muted">${esc(FIM_NOME[s.fim] || 'Encerrada')}${s.fim === 'aprovado' ? ' — segue para a ordem de compra' : ''}</div><div class="d">${s.canal === 'clickup' ? 'pedido do ClickUp, de antes das telas' : 'pedido encerrado'}</div></div></li>`
+        : `<li class="now"><span class="b"></span><div><div class="t muted">Agora: ${etapa(s.status).nome}</div><div class="d">aguardando ${esc(comQuem(s))}</div></div></li>`);
   const acao = s.status === 'cot' ? (s.cot && s.cot.iniciada ? 'Continuar cotação' : 'Cotar esta solicitação') : 'Ver orçamento enviado';
+  const semMapa = s.status === 'fim' && !s.mapaEstado;   // encerrada sem mapa (ClickUp, ou reprovada na cotação): não há o que abrir
+  const card = s.cardId ? `<li><a href="https://app.clickup.com/t/${encodeURIComponent(s.cardId)}" target="_blank" rel="noopener">Card no ClickUp</a> <span class="muted">· cotação e orçamentos de antes das telas</span></li>` : '';
   abrirModal(`
     <div class="m-head"><div>
       <div class="eyebrow"><span class="mono">${esc(s.id)}</span> · aberta em ${dt(s.criada)}</div>
@@ -838,12 +858,12 @@ function pintarDetalhe(){
       <div class="grid3">
         ${kv('Valor', brl(valor), 'big num')}${kv('Origem do valor', origem)}${kv('Precisa até', dt(s.necessidade) + ' ' + necessidadePill(s))}
         ${kv('Solicitante', esc(s.solicitante))}${kv('Comprador', esc(s.comprador))}${kv('Setor / unidade', esc(s.setor))}
-        ${kv('Fornecedor', s.defForn === 'unico' ? 'Fornecedor único' : 'Por cotação')}${kv('Cotações', nCot ? plural(nCot,'fornecedor preenchido','fornecedores preenchidos') : '<span class="muted">nenhuma enviada ainda</span>')}${kv('Local de entrega', esc(s.local || '—'))}
+        ${kv('Fornecedor', s.fornecedorCotado ? esc(s.fornecedorCotado) : (s.defForn === 'unico' ? 'Fornecedor único' : 'Por cotação'))}${kv('Cotações', nCot ? plural(nCot,'fornecedor preenchido','fornecedores preenchidos') : '<span class="muted">nenhuma enviada ainda</span>')}${kv('Local de entrega', esc(s.local || '—'))}
       </div>
       ${s.justForn ? `<div class="m-sec"><h3>Justificativa do fornecedor único</h3><div class="just">${esc(s.justForn)}</div></div>` : ''}
       <div class="m-sec"><h3>Motivo</h3><div class="just">${esc(s.motivo)}</div></div>
       <div class="m-sec"><h3>Itens</h3><div class="tbl-wrap"><table class="items"><thead><tr><th>Código</th><th>Item</th><th>Família</th><th class="r">Qtd.</th><th class="r">Unitário</th><th class="r">Total</th></tr></thead><tbody>${itens}</tbody></table></div></div>
-      ${anexos ? `<div class="m-sec"><h3>Anexos</h3><ul class="anexos-lista">${anexos}</ul></div>` : ''}
+      ${anexos || card ? `<div class="m-sec"><h3>Anexos</h3><ul class="anexos-lista">${anexos}${card}</ul></div>` : ''}
       <div class="m-sec"><h3>Histórico</h3><ol class="tl">${tl}</ol></div>
     </div>
     <div class="m-foot">
@@ -852,13 +872,13 @@ function pintarDetalhe(){
         <button class="btn" type="button" id="m-prev" ${S.modalIdx <= 0 ? 'disabled' : ''}>← Anterior</button>
         <button class="btn" type="button" id="m-next" ${S.modalIdx >= S.modalList.length - 1 ? 'disabled' : ''}>Próxima →</button>
         ${s.status === 'cot' ? '<button class="btn danger-ghost" type="button" id="m-reprovar">Reprovar pedido</button>' : ''}
-        <button class="btn primary" type="button" id="m-go">${acao}</button>
+        ${semMapa ? '' : `<button class="btn primary" type="button" id="m-go">${acao}</button>`}
       </div>
     </div>`);
   $('m-close').onclick = fecharModal;
   $('m-prev').onclick = () => navegar(-1);
   $('m-next').onclick = () => navegar(1);
-  $('m-go').onclick = () => { fecharModal(); if (S.view !== 'mapa' || S.solId !== s.id) abrirMapa(s.id); };
+  if ($('m-go')) $('m-go').onclick = () => { fecharModal(); if (S.view !== 'mapa' || S.solId !== s.id) abrirMapa(s.id); };
   if ($('m-reprovar')) $('m-reprovar').onclick = () => abrirReprovar(s);
   $('m-close').focus();
   S.modalTipo = 'detalhe';
@@ -1437,9 +1457,12 @@ function deBanco(p, velho){
     criada:new Date(p.aberto_em || p.desde), necessidade:p.data_necessidade ? new Date(String(p.data_necessidade).slice(0,10) + 'T12:00:00') : null,
     tipo:p.tipo_compra || 'normal', urgente:p.tipo_compra === 'urgente',
     defForn:p.definicao_fornecedor === 'unico' ? 'unico' : 'cotacao', justForn:p.justificativa_fornecedor || null,
-    status:ETAPA_BANCO[p.etapa_atual] || 'cot', comQuemNome:p.com_quem || null,
+    status:p.etapa_atual ? (ETAPA_BANCO[p.etapa_atual] || 'cot') : 'fim', comQuemNome:p.com_quem || null,
+    fim:p.etapa_atual ? null : (p.status || null), canal:p.canal || 'telas',
+    fornecedorCotado:p.etapa_atual === 'cotacao' ? null : (p.fornecedor_cotado || null), cardId:p.card_id || null,
     mapaEstado:p.mapa_estado || null, versaoMapa:p.mapa_versao || 0,
-    valor:p.total !== null && p.total !== undefined && p.etapa_atual !== 'cotacao' ? Number(p.total) : null,
+    valor:p.etapa_atual === 'cotacao' ? null : (p.total !== null && p.total !== undefined ? Number(p.total)
+          : (p.valor_cotado !== null && p.valor_cotado !== undefined ? Number(p.valor_cotado) : null)),
     devolucao:p.aba === 'devolvidas' && p.devolucao ? { motivo:p.devolucao.motivo || '', por:p.devolucao.por || 'o aprovador', em:new Date(p.devolucao.em), etapa:p.devolucao.etapa } : null,
     itens:(p.itens || []).map(itemDoBanco),
     eventos:[{ data:new Date(p.desde || p.aberto_em), titulo:'Chegou nesta etapa', pessoa:null }],
@@ -1477,7 +1500,8 @@ async function carregarPedido(s){
   if (!r || r.ok !== true) throw new Error((r && r.mensagem) || 'Não consegui abrir este pedido.');
   const p = r.pedido;
   s.versao = p.versao;
-  s.status = ETAPA_BANCO[p.etapa_atual] || s.status;
+  s.status = p.etapa_atual ? (ETAPA_BANCO[p.etapa_atual] || s.status) : 'fim';
+  if (!p.etapa_atual) s.fim = p.status || s.fim;
   s.local = p.local_entrega || s.local;
   s.empresa = p.empresa_nome || s.empresa;
   s.comQuemNome = p.com_quem || s.comQuemNome;

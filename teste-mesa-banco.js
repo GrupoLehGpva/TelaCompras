@@ -79,7 +79,7 @@ function responder(B, nome, c){
   if (nome === 'fornecedores_ativos') return 3568;
   if (nome === 'buscar_fornecedor') return FORN.filter(f => f.nome.toLowerCase().includes(String(c.termo).toLowerCase()));
   if (c.p_token !== TOKEN) return { ok:false, erro:'token_invalido', mensagem:'Este link não vale mais.' };
-  if (nome === 'fila_do_comprador') return { ok:true, comprador:'HERISSON LUCAS LAPCZAK', pedidos:B.pedidos.filter(p => ['cotacao','gerencial','financeiro'].includes(p.etapa_atual)).map(p => ({
+  if (nome === 'fila_do_comprador') return { ok:true, comprador:'HERISSON LUCAS LAPCZAK', pedidos:B.pedidos.filter(p => ['cotacao','gerencial','financeiro'].includes(p.etapa_atual) || p.historico).map(p => ({
     id:p.id, numero:p.numero, versao:p.versao, aba:p.etapa_atual !== 'cotacao' ? 'enviadas' : (p.mapa && p.mapa.estado === 'devolvida' ? 'devolvidas' : 'para_cotar'),
     tipo_compra:p.tipo_compra, urgente:p.tipo_compra === 'urgente', definicao_fornecedor:p.definicao_fornecedor, assunto:p.motivo, motivo:p.motivo,
     solicitante_nome:p.solicitante_nome, aberto_em:p.aberto_em, justificativa_fornecedor:p.justificativa_fornecedor || null, local_entrega:null,
@@ -87,10 +87,11 @@ function responder(B, nome, c){
     data_necessidade:p.data_necessidade, facilitador:p.facilitador, unidade:p.unidade, centro_custo_nome:p.centro_custo_nome,
     comprador_responsavel:p.comprador_responsavel, e_meu:p.e_meu, total_itens:p.itens.length, etapa_atual:p.etapa_atual, com_quem:p.com_quem,
     desde:p.desde, mapa_estado:p.mapa ? p.mapa.estado : null, mapa_versao:p.mapa ? p.mapa.versao : null, total:p.total || null,
-    devolucao:p.devolvida || null })) };
+    devolucao:p.devolvida || null, canal:p.canal || 'telas', status:p.status || null, valor_cotado:p.valor_cotado || null,
+    fornecedor_cotado:p.fornecedor_cotado || null, card_id:p.card_id || null })) };
   const p = achar(c.p_id);
   if (!p) return { ok:false, erro:'nao_encontrado', mensagem:'Pedido não encontrado.' };
-  if (nome === 'pedido_telas') return { ok:true, pedido:{ id:p.id, numero:p.numero, versao:p.versao, etapa_atual:p.etapa_atual, local_entrega:'Almoxarifado', empresa_nome:p.empresa_nome, com_quem:p.com_quem },
+  if (nome === 'pedido_telas') return { ok:true, pedido:{ id:p.id, numero:p.numero, versao:p.versao, etapa_atual:p.etapa_atual, status:p.status || null, local_entrega:'Almoxarifado', empresa_nome:p.empresa_nome, com_quem:p.com_quem },
     itens:p.itens, anexos:p.anexos, linha_do_tempo:p.linha,
     mapa:p.mapa ? { estado:p.mapa.estado, versao:p.mapa.versao, observacao:p.mapa.observacao, resumo:resumo(p), precos:p.mapa.precos, escolhas:p.mapa.escolhas } : null };
   if (nome === 'salvar_mapa'){
@@ -447,6 +448,34 @@ const b = await chromium.launch();
   await p.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); await p.waitForTimeout(700);
   ok('18 campos ficam bloqueados', await p.$eval('#p-MG-i1-0', e => e.disabled) && await p.locator('#bt-enviar').count() === 0);
   ok('18 avisa', /só para leitura/.test(await txt(p, '#toast')), await txt(p, '#toast'));
+  await p.close(); }
+
+/* 19 — histórico nas Enviadas (30/09): pedidos encerrados, inclusive do ClickUp, só para consulta */
+{ const p = await abrir(b, '?t=' + TOKEN, { prep: B => {
+    B.pedidos.push(Object.assign(JSON.parse(JSON.stringify(B.pedidos[0])), { id:'k1', numero:'C2609-00011', etapa_atual:null, status:'aprovado', historico:true,
+      canal:'clickup', card_id:'86e3abc', valor_cotado:122400, fornecedor_cotado:'CARGILL', mapa:null, motivo:'Ração',
+      linha:[{ acao:'aprovado', etapa:'lider', quem:'Brandão', em:dia(9) }, { acao:'aprovado', etapa:'gerencial', quem:'Brandão', em:dia(8) }, { acao:'aprovado', etapa:'financeiro', quem:'Wienfried', em:dia(7) }] }));
+    B.pedidos.push(Object.assign(JSON.parse(JSON.stringify(B.pedidos[0])), { id:'k2', numero:'C2609-00008', etapa_atual:null, status:'reprovado', historico:true,
+      canal:'clickup', card_id:'86e3def', mapa:null, motivo:'Urgente reprovado' }));
+    B.pedidos.push(Object.assign(JSON.parse(JSON.stringify(B.pedidos[0])), { id:'k3', numero:'C2609-00017', etapa_atual:null, status:'reprovado', historico:true, mapa:null, motivo:'Notebook' }));
+  } });
+  ok('19 para cotar não recebe os encerrados', !/C2609-00011|C2609-00008|C2609-00017/.test(await txt(p, '#view')));
+  await p.click('[data-tab="env"]'); await p.waitForTimeout(200);
+  const linhas = await p.$$eval('tr[data-id]', t => t.map(x => x.dataset.id));
+  ok('19 Enviadas: em andamento primeiro, encerrados depois', linhas[0] === 'C2609-03004' && linhas.includes('C2609-00011') && linhas.includes('C2609-00008') && linhas.includes('C2609-00017'), JSON.stringify(linhas));
+  ok('19 aprovada do ClickUp com valor', /Aprovada · R\$\s?122\.400,00 · ClickUp/.test(await txt(p, 'tr[data-id="C2609-00011"]')), await txt(p, 'tr[data-id="C2609-00011"]'));
+  ok('19 reprovadas marcadas', /Reprovada · ClickUp/.test(await txt(p, 'tr[data-id="C2609-00008"]')) && /Reprovada/.test(await txt(p, 'tr[data-id="C2609-00017"]')));
+  const n = ch(p, 'pedido_telas').length;
+  await p.click('tr[data-id="C2609-00011"] [data-det]'); await p.waitForTimeout(600);
+  const m = await txt(p, '#modal');
+  ok('19 Ver abre o detalhe, não o mapa', await p.locator('#map-wrap').count() === 0 && ch(p, 'pedido_telas').length === n + 1 && /C2609-00011/.test(m));
+  ok('19 detalhe: valor, fornecedor e origem', /122\.400,00/.test(m) && /CARGILL/.test(m) && /Cotação pelo ClickUp/.test(m), m.slice(0, 500));
+  ok('19 detalhe: encerrada, sem botão de cotar nem reprovar', /Aprovada — segue para a ordem de compra/.test(m) && await p.locator('#m-go').count() === 0 && await p.locator('#m-reprovar').count() === 0);
+  ok('19 detalhe: link do card no ClickUp', await p.getAttribute('#modal a[href="https://app.clickup.com/t/86e3abc"]', 'target') === '_blank');
+  ok('19 trilha: aprovada fica em Ordem de compra', /OC/.test(await txt(p, '#modal .step.cur')), await txt(p, '#modal .steps'));
+  await p.keyboard.press('Escape');
+  await p.click('[data-tipo="urgente"]'); await p.waitForTimeout(200);
+  ok('19 filtro de tipo vale nos encerrados', !/C2609-00011/.test(await txt(p, '#view')));
   await p.close(); }
 
 /* 11 — celular */
