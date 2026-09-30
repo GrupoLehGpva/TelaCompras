@@ -62,8 +62,13 @@ ok('4 cabeçalho marca a ordem', await p.getAttribute('th:has([data-ord=valor])'
 await p.click('[data-ord=valor]'); await p.waitForTimeout(200);
 ord = await p.$$eval('table.lista tbody tr[data-id]', t => t.map(x => x.dataset.id));
 ok('4 segundo clique: decrescente', ord[0] === 'C-FIN' && await p.getAttribute('th:has([data-ord=valor])', 'aria-sort') === 'descending', JSON.stringify(ord));
+ok('4 ordenado: aviso com o botão de voltar', /Ordenado por Valor ↓ decrescente/.test(await p.textContent('.ord-aviso')) && await p.isVisible('#ord-volta'));
 await p.click('[data-ord=valor]'); await p.waitForTimeout(200);
-ok('4 terceiro clique: volta aos grupos', await p.locator('tr.grupo').count() === 5);
+ok('4 terceiro clique: volta aos grupos', await p.locator('tr.grupo').count() === 5 && await p.locator('.ord-aviso').count() === 0);
+await p.click('[data-ord=num]'); await p.waitForTimeout(200);
+ok('4b ordenar por Nº: aviso aparece', /Ordenado por Nº ↑ crescente/.test(await p.textContent('.ord-aviso')) && await p.locator('tr.grupo').count() === 0);
+await p.click('#ord-volta'); await p.waitForTimeout(200);
+ok('4b botão "Voltar à lista por etapa" devolve os grupos', await p.locator('tr.grupo').count() === 5 && await p.locator('.ord-aviso').count() === 0 && await p.getAttribute('th:has([data-ord=num])', 'aria-sort') === 'none');
 await p.click('[data-ord=na]'); await p.waitForTimeout(200);
 await p.click('[data-ord=na]'); await p.waitForTimeout(200);
 ok('4 na etapa decrescente: mais parado primeiro', (await p.$$eval('table.lista tbody tr[data-id]', t => t.map(x => x.dataset.id)))[0] === 'C-COT');

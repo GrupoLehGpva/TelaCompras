@@ -36,7 +36,8 @@ ok('1 três botões de tipo, nenhum marcado', JSON.stringify(await p.$$eval('#f-
 ok('1 sem caixa de seleção de tipo', await p.locator('select#f-tipo').count() === 0 && await p.locator('.filters [data-tipo]').count() === 0);
 ok('1 botões logo acima do título', await p.evaluate(() => { const h = document.getElementById('quadro-titulo').closest('.sec-h'); return h.previousElementSibling && h.previousElementSibling.id === 'f-tipo'; }));
 { const conta = await p.$$eval('#f-tipo [data-conta]', cs => cs.map(c => c.textContent));
-  ok('1 cada botão mostra quantos há', conta.every(c => /^\d+$/.test(c)) && Number(conta[3]) === 4 && Number(conta[0]) === Number(conta[1]) + Number(conta[2]) + Number(conta[3]), JSON.stringify(conta)); }
+  ok('1 cada tipo mostra quantos há ("Todas" sem número)', conta.length === 3 && conta.every(c => /^\d+$/.test(c)) && Number(conta[2]) === 4 && (await p.textContent('#f-tipo [data-tipo=""]')).trim() === 'Todas', JSON.stringify(conta)); }
+ok('1 número colorido só quando há pedido', await p.$eval('#f-tipo [data-tipo=mensal] .c', c => c.classList.contains('tem')));
 ok('1 todos: ordem normal', JSON.stringify(await cols()) === JSON.stringify(['Liderança imediata','Compras · cotação','Aprovação gerencial','Aprovação financeiro','Ordem de compra']), JSON.stringify(await cols()));
 ok('1 todos: card mensal com etiqueta', /Mensal/.test(await p.textContent('.card[data-id="M-02"]')) && !/Mensal/.test(await p.textContent('.card[data-id="N-03"]')));
 
