@@ -70,3 +70,10 @@ begin
      where id = s.id;
   end loop;
 end $$;
+
+-- APLICADO em 30/09. Correção pedida pelo Guilherme logo depois: os 3 da gerencial
+-- (00003, 00019, 00020) já estavam cotados e voltaram para o Brandão, com mapa
+-- 'enviada' montado do valor da planilha (preço = valor / quantidade, frete/prazo/
+-- condição em branco, observação com o link do card do ClickUp). Fornecedor do
+-- cadastro só no 00003 (SMARTECH, 9646); 00019 (H&A) não está no cadastro e 00020
+-- (FARMABASE) tem dois cadastros (1319 e 2978): definir antes da OC no GR.
