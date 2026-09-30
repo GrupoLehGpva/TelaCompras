@@ -133,6 +133,15 @@ const b = await chromium.launch();
   ok('1.2b pedido por cotação não mostra o aviso', await p.locator('#cotacaoCorpo .cot-unico').count() === 0);
   await p.close(); }
 
+/* 1.2c — preço unitário com 3 casas aparece inteiro para o aprovador (pente fino 30/09) */
+{ const m = JSON.parse(JSON.stringify(MAPA_UNICO)); m.mapa.precos[0].preco = 0.035;
+  const p = await abrir(b, {mapa:m});
+  const cel = await p.locator('.cot-mapa tbody tr', {hasText:'ROLAMENTO'}).locator('td').first().textContent();
+  ok('1.2c unitário R$ 0,035 e total da linha R$ 0,14', /0,035/.test(cel) && /0,14/.test(cel), cel);
+  const c2 = await p.locator('.cot-mapa tbody tr', {hasText:'RETENTOR'}).locator('td').first().textContent();
+  ok('1.2c preço redondo continua com 2 casas', /120,00/.test(c2) && !/120,000/.test(c2), c2);
+  await p.close(); }
+
 /* 1.3 — nome de fornecedor e de item não viram HTML */
 { const m = JSON.parse(JSON.stringify(MAPA)); m.mapa.resumo.familias[0].fornecedores[0].nome = '<img src=x onerror="window.__x=1">';
   m.itens[0].descricao = '<b>x</b>';

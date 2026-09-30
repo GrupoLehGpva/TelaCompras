@@ -633,6 +633,8 @@ function baixarCSV(){
    DESENHO DO CABEÇALHO
    ========================================================================== */
 const dinheiroBR = v => Number(v || 0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+/* Preço unitário com até 4 casas (30/09): R$ 0,035 não aparece como R$ 0,04. */
+const dinheiroUnit = v => Number(v || 0).toLocaleString('pt-BR', { style:'currency', currency:'BRL', minimumFractionDigits:2, maximumFractionDigits:4 });
 
 function campo(rotulo, valor, solto){
   return '<div><dt>' + rotulo + '</dt><dd' + (solto ? ' class="solto"' : '') + '>' + esc(valor || '—') + '</dd></div>';
@@ -1018,7 +1020,7 @@ async function carregarCotacao(){
         if(pr == null) return '<td class="nao-cotou">não cotou</td>';
         const eh = escolha[i.id] === c.f.coluna;
         return '<td' + (eh ? ' class="escolhido"' : '') + '>' + (eh ? '<span class="marca-escolha" aria-label="escolhido">✓ </span>' : '') +
-          dinheiroBR(pr) + '<span class="linha-total">' + dinheiroBR(pr * Number(i.quantidade || 0)) + '</span></td>';
+          dinheiroUnit(pr) + '<span class="linha-total">' + dinheiroBR(pr * Number(i.quantidade || 0)) + '</span></td>';
       }).join('') + '</tr>').join('');
     const rodape = (rotulo, fn, cls) => '<tr class="' + (cls || 'cond') + '"><th scope="row">' + rotulo + '</th>' +
       cont.map(c => '<td>' + fn(c) + '</td>').join('') + '</tr>';
