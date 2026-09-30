@@ -1,6 +1,6 @@
 const { chromium } = require('playwright');
 const mock = require('./mock-supabase');
-const ARQ = 'file:///home/claude/TelaCompras/index.html';
+const ARQ = require('./caminho-antigo.js')();
 const falhas = [], notas = [];
 const ok = (c, cond, det='') => { if(!cond) falhas.push(c + (det?' — '+det:'')); };
 const nota = (c, t) => notas.push(c + ' — ' + t);

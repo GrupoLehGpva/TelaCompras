@@ -1,6 +1,6 @@
 /* Bateria do campo de centro de custo (busca com 746 opções). */
 const { chromium } = require('playwright');
-const url = 'file://' + __dirname + '/index.html';
+const url = require('./caminho-antigo.js')();
 const falhas = [], notas = [];
 const ok = (n,c,d)=> c ? null : falhas.push(n + ' — ' + d);
 

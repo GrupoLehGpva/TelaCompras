@@ -1,6 +1,6 @@
 /* Facilitador vindo do Slack, solicitante opcional e observação do pedido. */
 const { chromium } = require('playwright');
-const url = 'file://' + __dirname + '/index.html';
+const url = require('./caminho-antigo.js')();
 const falhas = [];
 const ok = (n,c,d)=> c ? null : falhas.push(n + ' — ' + d);
 
@@ -34,7 +34,7 @@ const FAC = [{slack_user_id:'U0BL5JPQX97', nome:'Guilherme Pimpão',
 const arquivoComTrava = url;
 const arquivoSemTrava = (()=>{
   const fs = require('fs');
-  const orig = fs.readFileSync(__dirname + '/index.html','utf8');
+  const orig = fs.readFileSync(__dirname + '/index.html','utf8').replace('const CAMINHO_CLICKUP_ABERTO = false;', 'const CAMINHO_CLICKUP_ABERTO = true;');
   const alterado = orig.replace('const EXIGIR_FACILITADOR = true;','const EXIGIR_FACILITADOR = false;');
   if(alterado === orig) throw new Error('a trava EXIGIR_FACILITADOR não está ligada no index.html');
   fs.writeFileSync('/tmp/index-sem-trava.html', alterado);

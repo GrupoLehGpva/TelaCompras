@@ -5,7 +5,7 @@
    ========================================================================== */
 const { chromium } = require('playwright');
 const mock = require('./mock-supabase');
-const url = 'file://' + __dirname + '/index.html';
+const url = require('./caminho-antigo.js')();
 const falhas = [], notas = [];
 const ok = (n,c,d)=> c ? null : falhas.push(n + ' — ' + d);
 

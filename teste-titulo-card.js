@@ -16,7 +16,7 @@
  */
 const { chromium } = require('playwright');
 const fs  = require('fs');
-const url = 'file://' + __dirname + '/index.html';
+const url = require('./caminho-antigo.js')();
 const falhas = [];
 const ok = (n,c,d)=> c ? null : falhas.push(n + ' — ' + d);
 

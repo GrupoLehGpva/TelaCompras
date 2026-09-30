@@ -19,3 +19,6 @@ demonstracao/
 # Importação de fornecedores: tem CNPJ, CPF, telefone e e-mail de gente de
 # verdade. O repositório é PÚBLICO. Rodar no Supabase e manter só local.
 fornecedores-import.sql
+
+# cópia do formulário com o caminho do ClickUp aberto, só para os testes (caminho-antigo.js)
+index-caminho-antigo.html

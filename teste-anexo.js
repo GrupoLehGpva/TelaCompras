@@ -22,7 +22,7 @@ const { chromium } = require('playwright');
 const mock = require('./mock-supabase.js');
 const { respostaDoFormulario, respostaCriarSolicitacao } = mock;
 
-const formulario = 'file://' + __dirname + '/index.html';
+const formulario = require('./caminho-antigo.js')();
 const telaPedido = 'file://' + __dirname + '/pedido.html';
 const falhas = [];
 const ok = (n, c, d) => c ? null : falhas.push(n + ' — ' + (d || ''));

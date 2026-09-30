@@ -2309,3 +2309,8 @@ end $$;
 --   de:   (canal<>'clickup' or versao<>1)
 --   para: ((card_id is not null and canal<>'clickup') or (canal='clickup' and versao<>1))
 -- ============================================================================
+
+-- telas_16 (30/09) — bateria: depois da migração não sobra pedido aberto no ClickUp.
+-- Se não houver, a bateria reabre um encerrado do ClickUp SÓ dentro do teste (tudo é
+-- desfeito no fim) para seguir provando que as telas recusam pedido do ClickUp.
+-- Aplicado logo após `select id into real_id from solicitacoes where canal='clickup' and etapa_atual='cotacao' ...`.

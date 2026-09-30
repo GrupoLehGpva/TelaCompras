@@ -2223,11 +2223,10 @@ function concluir(cabecalho, itens, nota, cardCriado, anexos){
                      Salva por salvar_edicao; tem prazo (30 min) e pode ser
                      abandonada — o que também gasta a edição.
    ========================================================================== */
-/* VIRADA (quinta, 01/10): trocar para false. Com false, o link antigo do
-   formulário (sem ?t=, o do ClickUp) não abre mais pedido: manda a pessoa
-   pegar o link pessoal com /compras. Até lá fica true — o caminho do ClickUp
-   segue funcionando como sempre. */
-const CAMINHO_CLICKUP_ABERTO = true;
+/* VIRADA (30/09): false. O link antigo do formulário (sem ?t=, o do ClickUp)
+   não abre mais pedido: manda a pessoa pegar o link pessoal com /compras.
+   Voltar para true reabre o caminho do ClickUp (plano de volta da virada). */
+const CAMINHO_CLICKUP_ABERTO = false;
 const PARAMS_TELAS = new URLSearchParams(location.search);
 const TOKEN_TELAS  = (PARAMS_TELAS.get('t') || '').trim();
 const EDITAR_ID    = (PARAMS_TELAS.get('editar') || '').trim();

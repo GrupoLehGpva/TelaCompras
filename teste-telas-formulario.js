@@ -117,7 +117,7 @@ const b = await chromium.launch();
   const a = chamou(p,'abrir_pedido_telas')[0];
   ok('1.6 pedido mensal sai pelas telas', a && a.corpo.p_cabecalho.tipo_compra === 'mensal', JSON.stringify(a && a.corpo.p_cabecalho));
   await p.close(); }
-{ const p = await abrir(b, '?uid=' + mock.UID_EXEMPLO);
+{ const p = await abrir(b, '?uid=' + mock.UID_EXEMPLO, { url:require('./caminho-antigo.js')() });
   ok('1.6 mensal continua desligada no ClickUp', await p.locator('input[name=tipoCompra][value=mensal]').isDisabled());
   await p.close(); }
 
@@ -125,8 +125,8 @@ const b = await chromium.launch();
 { const fs = require('fs'), path = require('path');
   const tmp = path.join(__dirname, 'index-virada-teste.html');
   const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
-  ok('1.7 a chave existe e hoje está aberta', /const CAMINHO_CLICKUP_ABERTO = true;/.test(src));
-  fs.writeFileSync(tmp, src.replace('const CAMINHO_CLICKUP_ABERTO = true;', 'const CAMINHO_CLICKUP_ABERTO = false;'));
+  ok('1.7 a chave existe e está fechada desde a virada (30/09)', /const CAMINHO_CLICKUP_ABERTO = false;/.test(src));
+  fs.writeFileSync(tmp, src);
   try {
     const p = await abrir(b, '?uid=' + mock.UID_EXEMPLO, { url:'file://' + tmp });
     ok('1.7 link antigo bloqueado', /não vale mais/.test(await p.textContent('#alerta')) && /\/compras no Slack/.test(await p.textContent('#alerta')));
@@ -148,7 +148,7 @@ const b = await chromium.launch();
    Com ?uid=: no caminho do ClickUp quem identifica é o usuário do Slack, e sem
    ele a trava do facilitador barra o envio antes de qualquer coisa. Nome e
    e-mail passam a vir do cadastro (e ficam travados), então não se digita. */
-{ const p = await abrir(b, '?uid=' + mock.UID_EXEMPLO);
+{ const p = await abrir(b, '?uid=' + mock.UID_EXEMPLO, { url:require('./caminho-antigo.js')() });   // caminho antigo = plano de volta
   ok('2 não perguntou eu_facilitador', chamou(p,'eu_facilitador').length === 0);
   ok('2 identificou pelo Slack', chamou(p,'facilitador_por_slack').length === 1);
   await preencherNovo(p);

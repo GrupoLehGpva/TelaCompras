@@ -7,6 +7,7 @@
 const { chromium } = require('playwright');
 const mock = require('./mock-supabase');
 const dir = 'file://' + __dirname + '/';
+const ANTIGO = require('./caminho-antigo.js')();   // formulário antigo (ClickUp), cópia com a chave aberta
 const falhas = [], notas = [];
 const ok = (n,c,d)=> c ? null : falhas.push(n + ' — ' + d);
 const nota = t => notas.push(t);
@@ -210,7 +211,7 @@ await p.close();
 
 // C1 — catálogo respondendo 500: cai na lista local e avisa
 p = await b.newPage(); await servir(p, {padrao:500});
-await p.goto(dir + 'index.html?uid=U0BL5JPQX97', {waitUntil:'load'}); await p.waitForTimeout(1500);
+await p.goto(ANTIGO + '?uid=U0BL5JPQX97', {waitUntil:'load'}); await p.waitForTimeout(1500);
 ok('C1 avisa a queda', await p.locator('#alerta').isVisible(), 'não avisou o 500 do catálogo');
 ok('C1 catálogo local', (await p.evaluate(()=>CATALOGO.length)) > 0, 'ficou sem catálogo');
 ok('C1 centros locais', (await p.evaluate(()=>CENTROS_CUSTO.length)) > 0, 'ficou sem centro de custo');
@@ -218,7 +219,7 @@ await p.close();
 
 // C2 — resposta que não é JSON
 p = await b.newPage(); await servir(p, {padrao:'html'});
-await p.goto(dir + 'index.html?uid=U0BL5JPQX97', {waitUntil:'load'}); await p.waitForTimeout(1500);
+await p.goto(ANTIGO + '?uid=U0BL5JPQX97', {waitUntil:'load'}); await p.waitForTimeout(1500);
 ok('C2 sobrevive a HTML', (await p.evaluate(()=>CATALOGO.length)) > 0, 'quebrou com resposta HTML');
 await p.close();
 
@@ -226,7 +227,7 @@ await p.close();
 p = await b.newPage();
 await servir(p, { catalogo:[], centros:[], padrao:[] });
 await p.route('**n8n.cloud/**', r => r.fulfill({status:500,contentType:'text/plain',body:'erro'}));
-await p.goto(dir + 'index.html?uid=U0BL5JPQX97', {waitUntil:'load'}); await p.waitForTimeout(1400);
+await p.goto(ANTIGO + '?uid=U0BL5JPQX97', {waitUntil:'load'}); await p.waitForTimeout(1400);
 await p.evaluate(()=>{
   $('nomeSolicitante').value='Teste'; $('nomeSolicitante').dispatchEvent(new Event('input'));
   $('emailSolicitante').value='ia@leh.com.br'; $('emailSolicitante').dispatchEvent(new Event('input'));
@@ -260,7 +261,7 @@ await p.route('**/rest/v1/solicitacoes**', r => r.request().method() === 'POST'
   ? r.fulfill({status:201,contentType:'application/json',body:JSON.stringify([{id:'novo-2'}])})
   : r.fulfill({status:200,contentType:'application/json',body:'[]'}));
 await p.route('**n8n.cloud/**', r => r.fulfill({status:200,contentType:'application/json',body:'{"ok":true}'}));
-await p.goto(dir + 'index.html?uid=U0BL5JPQX97', {waitUntil:'load'}); await p.waitForTimeout(1400);
+await p.goto(ANTIGO + '?uid=U0BL5JPQX97', {waitUntil:'load'}); await p.waitForTimeout(1400);
 await p.evaluate(()=>{
   $('nomeSolicitante').value='Teste'; $('nomeSolicitante').dispatchEvent(new Event('input'));
   $('emailSolicitante').value='ia@leh.com.br'; $('emailSolicitante').dispatchEvent(new Event('input'));
@@ -282,7 +283,7 @@ await p.close();
 
 // C4 — parâmetros hostis na URL do formulário
 p = await b.newPage(); await servir(p, {padrao:[]});
-await p.goto(dir + 'index.html?nome=' + encodeURIComponent('"><img src=x onerror=alert(1)>') +
+await p.goto(ANTIGO + '?nome=' + encodeURIComponent('"><img src=x onerror=alert(1)>') +
   '&uid=' + encodeURIComponent('<script>alert(2)</script>'), {waitUntil:'load'});
 await p.waitForTimeout(1200);
 ok('C4 sem injeção pelo nome', (await p.locator('img[onerror]').count()) === 0, 'injetou pelo ?nome');

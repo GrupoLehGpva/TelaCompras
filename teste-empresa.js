@@ -17,7 +17,7 @@ const { chromium } = require('playwright');
 const mock = require('./mock-supabase.js');
 const { respostaDoFormulario, respostaCriarSolicitacao, EMPRESAS_EXEMPLO } = require('./mock-supabase.js');
 
-const url = 'file://' + __dirname + '/index.html';
+const url = require('./caminho-antigo.js')();
 const falhas = [];
 const ok = (n, c, d) => c ? null : falhas.push(n + ' — ' + (d || ''));
 const CENTROS = [{ codigo:'3180', nome:'MANUTENCAO', unidade:'AGRICULTURA SUL', tipo:'Produtivo' }];
