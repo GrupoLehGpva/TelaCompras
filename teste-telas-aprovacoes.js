@@ -75,6 +75,21 @@ const b = await chromium.launch();
   ok('2 caixa diz desde quando, sem prazo (29/09)', /editando desde \d\d:\d\d/.test(t) && !/volta até/.test(t), t);
   await p.close(); }
 
+/* 2.6 — alinhamento (01/10): Aprovar embaixo de Aprovar e Reprovar embaixo de
+   Reprovar, tenha a linha o Devolver ou não */
+for(const w of [1366, 1440, 1920]){
+  const p = await tela(b); await p.setViewportSize({width:w, height:900}); await p.waitForTimeout(200);
+  const xs = await p.evaluate(() => [...document.querySelectorAll('#corpoFila tr')].map(tr => ({
+    sim: Math.round(tr.querySelector('.btn-linha.sim').getBoundingClientRect().x),
+    nao: Math.round(tr.querySelector('.btn-linha.nao').getBoundingClientRect().x),
+    simW: Math.round(tr.querySelector('.btn-linha.sim').getBoundingClientRect().width),
+    dev: !!tr.querySelector('.btn-linha.dev') })));
+  ok('2.6 ' + w + 'px tem linha com e sem Devolver', xs.some(x => x.dev) && xs.some(x => !x.dev), JSON.stringify(xs));
+  ok('2.6 ' + w + 'px Aprovar alinhado', new Set(xs.map(x => x.sim)).size === 1 && new Set(xs.map(x => x.simW)).size === 1, JSON.stringify(xs));
+  ok('2.6 ' + w + 'px Reprovar alinhado', new Set(xs.map(x => x.nao)).size === 1, JSON.stringify(xs));
+  await p.close();
+}
+
 /* 2.5 — os três botões cabem na célula (em tela de notebook e larga) */
 for(const w of [1366, 1440, 1920]){
   const p = await tela(b); await p.setViewportSize({width:w, height:900}); await p.waitForTimeout(200);

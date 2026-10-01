@@ -221,8 +221,6 @@
   table.lista td.num.ok{--cor-etapa:var(--ok-txt)}
   table.lista td.num.nao{--cor-etapa:var(--erro)}
 
-  .ha-quanto{display:block;color:var(--muted);font-size:12.5px;margin-top:5px}
-  .ha-quanto.demorando{color:var(--demo);font-weight:600}
 
   /* O motivo da recusa não fica derramado na lista: vira um botão. A lista
      continua respirável, e quem quer ler o motivo abre — é o que a pessoa faz
@@ -359,7 +357,6 @@
   .ver-motivo{margin-top:6px}
   .ver-itens{border-color:transparent;background:transparent;color:var(--verde-mata);font-weight:650}
   .ver-itens:hover{background:var(--realce)}
-  table.lista .ha-quanto{font-size:12px}
   .modal-acao .rodape button.confirmar.perigo{background:var(--reprovar);border-color:var(--reprovar);color:#fff}
   /* Colunas de pouco texto centralizadas (Guilherme, 24/09): número, datas, quantidades,
      valores, etapa, situação e botões. Ficam à esquerda só as de texto longo. */
@@ -725,20 +722,7 @@ function trilha(s){
   return '<div class="trilha' + (pronta ? ' pronta' : '') + '">' + traços + '</div>';
 }
 
-/* Há quanto tempo o pedido existe. "Aberta há 6 dias, esperando a liderança"
-   responde a pergunta real de quem pediu, que nenhuma data sozinha responde. */
 const DIA = 864e5;
-function haQuanto(s){
-  if(!s.aberto_em) return '';
-  const dias = Math.floor((Date.now() - new Date(s.aberto_em).getTime()) / DIA);
-  if(isNaN(dias) || dias < 0) return '';
-  const txt = dias === 0 ? 'hoje'
-            : dias === 1 ? 'ontem'
-            : 'há ' + dias + ' dias';
-  /* Sete dias parados é reclamação a caminho. Marcar antes de virar cobrança. */
-  const demorando = !s.encerrada && dias >= 7;
-  return '<span class="ha-quanto' + (demorando ? ' demorando' : '') + '">' + txt + '</span>';
-}
 
 function visiveis(){
   const t = termo.trim().toLowerCase();
@@ -763,7 +747,7 @@ function linha(s){
         ' aria-expanded="' + abertas.has(s.id) + '" aria-controls="itens-' + esc(s.id) + '"' +
         ' title="Ver os itens pedidos">' + s.total_itens + '<span class="seta" aria-hidden="true">▾</span></button>') +
     '</td>' +
-    '<td>' + dataBR(s.aberto_em) + haQuanto(s) + '</td>' +
+    '<td>' + dataBR(s.aberto_em) + '</td>' +
     '<td>' + dataBR(s.data_necessidade) + '</td>' +
     '<td class="etapa-cel ' + cls + '">' +
       /* Uma linha só: a situação e com quem está. A trilha de etapas e o nome

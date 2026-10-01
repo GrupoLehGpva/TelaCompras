@@ -376,30 +376,26 @@ p = await tela(b);
   ok('18.4 nenhuma coluna apertada', apertadas.length === 0, apertadas.length + ' célula(s)'); }
 await p.close();
 
-/* 18.5 — a data em que o pedido foi feito, e há quanto tempo ele espera */
+/* 18.5 — só a data em que o pedido foi feito (01/10: saiu o "há X dias / hoje / ontem") */
 p = await tela(b);
 { const l1 = await p.locator('#corpoFila tr').nth(0).textContent();   // aberta hoje
   const l2 = await p.locator('#corpoFila tr').nth(1).textContent();   // aberta há 2 dias
   const hj = new Date().toLocaleDateString('pt-BR');
-  ok('18.5 mostra a data de abertura', l1.includes(hj), 'não mostrou ' + hj + ': ' + l1);
-  ok('18.5 diz "hoje"',      /hoje/.test(l1), 'linha 1: ' + l1);
-  ok('18.5 conta os dias',   /há 2 dias/.test(l2), 'linha 2: ' + l2);
+  const dois = new Date(Date.now() - 2*864e5).toLocaleDateString('pt-BR');
+  ok('18.5 mostra a data de abertura', l1.includes(hj) && l2.includes(dois), 'linhas: ' + l1 + ' | ' + l2);
+  ok('18.5 sem "hoje/ontem/há X dias"', !/\bhoje\b|\bontem\b|há \d+ dias?/.test(l1 + l2), l1 + ' | ' + l2);
+  ok('18.5 sem etiqueta de tempo', await p.locator('#corpoFila .ha-quanto').count() === 0);
   ok('18.5 cor por etapa',   await p.locator('#corpoFila tr').nth(0).locator('.etapa.lider').count() === 1
                           && await p.locator('#corpoFila tr').nth(1).locator('.etapa.gerencial').count() === 1,
-     'as etapas não receberam a classe da cor');
-  // Sete dias parado é reclamação a caminho; a marca serve para ver antes.
-  const marcadas = await p.locator('#corpoFila .ha-quanto.demorando').count();
-  ok('18.5 nada marcado como atrasado ainda', marcadas === 0, 'marcou ' + marcadas + ' com 2 dias'); }
+     'as etapas não receberam a classe da cor'); }
 await p.close();
 
-/* 18.6 — pedido velho aparece marcado */
+/* 18.6 — pedido velho: só a data, sem marca de atraso */
 { const velha = JSON.parse(JSON.stringify(FILA));
   velha[0].aberto_em = new Date(Date.now() - 9*864e5).toISOString();
   p = await tela(b, {fila: velha});
-  ok('18.6 marca o que está demorando', await p.locator('#corpoFila .ha-quanto.demorando').count() === 1,
-     'pedido de 9 dias não foi marcado');
-  ok('18.6 diz quantos dias', /há 9 dias/.test(await p.locator('#corpoFila tr').nth(0).textContent()||''),
-     'linha: ' + await p.locator('#corpoFila tr').nth(0).textContent());
+  const t = await p.locator('#corpoFila tr').nth(0).textContent() || '';
+  ok('18.6 só a data', t.includes(new Date(Date.now() - 9*864e5).toLocaleDateString('pt-BR')) && !/há 9 dias/.test(t), t);
   await p.close(); }
 
 /* 19 — o que a tela mostra ENQUANTO o servidor não respondeu.

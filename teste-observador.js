@@ -102,8 +102,11 @@ const b = await chromium.launch();
   ok('4 link do histórico com o=&a=', /o=pa-obs/.test(hl) && !/[?&]t=/.test(hl), hl);
   ok('4 só observar_como com o token do funil', semToken(p) && p.__rpc.every(x => x.nome === 'observar_como'));
   /* 5 — trocar o aprovador recarrega com ?a= */
-  await p.selectOption('#obsAprovador', 'junior'); await p.waitForTimeout(700);
-  ok('5 trocou para o Junior', /a=junior/.test(p.url()) && /JOSE DE CARVALHO/.test(await p.locator('#tituloTopo').textContent()) && await p.locator('#corpoFila tr').count() === 1, p.url());
+  await p.selectOption('#obsAprovador', 'junior');
+  await p.waitForURL(/a=junior/); await p.waitForLoadState('load'); await p.waitForFunction(() => /JOSE/.test(document.querySelector('#tituloTopo').textContent), null, {timeout:8000}).catch(()=>{});
+  await p.waitForTimeout(300);
+  const tit5 = await p.locator('#tituloTopo').textContent(), n5 = await p.locator('#corpoFila tr').count();
+  ok('5 trocou para o Junior', /a=junior/.test(p.url()) && /JOSE DE CARVALHO/.test(tit5) && n5 === 1, p.url() + ' | ' + tit5 + ' | ' + n5);
   await p.close(); }
 
 /* 6 — aprovador sem fila: lista vazia, sem erro */

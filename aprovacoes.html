@@ -234,8 +234,6 @@
     display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;
     overflow:hidden;word-break:break-word}
 
-  .ha-quanto{display:block;color:var(--muted);font-size:12.5px;margin-top:4px}
-  .ha-quanto.demorando{color:var(--demo);font-weight:600}
 
   .rolagem{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--borda);
     border-radius:var(--raio);background:var(--card)}
@@ -378,7 +376,7 @@
        mostram a cor ao passar o mouse — cor demais em toda linha faz o olho
        não achar nada.
      · Número do pedido é link, na cor da marca, sem sublinhado e sem
-       etiqueta embaixo (o "hoje" já aparece em Aberta em). */
+       etiqueta embaixo. */
   table.fila thead th,table.hist thead th{text-align:center;font-family:var(--sans)}
   table.fila tbody td,table.fila tbody td.num,table.fila tbody td.acoes{text-align:center}
   table.fila tbody td:nth-child(3),table.fila tbody td:nth-child(4){text-align:left}
@@ -443,6 +441,12 @@
      valores, etapa, situação e botões. Ficam à esquerda só as de texto longo. */
   table.fila tbody td:not(:nth-child(3)){text-align:center}
   table.fila tbody td:nth-child(10) > *{justify-content:center;margin-left:auto;margin-right:auto}
+  /* Alinhamento (01/10): três vagas de largura fixa — Aprovar | Reprovar | Devolver.
+     A vaga do Devolver existe mesmo vazia, então o Aprovar fica sempre embaixo do
+     Aprovar e o Reprovar embaixo do Reprovar, em toda linha. */
+  table.fila tbody td.acoes{padding-left:8px;padding-right:8px}
+  .grade-acoes{display:grid;grid-template-columns:5.6em 6.1em 6em;gap:4px;width:max-content;font-size:13px}
+  table.fila td.acoes .grade-acoes .btn-linha{margin:3px 0;width:100%;text-align:center}
   table.hist tbody td:not(:nth-child(3)){text-align:center}
   table.hist tbody td:nth-child(3){text-align:left}
   /* Tela cheia (Guilherme, 29/09): ocupa a largura toda do computador, como o funil.
@@ -647,15 +651,6 @@ const dataBR = iso => {
   return isNaN(d) ? String(iso) : d.toLocaleDateString('pt-BR');
 };
 const ETAPA_NOME = { lider:'Liderança', gerencial:'Gerencial', financeiro:'Financeiro' };
-const DIA = 864e5;
-/* Quantos dias o pedido tem. Devolve o número junto do texto para quem chama
-   decidir se aquilo já virou atraso — a regra do que é "muito" é de quem usa. */
-function haQuanto(iso){
-  if(!iso) return null;
-  const dias = Math.floor((Date.now() - new Date(iso).getTime()) / DIA);
-  if(isNaN(dias) || dias < 0) return null;
-  return { dias, texto: dias === 0 ? 'hoje' : dias === 1 ? 'ontem' : 'há ' + dias + ' dias' };
-}
 const MOTIVO_MINIMO = 10;
 
 async function rpc(nome, corpo){
@@ -864,19 +859,12 @@ function desenhar(){
     }
     tr.appendChild(tdV);
 
-    /* A data de abertura sozinha não diz nada; "há 6 dias" diz. Pedido parado é
-       a reclamação que chega depois, e ela começa aqui. */
+    /* Só a data de abertura (01/10): o "há X dias / hoje / ontem" embaixo saiu
+       a pedido do Guilherme. */
     const tdAb = document.createElement('td');
     const dAb = document.createElement('span');
     dAb.textContent = dataBR(s.aberto_em);
     tdAb.appendChild(dAb);
-    const quanto = haQuanto(s.aberto_em);
-    if(quanto){
-      const q = document.createElement('span');
-      q.className = 'ha-quanto' + (quanto.dias >= 7 ? ' demorando' : '');
-      q.textContent = quanto.texto;
-      tdAb.appendChild(q);
-    }
     tr.appendChild(tdAb);
 
     tr.appendChild(cel(dataBR(s.data_necessidade)));
@@ -911,13 +899,16 @@ function desenhar(){
     const bNao = document.createElement('button');
     bNao.type='button'; bNao.className='btn-linha nao'; bNao.textContent='Reprovar';
     bNao.addEventListener('click', ()=> abrirReprova(s, 'reprovar'));
-    tdA.appendChild(bSim); tdA.appendChild(bNao);
+    const grade = document.createElement('div');
+    grade.className = 'grade-acoes';
+    grade.appendChild(bSim); grade.appendChild(bNao);
+    tdA.appendChild(grade);
     if(s.canal === 'telas' && s.pode_devolver){
       const bDev = document.createElement('button');
       bDev.type='button'; bDev.className='btn-linha dev'; bDev.textContent='Devolver';
       bDev.title = 'Devolver ao comprador para rever a cotação';
       bDev.addEventListener('click', ()=> abrirReprova(s, 'devolver'));
-      tdA.appendChild(bDev);
+      grade.appendChild(bDev);
     }
     tr.appendChild(tdA);
 
