@@ -309,6 +309,14 @@
   /* Devolver ao comprador: só no caminho das telas (sem ClickUp), e só onde a
      regra deixa (gerencial e financeiro no normal/urgente; financeiro no mensal). */
   .btn-linha.dev{background:var(--demo-bg);border-color:var(--demo-borda);color:var(--demo)}
+  /* Modo observador (01/10): faixa que diz de quem é a fila e que nada aqui decide. */
+  .faixa-obs{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 16px;padding:10px 14px;border-radius:8px;
+             border:1px dashed var(--demo-borda);background:var(--demo-bg);color:var(--texto);font-size:13.5px;line-height:1.5}
+  .faixa-obs[hidden]{display:none}
+  .faixa-obs b{font-weight:700}
+  .faixa-obs select{font:inherit;padding:5px 8px;border:1px solid var(--borda);border-radius:6px;background:var(--card);color:var(--texto);max-width:100%}
+  .faixa-obs .obs-nota{color:var(--muted)}
+  body.observador .btn-linha:disabled, body.observador .btn-lote:disabled{opacity:.55;cursor:not-allowed}
   .fila-grupo{margin:0 0 14px;padding:10px 14px;border-radius:8px;background:var(--verde-claro);color:var(--verde-mata);font-size:13.5px;line-height:1.5}
   .hist-quem{display:block;margin-top:3px;font-size:12px;color:var(--muted)}
   .hist-quem.outro{color:var(--texto);font-weight:600}
@@ -472,6 +480,11 @@
 </header>
 
 <div class="envelope">
+  <div class="faixa-obs" id="faixaObs" hidden>
+    <span><b>Modo observador.</b> Vendo a fila de</span>
+    <select id="obsAprovador" aria-label="De quem ver a fila"></select>
+    <span class="obs-nota">Só leitura: é a tela real do aprovador, com os botões desligados.</span>
+  </div>
   <div class="carregando" id="carregando">Carregando a sua fila…</div>
   <div class="erro" id="erro" hidden></div>
 
@@ -610,6 +623,18 @@ const ENDPOINT_DECISAO = 'https://grupoleh.app.n8n.cloud/webhook/decisao-tela-5a
 
 const q = new URLSearchParams(location.search);
 const TOKEN = (q.get('t') || '').trim();
+/* MODO OBSERVADOR (01/10): ?o=<token do funil>&a=<id do aprovador>. Mostra a
+   fila real daquele aprovador sem o token dele: o banco (observar_como) lê por
+   ele e devolve sem nada que decida. Aqui os botões ficam desligados. */
+const OBS = (q.get('o') || '').trim();
+let OBS_APROV = (q.get('a') || '').trim();
+const OBSERVADOR = !TOKEN && !!OBS;
+const LEITURA_OBS = { fila_de_aprovacao:1, fila_do_aprovador:1, aprovador_do_token:1, historico_de_aprovacoes:1 };
+/* O que vai no link da tela do pedido: o token do aprovador, ou o acesso do observador. */
+function sufixoPedido(etapa){
+  if(OBSERVADOR) return '&o=' + encodeURIComponent(OBS) + '&a=' + encodeURIComponent(OBS_APROV) + '&e=' + encodeURIComponent(etapa || '');
+  return TOKEN ? '&t=' + encodeURIComponent(TOKEN) + '&e=' + encodeURIComponent(etapa || '') : '';
+}
 
 const $ = id => document.getElementById(id);
 const esc = t => String(t==null?'':t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -634,6 +659,13 @@ function haQuanto(iso){
 const MOTIVO_MINIMO = 10;
 
 async function rpc(nome, corpo){
+  if(OBSERVADOR && nome !== 'observar_como'){
+    if(!LEITURA_OBS[nome]) throw new Error('Modo observador: só leitura.');
+    const j = await rpc('observar_como', { p_token: OBS, p_aprovador: OBS_APROV, p_funcao: nome,
+                                           p_limite: (corpo && corpo.p_limite) || 60 });
+    if(j && !Array.isArray(j) && j.ok === false) throw new Error(j.erro || 'sem acesso');
+    return j;
+  }
   const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + nome, {
     method:'POST',
     headers:{ apikey:SUPABASE_KEY, Authorization:'Bearer ' + SUPABASE_KEY,
@@ -756,7 +788,7 @@ function desenhar(){
 
     const tdC = document.createElement('td');
     const cb = document.createElement('input');
-    cb.type = 'checkbox'; cb.checked = marcadas.has(s.id);
+    cb.type = 'checkbox'; cb.checked = marcadas.has(s.id); cb.disabled = OBSERVADOR;
     cb.setAttribute('aria-label', 'Selecionar ' + (s.numero||''));
     cb.addEventListener('change', ()=>{
       if(cb.checked) marcadas.add(s.id); else marcadas.delete(s.id);
@@ -765,8 +797,7 @@ function desenhar(){
     tdC.appendChild(cb); tr.appendChild(tdC);
 
     const link = document.createElement('a');
-    link.href = 'pedido.html?id=' + encodeURIComponent(s.id) +
-                (TOKEN ? '&t=' + encodeURIComponent(TOKEN) + '&e=' + encodeURIComponent(s.etapa_atual||'') : '');
+    link.href = 'pedido.html?id=' + encodeURIComponent(s.id) + sufixoPedido(s.etapa_atual);
     link.className = 'numero-sc';
     link.textContent = s.numero || '—';
     const tdN = document.createElement('td');
@@ -899,7 +930,8 @@ function desenhar(){
     FILA.length === 0 ? 'Nada esperando por você.' : 'Nada com esse filtro.';
 
   const marcadasVisiveis = lista.filter(s=>marcadas.has(s.id)).length;
-  $('btnLote').disabled = marcadasVisiveis === 0 || enviando;
+  $('btnLote').disabled = marcadasVisiveis === 0 || enviando || OBSERVADOR;
+  $('marcarTodas').disabled = OBSERVADOR;
   $('btnLote').textContent = enviando
     ? 'Registrando…'
     : marcadasVisiveis
@@ -910,7 +942,7 @@ function desenhar(){
   $('contaFila').textContent = FILA.length;
   $('seloTotal').textContent = FILA.length + (FILA.length === 1 ? ' na fila' : ' na fila');
   $('seloTotal').hidden = false;
-  document.querySelectorAll('.btn-linha').forEach(b => b.disabled = enviando);
+  document.querySelectorAll('.btn-linha').forEach(b => { b.disabled = enviando || OBSERVADOR; if(OBSERVADOR) b.title = 'Modo observador: só leitura'; });
 }
 
 /* ============================================================================
@@ -919,6 +951,7 @@ function desenhar(){
    antes de mover. A tela só pede — e conta o que voltou.
    ========================================================================== */
 async function decidir(itens, decisao, motivo){
+  if(OBSERVADOR) return;
   const alvos = (itens || []).filter(s => s && !emVoo.has(s.id));
   if(enviando || !alvos.length) return;
   alvos.forEach(s => emVoo.add(s.id));
@@ -1040,6 +1073,7 @@ function avisar(texto, tipo){
 
 /* ---- caixa de reprovação: motivo é obrigatório ---- */
 function abrirReprova(s, modo){
+  if(OBSERVADOR) return;
   alvoReprova = s;
   modoModal = modo === 'devolver' ? 'devolver' : 'reprovar';
   const dev = modoModal === 'devolver';
@@ -1090,8 +1124,38 @@ function falhar(titulo, detalhe){
   $('erro').hidden = false;
 }
 
+/* Observador: a faixa com a lista dos aprovadores; trocar recarrega a tela. */
+async function prepararObservador(){
+  document.body.classList.add('observador');
+  const j = await rpc('observar_como', { p_token: OBS, p_funcao: 'aprovadores' });
+  if(!j || j.ok !== true){
+    falhar('Este link não tem acesso ao modo observador.', 'Fale com o setor de compras.');
+    return false;
+  }
+  const lista = Array.isArray(j.aprovadores) ? j.aprovadores : [];
+  if(!OBS_APROV || !lista.some(a => a.id === OBS_APROV)){
+    const comFila = lista.slice().sort((a, b) => (b.na_fila || 0) - (a.na_fila || 0))[0];
+    OBS_APROV = comFila ? comFila.id : '';
+  }
+  const sel = $('obsAprovador');
+  sel.innerHTML = lista.map(a => '<option value="' + esc(a.id) + '"' + (a.id === OBS_APROV ? ' selected' : '') + '>' +
+    esc(a.nome) + ' (' + esc((a.etapas || []).map(e => ETAPA_NOME[e] || e).join(', ')) + ') · ' +
+    (a.na_fila || 0) + ' na fila</option>').join('');
+  sel.addEventListener('change', () => {
+    const u = new URLSearchParams(location.search);
+    u.set('a', sel.value);
+    location.search = u.toString();
+  });
+  $('faixaObs').hidden = false;
+  return !!OBS_APROV;
+}
+
 async function abrir(){
-  if(!TOKEN){
+  if(OBSERVADOR){
+    try{ if(!(await prepararObservador())) return; }
+    catch(e){ falhar('Não consegui abrir o modo observador.', String(e.message).slice(0,220)); return; }
+  }
+  if(!TOKEN && !OBSERVADOR){
     falhar('Link incompleto.',
       'O endereço da fila precisa vir do aviso que você recebe no Slack — é ele que diz de quem é a fila.');
     return;
@@ -1107,7 +1171,7 @@ async function abrir(){
     $('seloAprovador').textContent = APROVADOR.nome;
     $('seloAprovador').hidden = false;
     $('tituloTopo').textContent = 'Aprovações de ' + APROVADOR.nome;
-    document.title = 'Aprovações · ' + APROVADOR.nome + ' · Grupo Leh';
+    document.title = (OBSERVADOR ? 'Observando · ' : 'Aprovações · ') + APROVADOR.nome + ' · Grupo Leh';
 
     FILA = await carregarFila();
     $('carregando').hidden = true;
@@ -1140,8 +1204,7 @@ function desenharHist(){
     /* Fila compartilhada: diz quem decidiu (o próprio ou outra pessoa do financeiro). */
     const quem = h.fui_eu === false ? '<span class="hist-quem outro">por ' + esc(h.decidido_por || '—') + '</span>'
                : (GRUPO ? '<span class="hist-quem">por você</span>' : '');
-    const link = 'pedido.html?id=' + encodeURIComponent(h.id) +
-                 '&t=' + encodeURIComponent(TOKEN) + '&e=' + encodeURIComponent(h.etapa || '');
+    const link = 'pedido.html?id=' + encodeURIComponent(h.id) + sufixoPedido(h.etapa);
 
     tr.innerHTML =
       '<td class="num"><a href="' + link + '">' + esc(h.numero || '—') + '</a></td>' +

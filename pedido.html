@@ -812,12 +812,31 @@ abrir();
 const ENDPOINT_DECISAO = 'https://grupoleh.app.n8n.cloud/webhook/decisao-tela-5a31745968808aaf41ce';
 const MOTIVO_MINIMO = 10;
 const TOKEN_APROVADOR = (PARAMS.get('t') || '').trim();
+/* MODO OBSERVADOR (01/10): ?o=<token do funil>&a=<id do aprovador>. A tela
+   aparece como para aquele aprovador (barra, mapa da cotação), mas os botões
+   ficam desligados e o banco (observar_como) não devolve nada que decida. */
+const OBS = (PARAMS.get('o') || '').trim();
+const OBS_APROV = (PARAMS.get('a') || '').trim();
+const OBSERVADOR = !TOKEN_APROVADOR && !!OBS && !!OBS_APROV;
+const LEITURA_OBS = { fila_de_aprovacao:1, pedido_telas:1 };
+function linkDaFila(){
+  return OBSERVADOR
+    ? 'aprovacoes.html?o=' + encodeURIComponent(OBS) + '&a=' + encodeURIComponent(OBS_APROV)
+    : 'aprovacoes.html?t=' + encodeURIComponent(TOKEN_APROVADOR);
+}
 
 let NA_FILA = null;      // a linha da fila, quando este pedido é daquele aprovador
 let SO_REPROVA = false;  // comprador: a única decisão dele aqui é barrar a compra
 let decidindo = false;
 
 async function rpc(nome, corpo){
+  if(OBSERVADOR && nome !== 'observar_como'){
+    if(!LEITURA_OBS[nome]) throw new Error('Modo observador: só leitura.');
+    const j = await rpc('observar_como', { p_token: OBS, p_aprovador: OBS_APROV, p_funcao: nome,
+                                           p_id: (corpo && corpo.p_id) || null });
+    if(j && !Array.isArray(j) && j.ok === false && nome !== 'pedido_telas') throw new Error(j.erro || 'sem acesso');
+    return j;
+  }
   const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + nome, {
     method:'POST',
     headers:{ apikey:SUPABASE_KEY, Authorization:'Bearer ' + SUPABASE_KEY,
@@ -829,7 +848,7 @@ async function rpc(nome, corpo){
 }
 
 async function prepararAprovacao(){
-  if(!TOKEN_APROVADOR) return;
+  if(!TOKEN_APROVADOR && !OBSERVADOR) return;
 
   /* Fila fora do ar é diferente de fila vazia: sem conseguir conferir, a tela
      continua sendo só de leitura em vez de afirmar o que não sabe. */
@@ -841,12 +860,19 @@ async function prepararAprovacao(){
   if(aqui){
     /* O caminho de volta só existe para quem tem fila: a do aprovador. */
     const voltar = $('voltarTopo');
-    voltar.href = 'aprovacoes.html?t=' + encodeURIComponent(TOKEN_APROVADOR);
+    voltar.href = linkDaFila();
     voltar.hidden = false;
     NA_FILA = aqui;
+    if(OBSERVADOR){
+      mostrarBarra('Modo observador',
+        'É aqui que o aprovador decide; para ele estes botões funcionam. Nesta visão ficam desligados.', '', true);
+      $('btnDevolver').hidden = !podeDevolver();
+      ['btnAprovar','btnReprovar','btnDevolver'].forEach(id => { $(id).disabled = true; $(id).title = 'Modo observador: só leitura'; });
+    } else {
     mostrarBarra('Sua decisão sobre esta solicitação',
       'Aprovando, ela segue para a próxima etapa. Reprovando, o motivo vai para quem pediu.', '', true);
     $('btnDevolver').hidden = !podeDevolver();
+    }
     if(ehDasTelas()) carregarCotacao().catch(()=>{});
     return;
   }
@@ -856,7 +882,7 @@ async function prepararAprovacao(){
      de Cotação. Aqui só explicamos onde o pedido está. */
   if(ehDasTelas()){
     const voltar = $('voltarTopo');
-    voltar.href = 'aprovacoes.html?t=' + encodeURIComponent(TOKEN_APROVADOR);
+    voltar.href = linkDaFila();
     voltar.hidden = false;
     if(SOLICITACAO.etapa_atual === 'edicao'){
       /* Pedido em edição pelo facilitador sai da fila. Dizer isso é melhor que
@@ -868,11 +894,19 @@ async function prepararAprovacao(){
         (desde ? ', ou sozinho às ' + hora(new Date(desde.getTime() + 30*60000)) : '') + '.', 'nao-ok', false);
       return;
     }
-    mostrarBarra('Este pedido não está esperando a sua aprovação.',
+    mostrarBarra(OBSERVADOR ? 'Este pedido não está na fila deste aprovador.' : 'Este pedido não está esperando a sua aprovação.',
       'Ele pode já ter sido decidido, ou estar em outra etapa.', 'nao-ok', false);
     return;
   }
 
+  if(OBSERVADOR){
+    const voltar = $('voltarTopo');
+    voltar.href = linkDaFila();
+    voltar.hidden = false;
+    mostrarBarra('Este pedido não está na fila deste aprovador.',
+      'Ele pode já ter sido decidido, ou estar em outra etapa.', 'nao-ok', false);
+    return;
+  }
 
   await prepararComprador();
 }
@@ -1068,7 +1102,7 @@ function seloDepois(decisao){
 }
 
 async function decidir(decisao, motivo){
-  if(decidindo || !NA_FILA) return;
+  if(OBSERVADOR || decidindo || !NA_FILA) return;
   decidindo = true;
   $('btnAprovar').disabled = true; $('btnReprovar').disabled = true; $('btnDevolver').disabled = true;
   mostrarBarra(SO_REPROVA ? 'Reprovando a compra…' : 'Registrando…',
@@ -1137,6 +1171,7 @@ async function decidir(decisao, motivo){
 
 let modoModal = 'reprovar';
 function abrirReprova(modo){
+  if(OBSERVADOR) return;
   modoModal = modo === 'devolver' ? 'devolver' : 'reprovar';
   const dev = modoModal === 'devolver';
   $('tituloModal').textContent = dev ? 'Devolver ao comprador'

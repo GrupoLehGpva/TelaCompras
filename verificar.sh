@@ -21,7 +21,7 @@ for b in bateria-tela.js teste-centros.js teste-pedido.js teste-decisao.js \
          teste-reprovar-compra.js \
          teste-cadastro-itens.js \
          teste-telas-aprovacoes.js teste-telas-pedido.js teste-telas-formulario.js \
-         teste-telas-acompanhar.js teste-painel-mensal.js teste-painel-telas.js teste-painel-lista.js teste-mesa-banco.js \
+         teste-telas-acompanhar.js teste-painel-mensal.js teste-painel-telas.js teste-painel-lista.js teste-mesa-banco.js teste-observador.js \
          teste-indicadores.js; do
   echo
   echo "== $b =="
