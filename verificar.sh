@@ -49,6 +49,12 @@ echo "$saida" | tail -1
 echo "$saida" | grep -q "falhou 0" || falhou=1
 
 echo
+echo "== teste-lista-de-aprovacao.js (lista do Slack para os aprovadores) =="
+saida=$(node teste-lista-de-aprovacao.js 2>&1) || falhou=1
+echo "$saida" | tail -1
+echo "$saida" | grep -q "falhou 0" || falhou=1
+
+echo
 echo "== teste-comparativa.py (planilha de cotacao) =="
 # Este e lento: recalcula a planilha no LibreOffice de verdade. Recalcular sem
 # erro so provaria que as formulas avaliam; o que ele confere e se as CONTAS

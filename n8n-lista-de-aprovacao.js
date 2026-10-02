@@ -27,6 +27,21 @@
  *   2. o item pulado leva `quantidade` e `numeros`, para a execução dizer O
  *      QUE ficou parado com aquela pessoa, e não só que alguém foi pulado.
  *
+ * ----------------------------------------------------------------------------
+ * FILA DIVIDIDA (02/10)
+ *
+ * O financeiro é uma fila só para três pessoas (Wienfried, Elisangela e
+ * Isabela). Às 9h a lista saiu para as três com o C2609-00022; às 9h04 o
+ * Wienfried aprovou, e quem abriu o link depois achou a fila vazia — parecia
+ * aviso errado. A mensagem estava certa quando saiu, mas ficou velha.
+ *
+ * Decisão do Guilherme: só mudar o texto. Quando o mesmo pedido está na fila
+ * de mais de uma pessoa, a mensagem diz com quem a fila é dividida, que quem
+ * decidir primeiro tira o pedido da fila de todos, e a hora da foto ("situação
+ * às 9h00"). Quem divide é descoberto aqui mesmo, cruzando os números de
+ * cada aprovador nesta execução — sem mexer no banco.
+ * -------------------------------------------------------------------------- */
+/*
  * A lição que fica: marcar não é filtrar. Uma marca só vale se alguém age
  * sobre ela — e a nota do nó dizia que alguém agia, o que fez a leitura do
  * código parecer certa por semanas.
@@ -65,6 +80,26 @@ const HORARIO = {
   lider:      '8h, 11h, 14h e 16h',
   gerencial:  '8h, 11h, 14h e 16h',
   financeiro: '9h, 11h, 14h30 e 16h30'
+};
+
+/* "ELISANGELA G. B. KLOSTER" → "Elisangela" */
+const primeiroNome = nome => {
+  const p = String(nome || '').trim().split(/\s+/)[0] || '';
+  return p ? p.charAt(0).toUpperCase() + p.slice(1).toLowerCase() : '';
+};
+const juntar = l => l.length <= 1 ? (l[0] || '') : l.slice(0, -1).join(', ') + ' e ' + l[l.length - 1];
+const horaBR = () => new Date().toLocaleTimeString('pt-BR', { timeZone: FUSO, hour: '2-digit', minute: '2-digit' }).replace(':', 'h');
+
+/* Quem mais tem os mesmos pedidos na fila nesta execução. */
+const validos = bruto.filter(a => a && a.aprovador_id);
+const dividemCom = a => {
+  const meus = new Set(a.numeros || []);
+  if (!meus.size) return [];
+  return validos
+    .filter(o => o.aprovador_id !== a.aprovador_id && (o.numeros || []).some(nm => meus.has(nm)))
+    .map(o => primeiroNome(o.nome))
+    .filter(Boolean)
+    .sort((x, y) => x.localeCompare(y, 'pt-BR'));
 };
 
 const saida = [];
@@ -130,11 +165,18 @@ for (const a of bruto) {
     ? '_Esta lista chega às ' + quando.join(', e às ') + ', nos dias úteis — não a cada pedido._'
     : '_Esta lista chega algumas vezes ao dia, nos dias úteis — não a cada pedido._';
 
+  const outros = [...new Set(dividemCom(a))];
+  const dividida = outros.length
+    ? '\n_Fila dividida com ' + juntar(outros) + ': quem decidir primeiro tira o pedido da fila de todos. ' +
+      'Se o link abrir sem pedido, alguém já decidiu — não precisa fazer nada._\n'
+    : '';
+
   const texto =
-    '*Pedidos esperando você*\n' +
-    resumo + '\n' +
+    '*Pedidos esperando ' + (outros.length ? 'aprovação' : 'você') + '*\n' +
+    resumo + (outros.length ? ' · situação às ' + horaBR() : '') + '\n' +
     (etapas.length ? '_Aprovação de ' + etapas.join(' e ') + '._\n' : '') +
     (lista.length ? '\n' + lista.join(', ') + resto + '\n' : '') +
+    dividida +
     '\n👉 Abrir a fila: ' + FILA + encodeURIComponent(a.token) + '\n\n' +
     'Na tela dá para aprovar várias de uma vez, ou abrir cada pedido antes de decidir. Reprovar pede o motivo.\n' +
     rodape;
