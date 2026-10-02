@@ -294,6 +294,7 @@ td.r,th.r{text-align:right}
   <nav class="nav-telas" aria-label="Telas da diretoria">
     <a class="bb-link" href="#" aria-current="page">Funil de aprovação</a>
     <a class="bb-link" id="lnk-indicadores" href="indicadores.html">Indicadores</a>
+    <a class="bb-link" id="lnk-lote" href="relatorio-mensal.html">Lote mensal</a>
   </nav>
 </header>
 
@@ -1037,6 +1038,7 @@ function toast(msg){ const t = $('toast'); t.textContent = msg; t.hidden = false
    ===================================================================== */
 initFiltros();
 $('lnk-indicadores').href = 'indicadores.html?t=' + encodeURIComponent(TOKEN);
+$('lnk-lote').href = 'relatorio-mensal.html?t=' + encodeURIComponent(TOKEN);
 $('board-area').innerHTML = '<div class="state"><h3>Carregando…</h3><p>Lendo as solicitações no banco de compras.</p></div>';
 carregar(false);
 // atualiza sozinho a cada 5 min enquanto a página estiver visível

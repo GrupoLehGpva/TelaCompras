@@ -95,6 +95,7 @@ const b = await chromium.launch();
   ok('1 itens somados dos pedidos', /\b4\b/.test(await linhaPac(p, 'g1').locator('td.num').first().textContent()));
   ok('1 pacote de um CC mostra o nome do CC', /LAVOURA/.test(await linhaPac(p, 'g2').textContent()));
   ok('1 pacote sem Devolver', await linhaPac(p, 'g1').locator('.btn-linha.dev').count() === 0 && await linhaPac(p, 'g1').locator('.btn-linha.sim').count() === 1 && await linhaPac(p, 'g1').locator('.btn-linha.nao').count() === 1);
+  ok('1 link do relatório do lote (financeiro) com o token', !(await p.locator('#lnkRelatorio').isHidden()) && (await p.getAttribute('#lnkRelatorio', 'href')) === 'relatorio-mensal.html?t=ap-w');
   ok('1 contagem: 3 na fila', (await p.textContent('#contaFila')) === '3');
   ok('1 tipos: mensal conta os pacotes', /2/.test(await p.textContent('#segTipo [data-tipo=mensal]')));
   /* abrir os pedidos do pacote */
@@ -182,6 +183,7 @@ const b = await chromium.launch();
     return j({ ok:false });
   });
   await p.goto(base + '?o=fn-x&a=wienfried', { waitUntil:'load' }); await p.waitForTimeout(700);
+  ok('7 observador não leva link do relatório', await p.locator('#lnkRelatorio').isHidden());
   ok('7 observador vê os pacotes', await linhaPac(p, 'g1').count() === 1);
   ok('7 botões desligados', await linhaPac(p, 'g1').locator('.btn-linha.sim').isDisabled());
   await linhaPac(p, 'g1').locator('.btn-pacote').click(); await p.waitForTimeout(150);

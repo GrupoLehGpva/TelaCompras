@@ -239,6 +239,7 @@ tr.link:hover{background:var(--surface-2)}
   <nav class="nav-telas" aria-label="Telas da diretoria">
     <a class="bb-link" id="lnk-funil" href="painel.html">Funil de aprovação</a>
     <a class="bb-link" href="#" aria-current="page">Indicadores</a>
+    <a class="bb-link" id="lnk-lote" href="relatorio-mensal.html">Lote mensal</a>
   </nav>
 </header>
 
@@ -508,6 +509,7 @@ function initFiltros(){
   $('btn-refresh').addEventListener('click', () => carregar(true));
   $('btn-csv').addEventListener('click', baixarCSV);
   $('lnk-funil').href = linkFunil();
+  $('lnk-lote').href = 'relatorio-mensal.html?t=' + encodeURIComponent(TOKEN);
 }
 function limparFiltros(){
   Object.assign(state, { per:'d30', emp:'', und:'', cc:'', tipo:'', fam:'' });

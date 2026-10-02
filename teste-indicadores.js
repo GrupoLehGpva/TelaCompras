@@ -282,8 +282,10 @@ ok('10 clicou → funil', /painel\.html\?t=pd-teste&q=T-COT$/.test(p.url()), p.u
 ok('10 funil já busca o pedido, em todo o período', await p.inputValue('#f-q') === 'T-COT' && await p.inputValue('#f-per') === 'all', [await p.inputValue('#f-q'), await p.inputValue('#f-per')]);
 ok('10 funil mostra só ele', await p.locator('#board-area .card').count() === 1 && await p.locator('#board-area .card[data-id="T-COT"]').count() === 1);
 ok('10 botão Indicadores no funil leva o token', (await p.getAttribute('#lnk-indicadores', 'href')) === 'indicadores.html?t=pd-teste');
+ok('10 botão Lote mensal no funil leva o token', (await p.getAttribute('#lnk-lote', 'href')) === 'relatorio-mensal.html?t=pd-teste');
 await p.click('#lnk-indicadores'); await p.waitForTimeout(700);
 ok('10 funil → indicadores', /indicadores\.html\?t=pd-teste$/.test(p.url()) && nb(await txt(p, '#v-carteira')) === 'R$ 70.000,00', p.url());
+ok('10 botão Lote mensal nos indicadores leva o token', (await p.getAttribute('#lnk-lote', 'href')) === 'relatorio-mensal.html?t=pd-teste');
 await p.click('#lnk-funil'); await p.waitForTimeout(700);
 ok('10 indicadores → funil (sem busca)', /painel\.html\?t=pd-teste$/.test(p.url()) && await p.inputValue('#f-q') === '', p.url());
 await p.goBack(); await p.waitForTimeout(600);

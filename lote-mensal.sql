@@ -40,3 +40,20 @@
 -- · fila_do_comprador: pedido com lote_id nunca aparece solto (só o lote).
 -- · Teste: _teste_lote_mensal P23..P36 (36/36); _teste_caminho_telas 167/167.
 -- =====================================================================
+
+-- =====================================================================
+-- FASE 4 (02/10) — relatório do mês (telas_24)
+-- · relatorio_lote_mensal(p_token, p_competencia default null) → jsonb:
+--   quem, ve_tudo, competencia, competencias (lotes + o próximo), lote (estado,
+--   corte, pacotes), itens (um por item: pedido, gerência, unidade de negócio,
+--   CC, família, qtd pedida, qtd aprovada, incluído, cortado, valor comprado,
+--   valor reprovado, fornecedor, situação) e cortes (item reprovado pela
+--   gerência, quantidade reduzida, pedido reprovado — com motivo, quem e quando).
+-- · Escopo do mês: pedidos do lote + mensais reprovadas antes do lote entre o
+--   corte anterior e o deste mês + (mês que ainda não fechou) as que aguardam o lote.
+-- · Acesso: diretoria, comprador e financeiro veem tudo; gerência vê só a sua;
+--   facilitador não vê.
+-- · Tela: relatorio-mensal.html?t=<token> (links no funil, nos indicadores,
+--   na Mesa e na tela de aprovações da gerência e do financeiro).
+-- · Teste: _teste_lote_mensal P37..P43 (43/43).
+-- =====================================================================

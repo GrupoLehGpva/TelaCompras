@@ -438,6 +438,7 @@ table.rateio td.ind{padding-left:24px}
     <div class="who">
       <span class="lbl">Comprador</span>
       <span class="nome-comprador" id="quem-nome">—</span>
+      <a class="btn ghost" id="lnk-relatorio" href="relatorio-mensal.html">Relatório do lote</a>
       <button class="btn ghost" type="button" id="bt-atualizar">Atualizar</button>
     </div>
   </header>
@@ -1608,6 +1609,7 @@ $('bt-atualizar').onclick = () => carregarFila(true);
      reprovar_na_cotacao · registrar_orcamentos · buscar_fornecedor
    ===================================================================== */
 const TOKEN = (new URLSearchParams(location.search).get('t') || '').trim();
+$('lnk-relatorio').href = 'relatorio-mensal.html?t=' + encodeURIComponent(TOKEN);   // relatório do lote mensal (fase 4)
 const ANEXO_URL = 'https://grupoleh.app.n8n.cloud/webhook/anexo';
 const ORC_MAX = 10 * 1024 * 1024;
 const ORC_TIPOS = /^(application\/pdf|image\/(jpeg|png|webp|heic|heif))$/;

@@ -143,6 +143,7 @@ const b = await chromium.launch();
 
 /* L1 — antes do corte: aba "Aguardando o lote" com os pedidos, só para ver */
 { const p = await abrir(b);
+  ok('L1 link do relatório do lote com o token', (await p.getAttribute('#lnk-relatorio', 'href')) === 'relatorio-mensal.html?t=cp-herisson');
   ok('L1 abas antes do corte', JSON.stringify(await abas(p)) === JSON.stringify(['Para cotar1','Aguardando o lote2','Devolvidas0','Enviadas0']), await abas(p));
   ok('L1 mensal no lote não aparece em Para cotar', !/C2610-00010/.test(await txt(p, '#view')));
   await p.click('[data-tab="lote"]'); await p.waitForTimeout(150);

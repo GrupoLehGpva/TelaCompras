@@ -490,6 +490,8 @@
   .selo-tipo.mensal{background:var(--demo-bg);color:var(--demo)}
   .selo-unico{display:inline-block;margin-top:4px;padding:1px 8px;border-radius:999px;background:var(--demo-bg);color:var(--demo);font-size:11px;font-weight:700}
   .selo-urgente{display:inline-block;margin-top:4px;margin-right:4px;padding:1px 8px;border-radius:999px;background:var(--erro-bg);color:var(--erro);font-size:11px;font-weight:700}
+  .lnk-rel{color:inherit;text-decoration:none;border:1px solid currentColor;background:transparent}
+  .lnk-rel:hover{background:rgba(255,255,255,.12)}
   .selo-pacote{display:inline-block;margin-top:4px;margin-right:4px;padding:1px 8px;border-radius:999px;background:var(--verde-claro);color:var(--verde-mata);font-size:11px;font-weight:700}
   .btn-pacote{font:inherit;font-weight:700;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left;text-decoration:underline;text-underline-offset:3px}
   .btn-pacote:focus-visible{outline:2px solid currentColor;outline-offset:2px}
@@ -516,6 +518,7 @@
   <div class="direita">
     <span class="selo" id="seloAprovador" hidden></span>
     <span class="selo status" id="seloTotal" hidden></span>
+    <a class="selo lnk-rel" id="lnkRelatorio" href="relatorio-mensal.html" hidden>Relatório do lote mensal</a>
   </div>
 </header>
 
@@ -1308,6 +1311,11 @@ async function abrir(){
     $('seloAprovador').textContent = APROVADOR.nome;
     $('seloAprovador').hidden = false;
     $('tituloTopo').textContent = 'Aprovações de ' + APROVADOR.nome;
+    /* Relatório do lote mensal (fase 4): gerência e financeiro. Observador não leva o token de ninguém. */
+    if(!OBSERVADOR && Array.isArray(APROVADOR.etapas) && APROVADOR.etapas.some(e => e === 'gerencial' || e === 'financeiro')){
+      $('lnkRelatorio').href = 'relatorio-mensal.html?t=' + encodeURIComponent(TOKEN);
+      $('lnkRelatorio').hidden = false;
+    }
     document.title = (OBSERVADOR ? 'Observando · ' : 'Aprovações · ') + APROVADOR.nome + ' · Grupo Leh';
 
     FILA = await carregarFila();
