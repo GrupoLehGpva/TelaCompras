@@ -506,6 +506,7 @@
   .hist-resumo{font-size:13px;color:var(--muted)}
   table.hist tr.mes-sep td{background:var(--realce);color:var(--texto);font-weight:700;font-size:13px;padding:9px 12px;text-align:left}
   table.hist tr.mes-sep td span{font-weight:500;color:var(--muted)}
+  table.hist .etapas{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
   table.hist tr.pac-det td{background:var(--realce);padding:10px 12px 12px}
   .hist-ped{display:flex;flex-wrap:wrap;gap:6px 12px;margin:0;padding:0;list-style:none;font-size:13px}
   .hist-ped a{color:var(--verde);font-weight:650;text-decoration:none}
@@ -1059,7 +1060,6 @@ function desenhar(){
       : 'Aprovar selecionadas';
   $('marcarTodas').checked = lista.length > 0 && marcadasVisiveis === lista.length;
 
-  $('contaFila').textContent = FILA.length;
   $('seloTotal').textContent = FILA.length + (FILA.length === 1 ? ' na fila' : ' na fila');
   $('seloTotal').hidden = false;
   document.querySelectorAll('.btn-linha').forEach(b => { b.disabled = enviando || OBSERVADOR; if(OBSERVADOR) b.title = 'Modo observador: só leitura'; });
@@ -1402,14 +1402,30 @@ const passaBusca = h => {
   return [h.numero, h.facilitador, h.centro_custo_nome, h.motivo, h.situacao, h.decidido_por, h.gerencia,
           ...(h.pedidos || []).map(p => p.numero)].some(v => String(v || '').toLowerCase().includes(t));
 };
-function histDaAba(){
-  return agruparPacotes((HIST || []).filter(h => aba === 'aprov' ? ehAprovada(h) : !ehAprovada(h)));
+/* Um pedido, uma linha (02/10): o banco grava uma decisão por etapa, e quem é
+   liderança e gerência decide o mesmo pedido duas vezes — a lista mostrava o
+   pedido repetido e contava em dobro. Vale a decisão mais recente; a coluna
+   Etapa diz todas em que a pessoa decidiu. */
+function umPorPedido(lista){
+  const por = new Map();
+  lista.slice().sort((a, b) => String(a.decidido_em || '').localeCompare(String(b.decidido_em || ''))).forEach(h => {
+    const k = h.id || h.numero, x = por.get(k);
+    if(!x){ por.set(k, Object.assign({}, h, { etapas:[h.etapa].filter(Boolean) })); return; }
+    const etapas = x.etapas.concat(h.etapa && !x.etapas.includes(h.etapa) ? [h.etapa] : []);
+    por.set(k, Object.assign({}, h, { etapas, aberto_em: x.aberto_em || h.aberto_em }));
+  });
+  return [...por.values()];
 }
+function histDaAba(qual){
+  const a = qual || aba;
+  return agruparPacotes(umPorPedido(HIST || []).filter(h => a === 'aprov' ? ehAprovada(h) : !ehAprovada(h)));
+}
+/* Números das abas = do tipo escolhido (o tipo vem primeiro, como na Mesa). */
 function contarHist(){
   if(!HIST) return;
-  const ap = agruparPacotes(HIST.filter(ehAprovada)).length;
-  $('contaAprov').textContent = ap; $('contaAprov').hidden = false;
-  $('contaRep').textContent = agruparPacotes(HIST.filter(h => !ehAprovada(h))).length; $('contaRep').hidden = false;
+  const doTipo = l => l.filter(h => tipoDe(h) === tipoSel).length;
+  $('contaAprov').textContent = doTipo(histDaAba('aprov')); $('contaAprov').hidden = false;
+  $('contaRep').textContent = doTipo(histDaAba('rep')); $('contaRep').hidden = false;
 }
 const pacotesHistAbertos = new Set();
 
@@ -1480,8 +1496,8 @@ function desenharHist(){
         (h.tipo_compra ? '<br><span class="selo-tipo ' + (tipoDe(h) === 'urgente' ? 'urgente selo-urgente' : tipoDe(h)) + '">' + TIPO_NOME[tipoDe(h)] + '</span>' : '') + '</td>' +
       '<td><span class="corta">' + esc(h.facilitador || '—') + '</span></td>' +
       '<td><span class="corta">' + esc(h.centro_custo_nome || '—') + '</span></td>' +
-      '<td><span class="etapa ' + esc(h.etapa || '') + '">' +
-        esc(ETAPA_NOME[h.etapa] || h.etapa || '—') + '</span></td>' +
+      '<td><div class="etapas">' + (h.etapas && h.etapas.length ? h.etapas : [h.etapa]).map(e =>
+        '<span class="etapa ' + esc(e || '') + '">' + esc(ETAPA_NOME[e] || e || '—') + '</span>').join('') + '</div></td>' +
       '<td><span class="selo-res ' + (aprovou ? 'sim' : 'nao') + '">' +
         rotulo + '</span>' + quem +
         (h.motivo ? '<div class="hist-motivo" title="' + esc(h.motivo) + '">' + esc(h.motivo) + '</div>' : '') +
@@ -1547,18 +1563,17 @@ function escolherTipoInicial(){
   tipoSel = t || 'normal';
 }
 
-/* Contagem por tipo na aba aberta, com os outros filtros da fila aplicados. */
+/* Número de cada tipo = quantos ESPERAM a decisão, como na Mesa (02/10). Fixo:
+   não muda ao trocar de aba, de mês ou de busca — antes mudava e confundia. */
 function pintarTipos(){
-  let base;
-  if(aba === 'fila'){
-    const t = tipoSel; tipoSel = ''; base = visiveis(); tipoSel = t;
-  } else base = histDaAba().filter(passaBusca).filter(h => !histMes || mesDe(h) === histMes);
   document.querySelectorAll('#segTipo [data-tipo]').forEach(b => {
-    const t = b.dataset.tipo, n = base.filter(x => tipoDe(x) === t).length;
+    const t = b.dataset.tipo, n = FILA.filter(x => tipoDe(x) === t).length;
     b.setAttribute('aria-pressed', String(tipoSel === t));
-    b.title = 'Compra ' + TIPO_NOME[t].toLowerCase();
-    const c = b.querySelector('.c'); c.textContent = (aba !== 'fila' && !HIST) ? '–' : n; c.classList.toggle('tem', n > 0);
+    b.title = 'Compra ' + TIPO_NOME[t].toLowerCase() + ' · ' + n + (n === 1 ? ' esperando você' : ' esperando você');
+    const c = b.querySelector('.c'); c.textContent = n; c.classList.toggle('tem', n > 0);
   });
+  $('contaFila').textContent = FILA.filter(x => tipoDe(x) === tipoSel).length;
+  contarHist();
 }
 
 /* ---- eventos ---- */

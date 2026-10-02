@@ -100,7 +100,7 @@ const b = await chromium.launch();
   ok('1 pacote de um CC mostra o nome do CC', /LAVOURA/.test(await linhaPac(p, 'g2').textContent()));
   ok('1 pacote sem Devolver', await linhaPac(p, 'g1').locator('.btn-linha.dev').count() === 0 && await linhaPac(p, 'g1').locator('.btn-linha.sim').count() === 1 && await linhaPac(p, 'g1').locator('.btn-linha.nao').count() === 1);
   ok('1 link do relatório do lote (financeiro) com o token', !(await p.locator('#lnkRelatorio').isHidden()) && (await p.getAttribute('#lnkRelatorio', 'href')) === 'relatorio-mensal.html?t=ap-w');
-  ok('1 contagem: 3 na fila', (await p.textContent('#contaFila')) === '3');
+  ok('1 contagem: 2 pacotes no Mensal, 3 na fila no total', (await p.textContent('#contaFila')) === '2' && /3 na fila/.test(await p.textContent('#seloTotal')));
   ok('1 tipos: mensal conta os pacotes', /2/.test(await p.textContent('#segTipo [data-tipo=mensal]')));
   /* abrir os pedidos do pacote */
   await linhaPac(p, 'g1').locator('.btn-pacote').click(); await p.waitForTimeout(150);
@@ -130,7 +130,7 @@ const b = await chromium.launch();
   ok('2 decidir_pacote com lote, gerência e token no corpo', c && c.c.p_lote_id === LOTE && c.c.p_gerencia_id === 'g1' && c.c.p_decisao === 'aprovado' && c.c.p_token === 'ap-w' && c.c.p_motivo === null, c);
   ok('2 não decidiu pedido a pedido', ch(p, 'decidir_pedido').length === 0);
   ok('2 aviso do banco', /Pacote de Gerente Fábrica aprovado: 2 pedidos/.test(await p.textContent('#avisoTopo')), await p.textContent('#avisoTopo'));
-  ok('2 pacote sai da fila; o outro fica', await linhaPac(p, 'g1').count() === 0 && await linhaPac(p, 'g2').count() === 1 && (await p.textContent('#contaFila')) === '2');
+  ok('2 pacote sai da fila; o outro fica', await linhaPac(p, 'g1').count() === 0 && await linhaPac(p, 'g2').count() === 1 && (await p.textContent('#contaFila')) === '1' && /2 na fila/.test(await p.textContent('#seloTotal')));
   await p.close(); }
 
 /* 3 — reprovar um pacote: motivo obrigatório, texto do pacote */
@@ -157,11 +157,11 @@ const b = await chromium.launch();
   ok('4 marcar todas (Mensal) conta os pacotes como linhas', /Aprovar 2 selecionadas/.test(await p.textContent('#btnLote')), await p.textContent('#btnLote'));
   await p.click('#btnLote'); await p.waitForTimeout(800);
   ok('4 uma chamada por pacote, nenhuma pedido a pedido', ch(p, 'decidir_pacote').length === 2 && ch(p, 'decidir_pedido').length === 0);
-  ok('4 Mensal vazio; a avulsa continua no Normal', (await linhasFila(p)).length === 0 && /2 solicitações aprovadas/.test(await p.textContent('#avisoTopo')) && (await p.textContent('#contaFila')) === '1', await p.textContent('#avisoTopo'));
+  ok('4 Mensal vazio; a avulsa continua no Normal', (await linhasFila(p)).length === 0 && /2 solicitações aprovadas/.test(await p.textContent('#avisoTopo')) && (await p.textContent('#contaFila')) === '0' && /1 na fila/.test(await p.textContent('#seloTotal')), await p.textContent('#avisoTopo'));
   await p.click('#segTipo [data-tipo=normal]'); await p.waitForTimeout(120);
   await p.click('#marcarTodas'); await p.click('#btnLote'); await p.waitForTimeout(800);
   ok('4 avulsa aprovada pelo pedido', ch(p, 'decidir_pedido').length === 1 && ch(p, 'decidir_pedido')[0].c.p_id === 'n1');
-  ok('4 fila vazia depois', (await linhasFila(p)).length === 0 && (await p.textContent('#contaFila')) === '0');
+  ok('4 fila vazia depois', (await linhasFila(p)).length === 0 && (await p.textContent('#contaFila')) === '0' && /0 na fila/.test(await p.textContent('#seloTotal')));
   await p.close(); }
 
 /* 5 — recusa do banco: aviso e fila recarregada; o pacote continua */
