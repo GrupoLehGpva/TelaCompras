@@ -44,13 +44,13 @@ ok('1 número colorido só quando há pedido', await p.$eval('#f-tipo [data-tipo
 /* 02/10: com pedido aguardando o lote mensal, a coluna aparece também no quadro geral */
 ok('1 todos: ordem normal + lote (há mensal aguardando)', JSON.stringify(await cols()) === JSON.stringify(['Liderança imediata','Compras · cotação','Aprovação gerencial','Aguardando o lote','Aprovação financeiro','Ordem de compra']), JSON.stringify(await cols()));
 ok('1 M-05 na coluna do lote', await p.$eval('.card[data-id="M-05"]', c => c.closest('.col').querySelector('h3').textContent.trim()) === 'Aguardando o lote');
-ok('1 lote diz com quem', /Lote mensal \(entra na cotação no dia 20\)/.test(await p.textContent('.card[data-id="M-05"]')));
+ok('1 lote diz com quem', /Lote mensal \(entra na cotação quando Compras fechar o mês\)/.test(await p.textContent('.card[data-id="M-05"]')));
 ok('1 todos: card mensal com etiqueta', /Mensal/.test(await p.textContent('.card[data-id="M-02"]')) && !/Mensal/.test(await p.textContent('.card[data-id="N-03"]')));
 
 await p.click('#f-tipo [data-tipo=mensal]'); await p.waitForTimeout(300);
 ok('2 mensal: colunas na ordem da mensal (com o lote)', JSON.stringify(await cols()) === JSON.stringify(['Liderança imediata','Aprovação gerencial','Aguardando o lote','Compras · cotação','Aprovação financeiro','Ordem de compra']), JSON.stringify(await cols()));
 ok('2 mensal: título diz compra mensal', /compra mensal/.test(await p.textContent('#quadro-titulo')));
-ok('2 mensal: dica explica o fluxo', /gerência aprova, o pedido espera o lote do dia 20/.test(await p.textContent('#quadro-dica')));
+ok('2 mensal: dica explica o fluxo', /gerência aprova, o pedido espera Compras fechar o mês/.test(await p.textContent('#quadro-dica')));
 ok('2 mensal: só pedidos mensais', await p.locator('.card[data-id^="N-"]').count() === 0 && await p.locator('.card[data-id^="M-"]').count() === 5);
 ok('2 mensal: sem etiqueta repetida', !/Mensal/.test(await p.textContent('.card[data-id="M-02"]')));
 const colDe = id => p.$eval('.card[data-id="' + id + '"]', c => c.closest('.col').querySelector('h3').textContent.trim());

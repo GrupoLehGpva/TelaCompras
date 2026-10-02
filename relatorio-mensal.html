@@ -331,7 +331,7 @@ function desenhar(){
   const tab = (id, nome, n) => `<button class="tab" role="tab" type="button" data-aba="${id}" aria-selected="${S.aba === id}">${nome}${n !== undefined ? `<span class="c num">${n}</span>` : ''}</button>`;
   let corpo;
   if (!r.itens.length && !r.cortes.length){
-    corpo = `<div class="state"><h3>Nenhuma compra mensal em ${esc(mesNome(r.competencia))}</h3><p>${L.estado === 'aberto' ? 'Quando as gerências aprovarem compras mensais, elas aparecem aqui até o corte do dia 20.' : 'Este lote não tem pedidos no seu acesso.'}</p></div>`;
+    corpo = `<div class="state"><h3>Nenhuma compra mensal em ${esc(mesNome(r.competencia))}</h3><p>${L.estado === 'aberto' ? 'Quando as gerências aprovarem compras mensais, elas aparecem aqui até Compras fechar o mês.' : 'Este lote não tem pedidos no seu acesso.'}</p></div>`;
   } else if (!I.length && !C.length){
     corpo = `<div class="state"><h3>Nada com esses filtros</h3><p>Tire os filtros para ver o mês inteiro.</p><button class="btn primary" type="button" id="bt-limpa">Tirar os filtros</button></div>`;
   } else if (S.aba === 'quanto') corpo = tabelaQuanto(semValor);
@@ -340,10 +340,10 @@ function desenhar(){
 
   $('view').innerHTML = `
     <div class="estado-lote"><span class="pill ${est[0]}">${est[1]}</span>
-      <span>Corte ${L.estado === 'aberto' ? 'previsto para' : 'em'} <strong>${dt(L.corte_em)}</strong> (virada do dia 19 para o 20)</span>
+      <span>${L.estado === 'aberto' ? 'Ainda não fechado: os pedidos entram na cotação quando Compras fechar o mês' : `Fechado por Compras em <strong>${dt(L.corte_em)}</strong>`}</span>
       ${pacs.length ? `<span class="pacs" aria-label="Pacotes por gerência">${pacs.map(p => { const e = ESTADO_PAC[p.estado] || ['neutral', p.estado]; return `<span class="pill ${e[0]}" title="${esc(p.motivo || '')}">${esc(p.gerencia)} · ${e[1]} · ${brl(Number(p.total))}</span>`; }).join('')}</span>` : ''}
     </div>
-    ${L.estado === 'aberto' ? `<p class="nota">O lote de ${esc(mesNome(r.competencia))} ainda não fechou. Aparecem os pedidos que já aguardam o corte; o valor só existe depois da cotação.</p>` : ''}
+    ${L.estado === 'aberto' ? `<p class="nota">O lote de ${esc(mesNome(r.competencia))} ainda não fechou. Aparecem os pedidos que já aguardam o fechamento; o valor só existe depois da cotação.</p>` : ''}
     <div class="resumo">
       <div class="card"><div class="k">Pedidos</div><div class="v">${pedidos.size}</div><div class="s">${plural(new Set(I.map(x => x.gerencia_id)).size, 'gerência', 'gerências')} · ${plural(new Set(I.map(x => x.centro_custo)).size, 'centro de custo', 'centros de custo')}</div></div>
       <div class="card"><div class="k">Itens pedidos</div><div class="v">${I.length}</div><div class="s">${plural(I.filter(x => Number(x.qtd_aprovada) > 0).length, 'aprovado', 'aprovados')} pela gerência</div></div>

@@ -85,7 +85,7 @@ const b = await chromium.launch();
   ok('2 título do mês', (await txt(p, '#titulo')) === 'Lote mensal de outubro/2026');
   ok('2 diretoria: navegação do funil com o token', !(await p.locator('#nav-telas').isHidden()) && /painel\.html\?t=dir-1/.test(await p.getAttribute('#lnk-funil', 'href')) && /indicadores\.html\?t=dir-1/.test(await p.getAttribute('#lnk-indicadores', 'href')));
   const est = await txt(p, '.estado-lote');
-  ok('2 estado do lote e pacotes', /Encerrado/.test(est) && /20\/10\/2026/.test(est) && /Gerente Fábrica · aprovado · R\$\s?100,00/.test(est) && /Gerente Fazenda · reprovado/.test(est), est);
+  ok('2 estado do lote e pacotes', /Encerrado/.test(est) && /Fechado por Compras em 20\/10\/2026/.test(est) && !/dia 19|dia 20/.test(est) && /Gerente Fábrica · aprovado · R\$\s?100,00/.test(est) && /Gerente Fazenda · reprovado/.test(est), est);
   const res = (await p.innerText('.resumo')).replace(/\s+/g, ' ');
   ok('2 resumo: pedidos, itens, valor comprado, cortes', /Pedidos 3/i.test(res) && /Itens pedidos 6/i.test(res) && /4 aprovados/.test(res) && /R\$\s?130,50/.test(res) && /O que foi cortado 3/i.test(res) && /R\$\s?70,00 reprovados no financeiro/.test(res), res);
   const q = await cel(p, '#tb-quanto');
@@ -157,7 +157,7 @@ const b = await chromium.launch();
   /* 6 — trocar de mês */
   await p.selectOption('#f-mes', '2026-11-01'); await p.waitForTimeout(400);
   ok('6 troca de mês pede o mês escolhido', p.chamadas[p.chamadas.length - 1].p_competencia === '2026-11-01');
-  ok('6 mês aberto: avisa e sem valor', /Lote mensal de novembro\/2026/.test(await txt(p, '#titulo')) && /ainda não fechou/.test(await txt(p, '#view')) && /Ainda não fechou/.test(await txt(p, '.estado-lote'))
+  ok('6 mês aberto: avisa e sem valor', /Lote mensal de novembro\/2026/.test(await txt(p, '#titulo')) && /ainda não fechou/.test(await txt(p, '#view')) && /Ainda não fechou/.test(await txt(p, '.estado-lote')) && /Ainda não fechado: os pedidos entram na cotação quando Compras fechar o mês/.test(await txt(p, '.estado-lote'))
      && /sai da cotação do lote/.test(await txt(p, '.resumo')), await txt(p, '.resumo'));
   ok('6 a aba escolhida continua', (await p.getAttribute('[data-aba="cortes"]', 'aria-selected')) === 'true' && /Nada foi cortado/.test(await txt(p, '#view')));
   ok('6 opção do mês aberto diz que não fechou', /novembro\/2026 \(ainda não fechou\)/.test(await txt(p, '#f-mes')));

@@ -388,8 +388,8 @@ const ETAPAS = [
    Com o filtro Tipo = Mensal o quadro mostra as colunas nessa ordem; o modal
    mostra a trilha pelo fluxo do próprio pedido. A regra dos dois fluxos mora no
    banco (passo_da_compra); aqui é só a ordem das colunas. */
-/* Lote mensal (02/10): a mensal aprovada pela gerência espera o corte da virada do
-   dia 19 para o 20 e só então entra na cotação, num lote único. Etapa própria,
+/* Lote mensal (02/10): a mensal aprovada pela gerência espera Compras fechar o mês
+   (botão "Fechar mês" na Mesa) e só então entra na cotação, num lote único. Etapa própria,
    só do fluxo mensal; no quadro geral a coluna só aparece quando há pedido nela. */
 const ETAPA_LOTE = { id:'lote', nome:'Aguardando o lote', curto:'Lote', sla:31 };
 const ETAPAS_MENSAL = ['lid','ger','lote','cot','fin','oc'].map(id => id === 'lote' ? ETAPA_LOTE : ETAPAS.find(e => e.id === id));
@@ -561,7 +561,7 @@ function comQuem(s){
     case 'lid': return s.aprovador ? s.aprovador + ' (liderança imediata)' : 'Liderança imediata';
     case 'cot': return s.comprador ? 'Comprador ' + s.comprador : 'Compras';
     case 'ger': return s.aprovador ? s.aprovador + ' (aprovação gerencial)' : 'Aprovação gerencial';
-    case 'lote': return 'Lote mensal (entra na cotação no dia 20)';
+    case 'lote': return 'Lote mensal (entra na cotação quando Compras fechar o mês)';
     case 'fin': return s.aprovador ? s.aprovador + ' (financeiro)' : 'Financeiro';
     case 'oc':  return 'Lançamento da ordem no GR';
     default: return '—';
@@ -763,7 +763,7 @@ function renderQuadro(base){
   $('quadro-titulo').textContent = 'Solicitações por etapa' + (mensal ? ' · compra mensal' : '');
   pintarTipos();
   const peca = state.vista === 'lista' ? 'numa linha' : 'num card';
-  $('quadro-dica').textContent = mensal ? 'Fluxo da compra mensal: a gerência aprova, o pedido espera o lote do dia 20 e só então vai à cotação · clique ' + peca + ' para ver o detalhe'
+  $('quadro-dica').textContent = mensal ? 'Fluxo da compra mensal: a gerência aprova, o pedido espera Compras fechar o mês e só então vai à cotação, no lote · clique ' + peca + ' para ver o detalhe'
                                         : 'Clique ' + peca + ' para ver o detalhe';
   document.querySelectorAll('#f-vista [data-vista]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.vista === state.vista)));
   const visiveis = COLS.flatMap(e => ordenar(base.filter(s => s.status === e.id)));

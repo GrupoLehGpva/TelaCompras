@@ -189,7 +189,7 @@ const b = await chromium.launch();
   ok('2 clicar no marcado não desmarca (sempre há um tipo)', (await tipos())[1] === 'urgente:true:1' && await p.locator('table.fila tbody tr').count() === 1);
   ok('2 sem botão "Todas" no tipo', await p.locator('[data-tipo=""]').count() === 0 && JSON.stringify(await p.$$eval('[data-tipo]', bs => bs.map(b => b.dataset.tipo))) === JSON.stringify(['normal','urgente','mensal']));
   await p.click('[data-tipo="mensal"]'); await p.waitForTimeout(150);
-  ok('2 etapas da mensal', JSON.stringify(await abas()) === JSON.stringify(['Lote para cotar0', 'Aguardando o corte · dia 200', 'Devolvidas1', 'Enviadas0']), await abas());
+  ok('2 etapas da mensal', JSON.stringify(await abas()) === JSON.stringify(['Aguardando fechamento0', 'Lote para cotar0', 'Enviadas0', 'Devolvidas1']), await abas());
   ok('2 mensal sem lote: aviso', /Nenhum lote mensal para cotar agora/.test(await txt(p, '#view')));
   await p.click('[data-tab="dev"]'); await p.waitForTimeout(100);
   ok('2 mensal devolvida', /C2609-03003/.test(await txt(p, 'table.fila')) && /Devolvida/.test(await txt(p, 'table.fila')));

@@ -419,6 +419,14 @@ td.u input{height:32px;padding:0 10px}
 .tipo-seg{padding:4px;border-radius:10px}
 .tipo-seg .sgb{font-size:15px;min-height:40px;padding:8px 16px}
 .busca-topo{min-width:300px;margin-left:auto}
+.linha-etapas{display:flex;align-items:flex-end;gap:12px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.linha-etapas .tabs{border-bottom:0;margin-bottom:0;flex:0 1 auto;min-width:0}
+.btn.fechar-mes{background:var(--crit);border-color:var(--crit);color:#fff;font-weight:700;margin-bottom:6px;white-space:nowrap}
+.btn.fechar-mes:hover:not(:disabled){filter:brightness(1.08);background:var(--crit)}
+.btn.fechar-mes:disabled{opacity:.45}
+.fm-ger{display:flex;flex-direction:column;gap:4px;margin:8px 0 0;padding:0;list-style:none}
+.fm-ger li{display:flex;justify-content:space-between;gap:12px;border-bottom:1px dashed var(--line);padding:4px 0}
+@media (max-width:600px){ .linha-etapas{flex-wrap:wrap} .btn.fechar-mes{margin:6px 0} }
 @media (max-width:600px){ .busca-topo{min-width:0;flex:1 1 100%;margin-left:0} }
 .lote-filtros select.ctl{max-width:260px}
 td.qt .qt-f{display:block;font-size:11px;color:var(--accent);font-family:inherit}
@@ -515,9 +523,9 @@ const ETAPAS = [
   { id:'fin', nome:'Aprovação financeiro', curto:'Financeiro', sla:2 },
   { id:'oc',  nome:'Ordem de compra',      curto:'OC',         sla:1 },
 ];
-/* Lote mensal (02/10): a mensal aprovada pela gerência espera o corte da virada
-   do dia 19 para o 20 e entra na Mesa junto com as outras, num lote só. */
-const ETAPA_LOTE = { id:'lote', nome:'Aguardando o lote', curto:'Lote', sla:null };
+/* Lote mensal (02/10): a mensal aprovada pela gerência espera Compras fechar o mês
+   (botão "Fechar mês") e entra na Mesa junto com as outras, num lote só. */
+const ETAPA_LOTE = { id:'lote', nome:'Aguardando fechamento do mês', curto:'Lote', sla:null };
 /* Compra mensal: a gerência aprova a necessidade ANTES da cotação. */
 const fluxoDe = s => s && s.tipo === 'mensal' ? ['lid','ger','lote','cot','fin','oc'].map(etapa) : ETAPAS;
 
@@ -662,7 +670,7 @@ const sol = id => SOLS.find(s => s.id === id);
 const etapa = id => id === 'lote' ? ETAPA_LOTE : ETAPAS.find(e => e.id === id);
 function entradaEtapa(s){ return s.eventos[s.eventos.length - 1].data; }
 function prazoEtapa(s){
-  if (s.status === 'lote') return { cls:'neutral', txt:'Espera o corte', d:(Date.now() - entradaEtapa(s)) / 864e5, sla:null };
+  if (s.status === 'lote') return { cls:'neutral', txt:'Aguarda o fechamento', d:(Date.now() - entradaEtapa(s)) / 864e5, sla:null };
   const e = etapa(s.status); if (!e || !e.sla) return null;
   const d = (Date.now() - entradaEtapa(s)) / 864e5;
   if (d > e.sla) return { cls:'crit', txt:'Atrasada', d, sla:e.sla };
@@ -699,13 +707,13 @@ const FIM_NOME = { aprovado:'Aprovada', reprovado:'Reprovada', cancelado:'Cancel
 function comQuem(s){
   if (s.status === 'fim') return (FIM_NOME[s.fim] || 'Encerrada') + ' · encerrada';
   if (s.status === 'cot') return 'Comprador ' + (s.comprador || S.comprador);
-  if (s.status === 'lote') return 'Lote mensal · entra na cotação em ' + dt(proximoCorte());
+  if (s.status === 'lote') return 'Lote mensal · entra na cotação quando Compras fechar o mês';
   if (s.lote && s.status === 'fin') return 'Aprovação financeira · ' + plural(s.pacotes.aguardando, 'pacote esperando', 'pacotes esperando');
   const nome = s.comQuemNome ? ' (' + s.comQuemNome + ')' : '';
   return ({ ger:'Aprovação gerencial', fin:'Aprovação financeira' }[s.status] || '—') + nome;
 }
 function estadoCot(s){
-  if (s.status === 'lote') return { cls:'neutral', txt:'Entra na cotação em ' + dt(proximoCorte()) };
+  if (s.status === 'lote') return { cls:'neutral', txt:'Aguardando fechamento' };
   if (s.lote && s.status === 'fim') return s.fim === 'aprovado' ? { cls:'ok', txt:'Pacotes aprovados · ' + brl(s.valor) } : { cls:'crit', txt:'Pacotes reprovados' };
   if (s.lote && s.status === 'fin') return { cls:'accent', txt:'No financeiro · ' + brl(s.valor) };
   if (s.status === 'fim'){
@@ -726,14 +734,17 @@ function estadoCot(s){
 const STATUS_ENV = [ { id:'aprov', nome:'Esperando aprovação' }, { id:'oc', nome:'OC liberada' }, { id:'rep', nome:'Reprovadas' } ];
 const statusEnv = s => s.status === 'ger' || s.status === 'fin' ? 'aprov' : s.status === 'fim' ? (s.fim === 'aprovado' ? 'oc' : 'rep') : null;
 const grupoTab = s => s.status === 'lote' ? 'lote' : s.status !== 'cot' ? 'env' : (s.devolucao ? 'dev' : 'cotar');
-/* O corte do lote: dia 20 à 00:00 (horário de Brasília). Quem entra no dia 20 ou
-   depois espera o do mês seguinte. */
-function proximoCorte(agora){
-  const d = agora || new Date();
-  const br = new Date(d.getTime() - 3 * 3600e3);          // Brasília, sem horário de verão
-  let a = br.getUTCFullYear(), m = br.getUTCMonth();
-  if (br.getUTCDate() >= 20){ m++; if (m > 11){ m = 0; a++; } }
-  return new Date(Date.UTC(a, m, 20, 12));
+/* Mês do próximo fechamento (02/10): o lote não fecha sozinho; quem fecha é Compras.
+   É o mês corrente (Brasília); se o lote deste mês já foi enviado, o do mês seguinte.
+   Mesma regra de fechar_lote_do_mes no banco. */
+function mesDoFechamento(lotes, agora){
+  const br = new Date((agora || new Date()).getTime() - 3 * 3600e3);
+  let d = new Date(Date.UTC(br.getUTCFullYear(), br.getUTCMonth(), 1, 12));
+  const chave = x => x.getUTCFullYear() + '-' + x.getUTCMonth();
+  const enviados = new Set((lotes || []).filter(l => l.status !== 'cot').map(l => chave(new Date(Date.UTC(l.competencia.getFullYear(), l.competencia.getMonth(), 1, 12)))));
+  while (enviados.has(chave(d))) d = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1, 12));
+  const emCotacao = (lotes || []).find(l => l.status === 'cot' && l.competencia.getFullYear() === d.getUTCFullYear() && l.competencia.getMonth() === d.getUTCMonth()) || null;
+  return { ano:d.getUTCFullYear(), mes:d.getUTCMonth(), emCotacao };
 }
 const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 /* Filtros do lote (gerência, unidade de negócio, centro de custo). */
@@ -796,15 +807,19 @@ function renderFila(){
   const q = S.q.toLowerCase();
   /* 02/10 (Guilherme): hierarquia da Mesa. Primeiro o tipo de compra (Normal,
      Urgente, Mensal), depois a etapa daquele tipo. Na mensal as etapas são
-     "Lote para cotar", "Aguardando o corte · dia 20", Devolvidas e Enviadas.
+     "Aguardando fechamento", "Lote para cotar", Enviadas e Devolvidas, e o botão
+     vermelho "Fechar mês" (o lote não fecha sozinho: quem fecha é o comprador).
      Um tipo está sempre escolhido: ao abrir, o primeiro (nesta ordem) que tem
      coisa para fazer. Busca no alto, à direita. */
   const daTipo = (l, t) => l.filter(x => x.tipo === t);
   const nAguard = grupos.lote.length;
   const pend = t => daTipo(grupos.cotar, t).length + daTipo(grupos.dev, t).length + (t === 'mensal' ? nAguard : 0);
   const IDS = TIPOS.filter(t => t.ativo).map(t => t.id);
-  if (!IDS.includes(S.tipo)) S.tipo = IDS.find(t => pend(t) > 0) || IDS[0];
-  const ETAPAS_DO_TIPO = S.tipo === 'mensal' ? ['cotar','aguard','dev','env'] : ['cotar','dev','env'];
+  if (!IDS.includes(S.tipo)){
+    S.tipo = IDS.find(t => pend(t) > 0) || IDS[0];
+    if (S.tipo === 'mensal' && S.tab === 'cotar' && !daTipo(grupos.cotar, 'mensal').length && nAguard) S.tab = 'aguard';
+  }
+  const ETAPAS_DO_TIPO = S.tipo === 'mensal' ? ['aguard','cotar','env','dev'] : ['cotar','dev','env'];
   if (!ETAPAS_DO_TIPO.includes(S.tab)) S.tab = 'cotar';
   const naEnv = S.tab === 'env', naLote = S.tab === 'aguard', mensalCotar = S.tipo === 'mensal' && S.tab === 'cotar';
   const nomeTipo = (TIPOS.find(t => t.id === S.tipo) || {}).nome || '';
@@ -817,7 +832,7 @@ function renderFila(){
     flash = `<div class="banner ${f.cls || 'ok'}" role="status"><span class="grow">${f.html}</span><button class="btn ghost" type="button" id="bt-flash-x">Ok</button></div>`;
   }
   const tabBtn = (id, nome, n, alert) => `<button class="tab ${alert && n ? 'alert' : ''}" role="tab" type="button" data-tab="${id}" aria-selected="${S.tab === id}">${nome}<span class="c num">${n}</span></button>`;
-  const NOME_ETAPA_FILA = { cotar: S.tipo === 'mensal' ? 'Lote para cotar' : 'Para cotar', aguard:'Aguardando o corte · dia 20', dev:'Devolvidas', env:'Enviadas' };
+  const NOME_ETAPA_FILA = { cotar: S.tipo === 'mensal' ? 'Lote para cotar' : 'Para cotar', aguard:'Aguardando fechamento', dev:'Devolvidas', env:'Enviadas' };
   const contaEtapa = id => id === 'aguard' ? nAguard : daTipo(grupos[id], S.tipo).length;
   let corpo;
   if (!minhas.length){
@@ -825,17 +840,17 @@ function renderFila(){
   } else if (!lista.length){
     const t = nomeTipo.toLowerCase();
     const vazio = { cotar:['Tudo cotado', `Nenhuma compra ${t} esperando cotação agora.`],
-      aguard:['Nada aguardando o corte','As compras mensais aprovadas pela gerência ficam aqui até o corte do dia 20. No corte, entram juntas na cotação, como um lote só.'],
+      aguard:['Nada aguardando fechamento','As compras mensais aprovadas pela gerência ficam aqui até você fechar o mês. Ao fechar, entram juntas na cotação, como um lote só.'],
       dev:['Nada devolvido', `Quando um aprovador devolver uma cotação de compra ${t}, ela aparece aqui com o motivo.`],
       env:['Nada enviado ainda', `As cotações de compra ${t} que você enviar para aprovação ficam aqui até virarem ordem de compra.`] }[S.tab];
     const rotuloSt = (STATUS_ENV.find(x => x.id === S.stEnv) || {}).nome;
     corpo = q ? `<div class="state"><h3>Nada encontrado para “${esc(S.q)}”</h3><p>Busque por número, item, solicitante ou centro de custo.</p><button class="btn primary" type="button" id="bt-limpa">Limpar busca</button></div>`
-      : naLote && filtroAtivo(S.lfFila) ? `<div class="state"><h3>Nada com esses filtros</h3><p>Tire os filtros para ver todos os pedidos que aguardam o corte.</p><button class="btn primary" type="button" id="bt-limpa-lf">Tirar os filtros</button></div>`
+      : naLote && filtroAtivo(S.lfFila) ? `<div class="state"><h3>Nada com esses filtros</h3><p>Tire os filtros para ver todos os pedidos que aguardam o fechamento.</p><button class="btn primary" type="button" id="bt-limpa-lf">Tirar os filtros</button></div>`
       : naEnv && S.stEnv ? `<div class="state"><h3>Nada em “${esc(rotuloSt || '')}”</h3><p>Veja os outros status das enviadas.</p><button class="btn primary" type="button" id="bt-limpa-st">Ver todas</button></div>`
-      : mensalCotar ? `<div class="state"><h3>Nenhum lote mensal para cotar agora</h3><p>O lote entra aqui no corte de ${dt(proximoCorte())} (virada do dia 19 para o 20).${nAguard ? ' Até lá, dá para ver os pedidos que aguardam o corte.' : ''}</p>${nAguard ? `<button class="btn primary" type="button" id="bt-ver-aguard">Ver os que aguardam o corte (${nAguard})</button>` : ''}</div>`
+      : mensalCotar ? `<div class="state"><h3>Nenhum lote mensal para cotar agora</h3><p>O lote entra aqui quando você fechar o mês, no botão <strong>Fechar mês</strong>.${nAguard ? ' Até lá, dá para ver os pedidos que aguardam o fechamento.' : ''}</p>${nAguard ? `<button class="btn primary" type="button" id="bt-ver-aguard">Ver os que aguardam fechamento (${nAguard})</button>` : ''}</div>`
       : `<div class="state"><h3>${vazio[0]}</h3><p>${vazio[1]}</p></div>`;
   } else if (naLote){
-    corpo = `<p class="muted lote-nota">Compras mensais já aprovadas pela gerência. Entram na cotação todas juntas no corte de <strong>${dt(proximoCorte())}</strong> (virada do dia 19 para o 20), num lote só, separadas por família. Até lá, dá para ver cada pedido.</p>
+    corpo = `<p class="muted lote-nota">Compras mensais já aprovadas pela gerência. Entram na cotação todas juntas quando você fechar o mês (botão <strong>Fechar mês</strong>), num lote só, separadas por família. Até lá, dá para ver cada pedido.</p>
       <div class="tbl-wrap"><table class="fila lote-fila"><thead><tr>
       <th>Nº</th><th>Solicitação</th><th>Gerência</th><th>Unidade de negócio</th><th>Centro de custo</th><th>Famílias</th><th>No lote há</th><th class="r"><span class="sr-only">Ação</span></th></tr></thead><tbody>
       ${lista.map(s => { const p = prazoEtapa(s); return `<tr data-id="${s.id}" tabindex="0">
@@ -855,7 +870,7 @@ function renderFila(){
         const acao = s.status === 'cot' ? ((s.cot && s.cot.iniciada) || s.mapaEstado ? 'Continuar' : (s.lote ? 'Cotar o lote' : 'Cotar')) : 'Ver';
         return `<tr data-id="${s.id}" tabindex="0">
           <td class="mono">${esc(s.id)}</td>
-          <td><span class="t">${esc(tituloSol(s))}</span><span class="s">${s.lote ? 'Corte de ' + dt(s.corte) + ' · cotação única por família, de todos os centros de custo' : esc(s.ccNome) + ' · ' + esc(s.solicitante)}</span>${s.lote ? ' <span class="pill accent">Lote mensal</span>' : ''}${s.urgente ? ' <span class="pill warn">Urgente</span>' : ''}${s.tipo === 'mensal' && !s.lote ? ' <span class="pill neutral">Mensal</span>' : ''}${s.defForn === 'unico' ? ' <span class="pill accent">Fornecedor único</span>' : ''}</td>
+          <td><span class="t">${esc(tituloSol(s))}</span><span class="s">${s.lote ? 'Fechado em ' + dt(s.corte) + ' · cotação única por família, de todos os centros de custo' : esc(s.ccNome) + ' · ' + esc(s.solicitante)}</span>${s.lote ? ' <span class="pill accent">Lote mensal</span>' : ''}${s.urgente ? ' <span class="pill warn">Urgente</span>' : ''}${s.tipo === 'mensal' && !s.lote ? ' <span class="pill neutral">Mensal</span>' : ''}${s.defForn === 'unico' ? ' <span class="pill accent">Fornecedor único</span>' : ''}</td>
           <td class="tipo">${tipoSolicitacao(s)}</td>
           <td>${s.lote && !s.itens.length ? `<span class="pill neutral">${plural(s.nFams, 'família', 'famílias')}</span>` : familiasDe(s).map(k => `<span class="pill neutral" title="${esc(famNome(k))}">${esc(famNome(k))}</span>`).join(' ')}</td>
           <td class="num">${dt(s.necessidade)}</td>
@@ -871,7 +886,10 @@ function renderFila(){
       </div>
       <input id="f-q" class="ctl busca-topo" type="search" placeholder="Buscar nº, item, solicitante…" value="${esc(S.q)}" aria-label="Buscar">
     </div>
-    <div class="tabs" role="tablist" aria-label="Etapas da compra ${esc(nomeTipo.toLowerCase())}">${ETAPAS_DO_TIPO.map(id => tabBtn(id, NOME_ETAPA_FILA[id], contaEtapa(id), id === 'dev')).join('')}</div>
+    <div class="linha-etapas">
+      <div class="tabs" role="tablist" aria-label="Etapas da compra ${esc(nomeTipo.toLowerCase())}">${ETAPAS_DO_TIPO.map(id => tabBtn(id, NOME_ETAPA_FILA[id], contaEtapa(id), id === 'dev')).join('')}</div>
+      ${S.tipo === 'mensal' ? `<button class="btn fechar-mes" type="button" id="bt-fechar-mes" ${nAguard ? '' : 'disabled'} title="${nAguard ? 'Fechar o lote do mês: os pedidos que aguardam fechamento entram na cotação' : 'Nenhum pedido aguardando fechamento'}">Fechar mês</button>` : ''}
+    </div>
     ${naEnv ? `<div class="tools"><div class="seg" role="group" aria-label="Status das enviadas">
         <button class="sgb" type="button" data-st="" aria-pressed="${!S.stEnv}">Todas</button>
         ${STATUS_ENV.map(t => `<button class="sgb" type="button" data-st="${t.id}" aria-pressed="${S.stEnv === t.id}">${t.nome}<span class="c num">${daTipo(grupos.env, S.tipo).filter(x => statusEnv(x) === t.id).length}</span></button>`).join('')}
@@ -884,12 +902,13 @@ function renderFila(){
   v.querySelectorAll('[data-tipo]').forEach(b => b.onclick = () => {
     if (S.tipo !== b.dataset.tipo){
       S.tipo = b.dataset.tipo; S.stEnv = '';
-      /* mensal sem lote para cotar: abre direto nos que aguardam o corte */
+      /* mensal sem lote para cotar: abre direto nos que aguardam fechamento */
       if (S.tipo === 'mensal' && S.tab === 'cotar' && !daTipo(grupos.cotar, 'mensal').length && nAguard) S.tab = 'aguard';
     }
     render(); const n = v.querySelector(`[data-tipo="${S.tipo}"]`); if (n) n.focus();
   });
   if ($('bt-ver-aguard')) $('bt-ver-aguard').onclick = () => { S.tab = 'aguard'; render(); };
+  if ($('bt-fechar-mes')) $('bt-fechar-mes').onclick = () => abrirFecharMes(grupos.lote);
   const fq = $('f-q'); fq.oninput = () => { S.q = fq.value; const pos = fq.selectionStart; render(); const n = $('f-q'); n.focus(); n.setSelectionRange(pos,pos); };
   if ($('bt-limpa')) $('bt-limpa').onclick = () => { S.q = ''; render(); };
   if ($('bt-limpa-st')) $('bt-limpa-st').onclick = () => { S.stEnv = ''; render(); };
@@ -908,6 +927,48 @@ function renderFila(){
 /* =====================================================================
    DETALHE DA SOLICITAÇÃO (formato do Funil)
    ===================================================================== */
+/* Fechar mês (02/10): confirmação vermelha, com o que entra no lote. */
+function abrirFecharMes(pendentes){
+  const lotes = SOLS.filter(x => x.lote);
+  const M = mesDoFechamento(lotes);
+  const nomeMes = MESES[M.mes] + '/' + M.ano;
+  const porGer = new Map();
+  pendentes.forEach(p => { const k = p.gerNome || 'Sem gerência'; porGer.set(k, (porGer.get(k) || 0) + 1); });
+  const gers = [...porGer].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'));
+  abrirModal(`<div class="m-head"><div><div class="eyebrow">Compra mensal</div><h2 id="m-title">Fechar o mês de ${esc(nomeMes)}</h2>
+      <div class="sub">${plural(pendentes.length, 'pedido entra', 'pedidos entram')} na cotação, num lote só, separados por família.</div></div>
+      <button class="x" id="m-close" type="button" aria-label="Fechar">✕</button></div>
+    <div class="m-body">
+      ${M.emCotacao ? `<div class="holder warn" style="flex-direction:column;align-items:flex-start"><strong>O lote de ${esc(nomeMes)} já está em cotação</strong><span>Estes pedidos entram nele. Os itens novos aparecem no mapa sem preço.</span></div>` : ''}
+      <div class="obs-box" style="margin:0"><label>Por gerência</label>
+        <ul class="fm-ger">${gers.map(([g, n]) => `<li><span>${esc(g)}</span><span class="num">${plural(n, 'pedido', 'pedidos')}</span></li>`).join('')}</ul></div>
+      <p class="muted" style="margin:12px 0 0;font-size:13px">Depois de fechado, não dá para desfazer. O que a gerência aprovar daqui em diante espera o próximo fechamento.</p>
+      <div class="err" id="e-fm" hidden></div>
+    </div>
+    <div class="m-foot"><span></span><div class="nav"><button class="btn" type="button" id="fm-cancel">Voltar</button><button class="btn fechar-mes" type="button" id="fm-ok">Fechar o mês de ${esc(nomeMes)}</button></div></div>`, 'sm');
+  S.modalTipo = 'fechar-mes';
+  $('m-close').onclick = fecharModal; $('fm-cancel').onclick = fecharModal;
+  let indo = false;
+  $('fm-ok').onclick = async () => {
+    if (indo) return; indo = true;
+    const b = $('fm-ok'); b.disabled = true; $('fm-cancel').disabled = true; b.textContent = 'Fechando…';
+    let r;
+    try { r = await rpc('fechar_lote_do_mes', { p_token: TOKEN }); }
+    catch (e){ r = { ok:false, mensagem:'A rede falhou no meio. Atualize a Mesa para ver se o mês foi fechado antes de tentar de novo.' }; }
+    if (!r || r.ok !== true){
+      indo = false; b.disabled = false; $('fm-cancel').disabled = false; b.textContent = 'Fechar o mês de ' + nomeMes;
+      $('e-fm').hidden = false; $('e-fm').textContent = (r && r.mensagem) || 'Não deu certo agora.';
+      if (r && r.erro === 'nada_para_fechar') carregarFila();
+      return;
+    }
+    S.flash = { cls:'ok', html:`<strong>Mês fechado.</strong> ${esc(r.mensagem || '')}` };
+    S.tipo = 'mensal'; S.tab = 'cotar';
+    fecharModal(); window.scrollTo(0,0);
+    await carregarFila(); render();
+  };
+  $('fm-ok').focus();
+}
+
 let ultimoFoco = null;
 function abrirModal(html, tamanho){
   if ($('overlay').hidden) ultimoFoco = document.activeElement;
@@ -947,7 +1008,7 @@ function pintarDetalhe(){
   /* encerrada: aprovada fica em Ordem de compra (a OC no GR é o passo seguinte); reprovada ou cancelada, sem etapa atual */
   const idx = s.status === 'fim' ? (s.fim === 'aprovado' ? FL.findIndex(e => e.id === 'oc') : -1) : FL.findIndex(e => e.id === s.status);
   const holder = !p ? '' : s.status === 'lote'
-    ? `<div class="holder info"><strong>Aguardando o lote mensal</strong><span>há <strong>${dias(p.d)}</strong></span><span>entra na cotação junto com as outras mensais em <strong>${dt(proximoCorte())}</strong> (virada do dia 19 para o 20)</span>${s.gerNome ? `<span>gerência: ${esc(s.gerNome)}</span>` : ''}</div>`
+    ? `<div class="holder info"><strong>Aguardando o lote mensal</strong><span>há <strong>${dias(p.d)}</strong></span><span>entra na cotação junto com as outras mensais quando Compras fechar o mês</span>${s.gerNome ? `<span>gerência: ${esc(s.gerNome)}</span>` : ''}</div>`
     : `<div class="holder ${p.cls}"><strong>${etapa(s.status).nome}</strong><span>com ${esc(comQuem(s))}</span><span>há <strong>${dias(p.d)}</strong> (prazo da etapa: ${p.sla} dias)</span><span class="pill ${p.cls}">${p.txt}</span></div>`;
   const steps = FL.map((e,i) => `<div class="step ${i < idx ? 'done' : i === idx ? 'cur' : ''}"><span class="ln"></span>${e.curto}</div>`).join('');
   const C = s.cot && s.cot.iniciada ? calcTudo(s) : null;
@@ -1022,7 +1083,7 @@ function pintarDetalheLote(s){
   }).join('');
   abrirModal(`
     <div class="m-head"><div>
-      <div class="eyebrow"><span class="mono">${esc(s.id)}</span> · corte de ${s.corte ? dt(s.corte) : '—'}</div>
+      <div class="eyebrow"><span class="mono">${esc(s.id)}</span> · fechado em ${s.corte ? dt(s.corte) : '—'}</div>
       <h2 id="m-title">${esc(tituloSol(s))}</h2>
       <div class="sub">${plural(s.itens.length,'item','itens')} em ${plural(familiasDe(s).length,'família','famílias')} · ${esc(estadoCot(s).txt)}</div>
     </div><button class="x" id="m-close" type="button" aria-label="Fechar">✕</button></div>
@@ -1085,7 +1146,7 @@ function renderMapa(){
     ${bannerUnico}${banner}
     ${s.lote ? `<div class="facts">
       <div class="fact"><div class="k">Pedidos</div><div class="v">${s.nPedidos}</div></div>
-      <div class="fact"><div class="k">Corte</div><div class="v num">${s.corte ? dt(s.corte) : '—'}</div></div>
+      <div class="fact"><div class="k">Fechado em</div><div class="v num">${s.corte ? dt(s.corte) : '—'}</div></div>
       <div class="fact"><div class="k">Itens</div><div class="v">${s.itens.length} em ${plural(fams.length,'família','famílias')}</div></div>
       <div class="fact wide"><div class="k">Gerências</div><div class="v">${esc([...new Set(s.pedidosLote.map(p => p.gerencia || 'Sem gerência'))].sort((a,b) => a.localeCompare(b, 'pt-BR')).join(' · ') || '—')}</div></div>
     </div>
@@ -1732,12 +1793,12 @@ function deLote(l, velho){
     mesNome:MESES[comp.getMonth()] + '/' + comp.getFullYear(), competencia:comp, corte:l.corte_em ? new Date(l.corte_em) : null,
     nPedidos:Number(l.total_pedidos) || 0, nGerencias:Number(l.gerencias) || 0, nItens:Number(l.total_itens) || 0, nFams:Number(l.familias) || 0,
     pacotes:pac, empresa:'Várias', cc:'Vários', ccNome:'todos os centros de custo', setor:'—', solicitante:'Vários', facilitador:null,
-    comprador:S.comprador, local:null, motivo:'Compra mensal de ' + MESES[comp.getMonth()] + ': os pedidos aprovados pela gerência até o corte, juntos por família.',
+    comprador:S.comprador, local:null, motivo:'Compra mensal de ' + MESES[comp.getMonth()] + ': os pedidos aprovados pela gerência até o fechamento do mês, juntos por família.',
     criada:new Date(l.fechado_em || l.corte_em || comp), necessidade:null, tipo:'mensal', urgente:false, defForn:'cotacao', justForn:null,
     status, fim:status === 'fim' ? (pac.aprovado > 0 ? 'aprovado' : 'reprovado') : null, canal:'telas', comQuemNome:null, fornecedorCotado:null, cardId:null,
     mapaEstado:l.mapa_estado || null, versaoMapa:l.mapa_versao || 0, valor:l.total !== null && l.total !== undefined ? Number(l.total) : null,
     devolucao:null, itens:[], pedidosLote:[], rateio:[], pacotesLista:[],
-    eventos:[{ data:new Date(enviado && l.enviado_em ? l.enviado_em : (l.fechado_em || l.corte_em || comp)), titulo:'Lote fechado no corte', pessoa:null }],
+    eventos:[{ data:new Date(enviado && l.enviado_em ? l.enviado_em : (l.fechado_em || l.corte_em || comp)), titulo:'Lote fechado por Compras', pessoa:null }],
     orcamentosN:0, anexos:[], cot:null, carregado:false, sujo:false
   };
   if (velho && velho.cot){
@@ -1788,7 +1849,7 @@ function eventoDoBanco(m){
     criado:'Solicitação aberta', aprovado:'Aprovado em ' + et, reprovado:'Reprovado em ' + et,
     devolvido:'Devolvida ao comprador em ' + et, cotacao_enviada:'Cotação enviada para ' + prox + (m.total ? ' · ' + brl(Number(m.total)) : ''),
     cancelado:'Cancelado', edicao_iniciada:'Edição começou', edicao_salva:'Edição salva', edicao_desistida:'Edição abandonada',
-    edicao_expirada:'Edição desfeita sem salvar', entrou_no_lote:'Entrou no lote mensal (corte do dia 20)'
+    edicao_expirada:'Edição desfeita sem salvar', entrou_no_lote:'Entrou no lote mensal (mês fechado por Compras)'
   }[m.acao] || m.acao;
   return { data:new Date(m.em), titulo:t, pessoa:m.quem || null, nota:m.motivo || null, bad:m.acao === 'reprovado' || m.acao === 'devolvido' };
 }

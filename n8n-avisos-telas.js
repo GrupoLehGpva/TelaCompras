@@ -30,7 +30,7 @@ const PROXIMO = {
   gerencial:  'está esperando a aprovação gerencial.',
   financeiro: 'está esperando a aprovação financeira.',
   cotacao:    'está com o comprador, em cotação.',
-  lote:       'está aguardando o lote mensal: entra na cotação na virada do dia 19 para o 20.'
+  lote:       'está aguardando o fechamento do lote mensal: entra na cotação quando Compras fechar o mês.'
 };
 const CAMPO = {
   solicitante_nome: 'para quem é', observacao: 'observação', empresa_id: 'empresa',

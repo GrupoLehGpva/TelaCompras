@@ -57,3 +57,21 @@
 --   na Mesa e na tela de aprovações da gerência e do financeiro).
 -- · Teste: _teste_lote_mensal P37..P43 (43/43).
 -- =====================================================================
+
+-- =====================================================================
+-- 02/10 — FECHAMENTO MANUAL (telas_25): o lote não fecha sozinho no dia 20.
+-- · fechar_lote_do_mes(p_token): só comprador. Leva TODAS as mensais em
+--   'lote' para a cotação. Mês do lote = mês corrente (Brasília); se o lote
+--   desse mês já foi enviado, vira o do mês seguinte; se está em cotação, os
+--   pedidos entram nele. Grava corte_em/fechado_em = agora e o movimento
+--   'entrou_no_lote' com o nome do comprador. Sem pedido: 'nada_para_fechar'.
+-- · fechar_lote_mensal(p_agora) passou a recusar ('fechamento_manual').
+--   A fase 5 (agendar o corte no n8n) foi cancelada.
+-- · Textos: "Lote mensal (aguardando fechamento)", situação "Aguardando o
+--   fechamento do lote mensal", aviso n8n "entra na cotação quando Compras
+--   fechar o mês" (K4koz6 publicado).
+-- · Relatório: o mês vai do fechamento anterior até este (ou até agora).
+-- · Mesa: Mensal → Aguardando fechamento | Lote para cotar | Enviadas |
+--   Devolvidas | botão vermelho "Fechar mês" (com confirmação).
+-- · Testes: _teste_lote_mensal 46/46; _teste_caminho_telas 167/167.
+-- =====================================================================
