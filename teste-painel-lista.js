@@ -79,7 +79,7 @@ await p.click('#f-tipo [data-tipo=urgente]'); await p.waitForTimeout(200);
 ok('5 botão Urgente filtra a lista', JSON.stringify(await p.$$eval('table.lista tbody tr[data-id]', t => t.map(x => x.dataset.id))) === '["C-COT"]');
 await p.click('#f-tipo [data-tipo=mensal]'); await p.waitForTimeout(200);
 const gm = await p.$$eval('table.lista tr.grupo td', t => t.map(x => x.textContent.trim().split(' · ')[0]));
-ok('5 mensal: grupos na ordem da mensal', JSON.stringify(gm) === JSON.stringify(['Liderança imediata','Aprovação gerencial','Compras · cotação','Aprovação financeiro','Ordem de compra']) || JSON.stringify(gm) === JSON.stringify(['Liderança imediata','Aprovação gerencial','Compras','Aprovação financeiro','Ordem de compra']), JSON.stringify(gm));
+ok('5 mensal: grupos na ordem da mensal', JSON.stringify(gm) === JSON.stringify(['Liderança imediata','Aprovação gerencial','Aguardando o lote','Compras · cotação','Aprovação financeiro','Ordem de compra']) || JSON.stringify(gm) === JSON.stringify(['Liderança imediata','Aprovação gerencial','Aguardando o lote','Compras','Aprovação financeiro','Ordem de compra']), JSON.stringify(gm));
 await p.click('#f-tipo [data-tipo=mensal]'); await p.waitForTimeout(200);
 await p.fill('#f-q', 'ger1'); await p.waitForTimeout(300);
 ok('5 busca filtra a lista', JSON.stringify(await p.$$eval('table.lista tbody tr[data-id]', t => t.map(x => x.dataset.id))) === '["C-GER1"]');

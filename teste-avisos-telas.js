@@ -76,4 +76,9 @@ t('muitos ajustes: 8 linhas e "e mais 3"', (r[0].texto.match(/• /g)||[]).lengt
 // 21 reprovação de todos os itens: motivo já traz os itens, sem lista repetida
 r=run([{...base,id:21,acao:'reprovado',etapa:'gerencial',etapa_seguinte:null,urgente:false,motivo:'Todos os itens reprovados pela gerência: A (x); B (y)',ajustes:{cortados:[{descricao:'A',motivo:'x'}]},para:[P('facilitador','ed')]}]);
 t('todos reprovados: motivo com itens, sem lista', r[0].texto.includes('Motivo: Todos os itens reprovados') && !r[0].texto.includes('ajustou'), r);
+// 22 lote mensal (02/10): gerência aprova → aguardando o lote; corte → entrou no lote
+r=run([{...base,id:22,acao:'aprovado',etapa:'gerencial',etapa_seguinte:'lote',tipo_compra:'mensal',urgente:false,para:[P('facilitador','ed')]}]);
+t('gerência aprova mensal: facilitador sabe que espera o lote do dia 20', r.length===1 && r[0].enviar && r[0].texto.includes('aprovada na aprovação gerencial') && r[0].texto.includes('aguardando o lote mensal') && r[0].texto.includes('dia 19 para o 20'), r);
+r=run([{...base,id:23,acao:'entrou_no_lote',etapa:'lote',etapa_seguinte:'cotacao',tipo_compra:'mensal',urgente:false,quem:'Lote mensal',para:[P('facilitador','ed')]}]);
+t('corte: facilitador sabe que entrou no lote e está em cotação', r.length===1 && r[0].enviar && r[0].texto.includes('entrou no lote mensal') && r[0].texto.includes('em cotação'), r);
 console.log('ok',ok,'falhou',falhou);

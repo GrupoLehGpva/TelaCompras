@@ -1,0 +1,25 @@
+-- ============================================================================
+-- LOTE MENSAL — fase 1 (banco), aplicada em 02/10/2026 (telas_21a..f)
+-- Compra mensal aprovada pela gerência NÃO vai direto à cotação: fica na etapa
+-- 'lote' (status 'aguardando lote') até o corte da virada do dia 19 para o 20,
+-- 00:00 de Brasília. Normal e urgente não mudam.
+--
+-- · movimentos_compra.acao aceita 'entrou_no_lote'.
+-- · lotes_mensais(id, competencia [1º dia do mês, única], corte_em, fechado_em,
+--   estado em_cotacao|enviado|encerrado, total_pedidos).
+-- · solicitacoes.lote_id e solicitacoes.gerencia_id (quem aprovou na gerencial;
+--   se a gerência foi pulada, o gerente do facilitador).
+-- · _lote_corte(competencia) = dia 20 00:00 America/Sao_Paulo.
+-- · passo_da_compra: mensal + gerencial + aprovado → etapa 'lote'.
+-- · etapa_inicial: mensal aberta por gerente/financeiro já nasce no lote.
+-- · abrir_pedido_telas, decidir_pedido (aviso só ao facilitador), _telas_situacao,
+--   minhas_solicitacoes, historico_de_aprovacoes, funil_da_diretoria, pedido_telas,
+--   meus_pedidos: textos da etapa lote ("Lote mensal (dia 20)").
+-- · fechar_lote_mensal(p_agora): só service_role; antes do dia 20 recusa; leva para
+--   a cotação toda mensal no lote que entrou ANTES do corte; idempotente; se o lote
+--   do mês já foi enviado, o atrasado espera o próximo.
+-- Testes: _teste_caminho_telas 166/166 (A14, A17, F3, F3b ajustados) e bateria do
+-- lote L1..L15 (rollback).
+-- Falta (fases 2–5): Mesa do lote, pacotes por gerência no financeiro, relatório,
+-- agendamento do corte no n8n. O corte NÃO está agendado ainda.
+-- ============================================================================

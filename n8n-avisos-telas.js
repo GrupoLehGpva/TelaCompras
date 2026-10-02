@@ -23,13 +23,14 @@ const PAGINA = {
 
 const ETAPA = {
   lider: 'liderança imediata', gerencial: 'aprovação gerencial',
-  financeiro: 'aprovação financeira', cotacao: 'cotação', edicao: 'edição'
+  financeiro: 'aprovação financeira', cotacao: 'cotação', edicao: 'edição', lote: 'lote mensal'
 };
 const PROXIMO = {
   lider:      'está esperando a liderança imediata.',
   gerencial:  'está esperando a aprovação gerencial.',
   financeiro: 'está esperando a aprovação financeira.',
-  cotacao:    'está com o comprador, em cotação.'
+  cotacao:    'está com o comprador, em cotação.',
+  lote:       'está aguardando o lote mensal: entra na cotação na virada do dia 19 para o 20.'
 };
 const CAMPO = {
   solicitante_nome: 'para quem é', observacao: 'observação', empresa_id: 'empresa',
@@ -78,6 +79,7 @@ function texto(a, d) {
     if (a.acao === 'reprovado')       frase = num + ' foi reprovada na ' + (ETAPA[a.etapa] || a.etapa) + '.\nMotivo: ' + limpa(a.motivo);
     if (frase && a.acao === 'aprovado' && a.ajustes) frase += textoAjustes(a.ajustes);   // reprovação total já traz cada item no motivo
     if (a.acao === 'cotacao_enviada') frase = num + ' teve a cotação concluída e agora ' + (PROXIMO[seg] || 'segue.');
+    if (a.acao === 'entrou_no_lote')  frase = num + ' entrou no lote mensal e agora ' + (PROXIMO[seg] || 'segue.');
     if (a.acao === 'edicao_expirada') frase = 'A edição de ' + num + ' ficou aberta sem ser salva e foi desfeita. ' +
                                               'O pedido voltou para a liderança como estava. Você ainda pode editar uma vez, enquanto a liderança não decidir.';
     if (!frase) return null;

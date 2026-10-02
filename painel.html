@@ -387,12 +387,17 @@ const ETAPAS = [
    Com o filtro Tipo = Mensal o quadro mostra as colunas nessa ordem; o modal
    mostra a trilha pelo fluxo do próprio pedido. A regra dos dois fluxos mora no
    banco (passo_da_compra); aqui é só a ordem das colunas. */
-const ETAPAS_MENSAL = ['lid','ger','cot','fin','oc'].map(id => ETAPAS.find(e => e.id === id));
+/* Lote mensal (02/10): a mensal aprovada pela gerência espera o corte da virada do
+   dia 19 para o 20 e só então entra na cotação, num lote único. Etapa própria,
+   só do fluxo mensal; no quadro geral a coluna só aparece quando há pedido nela. */
+const ETAPA_LOTE = { id:'lote', nome:'Aguardando o lote', curto:'Lote', sla:31 };
+const ETAPAS_MENSAL = ['lid','ger','lote','cot','fin','oc'].map(id => id === 'lote' ? ETAPA_LOTE : ETAPAS.find(e => e.id === id));
 const fluxoDe = s => s && s.tipoCompra === 'mensal' ? ETAPAS_MENSAL : ETAPAS;
-const colunasDoQuadro = () => state.tipo === 'mensal' ? ETAPAS_MENSAL : ETAPAS;
+const colunasDoQuadro = () => state.tipo === 'mensal' ? ETAPAS_MENSAL
+  : (SOLICITACOES.some(s => s.status === 'lote') ? ETAPAS.slice(0, 3).concat(ETAPA_LOTE, ETAPAS.slice(3)) : ETAPAS);
 const TIPOS_COMPRA = { normal:'Normal', programada:'Programada', urgente:'Urgente', mensal:'Mensal' };
 const NOME_ETAPA_DECISAO = { lider:'liderança imediata', compras:'compras', gerencial:'aprovação gerencial', financeiro:'aprovação financeiro' };
-const ETAPA_DB = { lider:'lid', cotacao:'cot', compras:'cot', gerencial:'ger', financeiro:'fin' };
+const ETAPA_DB = { lider:'lid', cotacao:'cot', compras:'cot', gerencial:'ger', lote:'lote', financeiro:'fin' };
 
 /* =====================================================================
    NORMALIZAÇÃO — linha do banco → solicitação da tela
@@ -539,7 +544,7 @@ function ligarAnexos(lista){
    ===================================================================== */
 let SOLICITACOES = [];
 let AGORA = new Date();
-const etapa = id => ETAPAS.find(e => e.id === id);
+const etapa = id => id === 'lote' ? ETAPA_LOTE : ETAPAS.find(e => e.id === id);
 const diasNaEtapa = s => (AGORA - s.entradaEtapa) / 864e5;
 const fechada = s => s.status === 'rep' || s.status === 'can';
 const aberta = s => !fechada(s);
@@ -555,6 +560,7 @@ function comQuem(s){
     case 'lid': return s.aprovador ? s.aprovador + ' (liderança imediata)' : 'Liderança imediata';
     case 'cot': return s.comprador ? 'Comprador ' + s.comprador : 'Compras';
     case 'ger': return s.aprovador ? s.aprovador + ' (aprovação gerencial)' : 'Aprovação gerencial';
+    case 'lote': return 'Lote mensal (entra na cotação no dia 20)';
     case 'fin': return s.aprovador ? s.aprovador + ' (financeiro)' : 'Financeiro';
     case 'oc':  return 'Lançamento da ordem no GR';
     default: return '—';
@@ -756,7 +762,7 @@ function renderQuadro(base){
   $('quadro-titulo').textContent = 'Solicitações por etapa' + (mensal ? ' · compra mensal' : '');
   pintarTipos();
   const peca = state.vista === 'lista' ? 'numa linha' : 'num card';
-  $('quadro-dica').textContent = mensal ? 'Fluxo da compra mensal: a gerência aprova antes da cotação · clique ' + peca + ' para ver o detalhe'
+  $('quadro-dica').textContent = mensal ? 'Fluxo da compra mensal: a gerência aprova, o pedido espera o lote do dia 20 e só então vai à cotação · clique ' + peca + ' para ver o detalhe'
                                         : 'Clique ' + peca + ' para ver o detalhe';
   document.querySelectorAll('#f-vista [data-vista]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.vista === state.vista)));
   const visiveis = COLS.flatMap(e => ordenar(base.filter(s => s.status === e.id)));
@@ -796,7 +802,7 @@ const COLS_LISTA = [
   { id:'num',   nome:'Nº',            chave:s => s.id },
   { id:'sol',   nome:'Solicitação',   chave:s => s.titulo.toLowerCase() },
   { id:'tipo',  nome:'Tipo',          chave:s => s.tipoCompraNome },
-  { id:'etapa', nome:'Etapa',         chave:s => ETAPAS.findIndex(e => e.id === s.status) },
+  { id:'etapa', nome:'Etapa',         chave:s => ['lid','cot','ger','lote','fin','oc'].indexOf(s.status) },
   { id:'quem',  nome:'Com quem',      chave:s => quemNaLista(s).toLowerCase() },
   { id:'na',    nome:'Na etapa',      chave:s => diasNaEtapa(s) },
   { id:'valor', nome:'Valor',         chave:s => s.valor === null ? -1 : s.valor, r:true },

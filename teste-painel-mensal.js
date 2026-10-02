@@ -14,6 +14,7 @@ const LINHAS = [
   L('N-01', 'normal', 'lider'), L('N-02', 'normal', 'cotacao', { status: 'em cotacao' }), L('N-03', 'normal', 'gerencial'),
   L('M-01', 'mensal', 'lider'), L('M-02', 'mensal', 'gerencial'), L('M-03', 'mensal', 'cotacao', { status: 'em cotacao' }),
   L('M-04', 'mensal', 'financeiro'),
+  L('M-05', 'mensal', 'lote', { status: 'aguardando lote' }),
   L('M-06', 'mensal', null, { status: 'reprovado', decisoes: [{ etapa: 'gerencial', resp: 'reprovado', motivo: 'Fora do orçamento do mês', por: 'W', em: dia(1) }] }),
 ];
 (async () => {
@@ -38,16 +39,19 @@ ok('1 sem botão "Todas"', await p.locator('#f-tipo [data-tipo=""]').count() ===
 ok('1 sem caixa de seleção de tipo', await p.locator('select#f-tipo').count() === 0 && await p.locator('.filters [data-tipo]').count() === 0);
 ok('1 botões logo acima do título', await p.evaluate(() => { const h = document.getElementById('quadro-titulo').closest('.sec-h'); return h.previousElementSibling && h.previousElementSibling.id === 'f-tipo'; }));
 { const conta = await p.$$eval('#f-tipo [data-conta]', cs => cs.map(c => c.textContent));
-  ok('1 cada tipo mostra quantos há', conta.length === 3 && conta.every(c => /^\d+$/.test(c)) && Number(conta[2]) === 4, JSON.stringify(conta)); }
+  ok('1 cada tipo mostra quantos há', conta.length === 3 && conta.every(c => /^\d+$/.test(c)) && Number(conta[2]) === 5, JSON.stringify(conta)); }
 ok('1 número colorido só quando há pedido', await p.$eval('#f-tipo [data-tipo=mensal] .c', c => c.classList.contains('tem')));
-ok('1 todos: ordem normal', JSON.stringify(await cols()) === JSON.stringify(['Liderança imediata','Compras · cotação','Aprovação gerencial','Aprovação financeiro','Ordem de compra']), JSON.stringify(await cols()));
+/* 02/10: com pedido aguardando o lote mensal, a coluna aparece também no quadro geral */
+ok('1 todos: ordem normal + lote (há mensal aguardando)', JSON.stringify(await cols()) === JSON.stringify(['Liderança imediata','Compras · cotação','Aprovação gerencial','Aguardando o lote','Aprovação financeiro','Ordem de compra']), JSON.stringify(await cols()));
+ok('1 M-05 na coluna do lote', await p.$eval('.card[data-id="M-05"]', c => c.closest('.col').querySelector('h3').textContent.trim()) === 'Aguardando o lote');
+ok('1 lote diz com quem', /Lote mensal \(entra na cotação no dia 20\)/.test(await p.textContent('.card[data-id="M-05"]')));
 ok('1 todos: card mensal com etiqueta', /Mensal/.test(await p.textContent('.card[data-id="M-02"]')) && !/Mensal/.test(await p.textContent('.card[data-id="N-03"]')));
 
 await p.click('#f-tipo [data-tipo=mensal]'); await p.waitForTimeout(300);
-ok('2 mensal: colunas na ordem da mensal', JSON.stringify(await cols()) === JSON.stringify(['Liderança imediata','Aprovação gerencial','Compras · cotação','Aprovação financeiro','Ordem de compra']), JSON.stringify(await cols()));
+ok('2 mensal: colunas na ordem da mensal (com o lote)', JSON.stringify(await cols()) === JSON.stringify(['Liderança imediata','Aprovação gerencial','Aguardando o lote','Compras · cotação','Aprovação financeiro','Ordem de compra']), JSON.stringify(await cols()));
 ok('2 mensal: título diz compra mensal', /compra mensal/.test(await p.textContent('#quadro-titulo')));
-ok('2 mensal: dica explica o fluxo', /gerência aprova antes da cotação/.test(await p.textContent('#quadro-dica')));
-ok('2 mensal: só pedidos mensais', await p.locator('.card[data-id^="N-"]').count() === 0 && await p.locator('.card[data-id^="M-"]').count() === 4);
+ok('2 mensal: dica explica o fluxo', /gerência aprova, o pedido espera o lote do dia 20/.test(await p.textContent('#quadro-dica')));
+ok('2 mensal: só pedidos mensais', await p.locator('.card[data-id^="N-"]').count() === 0 && await p.locator('.card[data-id^="M-"]').count() === 5);
 ok('2 mensal: sem etiqueta repetida', !/Mensal/.test(await p.textContent('.card[data-id="M-02"]')));
 const colDe = id => p.$eval('.card[data-id="' + id + '"]', c => c.closest('.col').querySelector('h3').textContent.trim());
 ok('2 M-02 na gerencial (2ª coluna)', await colDe('M-02') === 'Aprovação gerencial');
@@ -57,7 +61,7 @@ ok('2 reprovada mensal embaixo', /M-06/.test(await p.textContent('#closed-area')
 /* trilha do modal pelo fluxo do pedido */
 await p.click('.card[data-id="M-03"]'); await p.waitForTimeout(300);
 const trilha = await p.$$eval('#modal .step', s => s.map(x => x.textContent.trim() + (x.classList.contains('cur') ? '*' : '')));
-ok('3 modal mensal: trilha Liderança → Gerencial → Cotação*', JSON.stringify(trilha.slice(0, 3)) === JSON.stringify(['Liderança','Gerencial','Cotação*']), JSON.stringify(trilha));
+ok('3 modal mensal: trilha Liderança → Gerencial → Lote → Cotação*', JSON.stringify(trilha.slice(0, 4)) === JSON.stringify(['Liderança','Gerencial','Lote','Cotação*']), JSON.stringify(trilha));
 await p.keyboard.press('Escape'); await p.waitForTimeout(200);
 
 ok('2b botão Mensal marcado', await p.getAttribute('#f-tipo [data-tipo=mensal]', 'aria-pressed') === 'true');
@@ -90,7 +94,7 @@ ok('4 limpar filtros volta à ordem normal', (await cols())[1] === 'Compras · c
   await q.goto('file://' + __dirname + '/painel.html?t=pd-teste'); await q.waitForTimeout(900);
   await q.click('#f-tipo [data-tipo=mensal]'); await q.waitForTimeout(300);
   const c = await q.$$eval('#board-area .col h3', hs => hs.map(h => h.textContent.trim()));
-  ok('6 sem mensal: colunas da mensal aparecem vazias', JSON.stringify(c) === JSON.stringify(['Liderança imediata','Aprovação gerencial','Compras · cotação','Aprovação financeiro','Ordem de compra']), JSON.stringify(c));
+  ok('6 sem mensal: colunas da mensal aparecem vazias', JSON.stringify(c) === JSON.stringify(['Liderança imediata','Aprovação gerencial','Aguardando o lote','Compras · cotação','Aprovação financeiro','Ordem de compra']), JSON.stringify(c));
   ok('6 sem mensal: aviso de que ainda não há compra mensal', /Ainda não há compra mensal/.test(await q.textContent('#board-area')));
   await q.click('#f-tipo [data-tipo=urgente]'); await q.fill('#f-q', 'zzzz-nada'); await q.waitForTimeout(400);
   ok('6 filtro sem resultado: colunas + aviso com limpar', await q.locator('#board-area .col').count() === 5 && /Nenhuma solicitação com esses filtros/.test(await q.textContent('#board-area')));
