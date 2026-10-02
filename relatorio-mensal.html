@@ -178,6 +178,9 @@ table.rel tr.tot td{font-weight:700;background:var(--surface-2)}
 table.rel tbody tr:last-child td{border-bottom:1px solid var(--line)}
 .barra-v{display:block;height:4px;border-radius:2px;background:var(--accent);margin-top:4px;opacity:.55}
 .tipo-corte{white-space:nowrap}
+.voltar{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--accent);text-decoration:none;margin-bottom:6px}
+.voltar:hover{text-decoration:underline}
+.voltar:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
 .nota{font-size:12.5px;color:var(--ink-2);margin:0 0 10px;max-width:90ch}
 </style>
 </head><body>
@@ -198,13 +201,14 @@ table.rel tbody tr:last-child td{border-bottom:1px solid var(--line)}
 <div class="wrap">
   <header class="top">
     <div>
+      <a class="voltar" id="lnk-voltar" href="#" hidden><span aria-hidden="true">←</span> <span id="lnk-voltar-txt">Voltar</span></a>
       <div class="eyebrow" id="quem">—</div>
       <h1 id="titulo">Lote mensal</h1>
     </div>
     <div class="top-acoes">
       <label for="f-mes">Mês</label>
       <select class="ctl" id="f-mes" aria-label="Mês do lote"></select>
-      <button class="btn" type="button" id="bt-csv-itens">Baixar itens (CSV)</button>
+      <button class="btn" type="button" id="bt-xlsx-itens" title="Planilha do Excel: uma aba com todos os itens e uma aba para cada centro de custo">Baixar itens (Excel)</button>
       <button class="btn" type="button" id="bt-csv-cortes">Baixar cortes (CSV)</button>
     </div>
   </header>
@@ -267,6 +271,10 @@ async function carregar(mes){
   S.r = r; S.mes = r.competencia;
   const quem = r.quem || {};
   $('quem').textContent = (quem.nome || '') + (r.ve_tudo ? '' : ' · só a sua gerência');
+  /* volta para a tela de onde a pessoa veio: Mesa (Compras) ou aprovações (gerência/financeiro) */
+  const volta = quem.tipo === 'comprador' ? ['mesa-cotacao.html', 'Voltar para a Mesa de Cotação']
+              : quem.tipo === 'aprovador' ? ['aprovacoes.html', 'Voltar para as aprovações'] : null;
+  if (volta){ $('lnk-voltar').href = volta[0] + '?t=' + encodeURIComponent(TOKEN); $('lnk-voltar-txt').textContent = volta[1]; $('lnk-voltar').hidden = false; }
   if (quem.tipo === 'diretoria'){
     $('nav-telas').hidden = false; $('bb-marca').textContent = 'Compras · Visão da diretoria';
     $('lnk-funil').href = 'painel.html?t=' + encodeURIComponent(TOKEN);
@@ -402,13 +410,60 @@ function csv(nome, cab, linhas){
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 const nomeArq = t => 'lote-mensal-' + String(S.mes || '').slice(0,7) + '-' + t + '.csv';
-$('bt-csv-itens').onclick = () => {
-  if (!S.r) return;
+/* ---------- planilha de itens (Excel): aba "Todos os itens" + uma aba por centro de custo ---------- */
+const XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+let xlsxCarregando = null;
+function carregarXLSX(){
+  if (window.XLSX) return Promise.resolve(window.XLSX);
+  if (!xlsxCarregando) xlsxCarregando = new Promise((ok, falha) => {
+    const sc = document.createElement('script'); sc.src = XLSX_URL; sc.async = true;
+    sc.onload = () => window.XLSX ? ok(window.XLSX) : falha(new Error('sem XLSX'));
+    sc.onerror = () => { xlsxCarregando = null; sc.remove(); falha(new Error('não carregou')); };
+    document.head.appendChild(sc);
+  });
+  return xlsxCarregando;
+}
+/* nome de aba do Excel: até 31 caracteres, sem : \ / ? * [ ] e sem repetir */
+function nomeAba(txt, usados){
+  let base = String(txt || 'Sem centro de custo').replace(/[:\\/?*\[\]]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 31) || 'Aba';
+  let n = base, i = 2;
+  while (usados.has(n.toLowerCase())){ const suf = ' (' + i++ + ')'; n = base.slice(0, 31 - suf.length) + suf; }
+  usados.add(n.toLowerCase()); return n;
+}
+const CAB_ITENS = ['Pedido','Gerência','Unidade de negócio','Centro de custo','Nome do centro de custo','Família','Código','Item','Unidade','Qtd. pedida','Qtd. aprovada','Fornecedor','Valor comprado','Valor reprovado','Situação'];
+const linhaItem = x => [x.numero, x.gerencia, chaveUn(x), x.centro_custo, x.centro_custo_nome, famNome(x.familia), x.codigo, x.descricao, x.unidade,
+  Number(x.qtd_pedida), Number(x.qtd_aprovada), x.fornecedor, x.valor != null ? Number(x.valor) : null, x.valor_cortado != null ? Number(x.valor_cortado) : null, situacaoItem(x)[1]];
+function abaDeItens(X, lista){
+  const linhas = lista.map(linhaItem);
+  const soma = i => linhas.reduce((t, l) => t + (typeof l[i] === 'number' ? l[i] : 0), 0);
+  const tot = ['Total', '', '', '', '', '', '', plural(lista.length, 'item', 'itens'), '', '', '', '', Math.round(soma(12) * 100) / 100, Math.round(soma(13) * 100) / 100, ''];
+  const ws = X.utils.aoa_to_sheet([CAB_ITENS].concat(linhas, [tot]));
+  ws['!cols'] = [12, 24, 22, 10, 28, 30, 10, 44, 8, 11, 12, 30, 15, 15, 22].map(w => ({ wch:w }));
+  ws['!autofilter'] = { ref: 'A1:O' + (linhas.length + 1) };
+  const fmt = (col, z) => { for (let r = 2; r <= linhas.length + 2; r++){ const c = ws[col + r]; if (c && c.t === 'n') c.z = z; } };
+  fmt('M', '"R$" #,##0.00'); fmt('N', '"R$" #,##0.00'); fmt('J', '#,##0.###'); fmt('K', '#,##0.###');
+  return ws;
+}
+function porCentroDeCusto(I){
+  const g = new Map();
+  I.forEach(x => { const k = x.centro_custo || ''; if (!g.has(k)) g.set(k, { k, nome:x.centro_custo_nome || '', itens:[] }); g.get(k).itens.push(x); });
+  return [...g.values()].sort((a, b) => String(a.k).localeCompare(String(b.k), 'pt-BR', { numeric:true }));
+}
+let baixandoXlsx = false;
+$('bt-xlsx-itens').onclick = async () => {
+  if (!S.r || baixandoXlsx) return;
   const I = itens(); if (!I.length){ toast('Nada para baixar com esses filtros'); return; }
-  csv(nomeArq('itens'), ['Pedido','Gerência','Unidade de negócio','Centro de custo','Nome do centro de custo','Família','Código','Item','Unidade','Qtd. pedida','Qtd. aprovada','Fornecedor','Valor comprado','Valor reprovado','Situação'],
-    I.map(x => [x.numero, x.gerencia, chaveUn(x), x.centro_custo, x.centro_custo_nome, famNome(x.familia), x.codigo, x.descricao, x.unidade,
-                Number(x.qtd_pedida), Number(x.qtd_aprovada), x.fornecedor, x.valor != null ? Number(x.valor) : null, x.valor_cortado != null ? Number(x.valor_cortado) : null, situacaoItem(x)[1]]));
-  toast('Planilha de itens baixada');
+  const bt = $('bt-xlsx-itens'); baixandoXlsx = true; bt.disabled = true; bt.setAttribute('aria-busy', 'true');
+  try {
+    const X = await carregarXLSX();
+    const wb = X.utils.book_new(), usados = new Set();
+    X.utils.book_append_sheet(wb, abaDeItens(X, I), nomeAba('Todos os itens', usados));
+    porCentroDeCusto(I).forEach(g => X.utils.book_append_sheet(wb, abaDeItens(X, g.itens), nomeAba(g.k ? g.k + (g.nome ? ' ' + g.nome : '') : 'Sem centro de custo', usados)));
+    X.writeFile(wb, 'lote-mensal-' + String(S.mes || '').slice(0,7) + '-itens.xlsx', { compression:true });
+    toast('Planilha baixada: ' + plural(wb.SheetNames.length - 1, 'aba por centro de custo', 'abas por centro de custo') + ' e uma com todos');
+  } catch (e){
+    toast('Não consegui montar a planilha do Excel agora. Confira a internet e tente de novo.');
+  } finally { baixandoXlsx = false; bt.disabled = false; bt.removeAttribute('aria-busy'); }
 };
 $('bt-csv-cortes').onclick = () => {
   if (!S.r) return;

@@ -273,7 +273,7 @@ async function telaFin(b, {grupo, hist}){
     if(nome === 'fila_de_aprovacao') return j([FILA()[0]]);
     if(nome === 'fila_do_aprovador') return j({ ok:true, pedidos:[{id:'t1', canal:'telas', versao:7, pode_devolver:true}], em_edicao:[],
       fila_compartilhada: grupo ? 'financeiro' : null, compartilhada_com: grupo ? ['ELISANGELA G. B. KLOSTER','WIENFRIED MATTHIAS LEH'] : [] });
-    if(nome === 'historico_de_aprovacoes') return j(hist);
+    if(nome === 'historico_do_aprovador' || nome === 'historico_de_aprovacoes') return j(hist);
     return j([]);
   });
   await p.goto(base + '?t=ap-teste', {waitUntil:'load'}); await p.waitForTimeout(600);
@@ -287,6 +287,7 @@ const H = (numero, fui_eu, por, resposta='aprovado') => ({ id:'h-'+numero, numer
   ok('10 coluna vira "Decisão"', (await p.textContent('#thDecisao')).trim() === 'Decisão', await p.textContent('#thDecisao'));
   const l1 = await p.locator('#corpoHist tr', {hasText:'03001'}).textContent();
   const l2 = await p.locator('#corpoHist tr', {hasText:'03002'}).textContent();
+  await p.click('#abaRep'); await p.waitForTimeout(200);
   const l3 = await p.locator('#corpoHist tr', {hasText:'03003'}).textContent();
   ok('10 decisão de outra pessoa mostra o nome', /Aprovada\s*por WIENFRIED MATTHIAS LEH/.test(l1), l1);
   ok('10 a própria diz "por você"', /por você/.test(l2), l2);

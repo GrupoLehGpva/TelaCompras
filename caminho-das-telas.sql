@@ -2323,3 +2323,7 @@ end $$;
 --   funil_links_do_dia(): quem recebe hoje + resumo do funil. Traz TOKENS: só o
 --   service_role executa (n8n "Compras · Link do funil da diretoria", dias úteis 9h).
 -- ============================================================================
+
+-- telas_20 (02/10): historico_do_aprovador(token, limite) = historico_de_aprovacoes + tipo_compra,
+-- em jsonb; usado pela tela de aprovação (abas Aprovadas/Reprovadas e botões Normal/Urgente/Mensal).
+-- observar_como passou a aceitar 'historico_do_aprovador'. Se a função faltar, a tela usa a antiga.

@@ -40,7 +40,7 @@ async function tela(b, {hist = HIST, falhaHist = false, decisao = {ok:true}} = {
     p.__rpcs.push(u.split('/rpc/')[1]);
     const j = corpo => r.fulfill({status:200, contentType:'application/json', body:JSON.stringify(corpo)});
     if(u.includes('aprovador_do_token'))        return j(QUEM);
-    if(u.includes('historico_de_aprovacoes'))   return falhaHist
+    if(u.includes('historico_do_aprovador') || u.includes('historico_de_aprovacoes'))   return falhaHist
       ? r.fulfill({status:500, contentType:'application/json', body:'{"message":"boom"}'})
       : j(hist);
     if(u.includes('fila_de_aprovacao'))         return j(FILA);
@@ -74,8 +74,10 @@ await p.waitForTimeout(400);
 ok('2 troca de painel',   await p.locator('#painelHist').isVisible() && !(await p.locator('#painelFila').isVisible()),
    'os dois painéis ao mesmo tempo, ou nenhum');
 ok('2 buscou uma vez',    pediuHistorico(p) === 1, 'buscas: ' + pediuHistorico(p));
-ok('2 desenhou tudo',     await conta(p, '#corpoHist tr') === HIST.length,
+/* 02/10: o histórico se divide em Aprovadas e Reprovadas. */
+ok('2 Aprovadas mostra só a aprovada', await conta(p, '#corpoHist tr') === 1 && /C2608-00901/.test(await p.locator('#corpoHist').textContent()),
    'linhas: ' + await conta(p, '#corpoHist tr'));
+ok('2 contas nas abas', (await p.textContent('#contaAprov')) === '1' && (await p.textContent('#contaRep')) === '1');
 ok('2 filtro some',       !(await p.locator('#filtro').isVisible()), 'o filtro da fila ficou na tela do histórico');
 ok('2 aprovar em lote some', !(await p.locator('#btnLote').isVisible()), 'o botão de aprovar em lote ficou visível');
 ok('2 aba marcada',       (await p.locator('#abaHist').getAttribute('aria-selected')) === 'true'
@@ -83,7 +85,10 @@ ok('2 aba marcada',       (await p.locator('#abaHist').getAttribute('aria-select
 
 /* 3 — o que a linha mostra */
 { const linha1 = await p.locator('#corpoHist tr').nth(0).textContent();
-  const linha2 = await p.locator('#corpoHist tr').nth(1).textContent();
+  await p.click('#abaRep'); await p.waitForTimeout(200);
+  ok('3 Reprovadas mostra só a reprovada', await conta(p, '#corpoHist tr') === 1 && (await p.getAttribute('#abaRep', 'aria-selected')) === 'true');
+  const linha2 = await p.locator('#corpoHist tr').nth(0).textContent();
+  await p.click('#abaHist'); await p.waitForTimeout(200);
   ok('3 mostra aprovada',  /Aprovada/.test(linha1),  'linha 1: ' + linha1);
   ok('3 mostra reprovada', /Reprovada/.test(linha2), 'linha 2: ' + linha2);
   ok('3 mostra o motivo',  /Granja 103/.test(linha2), 'o motivo da reprovação sumiu: ' + linha2);
@@ -106,7 +111,9 @@ ok('2 aba marcada',       (await p.locator('#abaHist').getAttribute('aria-select
 await p.click('#abaFila'); await p.waitForTimeout(200);
 await p.click('#abaHist'); await p.waitForTimeout(300);
 ok('4 não busca de novo', pediuHistorico(p) === 1, 'buscas: ' + pediuHistorico(p));
-ok('4 volta a desenhar',  await conta(p, '#corpoHist tr') === HIST.length, 'linhas sumiram na volta');
+ok('4 volta a desenhar',  await conta(p, '#corpoHist tr') === 1, 'linhas sumiram na volta');
+await p.click('#abaRep'); await p.waitForTimeout(200);
+ok('4 Reprovadas não busca de novo', pediuHistorico(p) === 1, 'buscas: ' + pediuHistorico(p));
 await p.close();
 
 /* 5 — histórico vazio explica, em vez de tabela em branco */
@@ -145,7 +152,7 @@ await p.route('**/rest/v1/rpc/**', r => {
   const u = r.request().url();
   const j = c => r.fulfill({status:200, contentType:'application/json', body:JSON.stringify(c)});
   if(u.includes('aprovador_do_token'))      return j(QUEM);
-  if(u.includes('historico_de_aprovacoes')) return j(HIST);
+  if(u.includes('historico_do_aprovador') || u.includes('historico_de_aprovacoes')) return j(HIST);
   return j(FILA);
 });
 await p.goto(base + '?t=tk-brandao', {waitUntil:'load'});
@@ -153,7 +160,7 @@ await p.waitForTimeout(500);
 await p.click('#abaHist'); await p.waitForTimeout(400);
 { const m = await p.evaluate(() => ({doc: document.documentElement.scrollWidth, win: innerWidth}));
   ok('8 celular não rola para o lado', m.doc <= m.win + 1, m.doc + ' > ' + m.win);
-  ok('8 celular desenha', await conta(p, '#corpoHist tr') === HIST.length, 'linhas: ' + await conta(p, '#corpoHist tr')); }
+  ok('8 celular desenha', await conta(p, '#corpoHist tr') === 1, 'linhas: ' + await conta(p, '#corpoHist tr')); }
 await p.screenshot({path:'t-historico.png', fullPage:true});
 await p.close();
 

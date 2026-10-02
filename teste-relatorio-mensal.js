@@ -4,6 +4,8 @@
    filtros, troca de mês, planilhas, acesso (diretoria, gerência, sem acesso). */
 const { chromium } = require('playwright');
 const fs = require('fs');
+const XLSX = require('xlsx');
+const XLSX_JS = fs.readFileSync(require.resolve('xlsx/dist/xlsx.full.min.js'), 'utf8');
 const falhas = []; const ok = (n, c, d) => c ? null : falhas.push(n + ' — ' + (d === undefined ? '' : (typeof d === 'string' ? d : JSON.stringify(d))));
 const URL_ = 'file://' + __dirname + '/relatorio-mensal.html';
 
@@ -37,13 +39,17 @@ function mesNov(){
     competencias:mesOut().competencias, lote:{ estado:'aberto', corte_em:'2026-11-20T03:00:00Z' },
     itens:[ IT({ pedido_id:'pX', numero:'C2611-00001', descricao:'GRAXA', status:'aguardando lote', situacao:'aguardando lote', valor:null, fornecedor:null }) ], cortes:[] };
 }
-async function abrir(b, { token='dir-1', resp=null, vp={ width:1440, height:900 } }={}){
+async function abrir(b, { token='dir-1', resp=null, vp={ width:1440, height:900 }, semExcel=false }={}){
   const p = await b.newPage({ viewport:vp, acceptDownloads:true });
   p.chamadas = [];
   p.on('pageerror', e => falhas.push('ERRO DE PÁGINA: ' + e.message));
   await p.route('**/*', async r => {
     const u = r.request().url();
     if (u.startsWith('file:')) return r.continue();
+    if (u === 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'){
+      p.excelPedido = (p.excelPedido || 0) + 1;
+      return semExcel ? r.abort() : r.fulfill({ status:200, contentType:'application/javascript', body:XLSX_JS });
+    }
     if (u.includes('/rest/v1/rpc/relatorio_lote_mensal')){
       const c = JSON.parse(r.request().postData() || '{}'); p.chamadas.push(c);
       const x = resp ? resp(c) : (c.p_competencia === '2026-11-01' ? mesNov() : mesOut());
@@ -146,11 +152,29 @@ const b = await chromium.launch();
   let c = fs.readFileSync(await dl.path(), 'utf8');
   ok('5 planilha de cortes: nome, BOM, ponto e vírgula, vírgula decimal', dl.suggestedFilename() === 'lote-mensal-2026-10-cortes.csv' && c.charCodeAt(0) === 0xfeff
      && /^﻿Quando;O quê;Etapa;Pedido;/.test(c) && /;10;70;/.test(c) && /Acima do orçamento; revisar/.test(c) && /"Acima do orçamento; revisar"/.test(c) && c.split('\r\n').length === 4, c.slice(0, 300));
-  [dl] = await Promise.all([p.waitForEvent('download'), p.click('#bt-csv-itens')]);
-  c = fs.readFileSync(await dl.path(), 'utf8');
-  ok('5 planilha de itens: 6 linhas, número com vírgula', dl.suggestedFilename() === 'lote-mensal-2026-10-itens.csv' && c.split('\r\n').length === 7 && /;18,5;/.test(c) && /Cortado pela gerência/.test(c), c.slice(0, 400));
+  ok('5 Excel só carrega quando pede a planilha', !p.excelPedido);
+  [dl] = await Promise.all([p.waitForEvent('download'), p.click('#bt-xlsx-itens')]);
+  let wb = XLSX.readFile(await dl.path());
+  const aba = n => XLSX.utils.sheet_to_json(wb.Sheets[n], { header:1, defval:null });
+  ok('5 Excel de itens: aba com todos e uma por centro de custo, em ordem', dl.suggestedFilename() === 'lote-mensal-2026-10-itens.xlsx'
+     && JSON.stringify(wb.SheetNames) === JSON.stringify(['Todos os itens', '20 FABRICA', '21 RACAO', '31 LAVOURA']), wb.SheetNames);
+  const todos = aba('Todos os itens'), a20 = aba('20 FABRICA'), a21 = aba('21 RACAO'), a31 = aba('31 LAVOURA');
+  ok('5 aba "Todos": cabeçalho, 6 itens e a linha de total', todos[0][0] === 'Pedido' && todos[0][14] === 'Situação' && todos.length === 8
+     && todos[7][0] === 'Total' && todos[7][12] === 130.5 && todos[7][13] === 70, todos[7]);
+  ok('5 cada aba só com os itens do seu centro de custo', a20.length === 5 && a20.slice(1, 4).every(l => l[3] === '20') && a20[4][12] === 100
+     && a21.length === 4 && a21.slice(1, 3).every(l => l[3] === '21') && a21[3][12] === 30.5
+     && a31.length === 3 && a31[1][3] === '31' && a31[1][13] === 70 && /Reprovado/i.test(a31[1][14]), [a20, a21, a31]);
+  ok('5 números ficam números (Excel soma), com o formato de real', typeof a21[1][9] === 'number' && a21[1][12] === 18.5
+     && /R\$/.test(wb.Sheets['21 RACAO'].M2.w || ''), wb.Sheets['21 RACAO'].M2);
+  ok('5 Excel de itens: avisa quantas abas', /3 abas por centro de custo e uma com todos/.test(await txt(p, '#toast')), await txt(p, '#toast'));
+  await p.selectOption('#f-cc', '21'); await p.waitForTimeout(100);
+  [dl] = await Promise.all([p.waitForEvent('download'), p.click('#bt-xlsx-itens')]);
+  wb = XLSX.readFile(await dl.path());
+  ok('5 Excel respeita os filtros (só o centro escolhido)', JSON.stringify(wb.SheetNames) === JSON.stringify(['Todos os itens', '21 RACAO']) && /1 aba por centro de custo/.test(await txt(p, '#toast')), wb.SheetNames);
+  ok('5 a biblioteca do Excel carrega uma vez só', p.excelPedido === 1, p.excelPedido);
+  await p.selectOption('#f-cc', ''); await p.waitForTimeout(100);
   await p.selectOption('#f-ger', 'g2'); await p.selectOption('#f-fam', 'MG'); await p.waitForTimeout(100);
-  await p.click('#bt-csv-itens'); await p.waitForTimeout(200);
+  await p.click('#bt-xlsx-itens'); await p.waitForTimeout(200);
   ok('5 nada para baixar avisa', /Nada para baixar/.test(await txt(p, '#toast')));
   await p.click('#bt-limpa'); await p.waitForTimeout(100);
 
@@ -163,10 +187,28 @@ const b = await chromium.launch();
   ok('6 opção do mês aberto diz que não fechou', /novembro\/2026 \(ainda não fechou\)/.test(await txt(p, '#f-mes')));
   await p.close(); }
 
-/* 7 — gerência vê só a dela; comprador sem a navegação da diretoria */
+/* 7 — gerência vê só a dela; comprador sem a navegação da diretoria; voltar para a tela de origem */
 { const p = await abrir(b, { resp:() => Object.assign(mesOut(), { quem:{ tipo:'aprovador', nome:'JUNIOR' }, ve_tudo:false }) });
   ok('7 gerência: diz que vê só a dela', /JUNIOR · só a sua gerência/.test(await txt(p, '#quem')));
   ok('7 sem navegação da diretoria', await p.locator('#nav-telas').isHidden());
+  ok('7 gerência/financeiro: volta para as aprovações com o token', await p.locator('#lnk-voltar').isVisible()
+     && /Voltar para as aprovações/.test(await txt(p, '#lnk-voltar')) && (await p.getAttribute('#lnk-voltar', 'href')) === 'aprovacoes.html?t=dir-1');
+  await p.close(); }
+{ const p = await abrir(b, { token:'cp-9 x', resp:() => Object.assign(mesOut(), { quem:{ tipo:'comprador', nome:'HERISSON' } }) });
+  ok('7 Compras: volta para a Mesa de Cotação com o token', await p.locator('#lnk-voltar').isVisible()
+     && /Voltar para a Mesa de Cotação/.test(await txt(p, '#lnk-voltar')) && (await p.getAttribute('#lnk-voltar', 'href')) === 'mesa-cotacao.html?t=cp-9%20x'
+     && await p.locator('#nav-telas').isHidden());
+  await Promise.all([p.waitForURL(/mesa-cotacao\.html\?t=cp-9%20x/), p.click('#lnk-voltar')]);
+  ok('7 clicar em voltar abre a Mesa', /mesa-cotacao\.html\?t=cp-9%20x$/.test(p.url()), p.url());
+  await p.close(); }
+{ const p = await abrir(b);
+  ok('7 diretoria: sem "voltar" (tem a navegação própria)', await p.locator('#lnk-voltar').isHidden() && await p.locator('#nav-telas').isVisible());
+  await p.close(); }
+{ const p = await abrir(b, { semExcel:true });
+  await p.click('#bt-xlsx-itens'); await p.waitForTimeout(400);
+  ok('7 sem internet para o Excel: avisa e o botão volta', /Não consegui montar a planilha do Excel/.test(await txt(p, '#toast')) && !(await p.isDisabled('#bt-xlsx-itens')));
+  await p.click('#bt-xlsx-itens'); await p.waitForTimeout(400);
+  ok('7 tenta de novo na segunda vez', p.excelPedido === 2, p.excelPedido);
   await p.close(); }
 
 /* 8 — mês vazio */
