@@ -60,4 +60,20 @@ t('token nulo: mensagem sem link', r[0].enviar && !r[0].texto.includes('?t='), r
 // 17 comprador reprova na cotação -> facilitador com motivo
 r=run([{...base,id:17,acao:'reprovado',etapa:'cotacao',etapa_seguinte:null,urgente:false,motivo:'Item descontinuado',quem:'HERISSON',para:[P('facilitador','ed')]}]);
 t('comprador reprova: facilitador sabe que foi na cotação e o motivo', r[0].enviar && r[0].texto.includes('reprovada na cotação') && r[0].texto.includes('Motivo: Item descontinuado'), r);
+// 18 revisão item a item (mensal, gerencial): facilitador recebe os ajustes
+const AJ={cortados:[{descricao:'SABAO EM PO',motivo:'tem em estoque'}],mudados:[{descricao:'DETERGENTE',de_quantidade:10,de_unidade:'UNID',quantidade:6,unidade:'UNID'}],incluidos:[{descricao:'VASSOURA <PIACAVA>',quantidade:2,unidade:'UNID'}]};
+r=run([{...base,id:18,acao:'aprovado',etapa:'gerencial',etapa_seguinte:'cotacao',tipo_compra:'mensal',urgente:false,ajustes:AJ,para:[P('comprador','he'),P('facilitador','ed')]}]);
+{ const f=r.find(x=>x.papel==='facilitador').texto;
+  t('ajustes: cabeçalho e três linhas', f.includes('A gerência ajustou os itens:') && f.includes('• Reprovado: SABAO EM PO — tem em estoque') && f.includes('• Alterado: DETERGENTE — 10 UNID → 6 UNID') && f.includes('• Incluído: VASSOURA ‹PIACAVA› — 2 UNID'), f);
+  t('ajustes: antes do link', f.indexOf('ajustou') < f.indexOf('👉'), f);
+  t('ajustes: comprador não recebe a lista', !r.find(x=>x.papel==='comprador').texto.includes('ajustou'), r); }
+// 19 sem ajustes: mensagem igual a antes
+r=run([{...base,id:19,acao:'aprovado',etapa:'gerencial',etapa_seguinte:'cotacao',urgente:false,ajustes:null,para:[P('facilitador','ed')]}]);
+t('sem ajustes: sem a lista', !r[0].texto.includes('ajustou'), r);
+// 20 muitos ajustes: no máximo 8 linhas
+r=run([{...base,id:20,acao:'aprovado',etapa:'gerencial',etapa_seguinte:'cotacao',urgente:false,ajustes:{cortados:Array.from({length:11},(_,k)=>({descricao:'ITEM '+k,motivo:'x'+k}))},para:[P('facilitador','ed')]}]);
+t('muitos ajustes: 8 linhas e "e mais 3"', (r[0].texto.match(/• /g)||[]).length===8 && r[0].texto.includes('e mais 3'), r[0].texto);
+// 21 reprovação de todos os itens: motivo já traz os itens, sem lista repetida
+r=run([{...base,id:21,acao:'reprovado',etapa:'gerencial',etapa_seguinte:null,urgente:false,motivo:'Todos os itens reprovados pela gerência: A (x); B (y)',ajustes:{cortados:[{descricao:'A',motivo:'x'}]},para:[P('facilitador','ed')]}]);
+t('todos reprovados: motivo com itens, sem lista', r[0].texto.includes('Motivo: Todos os itens reprovados') && !r[0].texto.includes('ajustou'), r);
 console.log('ok',ok,'falhou',falhou);

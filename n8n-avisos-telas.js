@@ -39,6 +39,22 @@ const CAMPO = {
   data_necessidade: 'data de necessidade', motivo: 'motivo', itens: 'itens'
 };
 
+/* Revisão item a item da gerência na compra mensal (02/10): o que mudou nos
+   itens vai junto do aviso de quem pediu. Até 8 linhas; o resto vira "e mais N". */
+const qtd = v => Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 3 });
+function textoAjustes(aj) {
+  if (!aj) return '';
+  const linhas = [];
+  (aj.cortados || []).forEach(c => linhas.push('• Reprovado: ' + limpa(c.descricao) + ' — ' + limpa(c.motivo)));
+  (aj.mudados || []).forEach(m => linhas.push('• Alterado: ' + limpa(m.descricao) + ' — ' + qtd(m.de_quantidade) + ' ' + limpa(m.de_unidade) +
+                                              ' → ' + qtd(m.quantidade) + ' ' + limpa(m.unidade)));
+  (aj.incluidos || []).forEach(n => linhas.push('• Incluído: ' + limpa(n.descricao) + ' — ' + qtd(n.quantidade) + ' ' + limpa(n.unidade)));
+  if (!linhas.length) return '';
+  const mostra = linhas.slice(0, 8);
+  if (linhas.length > 8) mostra.push('… e mais ' + (linhas.length - 8) + '. Veja tudo no link abaixo.');
+  return '\nA gerência ajustou os itens:\n' + mostra.join('\n');
+}
+
 const brl = v => (v === null || v === undefined || v === '' || isNaN(Number(v))) ? null
   : Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const link = (papel, token) => token ? BASE + PAGINA[papel] + '?t=' + encodeURIComponent(token) : null;
@@ -60,6 +76,7 @@ function texto(a, d) {
     if (a.acao === 'aprovado')        frase = seg ? num + ' foi aprovada na ' + (ETAPA[a.etapa] || a.etapa) + ' e agora ' + (PROXIMO[seg] || 'segue.')
                                                   : num + ' foi aprovada em todas as etapas. A ordem de compra será emitida.';
     if (a.acao === 'reprovado')       frase = num + ' foi reprovada na ' + (ETAPA[a.etapa] || a.etapa) + '.\nMotivo: ' + limpa(a.motivo);
+    if (frase && a.acao === 'aprovado' && a.ajustes) frase += textoAjustes(a.ajustes);   // reprovação total já traz cada item no motivo
     if (a.acao === 'cotacao_enviada') frase = num + ' teve a cotação concluída e agora ' + (PROXIMO[seg] || 'segue.');
     if (a.acao === 'edicao_expirada') frase = 'A edição de ' + num + ' ficou aberta sem ser salva e foi desfeita. ' +
                                               'O pedido voltou para a liderança como estava. Você ainda pode editar uma vez, enquanto a liderança não decidir.';

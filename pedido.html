@@ -300,6 +300,50 @@
   .forn-razao{display:block;font-weight:400;font-size:11px;color:var(--muted);text-transform:none;letter-spacing:0}
   .cot-unico{margin:0 0 14px;padding:10px 14px;border-radius:8px;background:var(--demo-bg);color:var(--demo);font-size:13px;line-height:1.5}
   .cot-unico-just{display:block;color:var(--texto);margin-top:4px}
+
+  /* ===== REVISÃO ITEM A ITEM — gerencial da compra mensal (02/10) ===== */
+  .rev-nota{margin:0 0 12px;color:var(--muted);font-size:13.5px;line-height:1.5}
+  .rev-tab{min-width:640px}
+  .rev-tab td{vertical-align:middle}
+  .rev-tab td.desc .cod-mini{display:block;font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-top:2px}
+  .rev-tab tr.rep td{background:var(--erro-bg)}
+  .rev-tab tr.rep td.desc{text-decoration:line-through;color:var(--muted)}
+  .rev-tab tr.motivo-linha td{padding-top:0;background:var(--erro-bg)}
+  .rev-tab tr.novo td{background:var(--verde-claro)}
+  .rev-qtd{width:92px;padding:7px 9px;border:1px solid var(--borda);border-radius:6px;background:var(--card);color:var(--texto);
+           font:inherit;font-family:var(--mono);text-align:right}
+  .rev-un{padding:7px 8px;border:1px solid var(--borda);border-radius:6px;background:var(--card);color:var(--texto);font:inherit}
+  .rev-qtd.mudou,.rev-un.mudou{border-color:var(--demo);background:var(--demo-bg)}
+  .rev-qtd.invalido,.rev-motivo.invalido{border-color:var(--erro);box-shadow:0 0 0 2px var(--erro-bg)}
+  .rev-de{display:block;font-size:11.5px;color:var(--demo);margin-top:3px;white-space:nowrap}
+  .rev-seg{display:inline-flex;border:1px solid var(--borda);border-radius:6px;overflow:hidden}
+  .rev-seg button{border:0;background:var(--card);color:var(--texto);padding:7px 12px;font:inherit;font-size:13px;cursor:pointer}
+  .rev-seg button+button{border-left:1px solid var(--borda)}
+  .rev-seg button[aria-pressed="true"].ok{background:var(--aprovar);color:var(--sobre-aprovar)}
+  .rev-seg button[aria-pressed="true"].nao{background:var(--erro);color:#fff}
+  .rev-seg button:disabled{cursor:default;opacity:.6}
+  .rev-motivo{width:100%;padding:7px 10px;border:1px solid var(--erro-borda);border-radius:6px;background:var(--card);color:var(--texto);font:inherit;font-size:13px}
+  .rev-tirar{border:1px solid var(--borda);background:var(--card);color:var(--muted);border-radius:6px;padding:7px 12px;font:inherit;font-size:13px;cursor:pointer}
+  .rev-tirar:hover{color:var(--erro);border-color:var(--erro-borda)}
+  .rev-selo{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:var(--pilula);font-size:11px;font-weight:600;
+            background:var(--verde-claro);color:var(--verde-mata);text-decoration:none}
+  .rev-incluir{position:relative;margin-top:14px;max-width:520px}
+  .rev-incluir label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:5px}
+  .rev-incluir input{width:100%;padding:9px 12px;border:1px solid var(--borda);border-radius:8px;background:var(--card);color:var(--texto);font:inherit}
+  .rev-achados{position:absolute;left:0;right:0;top:100%;z-index:20;margin:4px 0 0;padding:4px;list-style:none;background:var(--card);
+               border:1px solid var(--linha-forte);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:300px;overflow:auto}
+  .rev-achados li button{display:block;width:100%;text-align:left;border:0;background:none;color:var(--texto);padding:8px 10px;border-radius:6px;font:inherit;font-size:13.5px;cursor:pointer}
+  .rev-achados li button:hover,.rev-achados li button:focus{background:var(--realce)}
+  .rev-achados li .cod-mini{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-left:6px}
+  .rev-achados li.vazio{padding:8px 10px;color:var(--muted);font-size:13px}
+  .rev-resumo{margin-top:14px;padding:10px 14px;border-radius:8px;background:var(--realce);font-size:13.5px;line-height:1.5}
+  .rev-resumo.alerta{background:var(--erro-bg);color:var(--erro)}
+  .rev-erro{margin-top:10px;color:var(--erro);font-size:13.5px}
+  .item-mudou{display:block;font-size:11.5px;color:var(--demo);margin-top:2px}
+  .cortados li{padding:8px 0;border-bottom:1px solid var(--borda);font-size:13.5px;line-height:1.45}
+  .cortados li:last-child{border-bottom:0}
+  .cortados{list-style:none;margin:0;padding:0}
+  .cortados .quem{color:var(--muted);font-size:12.5px}
 </style>
 </head>
 <body>
@@ -380,6 +424,33 @@
     <section class="cartao" id="cartaoAnexosCard" hidden>
       <h2>Orçamentos anexados pelo comprador</h2>
       <ul class="anexos" id="listaAnexosCard"></ul>
+    </section>
+
+    <!-- Revisão item a item (02/10): só na aprovação gerencial da compra mensal,
+         que vem antes da cotação. O gerente muda quantidade e unidade, reprova
+         item (com motivo) e inclui item do catálogo; vai junto com o Aprovar. -->
+    <section class="cartao" id="cartaoRevisao" hidden>
+      <h2>Revisão dos itens</h2>
+      <p class="rev-nota" id="revNota">Compra mensal: ajuste o que precisar antes de aprovar. Mude quantidade ou unidade, reprove o item que não deve ser comprado (com o motivo) ou inclua item do catálogo. Tudo é gravado quando você clicar em <b>Aprovar</b>.</p>
+      <div class="rolagem">
+        <table class="rev-tab">
+          <thead><tr><th>Item</th><th class="num">Quantidade</th><th>Unidade</th><th>Decisão</th></tr></thead>
+          <tbody id="revCorpo"></tbody>
+        </table>
+      </div>
+      <div class="rev-incluir" id="revIncluir">
+        <label for="revBusca">Incluir item do catálogo</label>
+        <input type="search" id="revBusca" placeholder="Buscar por descrição ou código (mín. 2 letras)" autocomplete="off">
+        <ul class="rev-achados" id="revAchados" hidden></ul>
+      </div>
+      <div class="rev-resumo" id="revResumo"></div>
+      <div class="rev-erro" id="revErro" hidden></div>
+    </section>
+
+    <!-- Itens reprovados pela gerência (compra mensal): ficam registrados. -->
+    <section class="cartao" id="cartaoCortados" hidden>
+      <h2>Itens reprovados pela gerência</h2>
+      <ul class="cortados" id="listaCortados"></ul>
     </section>
 
     <section class="cartao" id="cartaoItens">
@@ -589,9 +660,12 @@ function desenharTabela(){
   $('corpoTabela').innerHTML = lista.map(i => (
     '<tr>' +
       '<td class="cod">' + esc(i.codigo || 'sem código') + '</td>' +
-      '<td class="desc">' + esc(i.descricao) + '</td>' +
+      '<td class="desc">' + esc(i.descricao) + (i.incluido_por ? ' <span class="rev-selo">incluído pela gerência</span>' : '') + '</td>' +
       '<td>' + esc(plural(i.unidade, i.quantidade)) + '</td>' +
-      '<td class="num">' + numBR(i.quantidade) + '</td>' +
+      '<td class="num">' + numBR(i.quantidade) +
+        ((i.quantidade_pedida != null && (Number(i.quantidade_pedida) !== Number(i.quantidade) || (i.unidade_pedida && i.unidade_pedida !== i.unidade)))
+          ? '<span class="item-mudou">pedido: ' + numBR(i.quantidade_pedida) + ' ' + esc(plural(i.unidade_pedida || i.unidade, i.quantidade_pedida)) + '</span>' : '') +
+      '</td>' +
     '</tr>'
   )).join('');
   $('tabelaVazia').hidden = lista.length > 0;
@@ -730,6 +804,7 @@ function desenhar(s, itens){
     $('cartaoJustificativa').hidden = false;
   }
   desenharAnexos(ANEXOS);
+  desenharCortados();
   carregarAnexosDoCard(s.id);
 
   if(ehServico){
@@ -780,6 +855,7 @@ async function abrir(){
     const s = resposta.pedido;
     const itens = resposta.itens || [];
     ANEXOS = resposta.anexos || [];
+    CORTADOS = Array.isArray(resposta.itens_cortados) ? resposta.itens_cortados : [];
     CENTRO_NOME = s.centro_custo_nome || await nomeDoCentro(s.centro_custo);
     SOLICITACAO = s;
     desenhar(s, itens);
@@ -874,6 +950,7 @@ async function prepararAprovacao(){
     $('btnDevolver').hidden = !podeDevolver();
     }
     if(ehDasTelas()) carregarCotacao().catch(()=>{});
+    if(ehRevisaoMensal()) iniciarRevisao();
     return;
   }
 
@@ -1169,6 +1246,275 @@ async function decidir(decisao, motivo){
   decidindo = false;
 }
 
+/* ---------------------------------------------------------------------------
+   REVISÃO ITEM A ITEM — aprovação gerencial da compra mensal (02/10)
+   A gerência aprova a necessidade do mês antes da cotação. Aqui ela pode
+   mudar quantidade e unidade, reprovar item (motivo curto) e incluir item do
+   catálogo. Nada é gravado até o Aprovar: decidir_itens_mensal grava os
+   ajustes e a decisão juntos. Todos reprovados (e nada incluído) = o pedido
+   é reprovado, com o motivo de cada item.
+   --------------------------------------------------------------------------- */
+/* Unidades do catálogo do GR (as mesmas que o banco aceita). */
+const UNIDADES_CATALOGO = ['UNID','KG','L','ML','M','SC','TON','GRAMAS','CAB','DOSE','BAG'];
+const MOTIVO_ITEM_MIN = 3;
+let CORTADOS = [];
+let REV = null;            // { linhas:[{id, codigo, descricao, q0, u0, q, u, acao, motivo}], novos:[{codigo, descricao, q, u}] }
+let revBuscaSeq = 0;
+
+function ehRevisaoMensal(){
+  return !!(NA_FILA && ehDasTelas() && !SO_REPROVA &&
+            String(SOLICITACAO.tipo_compra || '').toLowerCase() === 'mensal' &&
+            (NA_FILA.etapa_atual || SOLICITACAO.etapa_atual) === 'gerencial');
+}
+function revAtiva(){ return !!(REV && !REV.travada); }
+
+/* "2,5" e "2.5" viram 2.5; "1.500" (milhar) vira 1500. */
+function lerQtd(txt){
+  let t = String(txt == null ? '' : txt).trim().replace(/\s/g, '');
+  if(!t) return NaN;
+  if(/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '');
+  else if(t.includes(',')) t = t.replace(/\./g, '').replace(',', '.');
+  return /^\d*\.?\d+$/.test(t) ? Number(t) : NaN;
+}
+const qtdTexto = n => Number(n).toLocaleString('pt-BR', { maximumFractionDigits: 3, useGrouping: false });
+
+function iniciarRevisao(){
+  REV = { travada: false,
+          linhas: ITENS.map(i => ({ id: i.id, codigo: i.codigo, descricao: i.descricao,
+                                    q0: Number(i.quantidade), u0: String(i.unidade || '').toUpperCase(),
+                                    q: qtdTexto(i.quantidade), u: String(i.unidade || '').toUpperCase(),
+                                    acao: 'manter', motivo: '' })),
+          novos: [] };
+  $('cartaoRevisao').hidden = false;
+  $('cartaoItens').hidden = true;
+  if(OBSERVADOR){
+    REV.travada = true;
+    $('revNota').innerHTML = '<b>Modo observador.</b> É aqui que o gerente revisa os itens da compra mensal; nesta visão os campos ficam desligados.';
+  }
+  $('revIncluir').hidden = !!REV.travada;
+  desenharRevisao();
+}
+
+function opcoesUnidade(atual){
+  const lista = UNIDADES_CATALOGO.slice();
+  if(atual && !lista.includes(atual)) lista.unshift(atual);
+  return lista.map(u => '<option value="' + esc(u) + '"' + (u === atual ? ' selected' : '') + '>' + esc(u) + '</option>').join('');
+}
+
+function desenharRevisao(){
+  const off = REV.travada ? ' disabled' : '';
+  const linhas = REV.linhas.map((l, k) => {
+    const rep = l.acao === 'reprovar';
+    const q = lerQtd(l.q);
+    const mudouQ = !rep && !isNaN(q) && q !== l.q0, mudouU = !rep && l.u !== l.u0;
+    let h = '<tr class="' + (rep ? 'rep' : '') + '" data-k="' + k + '">' +
+      '<td class="desc">' + esc(l.descricao) + '<span class="cod-mini">' + esc(l.codigo || 'sem código') + '</span></td>' +
+      '<td class="num"><input class="rev-qtd' + (mudouQ ? ' mudou' : '') + (l.erroQ ? ' invalido' : '') + '" inputmode="decimal" aria-label="Quantidade de ' + esc(l.descricao) + '" data-q="' + k + '" value="' + esc(l.q) + '"' + (rep ? ' disabled' : off) + '>' +
+        (mudouQ || mudouU ? '<span class="rev-de">pedido: ' + esc(qtdTexto(l.q0)) + ' ' + esc(l.u0) + '</span>' : '') + '</td>' +
+      '<td><select class="rev-un' + (mudouU ? ' mudou' : '') + '" aria-label="Unidade de ' + esc(l.descricao) + '" data-u="' + k + '"' + (rep ? ' disabled' : off) + '>' + opcoesUnidade(l.u) + '</select></td>' +
+      '<td><div class="rev-seg" role="group" aria-label="Decisão sobre ' + esc(l.descricao) + '">' +
+        '<button type="button" class="ok" data-acao="manter" data-k="' + k + '" aria-pressed="' + (!rep) + '"' + off + '>Aprovar</button>' +
+        '<button type="button" class="nao" data-acao="reprovar" data-k="' + k + '" aria-pressed="' + rep + '"' + off + '>Reprovar</button>' +
+      '</div></td></tr>';
+    if(rep) h += '<tr class="motivo-linha"><td colspan="4"><input class="rev-motivo' + (l.erroM ? ' invalido' : '') + '" data-m="' + k + '" maxlength="300" placeholder="Motivo de reprovar este item (ex.: tem em estoque)" aria-label="Motivo de reprovar ' + esc(l.descricao) + '" value="' + esc(l.motivo) + '"' + off + '></td></tr>';
+    return h;
+  });
+  const novos = REV.novos.map((n, k) =>
+    '<tr class="novo" data-n="' + k + '">' +
+      '<td class="desc">' + esc(n.descricao) + ' <span class="rev-selo">incluído</span><span class="cod-mini">' + esc(n.codigo) + '</span></td>' +
+      '<td class="num"><input class="rev-qtd' + (n.erroQ ? ' invalido' : '') + '" inputmode="decimal" aria-label="Quantidade de ' + esc(n.descricao) + '" data-nq="' + k + '" value="' + esc(n.q) + '"' + off + '></td>' +
+      '<td><select class="rev-un" aria-label="Unidade de ' + esc(n.descricao) + '" data-nu="' + k + '"' + off + '>' + opcoesUnidade(n.u) + '</select></td>' +
+      '<td><button type="button" class="rev-tirar" data-tirar="' + k + '"' + off + '>Tirar</button></td></tr>');
+  $('revCorpo').innerHTML = linhas.join('') + novos.join('');
+  resumirRevisao();
+}
+
+/* Atualiza só a linha (marcas e o "pedido: …"), sem redesenhar a tabela: redesenhar
+   no meio da digitação troca os campos de lugar e o que a pessoa digita a seguir
+   cai num campo que já não existe. */
+function marcarLinha(k){
+  const l = REV.linhas[k], tr = document.querySelector('#revCorpo tr[data-k="' + k + '"]');
+  if(!tr || l.acao === 'reprovar') return;
+  const q = lerQtd(l.q), mudouQ = !isNaN(q) && q !== l.q0, mudouU = l.u !== l.u0;
+  tr.querySelector('.rev-qtd').classList.toggle('mudou', mudouQ);
+  tr.querySelector('.rev-un').classList.toggle('mudou', mudouU);
+  let de = tr.querySelector('.rev-de');
+  if(mudouQ || mudouU){
+    if(!de){ de = document.createElement('span'); de.className = 'rev-de'; tr.querySelector('.rev-qtd').after(de); }
+    de.textContent = 'pedido: ' + qtdTexto(l.q0) + ' ' + l.u0;
+  } else if(de) de.remove();
+}
+
+function resumoContas(){
+  const rep = REV.linhas.filter(l => l.acao === 'reprovar').length;
+  const mud = REV.linhas.filter(l => l.acao !== 'reprovar' && ((lerQtd(l.q) !== l.q0 && !isNaN(lerQtd(l.q))) || l.u !== l.u0)).length;
+  const ficam = REV.linhas.length - rep + REV.novos.length;
+  return { rep, mud, inc: REV.novos.length, ficam, aprov: REV.linhas.length - rep };
+}
+
+function resumirRevisao(){
+  const c = resumoContas();
+  const pl = (n, a, b) => n + ' ' + (n === 1 ? a : b);
+  const r = $('revResumo');
+  if(c.ficam === 0){
+    r.className = 'rev-resumo alerta';
+    r.textContent = 'Todos os itens estão reprovados. Ao confirmar, o pedido será reprovado e quem pediu recebe o motivo de cada item.';
+  } else {
+    r.className = 'rev-resumo';
+    r.textContent = pl(c.aprov, 'item aprovado', 'itens aprovados') + ' · ' + pl(c.rep, 'reprovado', 'reprovados') +
+      ' · ' + pl(c.mud, 'alterado', 'alterados') + ' · ' + pl(c.inc, 'incluído', 'incluídos') + '.';
+  }
+  if(!REV.travada && NA_FILA && !decidindo){
+    $('btnAprovar').textContent = c.ficam === 0 ? 'Reprovar pedido' : (c.rep + c.mud + c.inc ? 'Aprovar com ajustes' : 'Aprovar');
+  }
+}
+
+function revSujo(){
+  if(!REV || REV.travada || !NA_FILA) return false;
+  const c = resumoContas();
+  return c.rep + c.mud + c.inc > 0 || REV.linhas.some(l => l.motivo);
+}
+
+/* Confere antes de mandar: devolve a lista de problemas (vazia = pode ir). */
+function validarRevisao(){
+  const erros = [];
+  REV.linhas.forEach(l => {
+    l.erroQ = false; l.erroM = false;
+    if(l.acao === 'reprovar'){
+      if(String(l.motivo).trim().length < MOTIVO_ITEM_MIN){ l.erroM = true; erros.push('Escreva o motivo de reprovar "' + l.descricao + '".'); }
+    } else {
+      const q = lerQtd(l.q);
+      if(isNaN(q) || q <= 0){ l.erroQ = true; erros.push('Quantidade inválida em "' + l.descricao + '".'); }
+    }
+  });
+  REV.novos.forEach(n => {
+    n.erroQ = false;
+    const q = lerQtd(n.q);
+    if(isNaN(q) || q <= 0){ n.erroQ = true; erros.push('Informe a quantidade de "' + n.descricao + '" (incluído).'); }
+  });
+  return erros;
+}
+
+async function enviarRevisao(){
+  const erros = validarRevisao();
+  desenharRevisao();
+  if(erros.length){
+    $('revErro').innerHTML = erros.map(esc).join('<br>');
+    $('revErro').hidden = false;
+    mostrarBarra('Falta acertar a revisão dos itens.', erros[0], 'nao-ok', true, false);
+    const alvo = document.querySelector('.rev-qtd.invalido, .rev-motivo.invalido');
+    if(alvo) alvo.focus();
+    return;
+  }
+  $('revErro').hidden = true;
+  decidindo = true;
+  ['btnAprovar','btnReprovar','btnDevolver'].forEach(id => $(id).disabled = true);
+  mostrarBarra('Registrando…', 'Gravando os itens e a decisão.', '', false, true);
+  let j = null;
+  try{
+    j = await rpc('decidir_itens_mensal', {
+      p_token: TOKEN_APROVADOR, p_id: NA_FILA.id, p_versao: SOLICITACAO.versao,
+      p_itens: REV.linhas.map(l => l.acao === 'reprovar'
+        ? { id: l.id, acao: 'reprovar', motivo: String(l.motivo).trim() }
+        : { id: l.id, acao: 'manter', quantidade: lerQtd(l.q), unidade: l.u }),
+      p_novos: REV.novos.map(n => ({ codigo: n.codigo, quantidade: lerQtd(n.q), unidade: n.u }))
+    });
+  }catch(e){ j = null; }
+  decidindo = false;
+  if(j && j.ok){
+    const todos = j.todos_reprovados === true;
+    NA_FILA = null;
+    REV.travada = true;
+    $('revIncluir').hidden = true;
+    desenharRevisao();
+    seloDepois(todos ? 'reprovado' : 'aprovado');
+    mostrarBarra(todos ? 'Reprovado.' : 'Aprovado.', j.mensagem || '', todos ? 'nao-ok' : 'ok', false);
+    return;
+  }
+  if(j && (j.erro === 'versao_mudou' || j.erro === 'itens_desatualizados')){
+    NA_FILA = null;
+    mostrarBarra('Este pedido foi alterado.', 'Recarregue a página e confira antes de decidir.', 'nao-ok', false);
+    return;
+  }
+  mostrarBarra('Não consegui registrar a decisão.', ((j && j.mensagem) || 'A rede falhou no meio. Tente de novo.'), 'nao-ok', true, false);
+  ['btnAprovar','btnReprovar','btnDevolver'].forEach(id => $(id).disabled = false);
+  resumirRevisao();
+}
+
+/* Eventos da tabela (delegados: a tabela é redesenhada a cada mudança de ação). */
+$('revCorpo').addEventListener('input', e => {
+  if(!REV || REV.travada) return;
+  const t = e.target;
+  if(t.dataset.q !== undefined){ REV.linhas[+t.dataset.q].q = t.value; REV.linhas[+t.dataset.q].erroQ = false; t.classList.remove('invalido');
+    marcarLinha(+t.dataset.q); resumirRevisao(); }
+  if(t.dataset.m !== undefined){ REV.linhas[+t.dataset.m].motivo = t.value; REV.linhas[+t.dataset.m].erroM = false; t.classList.remove('invalido'); }
+  if(t.dataset.nq !== undefined){ REV.novos[+t.dataset.nq].q = t.value; REV.novos[+t.dataset.nq].erroQ = false; t.classList.remove('invalido'); }
+});
+$('revCorpo').addEventListener('change', e => {
+  if(!REV || REV.travada) return;
+  const t = e.target;
+  if(t.dataset.u !== undefined){ REV.linhas[+t.dataset.u].u = t.value; marcarLinha(+t.dataset.u); resumirRevisao(); }
+  if(t.dataset.nu !== undefined){ REV.novos[+t.dataset.nu].u = t.value; }
+});
+$('revCorpo').addEventListener('click', e => {
+  if(!REV || REV.travada) return;
+  const b = e.target.closest('button'); if(!b) return;
+  if(b.dataset.acao){
+    const l = REV.linhas[+b.dataset.k];
+    l.acao = b.dataset.acao; l.erroM = false;
+    desenharRevisao();
+    if(l.acao === 'reprovar'){ const m = document.querySelector('[data-m="' + b.dataset.k + '"]'); if(m) m.focus(); }
+  }
+  if(b.dataset.tirar !== undefined){ REV.novos.splice(+b.dataset.tirar, 1); desenharRevisao(); }
+});
+
+/* Busca no catálogo para incluir item: espera a digitação parar e ignora
+   respostas atrasadas (a última busca é a que vale). */
+let revTimer = null;
+$('revBusca').addEventListener('input', () => {
+  clearTimeout(revTimer);
+  const termo = $('revBusca').value.trim();
+  if(termo.length < 2){ $('revAchados').hidden = true; return; }
+  revTimer = setTimeout(() => buscarNoCatalogo(termo), 250);
+});
+$('revBusca').addEventListener('keydown', e => { if(e.key === 'Escape'){ $('revAchados').hidden = true; } });
+document.addEventListener('click', e => { if(!e.target.closest('#revIncluir')) $('revAchados').hidden = true; });
+
+async function buscarNoCatalogo(termo){
+  const seq = ++revBuscaSeq;
+  let j = null;
+  try{ j = await rpc('buscar_item_catalogo', { p_token: TOKEN_APROVADOR, p_termo: termo }); }catch(e){ j = null; }
+  if(seq !== revBuscaSeq || $('revBusca').value.trim() !== termo) return;
+  const ul = $('revAchados');
+  if(!j || j.ok !== true){ ul.innerHTML = '<li class="vazio">Não consegui buscar no catálogo agora.</li>'; ul.hidden = false; return; }
+  const ja = new Set(REV.linhas.filter(l => l.acao !== 'reprovar').map(l => l.codigo).concat(REV.novos.map(n => n.codigo)));
+  const itens = (j.itens || []);
+  ul.innerHTML = itens.length
+    ? itens.map((it, k) => ja.has(it.codigo)
+        ? '<li class="vazio">' + esc(it.descricao) + ' — já está no pedido</li>'
+        : '<li><button type="button" data-inc="' + k + '">' + esc(it.descricao) + '<span class="cod-mini">' + esc(it.codigo) + ' · ' + esc(it.unidade || '') + '</span></button></li>').join('')
+    : '<li class="vazio">Nada no catálogo com "' + esc(termo) + '".</li>';
+  ul.hidden = false;
+  ul.querySelectorAll('[data-inc]').forEach(b => b.addEventListener('click', () => {
+    const it = itens[+b.dataset.inc];
+    REV.novos.push({ codigo: it.codigo, descricao: it.descricao, q: '', u: String(it.unidade || 'UNID').toUpperCase() });
+    $('revBusca').value = ''; ul.hidden = true;
+    desenharRevisao();
+    const q = document.querySelector('[data-nq="' + (REV.novos.length - 1) + '"]'); if(q) q.focus();
+  }));
+}
+
+window.addEventListener('beforeunload', e => { if(revSujo()){ e.preventDefault(); e.returnValue = ''; } });
+
+/* Depois da gerência: o que ela reprovou fica à vista de quem vem depois. */
+function desenharCortados(){
+  if(!CORTADOS.length){ $('cartaoCortados').hidden = true; return; }
+  $('listaCortados').innerHTML = CORTADOS.map(c =>
+    '<li><b>' + esc(c.descricao) + '</b> — ' + numBR(c.quantidade) + ' ' + esc(plural(c.unidade, c.quantidade)) +
+    '<br>Motivo: ' + esc(c.motivo) + (c.cortado_por ? ' <span class="quem">· ' + esc(c.cortado_por) + (c.em ? ', ' + dataBR(c.em) : '') + '</span>' : '') + '</li>').join('');
+  $('cartaoCortados').hidden = false;
+}
+
 let modoModal = 'reprovar';
 function abrirReprova(modo){
   if(OBSERVADOR) return;
@@ -1194,7 +1540,7 @@ function abrirReprova(modo){
 }
 function fecharReprova(){ $('fundoModal').hidden = true; }
 
-$('btnAprovar').addEventListener('click', ()=> decidir('aprovado', ''));
+$('btnAprovar').addEventListener('click', ()=> (ehRevisaoMensal() && revAtiva()) ? enviarRevisao() : decidir('aprovado', ''));
 $('btnReprovar').addEventListener('click', ()=> abrirReprova('reprovar'));
 $('btnDevolver').addEventListener('click', ()=> abrirReprova('devolver'));
 $('btnCancelar').addEventListener('click', fecharReprova);
