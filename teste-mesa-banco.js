@@ -170,7 +170,7 @@ const b = await chromium.launch();
   ok('2 token no corpo, não na URL', f && f.c.p_token === TOKEN);
   ok('2 nome do comprador', /HERISSON LUCAS LAPCZAK/.test(await txt(p, '#quem-nome')));
   const abas = await p.$$eval('[data-tab]', bs => bs.map(b => b.textContent.replace(/\s+/g, ' ').trim()));
-  ok('2 abas com contagem (outro comprador fora)', JSON.stringify(abas) === JSON.stringify(['Para cotar2', 'Aguardando o lote0', 'Devolvidas1', 'Enviadas1']), abas);
+  ok('2 abas com contagem (outro comprador fora)', JSON.stringify(abas) === JSON.stringify(['Para cotar2', 'Devolvidas1', 'Enviadas1']), abas);
   ok('2 pedido de outro comprador não aparece', !/C2609-03005/.test(await txt(p, '#view')));
   ok('2 urgente primeiro', (await p.$$eval('table.fila tbody tr', t => t.map(x => x.dataset.id)))[0] === 'C2609-03002');
   ok('2 tipo: serviço e item único', /Serviço/.test(await txt(p, 'tr[data-id="C2609-03002"]')) && /Lista · 2 itens/.test(await txt(p, 'tr[data-id="C2609-03001"]')));

@@ -141,18 +141,25 @@ async function escolherForn(p, campo, termo, fid){
 (async () => {
 const b = await chromium.launch();
 
-/* L1 — antes do corte: aba "Aguardando o lote" com os pedidos, só para ver */
+/* L1 — antes do corte: Mensal > "Aguardando o corte" com os pedidos, só para ver
+   (02/10: a aba "Aguardando o lote" saiu; tudo da mensal fica no botão Mensal) */
 { const p = await abrir(b);
   ok('L1 link do relatório do lote com o token', (await p.getAttribute('#lnk-relatorio', 'href')) === 'relatorio-mensal.html?t=cp-herisson');
-  ok('L1 abas antes do corte', JSON.stringify(await abas(p)) === JSON.stringify(['Para cotar1','Aguardando o lote2','Devolvidas0','Enviadas0']), await abas(p));
-  ok('L1 mensal no lote não aparece em Para cotar', !/C2610-00010/.test(await txt(p, '#view')));
-  await p.click('[data-tab="lote"]'); await p.waitForTimeout(150);
+  ok('L1 abas: Para cotar, Devolvidas, Enviadas (sem aba do lote)', JSON.stringify(await abas(p)) === JSON.stringify(['Para cotar1','Devolvidas0','Enviadas0']), await abas(p));
+  ok('L1 mensal que aguarda o corte não aparece com as outras', !/C2610-00010/.test(await txt(p, '#view')));
+  ok('L1 botão Mensal conta os que aguardam o corte', /2/.test(await txt(p, '[data-tipo="mensal"]')) && await p.locator('[data-tipo="mensal"] .c.tem').count() === 1);
+  ok('L1 aviso diz onde está a mensal', /clique em Mensal para ver o lote e os pedidos que aguardam o corte do dia 20/.test(await txt(p, '#nota-mensal')));
+  ok('L1 sem as duas visões antes de clicar em Mensal', await p.locator('[data-sub]').count() === 0);
+  await p.click('[data-tipo="mensal"]'); await p.waitForTimeout(150);
+  ok('L1 Mensal abre as duas visões; sem lote, já mostra "Aguardando o corte"', await p.locator('[data-sub]').count() === 2
+     && (await p.getAttribute('[data-sub="aguardando"]', 'aria-pressed')) === 'true' && /Aguardando o corte · dia 20\s*2/.test(await txt(p, '[data-sub="aguardando"]'))
+     && /Lote para cotar\s*0/.test(await txt(p, '[data-sub="lote"]')), await txt(p, '.sub-mensal'));
   ok('L1 dois pedidos (o de outro comprador fica fora)', await linhas(p) === 2 && !/C2610-00012/.test(await txt(p, '#view')));
   const t = await txt(p, 'tr[data-id="C2610-00011"]');
   ok('L1 linha mostra gerência, unidade e centro de custo', /Gerente Fazenda/.test(t) && /Fazenda/.test(t) && /31/.test(t) && /LAVOURA/.test(t), t);
   ok('L1 explica o corte do dia 20', /virada do dia 19 para o 20/.test(await txt(p, '#view')) && /\/20\d\d|20\/\d\d\/\d{4}/.test(await txt(p, '.lote-nota')));
   ok('L1 sem botão de cotar na aba do lote', await p.locator('[data-open]').count() === 0 && await p.locator('[data-det]').count() === 2);
-  ok('L1 sem botões de tipo na aba do lote', await p.locator('[data-tipo]').count() === 0);
+  ok('L1 botões de tipo continuam, com Mensal marcado', await p.locator('[data-tipo]').count() === 3 && (await p.getAttribute('[data-tipo="mensal"]', 'aria-pressed')) === 'true');
   /* filtros */
   await p.selectOption('#lf-ger', 'g1'); await p.waitForTimeout(150);
   ok('L1 filtro gerência', await linhas(p) === 1 && /C2610-00010/.test(await txt(p, 'table.fila')));
@@ -187,14 +194,22 @@ const b = await chromium.launch();
   await p.click('tr[data-id="C2610-00010"]'); await p.waitForTimeout(400);
   ok('L1 clicar na linha também abre', !(await p.locator('#overlay').isHidden()) && /C2610-00010/.test(await txt(p, '#modal .eyebrow')));
   await p.keyboard.press('Escape');
-  await p.click('[data-tab="cotar"]'); await p.waitForTimeout(100);
+  await p.click('[data-sub="lote"]'); await p.waitForTimeout(100);
+  ok('L1 "Lote para cotar" antes do corte explica e leva aos que aguardam', /Nenhum lote mensal para cotar agora/.test(await txt(p, '#view')) && /Ver os que aguardam o corte \(2\)/.test(await txt(p, '#bt-ver-aguard'))
+     && await p.evaluate(() => document.activeElement.dataset.sub) === 'lote');
+  await p.click('#bt-ver-aguard'); await p.waitForTimeout(100);
+  ok('L1 botão do aviso volta aos que aguardam', await linhas(p) === 2 && (await p.getAttribute('[data-sub="aguardando"]', 'aria-pressed')) === 'true');
+  await p.click('[data-tipo="normal"]'); await p.waitForTimeout(100);
+  ok('L1 trocar para Normal some com as visões da mensal', await p.locator('[data-sub]').count() === 0 && await linhas(p) === 1);
   await p.click('[data-tipo="mensal"]'); await p.waitForTimeout(100);
-  ok('L1 Mensal em Para cotar: nada antes do corte', /Nenhuma compra mensal nesta aba/.test(await txt(p, '#view')));
+  ok('L1 voltar para Mensal escolhe de novo a visão com pedidos', (await p.getAttribute('[data-sub="aguardando"]', 'aria-pressed')) === 'true');
+  await p.click('[data-tab="dev"]'); await p.waitForTimeout(100);
+  ok('L1 em Devolvidas não há as visões da mensal', await p.locator('[data-sub]').count() === 0);
   await p.close(); }
 
 /* L2 — depois do corte: o lote é uma linha só em Para cotar */
 { const p = await abrir(b, { prep:fecharCorte });
-  ok('L2 abas depois do corte', JSON.stringify(await abas(p)) === JSON.stringify(['Para cotar2','Aguardando o lote0','Devolvidas0','Enviadas0']), await abas(p));
+  ok('L2 abas depois do corte', JSON.stringify(await abas(p)) === JSON.stringify(['Para cotar2','Devolvidas0','Enviadas0']), await abas(p));
   /* 02/10: a mensal não se mistura com as outras em Para cotar */
   ok('L2 sem tipo marcado: só normal e urgente, o lote fica de fora', await linhas(p) === 1 && !/Lote 10\/2026/.test(await txt(p, 'table.fila')) && /C2610-00001/.test(await txt(p, 'table.fila')));
   ok('L2 aviso de que a mensal está no botão Mensal', /clique em Mensal para ver/.test(await txt(p, '#nota-mensal')));
@@ -206,11 +221,10 @@ const b = await chromium.launch();
   const t = await txt(p, 'tr[data-id="Lote 10/2026"]');
   ok('L2 linha do lote', /Compra mensal de outubro\/2026 · 2 pedidos de 2 gerências/.test(t) && /Lote mensal/.test(t) && /Cotar o lote/.test(t) && /3 famílias/.test(t) && /Lote mensal/.test(t), t);
   ok('L2 pedidos do lote não aparecem soltos', !/C2610-00010|C2610-00011/.test(await txt(p, '#view')));
-  ok('L2 filtro Mensal mostra só o lote', await linhas(p) === 1);
-  await p.click('[data-tab="lote"]'); await p.waitForTimeout(100);
-  ok('L2 aba do lote vazia explica', /Nada aguardando o lote/.test(await txt(p, '#view')));
-  await p.click('[data-tab="cotar"]'); await p.waitForTimeout(100);
-  await verMensal(p);
+  ok('L2 filtro Mensal mostra só o lote, em "Lote para cotar"', await linhas(p) === 1 && (await p.getAttribute('[data-sub="lote"]', 'aria-pressed')) === 'true');
+  await p.click('[data-sub="aguardando"]'); await p.waitForTimeout(100);
+  ok('L2 "Aguardando o corte" vazio explica', /Nada aguardando o corte/.test(await txt(p, '#view')));
+  await p.click('[data-sub="lote"]'); await p.waitForTimeout(100);
   /* detalhe do lote */
   await p.click('tr[data-id="Lote 10/2026"]'); await p.waitForTimeout(600);
   ok('L2 detalhe chama lote_mesa com o id do lote', ch(p, 'lote_mesa').some(x => x.c.p_lote_id === 'lt1' && x.c.p_token === TOKEN));
@@ -380,8 +394,8 @@ const b = await chromium.launch();
   ok('L7 celular: fila sem rolagem lateral', await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   await p.close(); }
 { const p = await abrir(b, { vp:{ width:390, height:800 } });
-  await p.click('[data-tab="lote"]'); await p.waitForTimeout(150);
-  ok('L7 celular: aba do lote sem rolagem lateral', await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+  await p.click('[data-tipo="mensal"]'); await p.waitForTimeout(150);
+  ok('L7 celular: Mensal > aguardando o corte sem rolagem lateral', await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   await p.close(); }
 
 await b.close();
