@@ -206,6 +206,9 @@
   .aba .conta{font-size:12px;font-weight:700;padding:1px 7px;border-radius:var(--pilula);
     background:var(--realce);border:1px solid var(--borda);color:var(--muted)}
   .aba[aria-selected="true"] .conta{background:var(--verde-claro);border-color:var(--verde);color:var(--verde-mata)}
+  /* Três abas (02/10): no celular encolhem e, se ainda faltar espaço, a faixa rola sozinha. */
+  .abas{overflow-x:auto;scrollbar-width:none}
+  @media (max-width:520px){ .aba{padding:10px 9px;font-size:13.5px} .seg-tipo button{padding:7px 11px} }
 
   /* O motivo da reprovação mora dentro da coluna da decisão, e é o texto mais
      longo da tabela — por isso ela é a coluna larga. Com 118px o motivo virava
@@ -461,6 +464,30 @@
   input[type=search]:focus,input[type=text]:focus,select:focus,textarea:focus{outline:none;border-color:var(--verde);box-shadow:0 0 0 2px var(--verde-claro, rgba(0,114,122,.15))}
   /* barra do topo na mesma margem do conteúdo */
   @media (min-width:601px){ .topo{padding-left:24px;padding-right:24px} }
+  /* Tipo de compra (02/10): Normal | Urgente | Mensal, no padrão segmentado do
+     funil e da Mesa. Nenhum marcado = todos; clicar no marcado desmarca. */
+  /* Mesmo desenho do funil da diretoria (painel.html .tipos/.tipo-btn): faixa cinza
+     arredondada, botão marcado em branco com sombra, número colorido por tipo. */
+  .seg-tipo{--sg-fundo:#E7ECEE;--sg-sup:#FFFFFF;--sg-linha:#D7DCDE;--sg-tinta:#00263d;--sg-tinta2:#3D586B;--sg-tinta3:#6C818F;
+    --sg-sombra:0 1px 2px rgba(0,38,61,.07),0 4px 14px rgba(0,38,61,.07);
+    --sg-acc:#00727A;--sg-acc-s:#DCEFF1;--sg-crit:#A82A1F;--sg-crit-s:#F8E2DF;--sg-warn:#7A5A18;--sg-warn-s:#F3E9D5;
+    display:inline-flex;gap:4px;flex-wrap:wrap;background:var(--sg-fundo);border-radius:10px;padding:4px;margin:0 0 14px}
+  @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .seg-tipo{--sg-fundo:#143047;--sg-sup:#0E2438;--sg-linha:#23455D;--sg-tinta:#E7EEF2;--sg-tinta2:#AFC2CF;--sg-tinta3:#8296A4;
+    --sg-sombra:0 1px 2px rgba(0,0,0,.35),0 6px 18px rgba(0,0,0,.3);--sg-acc:#4FC0C8;--sg-acc-s:#0C3138;--sg-crit:#F0938A;--sg-crit-s:#3B1D1A;--sg-warn:#DDCBA3;--sg-warn-s:#332B1A} }
+  :root[data-theme="dark"] .seg-tipo{--sg-fundo:#143047;--sg-sup:#0E2438;--sg-linha:#23455D;--sg-tinta:#E7EEF2;--sg-tinta2:#AFC2CF;--sg-tinta3:#8296A4;
+    --sg-sombra:0 1px 2px rgba(0,0,0,.35),0 6px 18px rgba(0,0,0,.3);--sg-acc:#4FC0C8;--sg-acc-s:#0C3138;--sg-crit:#F0938A;--sg-crit-s:#3B1D1A;--sg-warn:#DDCBA3;--sg-warn-s:#332B1A}
+  .seg-tipo button{display:inline-flex;align-items:center;gap:7px;border:0;background:transparent;color:var(--sg-tinta2);border-radius:7px;
+    padding:7px 14px;min-height:36px;cursor:pointer;font:inherit;font-size:14px;font-weight:500}
+  .seg-tipo button:hover{background:var(--sg-sup)}
+  .seg-tipo button[aria-pressed="true"]{background:var(--sg-sup);color:var(--sg-tinta);font-weight:600;box-shadow:var(--sg-sombra)}
+  .seg-tipo .c{font-size:12px;line-height:18px;min-width:20px;text-align:center;border-radius:999px;padding:0 6px;
+    background:var(--sg-sup);color:var(--sg-tinta3);border:1px solid var(--sg-linha)}
+  .seg-tipo .c.tem[data-c="normal"]{background:var(--sg-acc-s);color:var(--sg-acc);border-color:color-mix(in srgb,var(--sg-acc) 25%,transparent)}
+  .seg-tipo .c.tem[data-c="urgente"]{background:var(--sg-crit-s);color:var(--sg-crit);border-color:color-mix(in srgb,var(--sg-crit) 25%,transparent)}
+  .seg-tipo .c.tem[data-c="mensal"]{background:var(--sg-warn-s);color:var(--sg-warn);border-color:color-mix(in srgb,var(--sg-warn) 25%,transparent)}
+  .selo-tipo{display:inline-block;margin-top:4px;margin-right:4px;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700}
+  .selo-tipo.normal{background:var(--realce);color:var(--muted);border:1px solid var(--borda)}
+  .selo-tipo.mensal{background:var(--demo-bg);color:var(--demo)}
   .selo-unico{display:inline-block;margin-top:4px;padding:1px 8px;border-radius:999px;background:var(--demo-bg);color:var(--demo);font-size:11px;font-weight:700}
   .selo-urgente{display:inline-block;margin-top:4px;margin-right:4px;padding:1px 8px;border-radius:999px;background:var(--erro-bg);color:var(--erro);font-size:11px;font-weight:700}
   .selo-editado{display:inline-block;margin-top:4px;margin-right:4px;padding:1px 8px;border-radius:999px;background:var(--verde-claro);color:var(--verde-mata);font-size:11px;font-weight:700}
@@ -500,8 +527,17 @@
         Esperando você <span class="conta" id="contaFila">0</span>
       </button>
       <button type="button" class="aba" id="abaHist" role="tab" aria-selected="false">
-        Histórico de aprovações
+        Aprovadas <span class="conta" id="contaAprov" hidden></span>
       </button>
+      <button type="button" class="aba" id="abaRep" role="tab" aria-selected="false">
+        Reprovadas <span class="conta" id="contaRep" hidden></span>
+      </button>
+    </div>
+
+    <div class="seg-tipo" id="segTipo" role="group" aria-label="Tipo de compra">
+      <button type="button" data-tipo="normal" aria-pressed="false">Normal <span class="c" data-c="normal">0</span></button>
+      <button type="button" data-tipo="urgente" aria-pressed="false">Urgente <span class="c" data-c="urgente">0</span></button>
+      <button type="button" data-tipo="mensal" aria-pressed="false">Mensal <span class="c" data-c="mensal">0</span></button>
     </div>
 
     <div id="painelFila">
@@ -633,7 +669,7 @@ const TOKEN = (q.get('t') || '').trim();
 const OBS = (q.get('o') || '').trim();
 let OBS_APROV = (q.get('a') || '').trim();
 const OBSERVADOR = !TOKEN && !!OBS;
-const LEITURA_OBS = { fila_de_aprovacao:1, fila_do_aprovador:1, aprovador_do_token:1, historico_de_aprovacoes:1 };
+const LEITURA_OBS = { fila_de_aprovacao:1, fila_do_aprovador:1, aprovador_do_token:1, historico_de_aprovacoes:1, historico_do_aprovador:1 };
 /* O que vai no link da tela do pedido: o token do aprovador, ou o acesso do observador. */
 function sufixoPedido(etapa){
   if(OBSERVADOR) return '&o=' + encodeURIComponent(OBS) + '&a=' + encodeURIComponent(OBS_APROV) + '&e=' + encodeURIComponent(etapa || '');
@@ -689,7 +725,10 @@ let enviando = false;
    cada decisão — senão a pessoa aprova, volta ao histórico e não vê o que
    acabou de fazer, que é justamente quando ela vai olhar. */
 let HIST = null;
-let aba = 'fila';
+let aba = 'fila';           // 'fila' | 'aprov' | 'rep'
+let tipoSel = '';           // '' = todos os tipos
+const TIPO_NOME = { normal:'Normal', urgente:'Urgente', mensal:'Mensal' };
+const tipoDe = x => { const t = String((x && x.tipo_compra) || '').toLowerCase(); return TIPO_NOME[t] ? t : 'normal'; };
 /* Ids já em voo ou já decididos. O botão da linha pode ser clicado duas vezes
    antes do primeiro pedido voltar, e a linha some só depois da resposta — sem
    isto, o segundo clique manda a mesma decisão de novo e a pessoa vê um erro
@@ -706,6 +745,7 @@ function visiveis(){
   const t = termo.trim().toLowerCase();
   return FILA.filter(s=>{
     if(soHoje && !ehDeHoje(s)) return false;
+    if(tipoSel && tipoDe(s) !== tipoSel) return false;
     if(!t) return true;
     return [s.numero, s.facilitador, s.solicitante_nome, s.centro_custo,
             s.centro_custo_nome, s.motivo, s.observacao]
@@ -811,7 +851,9 @@ function desenhar(){
     /* Fornecedor único fica explícito já na fila: quem aprova sabe que não houve cotação com outros. */
     /* Selos embaixo do motivo (piloto 29/09): urgente, editado pelo solicitante e fornecedor único. */
     const selo = (cls, txt, dica) => { const u = document.createElement('span'); u.className = cls; u.textContent = txt; if(dica) u.title = dica; tdM.appendChild(u); };
-    if(s.tipo_compra === 'urgente') selo('selo-urgente', 'Urgente');
+    /* Tipo sempre marcado (02/10): Normal, Urgente ou Mensal. */
+    if(tipoDe(s) === 'urgente') selo('selo-urgente', 'Urgente');
+    else selo('selo-tipo ' + tipoDe(s), TIPO_NOME[tipoDe(s)]);
     if(s.editado) selo('selo-editado', 'Editado pelo solicitante', 'O pedido foi alterado depois de aberto. Abra para ver o que mudou.');
     if(s.definicao_fornecedor === 'unico') selo('selo-unico', 'Fornecedor único');
     tr.appendChild(tdM);
@@ -918,7 +960,10 @@ function desenhar(){
   desenharEdicao();
   $('filaVazia').hidden = lista.length > 0;
   $('filaVazia').querySelector('b').textContent =
-    FILA.length === 0 ? 'Nada esperando por você.' : 'Nada com esse filtro.';
+    FILA.length === 0 ? 'Nada esperando por você.'
+    : (tipoSel && !termo.trim() && !soHoje) ? 'Nenhuma compra ' + TIPO_NOME[tipoSel].toLowerCase() + ' esperando por você.'
+    : 'Nada com esse filtro.';
+  pintarTipos();
 
   const marcadasVisiveis = lista.filter(s=>marcadas.has(s.id)).length;
   $('btnLote').disabled = marcadasVisiveis === 0 || enviando || OBSERVADOR;
@@ -1178,17 +1223,40 @@ async function abrir(){
    ========================================================================== */
 const SITUACAO_BOA = /aprovado|em cota/i;
 
+/* Aprovadas e Reprovadas (02/10): o histórico se divide pela resposta, para
+   todos os tipos de compra, e cada linha diz o tipo. */
+const ehAprovada = h => h.resposta === 'aprovado';
+function histDaAba(){
+  return (HIST || []).filter(h => aba === 'aprov' ? ehAprovada(h) : !ehAprovada(h));
+}
+function contarHist(){
+  if(!HIST) return;
+  const ap = HIST.filter(ehAprovada).length;
+  $('contaAprov').textContent = ap; $('contaAprov').hidden = false;
+  $('contaRep').textContent = HIST.length - ap; $('contaRep').hidden = false;
+}
+
 function desenharHist(){
   const corpo = $('corpoHist');
   corpo.innerHTML = '';
+  contarHist();
+  pintarTipos();
 
-  const vazio = !HIST || !HIST.length;
+  const daAba = histDaAba();
+  const lista = daAba.filter(h => !tipoSel || tipoDe(h) === tipoSel);
+  const vazio = !lista.length;
   $('histRolagem').hidden = vazio;
   $('histVazio').hidden   = !vazio;
-  if(vazio) return;
+  if(vazio){
+    const b = $('histVazio').querySelector('b');
+    b.textContent = !HIST || !HIST.length ? 'Você ainda não decidiu nenhuma solicitação.'
+      : tipoSel && daAba.length ? 'Nenhuma compra ' + TIPO_NOME[tipoSel].toLowerCase() + (aba === 'aprov' ? ' aprovada.' : ' reprovada.')
+      : (aba === 'aprov' ? 'Nenhuma solicitação aprovada ainda.' : 'Nenhuma solicitação reprovada.');
+    return;
+  }
   $('thDecisao').textContent = (GRUPO || HIST.some(h => h.fui_eu === false)) ? 'Decisão' : 'Sua decisão';
 
-  HIST.forEach(h=>{
+  lista.forEach(h=>{
     const tr = document.createElement('tr');
     const aprovou = h.resposta === 'aprovado';
     const rotulo = aprovou ? 'Aprovada' : h.resposta === 'devolvido' ? 'Devolvida' : 'Reprovada';
@@ -1198,7 +1266,8 @@ function desenharHist(){
     const link = 'pedido.html?id=' + encodeURIComponent(h.id) + sufixoPedido(h.etapa);
 
     tr.innerHTML =
-      '<td class="num"><a href="' + link + '">' + esc(h.numero || '—') + '</a></td>' +
+      '<td class="num"><a href="' + link + '">' + esc(h.numero || '—') + '</a>' +
+        (h.tipo_compra ? '<br><span class="selo-tipo ' + (tipoDe(h) === 'urgente' ? 'urgente selo-urgente' : tipoDe(h)) + '">' + TIPO_NOME[tipoDe(h)] + '</span>' : '') + '</td>' +
       '<td><span class="corta">' + esc(h.facilitador || '—') + '</span></td>' +
       '<td><span class="corta">' + esc(h.centro_custo_nome || '—') + '</span></td>' +
       '<td><span class="etapa ' + esc(h.etapa || '') + '">' +
@@ -1220,7 +1289,11 @@ async function carregarHistorico(){
   $('histRolagem').hidden = true;
   $('histVazio').hidden = true;
   try{
-    HIST = await rpc('historico_de_aprovacoes', { p_token: TOKEN, p_limite: 60 });
+    /* historico_do_aprovador traz o tipo de compra; se ainda não existir no banco,
+       cai no histórico antigo (sem o tipo) em vez de mostrar erro. */
+    let h = null;
+    try{ h = await rpc('historico_do_aprovador', { p_token: TOKEN, p_limite: 120 }); }catch(e){ h = null; }
+    HIST = Array.isArray(h) ? h : await rpc('historico_de_aprovacoes', { p_token: TOKEN, p_limite: 120 });
   }catch(e){
     HIST = null;
     $('histCarregando').hidden = true;
@@ -1233,13 +1306,28 @@ async function carregarHistorico(){
 }
 
 function trocarAba(qual){
-  aba = qual;
-  const naFila = qual === 'fila';
+  aba = qual === 'historico' ? 'aprov' : qual;
+  const naFila = aba === 'fila';
   $('abaFila').setAttribute('aria-selected', String(naFila));
-  $('abaHist').setAttribute('aria-selected', String(!naFila));
+  $('abaHist').setAttribute('aria-selected', String(aba === 'aprov'));
+  $('abaRep').setAttribute('aria-selected', String(aba === 'rep'));
   $('painelFila').hidden = !naFila;
   $('painelHist').hidden = naFila;
-  if(!naFila) carregarHistorico();
+  if(!naFila) carregarHistorico(); else desenhar();
+}
+
+/* Contagem por tipo na aba aberta, com os outros filtros da fila aplicados. */
+function pintarTipos(){
+  let base;
+  if(aba === 'fila'){
+    const t = tipoSel; tipoSel = ''; base = visiveis(); tipoSel = t;
+  } else base = histDaAba();
+  document.querySelectorAll('#segTipo [data-tipo]').forEach(b => {
+    const t = b.dataset.tipo, n = base.filter(x => tipoDe(x) === t).length;
+    b.setAttribute('aria-pressed', String(tipoSel === t));
+    b.title = tipoSel === t ? 'Clique de novo para ver todos os tipos' : 'Mostrar só compra ' + TIPO_NOME[t].toLowerCase();
+    const c = b.querySelector('.c'); c.textContent = (aba !== 'fila' && !HIST) ? '–' : n; c.classList.toggle('tem', n > 0);
+  });
 }
 
 /* ---- eventos ---- */
@@ -1261,7 +1349,13 @@ $('btnLote').addEventListener('click', ()=>{
   decidir(lista, 'aprovado', '');
 });
 $('abaFila').addEventListener('click', ()=> trocarAba('fila'));
-$('abaHist').addEventListener('click', ()=> trocarAba('historico'));
+$('abaHist').addEventListener('click', ()=> trocarAba('aprov'));
+$('abaRep').addEventListener('click', ()=> trocarAba('rep'));
+$('segTipo').addEventListener('click', e => {
+  const b = e.target.closest('[data-tipo]'); if(!b) return;
+  tipoSel = tipoSel === b.dataset.tipo ? '' : b.dataset.tipo;
+  if(aba === 'fila') desenhar(); else desenharHist();
+});
 $('btnCancelar').addEventListener('click', fecharReprova);
 $('btnConfirmarReprova').addEventListener('click', confirmarReprova);
 $('fundoModal').addEventListener('click', e=>{ if(e.target === $('fundoModal')) fecharReprova(); });

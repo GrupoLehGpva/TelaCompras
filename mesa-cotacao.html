@@ -116,6 +116,11 @@ h1{font-size:28px;font-weight:700;letter-spacing:-.01em;margin-top:2px}
 .sgb.off .soon{color:var(--ink-3)}
 .sgb .c{font-size:12px;background:var(--surface);border-radius:999px;padding:0 7px;color:var(--ink-3)}
 .sgb[aria-pressed="true"] .c{background:var(--accent-soft);color:var(--accent)}
+/* Botões de tipo no mesmo desenho do funil (02/10): número colorido por tipo quando há pedido. */
+.sgb[data-tipo] .c{font-size:12px;line-height:18px;min-width:20px;text-align:center;padding:0 6px;border:1px solid var(--line);margin-left:1px}
+.sgb[data-tipo="normal"] .c.tem{background:var(--accent-soft);color:var(--accent);border-color:color-mix(in srgb,var(--accent) 25%,transparent)}
+.sgb[data-tipo="urgente"] .c.tem{background:var(--crit-soft);color:var(--crit);border-color:color-mix(in srgb,var(--crit) 25%,transparent)}
+.sgb[data-tipo="mensal"] .c.tem{background:var(--warn-soft);color:var(--warn);border-color:color-mix(in srgb,var(--warn) 25%,transparent)}
 .sgb .soon{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
 @media (max-width:600px){.tools input{min-width:0;flex:1}}
 .tbl-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px}
@@ -769,7 +774,7 @@ function renderFila(){
       </div>`
         : `<div class="seg" role="group" aria-label="Tipo de compra">
         ${TIPOS.map(t => t.ativo
-          ? `<button class="sgb" type="button" data-tipo="${t.id}" aria-pressed="${S.tipo === t.id}" title="${S.tipo === t.id ? 'Clique de novo para ver todos os tipos' : 'Mostrar só compra ' + t.nome.toLowerCase()}">${t.nome}<span class="c num">${minhas.filter(x => grupoTab(x) === S.tab && x.tipo === t.id).length}</span></button>`
+          ? (n => `<button class="sgb" type="button" data-tipo="${t.id}" aria-pressed="${S.tipo === t.id}" title="${S.tipo === t.id ? 'Clique de novo para ver todos os tipos' : 'Mostrar só compra ' + t.nome.toLowerCase()}">${t.nome}<span class="c num${n ? ' tem' : ''}">${n}</span></button>`)(minhas.filter(x => grupoTab(x) === S.tab && x.tipo === t.id).length)
           : `<button class="sgb off" type="button" data-tipo="${t.id}" aria-disabled="true">${t.nome} <span class="soon">em breve</span></button>`).join('')}
       </div>`}
     </div>
