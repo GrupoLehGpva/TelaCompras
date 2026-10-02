@@ -169,42 +169,58 @@ const b = await chromium.launch();
   const f = ch(p, 'fila_do_comprador')[0];
   ok('2 token no corpo, não na URL', f && f.c.p_token === TOKEN);
   ok('2 nome do comprador', /HERISSON LUCAS LAPCZAK/.test(await txt(p, '#quem-nome')));
-  const abas = await p.$$eval('[data-tab]', bs => bs.map(b => b.textContent.replace(/\s+/g, ' ').trim()));
-  ok('2 abas com contagem (outro comprador fora)', JSON.stringify(abas) === JSON.stringify(['Para cotar2', 'Devolvidas1', 'Enviadas1']), abas);
+  /* 02/10: hierarquia — primeiro o tipo (Normal | Urgente | Mensal), depois a etapa daquele tipo; busca no alto, à direita */
+  const tipos = async () => p.$$eval('[data-tipo]', bs => bs.map(b => b.dataset.tipo + ':' + b.getAttribute('aria-pressed') + ':' + b.querySelector('.c').textContent));
+  const abas = async () => p.$$eval('[data-tab]', bs => bs.map(b => b.textContent.replace(/\s+/g, ' ').trim()));
+  ok('2 tipos na ordem, contando o que há para fazer; abre no primeiro com pedidos (Normal)', JSON.stringify(await tipos()) === JSON.stringify(['normal:true:1','urgente:false:1','mensal:false:1']), await tipos());
+  ok('2 etapas da normal com contagem (outro comprador fora)', JSON.stringify(await abas()) === JSON.stringify(['Para cotar1', 'Devolvidas0', 'Enviadas1']), await abas());
+  ok('2 tipo vem antes das etapas', await p.evaluate(() => { const t = document.querySelector('.tipo-seg'), a = document.querySelector('.tabs'); return !!(t.compareDocumentPosition(a) & Node.DOCUMENT_POSITION_FOLLOWING); }));
+  ok('2 busca no alto à direita, na linha dos tipos', await p.evaluate(() => { const q = document.getElementById('f-q').getBoundingClientRect(), t = document.querySelector('.tipo-seg').getBoundingClientRect(), a = document.querySelector('.tabs').getBoundingClientRect();
+     return q.left > t.right && q.bottom <= a.top + 1 && Math.abs((q.top + q.bottom) / 2 - (t.top + t.bottom) / 2) < 12; }));
   ok('2 pedido de outro comprador não aparece', !/C2609-03005/.test(await txt(p, '#view')));
-  ok('2 urgente primeiro', (await p.$$eval('table.fila tbody tr', t => t.map(x => x.dataset.id)))[0] === 'C2609-03002');
-  ok('2 tipo: serviço e item único', /Serviço/.test(await txt(p, 'tr[data-id="C2609-03002"]')) && /Lista · 2 itens/.test(await txt(p, 'tr[data-id="C2609-03001"]')));
-  ok('2 fornecedor único marcado', /Fornecedor único/.test(await txt(p, 'tr[data-id="C2609-03002"]')));
+  ok('2 normal: só a normal', JSON.stringify(await p.$$eval('table.fila tbody tr', t => t.map(x => x.dataset.id))) === JSON.stringify(['C2609-03001']));
+  ok('2 tipo: lista de itens', /Lista · 2 itens/.test(await txt(p, 'tr[data-id="C2609-03001"]')));
   ok('2 motivo não vira HTML', !(await p.evaluate(() => window.__x)) && await p.locator('table.fila img').count() === 0);
   await p.click('[data-tipo="urgente"]'); await p.waitForTimeout(150);
-  ok('2 filtro urgente', await p.locator('table.fila tbody tr').count() === 1);
-  /* 02/10: sem botão "Todas" — só Normal, Urgente e Mensal; clicar no marcado desmarca */
-  ok('2 sem botão "Todas" no tipo', await p.locator('[data-tipo=""]').count() === 0 &&
-     JSON.stringify(await p.$$eval('[data-tipo]', bs => bs.map(b => b.dataset.tipo))) === JSON.stringify(['normal','urgente','mensal']));
+  ok('2 Urgente: só a urgente, serviço, fornecedor único', JSON.stringify(await p.$$eval('table.fila tbody tr', t => t.map(x => x.dataset.id))) === JSON.stringify(['C2609-03002'])
+     && /Serviço/.test(await txt(p, 'tr[data-id="C2609-03002"]')) && /Fornecedor único/.test(await txt(p, 'tr[data-id="C2609-03002"]')));
+  ok('2 Urgente marcado e com foco', (await tipos())[1] === 'urgente:true:1' && await p.evaluate(() => document.activeElement.dataset.tipo) === 'urgente');
   await p.click('[data-tipo="urgente"]'); await p.waitForTimeout(150);
-  ok('2 clicar de novo desmarca e mostra todos', await p.locator('[data-tipo][aria-pressed="true"]').count() === 0 && await p.locator('table.fila tbody tr').count() === 2);
+  ok('2 clicar no marcado não desmarca (sempre há um tipo)', (await tipos())[1] === 'urgente:true:1' && await p.locator('table.fila tbody tr').count() === 1);
+  ok('2 sem botão "Todas" no tipo', await p.locator('[data-tipo=""]').count() === 0 && JSON.stringify(await p.$$eval('[data-tipo]', bs => bs.map(b => b.dataset.tipo))) === JSON.stringify(['normal','urgente','mensal']));
+  await p.click('[data-tipo="mensal"]'); await p.waitForTimeout(150);
+  ok('2 etapas da mensal', JSON.stringify(await abas()) === JSON.stringify(['Lote para cotar0', 'Aguardando o corte · dia 200', 'Devolvidas1', 'Enviadas0']), await abas());
+  ok('2 mensal sem lote: aviso', /Nenhum lote mensal para cotar agora/.test(await txt(p, '#view')));
+  await p.click('[data-tab="dev"]'); await p.waitForTimeout(100);
+  ok('2 mensal devolvida', /C2609-03003/.test(await txt(p, 'table.fila')) && /Devolvida/.test(await txt(p, 'table.fila')));
+  await p.click('[data-tipo="normal"]'); await p.waitForTimeout(100);
+  ok('2 trocar de tipo mantém a etapa quando ela existe', (await p.getAttribute('[data-tab="dev"]', 'aria-selected')) === 'true' && /Nada devolvido/.test(await txt(p, '#view')));
+  await p.click('[data-tipo="mensal"]'); await p.click('[data-tab="aguard"]'); await p.waitForTimeout(100);
+  await p.click('[data-tipo="normal"]'); await p.waitForTimeout(100);
+  ok('2 etapa que o tipo não tem volta para Para cotar', (await p.getAttribute('[data-tab="cotar"]', 'aria-selected')) === 'true');
   await p.fill('#f-q', 'retentor'); await p.waitForTimeout(150);
   ok('2 busca por item', await p.locator('table.fila tbody tr').count() === 1);
-  await p.fill('#f-q', ''); await p.waitForTimeout(100);
-  await p.click('[data-tab="dev"]'); await p.waitForTimeout(100);
-  ok('2 aba devolvidas', /C2609-03003/.test(await txt(p, 'table.fila')) && /Devolvida/.test(await txt(p, 'table.fila')));
+  await p.fill('#f-q', 'zzz'); await p.waitForTimeout(150);
+  ok('2 busca sem resultado', /Nada encontrado para “zzz”/.test(await txt(p, '#view')));
+  await p.click('#bt-limpa'); await p.waitForTimeout(100);
   await p.click('[data-tab="env"]'); await p.waitForTimeout(100);
-  ok('2 aba enviadas com valor', /C2609-03004/.test(await txt(p, 'table.fila')) && /gerencial/.test(await txt(p, 'table.fila')));
+  ok('2 enviadas com valor', /C2609-03004/.test(await txt(p, 'table.fila')) && /gerencial/.test(await txt(p, 'table.fila')));
   await p.click('#bt-atualizar'); await p.waitForTimeout(400);
   ok('2 atualizar relê a fila', ch(p, 'fila_do_comprador').length === 2);
   await p.close(); }
 
 /* 3 — detalhe */
-{ const p = await abrir(b, '?t=' + TOKEN, { prep:B => B.pedidos[0].anexos.push({ id:'a1', nome:'foto.jpg', tamanho:2048 }) });
+{ const p = await abrir(b, '?t=' + TOKEN, { prep:B => { B.pedidos[0].anexos.push({ id:'a1', nome:'foto.jpg', tamanho:2048 });
+    B.pedidos.push(Object.assign({}, B.pedidos[0], { id:'u6', numero:'C2609-03006', motivo:'Outra normal', anexos:[], data_necessidade:futuro(20) })); } });
   await p.click('tr[data-id="C2609-03001"]'); await p.waitForTimeout(500);
   ok('3 detalhe pede pedido_telas', ch(p, 'pedido_telas').some(x => x.c.p_id === 'u1' && x.c.p_token === TOKEN));
   const m = await txt(p, '#modal');
   ok('3 histórico do banco', /Solicitação aberta/.test(m) && /Aprovado em liderança imediata/.test(m), m.slice(0, 300));
   ok('3 anexos com link seguro', (await p.getAttribute('#modal .anexos-lista a', 'href')) === 'https://grupoleh.app.n8n.cloud/webhook/anexo?id=a1');
   ok('3 botão reprovar no detalhe', await p.locator('#m-reprovar').count() === 1);
-  ok('3 última da lista: próxima desligada', await p.locator('#m-next').isDisabled());
-  await p.click('#m-prev'); await p.waitForTimeout(500);
-  ok('3 anterior abre a outra', /C2609-03002/.test(await txt(p, '#modal .eyebrow')));
+  ok('3 primeira da lista: anterior desligada', await p.locator('#m-prev').isDisabled());
+  await p.click('#m-next'); await p.waitForTimeout(500);
+  ok('3 próxima abre a outra do mesmo tipo e etapa', /C2609-03006/.test(await txt(p, '#modal .eyebrow')));
   await p.keyboard.press('Escape');
   ok('3 Escape fecha', await p.locator('#overlay').isHidden());
   await p.close(); }
@@ -268,7 +284,7 @@ const b = await chromium.launch();
 
 /* 5 — devolvida: reenvio exige observação nova */
 { const p = await abrir(b, '?t=' + TOKEN);
-  await p.click('[data-tab="dev"]'); await p.click('[data-open="C2609-03003"]'); await p.waitForTimeout(700);
+  await p.click('[data-tipo="mensal"]'); await p.click('[data-tab="dev"]'); await p.click('[data-open="C2609-03003"]'); await p.waitForTimeout(700);
   ok('5 banner com o motivo da devolução', /Devolvida por Carla Financeiro/.test(await txt(p, '#view')) && /Frete alto/.test(await txt(p, '#view')));
   ok('5 mensal, fornecedor restaurado', (await p.inputValue('#n-HL-0')) === 'ROLAMAX' && (await p.inputValue('#p-HL-i4-0')) === '12,50');
   await p.click('#bt-enviar'); await p.waitForTimeout(300);
@@ -294,7 +310,7 @@ const b = await chromium.launch();
 
 /* 7 — fornecedor único: uma coluna */
 { const p = await abrir(b, '?t=' + TOKEN);
-  await p.click('[data-open="C2609-03002"]'); await p.waitForTimeout(700);
+  await p.click('[data-tipo="urgente"]'); await p.click('[data-open="C2609-03002"]'); await p.waitForTimeout(700);
   ok('7 uma coluna só', await p.locator('#n-FORA-0').count() === 1 && await p.locator('#n-FORA-1').count() === 0);
   ok('7 justificativa em destaque', /Assistência autorizada/.test(await txt(p, '#view')) && /Fornecedor único/.test(await txt(p, '#view')));
   await p.click('#n-FORA-0'); await p.type('#n-FORA-0', 'di', { delay:30 }); await p.waitForTimeout(500);
@@ -365,7 +381,7 @@ const b = await chromium.launch();
 
 /* 13 — a fila se atualiza sozinha quando a liderança aprova um pedido novo */
 { const p = await abrir(b, '?t=' + TOKEN);
-  ok('13 antes: 2 para cotar', /Paracotar2/.test((await txt(p, '[data-tab="cotar"]')).replace(/\s+/g, '')));
+  ok('13 antes: 1 normal para cotar', /Paracotar1/.test((await txt(p, '[data-tab="cotar"]')).replace(/\s+/g, '')));
   const novo = JSON.parse(JSON.stringify(p.B.pedidos[0])); Object.assign(novo, { id:'u9', numero:'C2609-03009', motivo:'Chegou agora', mapa:null });
   p.B.pedidos.push(novo);
   await p.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); await p.waitForTimeout(700);
@@ -481,7 +497,7 @@ const b = await chromium.launch();
   await p.keyboard.press('Escape');
   /* 30/09: nas Enviadas os botões são de status, não de tipo */
   ok('19 coluna Status', /Status/.test(await txt(p, 'table.fila thead')) && !/Cotação/.test(await txt(p, 'table.fila thead')));
-  ok('19 botões de status no lugar do tipo', await p.locator('[data-tipo]').count() === 0 &&
+  ok('19 Enviadas: tipos em cima, status embaixo', await p.locator('[data-tipo]').count() === 3 &&
      JSON.stringify(await p.$$eval('[data-st]', bs => bs.map(b => b.textContent.replace(/\d+/g,'').trim()))) === JSON.stringify(['Todas','Esperando aprovação','OC liberada','Reprovadas']));
   const conta = await p.$$eval('[data-st] .c', cs => cs.map(c => c.textContent));
   ok('19 contagem por status', JSON.stringify(conta) === '["1","1","2"]', JSON.stringify(conta));

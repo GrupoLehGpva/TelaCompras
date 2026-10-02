@@ -415,7 +415,11 @@ td.u input{height:32px;padding:0 10px}
 .lote-nota{margin:0 0 10px;font-size:13px}
 .lote-filtros{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 #lm-filtros .lote-filtros{margin:0 0 12px}
-.sub-mensal{margin-top:-4px}
+.nivel-tipo{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;margin:2px 0 8px}
+.tipo-seg{padding:4px;border-radius:10px}
+.tipo-seg .sgb{font-size:15px;min-height:40px;padding:8px 16px}
+.busca-topo{min-width:300px;margin-left:auto}
+@media (max-width:600px){ .busca-topo{min-width:0;flex:1 1 100%;margin-left:0} }
 .lote-filtros select.ctl{max-width:260px}
 td.qt .qt-f{display:block;font-size:11px;color:var(--accent);font-family:inherit}
 .partes-row > td{background:var(--surface-2);padding:6px 10px 10px}
@@ -652,7 +656,7 @@ const plural = (n, a, b) => n + ' ' + (n === 1 ? a : b);
 /* =====================================================================
    ESTADO DA TELA
    ===================================================================== */
-const S = { view:'fila', tab:'cotar', subMensal:'', lfFila:{ ger:'', un:'', cc:'' }, lfMapa:{ ger:'', un:'', cc:'' }, verPartes:{}, q:'', tipo:'', stEnv:'', foco:null, soFalta:false, comprador:'', carregado:false, erro:null, solId:null, fam:null, mostrarErros:false,
+const S = { view:'fila', tab:'cotar', lfFila:{ ger:'', un:'', cc:'' }, lfMapa:{ ger:'', un:'', cc:'' }, verPartes:{}, q:'', tipo:'', stEnv:'', foco:null, soFalta:false, comprador:'', carregado:false, erro:null, solId:null, fam:null, mostrarErros:false,
             modalList:[], modalIdx:-1, flash:null };
 const sol = id => SOLS.find(s => s.id === id);
 const etapa = id => id === 'lote' ? ETAPA_LOTE : ETAPAS.find(e => e.id === id);
@@ -790,18 +794,22 @@ function renderFila(){
     || (a.status === 'fim' && b.status === 'fim' ? b.criada - a.criada : 0)
     || (b.urgente?1:0) - (a.urgente?1:0) || a.necessidade - b.necessidade || a.criada - b.criada);
   const q = S.q.toLowerCase();
-  const naEnv = S.tab === 'env';
-  /* 02/10 (Guilherme): em Para cotar a compra mensal não se mistura com as outras.
-     Sem tipo marcado aparecem normal e urgente. Tudo da mensal fica no botão Mensal,
-     em duas visões: "Lote para cotar" (o lote depois do corte) e "Aguardando o corte"
-     (pedidos aprovados pela gerência antes do dia 20, só para ver). */
-  const mensalCotar = S.tab === 'cotar' && S.tipo === 'mensal';
-  const nLoteCotar = grupos.cotar.filter(s => s.tipo === 'mensal').length, nAguard = grupos.lote.length;
-  if (mensalCotar && !S.subMensal) S.subMensal = nLoteCotar || !nAguard ? 'lote' : 'aguardando';
-  const naLote = mensalCotar && S.subMensal === 'aguardando';
-  const separaMensal = S.tab === 'cotar' && !S.tipo;
-  const mensaisOcultas = separaMensal ? nLoteCotar + nAguard : 0;
-  const lista = ordenar(naLote ? grupos.lote : grupos[S.tab]).filter(s => naLote ? passaFiltro(s, S.lfFila) : naEnv ? (!S.stEnv || statusEnv(s) === S.stEnv) : (S.tipo ? s.tipo === S.tipo : !(separaMensal && s.tipo === 'mensal'))).filter(s => !q || [s.id, tituloSol(s), s.solicitante, s.ccNome, s.motivo, s.gerNome, ...s.itens.map(i => i.desc + ' ' + (i.cod || ''))].join(' ').toLowerCase().includes(q));
+  /* 02/10 (Guilherme): hierarquia da Mesa. Primeiro o tipo de compra (Normal,
+     Urgente, Mensal), depois a etapa daquele tipo. Na mensal as etapas são
+     "Lote para cotar", "Aguardando o corte · dia 20", Devolvidas e Enviadas.
+     Um tipo está sempre escolhido: ao abrir, o primeiro (nesta ordem) que tem
+     coisa para fazer. Busca no alto, à direita. */
+  const daTipo = (l, t) => l.filter(x => x.tipo === t);
+  const nAguard = grupos.lote.length;
+  const pend = t => daTipo(grupos.cotar, t).length + daTipo(grupos.dev, t).length + (t === 'mensal' ? nAguard : 0);
+  const IDS = TIPOS.filter(t => t.ativo).map(t => t.id);
+  if (!IDS.includes(S.tipo)) S.tipo = IDS.find(t => pend(t) > 0) || IDS[0];
+  const ETAPAS_DO_TIPO = S.tipo === 'mensal' ? ['cotar','aguard','dev','env'] : ['cotar','dev','env'];
+  if (!ETAPAS_DO_TIPO.includes(S.tab)) S.tab = 'cotar';
+  const naEnv = S.tab === 'env', naLote = S.tab === 'aguard', mensalCotar = S.tipo === 'mensal' && S.tab === 'cotar';
+  const nomeTipo = (TIPOS.find(t => t.id === S.tipo) || {}).nome || '';
+  const base = naLote ? grupos.lote : daTipo(grupos[S.tab], S.tipo);
+  const lista = ordenar(base).filter(s => naLote ? passaFiltro(s, S.lfFila) : naEnv ? (!S.stEnv || statusEnv(s) === S.stEnv) : true).filter(s => !q || [s.id, tituloSol(s), s.solicitante, s.ccNome, s.motivo, s.gerNome, ...s.itens.map(i => i.desc + ' ' + (i.cod || ''))].join(' ').toLowerCase().includes(q));
 
   let flash = '';
   if (S.flash){
@@ -809,20 +817,23 @@ function renderFila(){
     flash = `<div class="banner ${f.cls || 'ok'}" role="status"><span class="grow">${f.html}</span><button class="btn ghost" type="button" id="bt-flash-x">Ok</button></div>`;
   }
   const tabBtn = (id, nome, n, alert) => `<button class="tab ${alert && n ? 'alert' : ''}" role="tab" type="button" data-tab="${id}" aria-selected="${S.tab === id}">${nome}<span class="c num">${n}</span></button>`;
+  const NOME_ETAPA_FILA = { cotar: S.tipo === 'mensal' ? 'Lote para cotar' : 'Para cotar', aguard:'Aguardando o corte · dia 20', dev:'Devolvidas', env:'Enviadas' };
+  const contaEtapa = id => id === 'aguard' ? nAguard : daTipo(grupos[id], S.tipo).length;
   let corpo;
   if (!minhas.length){
     corpo = `<div class="state"><h3>Nenhuma solicitação com você</h3><p>Quando a liderança aprovar um pedido que cai na sua carteira, ele aparece aqui para cotar. Pedidos que ainda andam pelo ClickUp continuam lá até a virada.</p></div>`;
   } else if (!lista.length){
-    const vazio = { cotar:['Tudo cotado','Nenhuma solicitação esperando cotação agora.'], lote:['Nada aguardando o corte','As compras mensais aprovadas pela gerência ficam aqui até o corte do dia 20. No corte, entram juntas na cotação, como um lote só.'], dev:['Nada devolvido','Quando um aprovador devolver uma cotação, ela aparece aqui com o motivo.'], env:['Nada enviado ainda','As cotações que você enviar para aprovação ficam aqui até virarem ordem de compra.'] }[naLote ? 'lote' : S.tab];
-    const rotuloTipo = (TIPOS.find(t => t.id === S.tipo) || {}).nome;
-    const rotuloSt = (STATUS_ENV.find(t => t.id === S.stEnv) || {}).nome;
-    corpo = mensaisOcultas && !q ? `<div class="state"><h3>Nenhuma compra normal ou urgente para cotar</h3><p>A compra mensal fica separada das outras.</p><button class="btn primary" type="button" id="bt-ver-mensal">Ver a compra mensal (${mensaisOcultas})</button></div>`
-      : mensalCotar && !naLote && !q ? `<div class="state"><h3>Nenhum lote mensal para cotar agora</h3><p>O lote entra aqui no corte de ${dt(proximoCorte())} (virada do dia 19 para o 20).${nAguard ? ' Até lá, dá para ver os pedidos que aguardam o corte.' : ''}</p>${nAguard ? `<button class="btn primary" type="button" id="bt-ver-aguard">Ver os que aguardam o corte (${nAguard})</button>` : ''}</div>`
-      : naLote && filtroAtivo(S.lfFila) && !q ? `<div class="state"><h3>Nada com esses filtros</h3><p>Tire os filtros para ver todos os pedidos que aguardam o lote.</p><button class="btn primary" type="button" id="bt-limpa-lf">Tirar os filtros</button></div>`
-      : naEnv && S.stEnv && !q ? `<div class="state"><h3>Nada em “${esc(rotuloSt || '')}”</h3><p>Veja os outros status das enviadas.</p><button class="btn primary" type="button" id="bt-limpa-st">Ver todas</button></div>`
-      : !naEnv && !naLote && S.tipo && !q ? `<div class="state"><h3>Nenhuma compra ${esc((rotuloTipo || '').toLowerCase())} nesta aba</h3><p>Tire o filtro para ver as outras.</p><button class="btn primary" type="button" id="bt-limpa-tipo">Ver todas</button></div>`
-      : q ? `<div class="state"><h3>Nada encontrado para “${esc(S.q)}”</h3><p>Busque por número, item, solicitante ou centro de custo.</p><button class="btn primary" type="button" id="bt-limpa">Limpar busca</button></div>`
-              : `<div class="state"><h3>${vazio[0]}</h3><p>${vazio[1]}</p></div>`;
+    const t = nomeTipo.toLowerCase();
+    const vazio = { cotar:['Tudo cotado', `Nenhuma compra ${t} esperando cotação agora.`],
+      aguard:['Nada aguardando o corte','As compras mensais aprovadas pela gerência ficam aqui até o corte do dia 20. No corte, entram juntas na cotação, como um lote só.'],
+      dev:['Nada devolvido', `Quando um aprovador devolver uma cotação de compra ${t}, ela aparece aqui com o motivo.`],
+      env:['Nada enviado ainda', `As cotações de compra ${t} que você enviar para aprovação ficam aqui até virarem ordem de compra.`] }[S.tab];
+    const rotuloSt = (STATUS_ENV.find(x => x.id === S.stEnv) || {}).nome;
+    corpo = q ? `<div class="state"><h3>Nada encontrado para “${esc(S.q)}”</h3><p>Busque por número, item, solicitante ou centro de custo.</p><button class="btn primary" type="button" id="bt-limpa">Limpar busca</button></div>`
+      : naLote && filtroAtivo(S.lfFila) ? `<div class="state"><h3>Nada com esses filtros</h3><p>Tire os filtros para ver todos os pedidos que aguardam o corte.</p><button class="btn primary" type="button" id="bt-limpa-lf">Tirar os filtros</button></div>`
+      : naEnv && S.stEnv ? `<div class="state"><h3>Nada em “${esc(rotuloSt || '')}”</h3><p>Veja os outros status das enviadas.</p><button class="btn primary" type="button" id="bt-limpa-st">Ver todas</button></div>`
+      : mensalCotar ? `<div class="state"><h3>Nenhum lote mensal para cotar agora</h3><p>O lote entra aqui no corte de ${dt(proximoCorte())} (virada do dia 19 para o 20).${nAguard ? ' Até lá, dá para ver os pedidos que aguardam o corte.' : ''}</p>${nAguard ? `<button class="btn primary" type="button" id="bt-ver-aguard">Ver os que aguardam o corte (${nAguard})</button>` : ''}</div>`
+      : `<div class="state"><h3>${vazio[0]}</h3><p>${vazio[1]}</p></div>`;
   } else if (naLote){
     corpo = `<p class="muted lote-nota">Compras mensais já aprovadas pela gerência. Entram na cotação todas juntas no corte de <strong>${dt(proximoCorte())}</strong> (virada do dia 19 para o 20), num lote só, separadas por família. Até lá, dá para ver cada pedido.</p>
       <div class="tbl-wrap"><table class="fila lote-fila"><thead><tr>
@@ -854,45 +865,34 @@ function renderFila(){
       }).join('')}</tbody></table></div>`;
   }
   v.innerHTML = `${flash}
-    <div class="tabs" role="tablist">${tabBtn('cotar','Para cotar',grupos.cotar.length)}${tabBtn('dev','Devolvidas',grupos.dev.length,true)}${tabBtn('env','Enviadas',grupos.env.length)}</div>
-    <div class="tools">
-      <input id="f-q" class="ctl" type="search" placeholder="Buscar nº, item, solicitante…" value="${esc(S.q)}" aria-label="Buscar">
-      ${naEnv
-        ? `<div class="seg" role="group" aria-label="Status das enviadas">
-        <button class="sgb" type="button" data-st="" aria-pressed="${!S.stEnv}">Todas</button>
-        ${STATUS_ENV.map(t => `<button class="sgb" type="button" data-st="${t.id}" aria-pressed="${S.stEnv === t.id}">${t.nome}<span class="c num">${grupos.env.filter(x => statusEnv(x) === t.id).length}</span></button>`).join('')}
-      </div>`
-        : `<div class="seg" role="group" aria-label="Tipo de compra">
-        ${TIPOS.map(t => t.ativo
-          ? (n => `<button class="sgb" type="button" data-tipo="${t.id}" aria-pressed="${S.tipo === t.id}" title="${S.tipo === t.id ? (S.tab === 'cotar' ? 'Clique de novo para voltar a normal e urgente' : 'Clique de novo para ver todos os tipos') : 'Mostrar só compra ' + t.nome.toLowerCase()}">${t.nome}<span class="c num${n ? ' tem' : ''}">${n}</span></button>`)(t.id === 'mensal' && S.tab === 'cotar' ? nLoteCotar + nAguard : minhas.filter(x => grupoTab(x) === S.tab && x.tipo === t.id).length)
-          : `<button class="sgb off" type="button" data-tipo="${t.id}" aria-disabled="true">${t.nome} <span class="soon">em breve</span></button>`).join('')}
-      </div>`}
-    </div>
-    ${mensalCotar ? `<div class="tools sub-mensal">
-      <div class="seg" role="group" aria-label="Compra mensal">
-        <button class="sgb" type="button" data-sub="lote" aria-pressed="${!naLote}">Lote para cotar<span class="c num${nLoteCotar ? ' tem' : ''}">${nLoteCotar}</span></button>
-        <button class="sgb" type="button" data-sub="aguardando" aria-pressed="${naLote}">Aguardando o corte · dia 20<span class="c num${nAguard ? ' tem' : ''}">${nAguard}</span></button>
+    <div class="nivel-tipo">
+      <div class="seg tipo-seg" role="group" aria-label="Tipo de compra">
+        ${TIPOS.filter(t => t.ativo).map(t => (n => `<button class="sgb" type="button" data-tipo="${t.id}" aria-pressed="${S.tipo === t.id}" title="Compras do tipo ${t.nome.toLowerCase()}">${t.nome}<span class="c num${n ? ' tem' : ''}">${n}</span></button>`)(pend(t.id))).join('')}
       </div>
-      ${naLote ? filtrosLote(grupos.lote, S.lfFila, 'lf') : ''}
-    </div>` : ''}
-    ${mensaisOcultas && lista.length ? `<p class="muted lote-nota" id="nota-mensal">A compra mensal fica separada das outras: clique em <strong>Mensal</strong> para ver o lote e os pedidos que aguardam o corte do dia 20.</p>` : ''}
+      <input id="f-q" class="ctl busca-topo" type="search" placeholder="Buscar nº, item, solicitante…" value="${esc(S.q)}" aria-label="Buscar">
+    </div>
+    <div class="tabs" role="tablist" aria-label="Etapas da compra ${esc(nomeTipo.toLowerCase())}">${ETAPAS_DO_TIPO.map(id => tabBtn(id, NOME_ETAPA_FILA[id], contaEtapa(id), id === 'dev')).join('')}</div>
+    ${naEnv ? `<div class="tools"><div class="seg" role="group" aria-label="Status das enviadas">
+        <button class="sgb" type="button" data-st="" aria-pressed="${!S.stEnv}">Todas</button>
+        ${STATUS_ENV.map(t => `<button class="sgb" type="button" data-st="${t.id}" aria-pressed="${S.stEnv === t.id}">${t.nome}<span class="c num">${daTipo(grupos.env, S.tipo).filter(x => statusEnv(x) === t.id).length}</span></button>`).join('')}
+      </div></div>` : ''}
+    ${naLote ? `<div class="tools">${filtrosLote(grupos.lote, S.lfFila, 'lf')}</div>` : ''}
     ${corpo}`;
 
   if (S.flash) $('bt-flash-x').onclick = () => { S.flash = null; render(); };
-  v.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { S.tab = b.dataset.tab; render(); });
+  v.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { S.tab = b.dataset.tab; render(); const n = v.querySelector(`[data-tab="${S.tab}"]`); if (n) n.focus(); });
   v.querySelectorAll('[data-tipo]').forEach(b => b.onclick = () => {
-    const t = TIPOS.find(x => x.id === b.dataset.tipo);
-    if (t && !t.ativo){ toast(t.nota); return; }
-    /* Só Normal, Urgente e Mensal (02/10): sem "Todas". Clicar no marcado desmarca. */
-    S.tipo = S.tipo === b.dataset.tipo ? '' : b.dataset.tipo; S.subMensal = ''; render();
+    if (S.tipo !== b.dataset.tipo){
+      S.tipo = b.dataset.tipo; S.stEnv = '';
+      /* mensal sem lote para cotar: abre direto nos que aguardam o corte */
+      if (S.tipo === 'mensal' && S.tab === 'cotar' && !daTipo(grupos.cotar, 'mensal').length && nAguard) S.tab = 'aguard';
+    }
+    render(); const n = v.querySelector(`[data-tipo="${S.tipo}"]`); if (n) n.focus();
   });
-  v.querySelectorAll('[data-sub]').forEach(b => b.onclick = () => { S.subMensal = b.dataset.sub; render(); const n = v.querySelector(`[data-sub="${S.subMensal}"]`); if (n) n.focus(); });
-  if ($('bt-ver-aguard')) $('bt-ver-aguard').onclick = () => { S.subMensal = 'aguardando'; render(); };
+  if ($('bt-ver-aguard')) $('bt-ver-aguard').onclick = () => { S.tab = 'aguard'; render(); };
   const fq = $('f-q'); fq.oninput = () => { S.q = fq.value; const pos = fq.selectionStart; render(); const n = $('f-q'); n.focus(); n.setSelectionRange(pos,pos); };
   if ($('bt-limpa')) $('bt-limpa').onclick = () => { S.q = ''; render(); };
-  if ($('bt-limpa-tipo')) $('bt-limpa-tipo').onclick = () => { S.tipo = ''; render(); };
   if ($('bt-limpa-st')) $('bt-limpa-st').onclick = () => { S.stEnv = ''; render(); };
-  if ($('bt-ver-mensal')) $('bt-ver-mensal').onclick = () => { S.tipo = 'mensal'; S.subMensal = ''; render(); };
   if ($('bt-limpa-lf')) $('bt-limpa-lf').onclick = () => { S.lfFila = { ger:'', un:'', cc:'' }; render(); };
   ligarFiltrosLote(v, 'lf', S.lfFila, render);
   v.querySelectorAll('[data-st]').forEach(b => b.onclick = () => { S.stEnv = b.dataset.st; render(); });
