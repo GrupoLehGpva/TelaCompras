@@ -1,0 +1,19 @@
+-- APROVAÇÕES: HISTÓRICO POR MÊS E LOTE POR PACOTE — telas_27 (02/10/2026, aplicado no banco)
+--
+-- 1. historico_de_aprovacoes: limite máximo 200 → 2000. A tela de aprovações
+--    agora separa Aprovadas/Reprovadas por mês e tem filtro de mês; com 200 o
+--    mês mais antigo vinha cortado. A tela pede p_limite = 2000.
+--
+-- 2. historico_do_aprovador: além do tipo de compra, devolve lote_id,
+--    competencia, gerencia_id e gerencia. Com isso a tela junta as decisões do
+--    financeiro de um pacote do lote mensal (o banco grava uma por pedido) numa
+--    linha só — "Lote 10/2026 · Pacote · 3 pedidos" —, igual à fila.
+--
+-- 3. filas_pendentes (lista do Slack 4x ao dia): pedido do lote no financeiro
+--    conta como pacote. Em vez de "3 solicitações: C2610-00014, -00015, -00016",
+--    sai "1 solicitação: Lote 10/2026 · ALVARO BRANDAO FILHO" — o que a pessoa
+--    vê ao abrir a fila. Os números continuam em ordem de espera (mais antigo
+--    primeiro) e os de liderança/gerência não mudaram.
+--
+-- Testes: _teste_lote_mensal P21b (lista do Slack por pacote) e P34b (histórico
+-- com lote e gerência) — 60/60. Tela: teste-aprovacoes-tipos.js.

@@ -11,7 +11,7 @@ const ontem = new Date(Date.now() - 2*864e5).toISOString();
 const FILA = [
   {id:'a1', numero:'C2609-01001', card_id:'c1', etapa_atual:'lider',
    facilitador:'Guilherme Pimpão', solicitante_nome:'João da Silva',
-   centro_custo:'20', centro_custo_nome:'FABRICA DE RAÇÕES', tipo_compra:'urgente',
+   centro_custo:'20', centro_custo_nome:'FABRICA DE RAÇÕES', tipo_compra:'normal',
    data_necessidade:'2026-12-01', motivo:'Pneu careca reprovado na inspeção',
    observacao:null, aberto_em:hoje, total_itens:2},
   {id:'a2', numero:'C2609-01002', card_id:'c2', etapa_atual:'gerencial',

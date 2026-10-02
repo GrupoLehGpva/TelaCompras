@@ -35,10 +35,10 @@ function banco(){
 /* mapa da u3 (devolvida) e da u4 (enviada), no formato do banco */
 function semear(B){
   const u3 = B.pedidos.find(p => p.id === 'u3');
-  u3.mapa = { estado:'devolvida', versao:4, observacao:'Obs antiga', forn:[{ familia:'HL', coluna:1, fornecedor_id:'f1', nome:'ROLAMAX', desconto_pct:null, frete:0, prazo_dias:3, condicao:'28 dias' }],
+  u3.mapa = { estado:'devolvida', versao:4, observacao:'Obs antiga', forn:[{ familia:'HL', coluna:1, fornecedor_id:'f1', nome:'ROLAMAX', desconto_pct:null, frete:0, prazo_dias:3, condicao:'28 dias', forma_pagamento:'Boleto' }],
     precos:[{ item_id:'i4', coluna:1, preco:12.5 }], escolhas:[{ item_id:'i4', coluna:1 }] };
   const u4 = B.pedidos.find(p => p.id === 'u4');
-  u4.mapa = { estado:'enviada', versao:3, observacao:'ok', forn:[{ familia:'MG', coluna:1, fornecedor_id:'f2', nome:'CASA DO ROLAMENTO', desconto_pct:null, frete:0, prazo_dias:2, condicao:'À vista' }],
+  u4.mapa = { estado:'enviada', versao:3, observacao:'ok', forn:[{ familia:'MG', coluna:1, fornecedor_id:'f2', nome:'CASA DO ROLAMENTO', desconto_pct:null, frete:0, prazo_dias:2, condicao:'À vista', forma_pagamento:'Boleto' }],
     precos:[{ item_id:'i5', coluna:1, preco:100 }], escolhas:[{ item_id:'i5', coluna:1 }] };
 }
 function resumo(p){
@@ -65,9 +65,9 @@ function resumo(p){
       const tot = ganhos.length ? Math.round((sub * (1 - ((f && f.desconto_pct) || 0) / 100) + ((f && f.frete) || 0)) * 100) / 100 : 0;
       if (ganhos.length){
         if (!f || !f.nome) bloq.push({ msg:'Falta o nome' }); else if (!f.fornecedor_id) bloq.push({ msg:'não está no cadastro' });
-        if (!f || f.frete === null) bloq.push({ msg:'frete' }); if (!f || f.prazo_dias === null) bloq.push({ msg:'prazo' }); if (!f || !f.condicao) bloq.push({ msg:'condição' });
+        if (!f || f.frete === null) bloq.push({ msg:'frete' }); if (!f || f.prazo_dias === null) bloq.push({ msg:'prazo' }); if (!f || !f.condicao) bloq.push({ msg:'condição' }); if (!f || !f.forma_pagamento) bloq.push({ msg:'forma de pagamento' });
       }
-      if (f || ganhos.length) fs.push(Object.assign({ coluna:col, itens_ganhos:ganhos.length, subtotal:sub, total:tot }, f ? { fornecedor_id:f.fornecedor_id, nome:f.nome, desconto_pct:f.desconto_pct, frete:f.frete, prazo_dias:f.prazo_dias, condicao:f.condicao } : {}));
+      if (f || ganhos.length) fs.push(Object.assign({ coluna:col, itens_ganhos:ganhos.length, subtotal:sub, total:tot }, f ? { fornecedor_id:f.fornecedor_id, nome:f.nome, desconto_pct:f.desconto_pct, frete:f.frete, prazo_dias:f.prazo_dias, condicao:f.condicao, forma_pagamento:f.forma_pagamento } : {}));
       total += tot;
     });
     fams[fam] = fs;
@@ -237,7 +237,7 @@ const b = await chromium.launch();
   ok('4 nome digitado pede escolha da lista', /Escolha na lista do cadastro/.test(await txt(p, '#st-MG-1')));
   await p.fill('#p-MG-i1-0', '100'); await p.fill('#p-MG-i2-0', '50'); await p.fill('#p-MG-i1-1', '90');
   await p.click('#k-MG-i1-1'); await p.click('#k-MG-i2-0');
-  await p.fill('#f-MG-0', '0'); await p.fill('#z-MG-0', '5'); await p.fill('#c-MG-0', '28 dias');
+  await p.fill('#f-MG-0', '0'); await p.fill('#z-MG-0', '5'); await p.fill('#c-MG-0', '28 dias'); await p.selectOption('#fp-MG-0', 'Boleto');
   await p.waitForTimeout(1800);
   const sv = ch(p, 'salvar_mapa');
   ok('4 salvou sozinho', sv.length >= 1, sv.length);
@@ -256,7 +256,7 @@ const b = await chromium.launch();
   /* troca o fornecedor 2 por um do cadastro e completa */
   await p.fill('#n-MG-1', ''); await p.type('#n-MG-1', 'ca', { delay:30 }); await p.waitForTimeout(500);
   await p.click('.sug [data-fid="f2"]');
-  await p.fill('#f-MG-1', '10'); await p.fill('#z-MG-1', '3'); await p.fill('#c-MG-1', 'À vista');
+  await p.fill('#f-MG-1', '10'); await p.fill('#z-MG-1', '3'); await p.fill('#c-MG-1', 'À vista'); await p.selectOption('#fp-MG-1', 'Boleto');
   await p.click('#bt-salvar'); await p.waitForTimeout(900);
   ok('4 salvar e voltar leva à fila', await p.locator('table.fila').count() === 1);
   ok('4 fila mostra continuar', /Continuar/.test(await txt(p, 'tr[data-id="C2609-03001"]')));
@@ -280,6 +280,45 @@ const b = await chromium.launch();
   ok('4 enviada abre só para leitura', /Enviada para aprovação gerencial/.test(await txt(p, '#view')) && await p.locator('#bt-enviar').count() === 0 && await p.locator('#p-MG-i1-0').isDisabled());
   ok('4 enviada sem botão reprovar', await p.locator('#bt-reprovar').count() === 0);
   await p.click('#bt-back'); await p.waitForTimeout(400);
+  await p.close(); }
+
+/* 4b — forma de pagamento (02/10): lista fechada, igual à do GR, obrigatória para quem ganhou item */
+{ const p = await abrir(b, '?t=' + TOKEN);
+  await p.click('[data-open="C2609-03001"]'); await p.waitForTimeout(600);
+  ok('4b forma é lista de seleção (sem digitação)', await p.$eval('#fp-MG-0', e => e.tagName) === 'SELECT' && await p.locator('input[data-k="forma"]').count() === 0);
+  const ops = await p.$$eval('#fp-MG-0 option', o => o.map(x => x.textContent));
+  ok('4b opções exatamente as do GR', JSON.stringify(ops) === JSON.stringify(['Escolha…', 'Não especificado', 'Boleto', 'Cheque', 'Dinheiro', 'Depósito em conta corrente', 'Pix']), JSON.stringify(ops));
+  ok('4b começa sem escolha', (await p.inputValue('#fp-MG-0')) === '');
+  ok('4b uma por fornecedor (3 colunas)', await p.locator('select[data-k="forma"]').count() === 3);
+  await p.click('#n-MG-0'); await p.type('#n-MG-0', 'ro', { delay:30 }); await p.waitForTimeout(600);
+  await p.click('.sug [data-fid="f1"]'); await p.waitForTimeout(200);
+  await p.fill('#p-MG-i1-0', '100'); await p.fill('#p-MG-i2-0', '50');
+  await p.click('#k-MG-i1-0'); await p.click('#k-MG-i2-0');
+  await p.fill('#f-MG-0', '0'); await p.fill('#z-MG-0', '5'); await p.fill('#c-MG-0', '28 dias'); await p.waitForTimeout(300);
+  ok('4b sem forma: o fornecedor mostra que falta condição', /condi/i.test(await txt(p, '#st-MG-0')), await txt(p, '#st-MG-0'));
+  await p.click('#bt-enviar'); await p.waitForTimeout(300);
+  ok('4b enviar sem forma mostra a pendência', /Escolha a forma de pagamento/.test(await txt(p, '#pend')), await txt(p, '#pend'));
+  ok('4b e não chama o banco', ch(p, 'enviar_mapa').length === 0);
+  await p.keyboard.press('Escape');
+  await p.selectOption('#fp-MG-0', 'Pix'); await p.waitForTimeout(1800);
+  const sv = ch(p, 'salvar_mapa'), u = sv[sv.length - 1] && sv[sv.length - 1].c;
+  ok('4b escolher salva sozinho, com a forma', u && u.p_mapa.fornecedores.some(f => f.coluna === 1 && f.forma_pagamento === 'Pix'), u && u.p_mapa.fornecedores);
+  ok('4b coluna sem forma vai como vazia (não inventa)', u && u.p_mapa.fornecedores.every(f => f.coluna === 1 || f.forma_pagamento === null || f.forma_pagamento === undefined));
+  ok('4b resumo mostra a forma junto da condição', /28 dias · Pix/.test(await txt(p, '#resumo')), await txt(p, '#resumo'));
+  await p.click('#bt-salvar'); await p.waitForTimeout(900);
+  await p.click('[data-open="C2609-03001"]'); await p.waitForTimeout(700);
+  ok('4b reabre com a forma salva', (await p.inputValue('#fp-MG-0')) === 'Pix');
+  await p.click('#bt-enviar'); await p.waitForTimeout(300);
+  ok('4b com a forma, abre o envio', /Enviar para aprovação gerencial/.test(await txt(p, '#modal')));
+  await p.keyboard.press('Escape'); await p.waitForTimeout(150);
+  await p.click('#bt-back'); await p.waitForTimeout(400);
+  /* enviada: só leitura, a lista vem travada e mostra a escolha */
+  await p.click('[data-tab="env"]'); await p.click('[data-open="C2609-03004"]'); await p.waitForTimeout(700);
+  ok('4b enviada: forma travada e com o valor do banco', await p.locator('#fp-MG-0').isDisabled() && (await p.inputValue('#fp-MG-0')) === 'Boleto');
+  await p.close(); }
+{ const p = await abrir(b, '?t=' + TOKEN);
+  await p.click('[data-tipo="mensal"]'); await p.click('[data-tab="dev"]'); await p.click('[data-open="C2609-03003"]'); await p.waitForTimeout(700);
+  ok('4b devolvida: forma restaurada do banco', (await p.inputValue('#fp-HL-0')) === 'Boleto' && !(await p.locator('#fp-HL-0').isDisabled()));
   await p.close(); }
 
 /* 5 — devolvida: reenvio exige observação nova */
@@ -315,7 +354,7 @@ const b = await chromium.launch();
   ok('7 justificativa em destaque', /Assistência autorizada/.test(await txt(p, '#view')) && /Fornecedor único/.test(await txt(p, '#view')));
   await p.click('#n-FORA-0'); await p.type('#n-FORA-0', 'di', { delay:30 }); await p.waitForTimeout(500);
   await p.click('.sug [data-fid="f3"]'); await p.fill('#p-FORA-i3-0', '800'); await p.click('#k-FORA-i3-0');
-  await p.fill('#f-FORA-0', '0'); await p.fill('#z-FORA-0', '10'); await p.fill('#c-FORA-0', 'À vista'); await p.waitForTimeout(1500);
+  await p.fill('#f-FORA-0', '0'); await p.fill('#z-FORA-0', '10'); await p.fill('#c-FORA-0', 'À vista'); await p.selectOption('#fp-FORA-0', 'Boleto'); await p.waitForTimeout(1500);
   await p.click('#bt-enviar'); await p.waitForTimeout(300);
   ok('7 envio diz que é fornecedor único', /Fornecedor único/.test(await txt(p, '#modal .unico-envio')));
   ok('7 fornecedor único não pede 3 cotações', !/O aprovador vai ver estes pontos/.test(await txt(p, '#modal')) && /opcional/.test(await txt(p, '#modal label[for="dlg-obs"]')));
@@ -369,7 +408,7 @@ const b = await chromium.launch();
   await p.click('.sug [data-fid="f1"]');
   await p.fill('#p-MG-i1-0', '100'); await p.fill('#p-MG-i2-0', '50');
   await p.click('#k-MG-i1-0'); await p.click('#k-MG-i2-0');
-  await p.fill('#f-MG-0', '0'); await p.fill('#z-MG-0', '5'); await p.fill('#c-MG-0', '28 dias');
+  await p.fill('#f-MG-0', '0'); await p.fill('#z-MG-0', '5'); await p.fill('#c-MG-0', '28 dias'); await p.selectOption('#fp-MG-0', 'Boleto');
   await p.waitForTimeout(1600);
   await p.click('#bt-enviar'); await p.waitForTimeout(300);
   ok('12 aviso de 1 de 3 aparece para o aprovador', /O aprovador vai ver estes pontos/.test(await txt(p, '#modal')) && /1 de 3/.test(await txt(p, '#modal')));

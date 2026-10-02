@@ -255,12 +255,14 @@ for(const w of [1366, 1440, 1920]){
     return j([]);
   });
   await p.goto(base + '?t=ap-teste', {waitUntil:'load'}); await p.waitForTimeout(600);
+  /* 02/10: o tipo vem marcado (Normal primeiro); o urgente está no botão Urgente */
+  ok('9 normal sem selo urgente', await linha(p,'C2609-02001').locator('.selo-urgente').count() === 0, 'selo sobrando');
+  ok('9 normal sem selo editado', await linha(p,'C2609-02001').locator('.selo-editado').count() === 0, 'selo editado');
+  ok('9 fornecedor único continua', await linha(p,'C2609-02001').locator('.selo-unico').count() === 1, 'sumiu');
+  await p.click('#segTipo [data-tipo="urgente"]'); await p.waitForTimeout(150);
   ok('9 urgente das telas marcado', await linha(p,'C2609-02002').locator('.selo-urgente').count() === 1, 'sem selo');
   ok('9 urgente do ClickUp marcado', await linha(p,'C2609-01001').locator('.selo-urgente').count() === 1, 'sem selo');
-  ok('9 normal sem selo urgente', await linha(p,'C2609-02001').locator('.selo-urgente').count() === 0, 'selo sobrando');
-  ok('9 editado marcado', await linha(p,'C2609-02002').locator('.selo-editado').count() === 1 &&
-     await linha(p,'C2609-02001').locator('.selo-editado').count() === 0, 'selo editado');
-  ok('9 fornecedor único continua', await linha(p,'C2609-02001').locator('.selo-unico').count() === 1, 'sumiu');
+  ok('9 editado marcado', await linha(p,'C2609-02002').locator('.selo-editado').count() === 1, 'selo editado');
   await p.close(); }
 
 /* Fila compartilhada do financeiro (29/09): aviso na fila e quem decidiu no histórico */
@@ -285,10 +287,10 @@ const H = (numero, fui_eu, por, resposta='aprovado') => ({ id:'h-'+numero, numer
   ok('10 aviso de fila compartilhada', await p.locator('#filaGrupo').isVisible() && /Elisangela e Wienfried também veem/.test(await p.textContent('#filaGrupo')), await p.textContent('#filaGrupo'));
   await p.click('#abaHist'); await p.waitForTimeout(500);
   ok('10 coluna vira "Decisão"', (await p.textContent('#thDecisao')).trim() === 'Decisão', await p.textContent('#thDecisao'));
-  const l1 = await p.locator('#corpoHist tr', {hasText:'03001'}).textContent();
-  const l2 = await p.locator('#corpoHist tr', {hasText:'03002'}).textContent();
+  const l1 = await p.locator('#corpoHist tr:not(.mes-sep)', {hasText:'03001'}).textContent();
+  const l2 = await p.locator('#corpoHist tr:not(.mes-sep)', {hasText:'03002'}).textContent();
   await p.click('#abaRep'); await p.waitForTimeout(200);
-  const l3 = await p.locator('#corpoHist tr', {hasText:'03003'}).textContent();
+  const l3 = await p.locator('#corpoHist tr:not(.mes-sep)', {hasText:'03003'}).textContent();
   ok('10 decisão de outra pessoa mostra o nome', /Aprovada\s*por WIENFRIED MATTHIAS LEH/.test(l1), l1);
   ok('10 a própria diz "por você"', /por você/.test(l2), l2);
   ok('10 devolução aparece como Devolvida', /Devolvida\s*por ELISANGELA/.test(l3), l3);
@@ -297,7 +299,7 @@ const H = (numero, fui_eu, por, resposta='aprovado') => ({ id:'h-'+numero, numer
   ok('11 fora da fila compartilhada, sem aviso', !(await p.locator('#filaGrupo').isVisible()));
   await p.click('#abaHist'); await p.waitForTimeout(500);
   ok('11 coluna continua "Sua decisão", sem "por"', (await p.textContent('#thDecisao')).trim() === 'Sua decisão' &&
-     !/por /.test(await p.locator('#corpoHist tr').first().textContent()));
+     !/por /.test(await p.locator('#corpoHist tr:not(.mes-sep)').first().textContent()));
   await p.close(); }
 
 await b.close();

@@ -246,12 +246,12 @@ const b = await chromium.launch();
   /* FORA */
   await escolherForn(p, 'n-FORA-0', 'dis', 'f3');
   await p.fill(`#p-FORA-${ID.cabo}-0`, '20'); await p.click(`#k-FORA-${ID.cabo}-0`);
-  await p.fill('#f-FORA-0', '0'); await p.fill('#z-FORA-0', '7'); await p.fill('#c-FORA-0', '28 dias');
+  await p.fill('#f-FORA-0', '0'); await p.fill('#z-FORA-0', '7'); await p.fill('#c-FORA-0', '28 dias'); await p.selectOption('#fp-FORA-0', 'Boleto');
   /* HL */
   await p.click('[data-fam="HL"]'); await p.waitForTimeout(150);
   await escolherForn(p, 'n-HL-0', 'ca', 'f2');
   await p.fill(`#p-HL-${ID.sab}-0`, '5'); await p.click(`#k-HL-${ID.sab}-0`);
-  await p.fill('#f-HL-0', '0'); await p.fill('#z-HL-0', '3'); await p.fill('#c-HL-0', 'À vista');
+  await p.fill('#f-HL-0', '0'); await p.fill('#z-HL-0', '3'); await p.fill('#c-HL-0', 'À vista'); await p.selectOption('#fp-HL-0', 'Boleto');
   /* MG: dois pedidos no mesmo item */
   await p.click('[data-fam="MG"]'); await p.waitForTimeout(150);
   ok('L3 quantidade somada do lote', /6 UN/.test(await txt(p, `#row-MG-${ID.rol} td.qt`)));
@@ -261,12 +261,13 @@ const b = await chromium.launch();
   ok('L3 botão de quem é mantém o foco', await p.evaluate(() => document.activeElement.dataset.partes) === ID.rol);
   await escolherForn(p, 'n-MG-0', 'ro', 'f1');
   await p.fill(`#p-MG-${ID.rol}-0`, '10'); await p.click(`#k-MG-${ID.rol}-0`);
-  await p.fill('#f-MG-0', '6'); await p.fill('#z-MG-0', '5'); await p.fill('#c-MG-0', '28 dias');
+  await p.fill('#f-MG-0', '6'); await p.fill('#z-MG-0', '5'); await p.fill('#c-MG-0', '28 dias'); await p.selectOption('#fp-MG-0', 'Boleto');
   await p.waitForTimeout(1800);
   const sv = ch(p, 'salvar_mapa_lote');
   const u = sv.length && sv[sv.length - 1].c;
   ok('L3 salvou no lote', sv.length >= 1 && u.p_lote_id === 'lt1' && !('p_id' in u), u);
   ok('L3 nada foi para salvar_mapa', ch(p, 'salvar_mapa').length === 0);
+  ok('L3 forma de pagamento vai ao lote (lista fechada)', u && u.p_mapa.fornecedores.every(f => ['Boleto', null, undefined].includes(f.forma_pagamento)) && u.p_mapa.fornecedores.some(f => f.familia === 'MG' && f.coluna === 1 && f.forma_pagamento === 'Boleto') && await p.$eval('#fp-MG-0', e => e.tagName) === 'SELECT', u && u.p_mapa.fornecedores);
   ok('L3 chaves originais voltam ao banco (inclusive a com aspas)', u && u.p_mapa.precos.some(x => x.item_id === CABO && x.preco === 20) && u.p_mapa.escolhas.some(x => x.item_id === '1201|UN' && x.coluna === 1), u && u.p_mapa);
   ok('L3 versões encadeadas', sv.every((x, k) => x.c.p_versao_mapa === k));
   /* prévia por gerência: g1 = 4×10 + frete 4 + cabo 60 = 104; g2 = 2×10 + 2 + sabão 50 = 72 */
@@ -326,9 +327,9 @@ const b = await chromium.launch();
 /* L4 — banco recusa o envio (bloqueios) */
 { const p = await abrir(b, { prep:B => { fecharCorte(B); B.forcaBloqueio = true;
     B.lote.mapa = { estado:'rascunho', versao:3, observacao:null,
-      forn:[{ familia:'MG', coluna:1, fornecedor_id:'f1', nome:'ROLAMAX', desconto_pct:null, frete:0, prazo_dias:2, condicao:'À vista' },
-            { familia:'HL', coluna:1, fornecedor_id:'f1', nome:'ROLAMAX', desconto_pct:null, frete:0, prazo_dias:2, condicao:'À vista' },
-            { familia:'FORA', coluna:1, fornecedor_id:'f1', nome:'ROLAMAX', desconto_pct:null, frete:0, prazo_dias:2, condicao:'À vista' }],
+      forn:[{ familia:'MG', coluna:1, fornecedor_id:'f1', nome:'ROLAMAX', desconto_pct:null, frete:0, prazo_dias:2, condicao:'À vista', forma_pagamento:'Boleto' },
+            { familia:'HL', coluna:1, fornecedor_id:'f1', nome:'ROLAMAX', desconto_pct:null, frete:0, prazo_dias:2, condicao:'À vista', forma_pagamento:'Boleto' },
+            { familia:'FORA', coluna:1, fornecedor_id:'f1', nome:'ROLAMAX', desconto_pct:null, frete:0, prazo_dias:2, condicao:'À vista', forma_pagamento:'Boleto' }],
       precos:[{ item_id:'1201|UN', coluna:1, preco:10 }, { item_id:'7360|UN', coluna:1, preco:5 }, { item_id:CABO, coluna:1, preco:20 }],
       escolhas:[{ item_id:'1201|UN', coluna:1 }, { item_id:'7360|UN', coluna:1 }, { item_id:CABO, coluna:1 }] }; } });
   await verMensal(p);

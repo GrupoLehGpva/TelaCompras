@@ -63,7 +63,7 @@ function responder(B, nome, c){
   if (nome.startsWith('historico')) return [];
   return [];
 }
-async function tela(b, { vw = 1440, prep = null, qs = '?t=ap-w' } = {}){
+async function tela(b, { vw = 1440, prep = null, qs = '?t=ap-w', tipo = 'mensal' } = {}){
   const p = await b.newPage({ viewport:{ width:vw, height:900 } });
   p.B = banco(); if (prep) prep(p.B);
   p.on('pageerror', e => falhas.push('ERRO DE PÁGINA: ' + e.message));
@@ -77,6 +77,8 @@ async function tela(b, { vw = 1440, prep = null, qs = '?t=ap-w' } = {}){
   });
   await p.route('**n8n.cloud/**', r => r.fulfill({ status:200, contentType:'application/json', body:'{"ok":true}' }));
   await p.goto(base + qs, { waitUntil:'load' }); await p.waitForTimeout(600);
+  /* 02/10: um tipo sempre marcado (abre no Normal, que tem a avulsa); os pacotes estão no Mensal */
+  if (tipo) { await p.click('#segTipo [data-tipo=' + tipo + ']'); await p.waitForTimeout(120); }
   return p;
 }
 const ch = (p, n) => p.B.chamadas.filter(x => x.nome === n);
@@ -87,9 +89,11 @@ const linhaPac = (p, g) => p.locator(`#corpoFila tr[data-id="pk:${LOTE}:${g}"]`)
 const b = await chromium.launch();
 
 /* 1 — a fila agrupa o lote em pacotes por gerência */
-{ const p = await tela(b);
+{ const p = await tela(b, { tipo:null });
+  ok('1 abre no Normal: só a avulsa', JSON.stringify(await linhasFila(p)) === JSON.stringify(['C2610-00050']), await linhasFila(p));
+  await p.click('#segTipo [data-tipo=mensal]'); await p.waitForTimeout(120);
   const ls = await linhasFila(p);
-  ok('1 três linhas: avulsa + 2 pacotes (pedidos do lote não aparecem soltos)', ls.length === 3 && ls.filter(x => x === 'Lote 10/2026').length === 2 && ls.includes('C2610-00050') && !ls.some(x => /C2610-0001[012]/.test(x)), ls);
+  ok('1 Mensal: 2 pacotes (pedidos do lote não aparecem soltos)', ls.length === 2 && ls.filter(x => x === 'Lote 10/2026').length === 2 && !ls.some(x => /C2610-0001[012]/.test(x)), ls);
   const t1 = await linhaPac(p, 'g1').textContent();
   ok('1 linha do pacote: gerência, pedidos, valor, selos', /Gerente Fábrica/.test(t1) && /2 pedidos/.test(t1) && /R\$\s?140,00/.test(t1) && /Pacote da gerência/.test(t1) && /Mensal/.test(t1) && /2 centros de custo/.test(t1), t1);
   ok('1 itens somados dos pedidos', /\b4\b/.test(await linhaPac(p, 'g1').locator('td.num').first().textContent()));
@@ -141,6 +145,7 @@ const b = await chromium.launch();
   ok('3 reprova com o motivo', c && c.c.p_decisao === 'reprovado' && c.c.p_motivo === 'Acima do orçamento do mês' && c.c.p_gerencia_id === 'g2', c);
   ok('3 aviso e fila', /reprovado: 1 pedidos encerrados/.test(await p.textContent('#avisoTopo')) && await linhaPac(p, 'g2').count() === 0);
   /* a caixa volta ao texto normal para um pedido avulso */
+  await p.click('#segTipo [data-tipo=normal]'); await p.waitForTimeout(120);
   await p.locator('#corpoFila tr[data-id="n1"] .btn-linha.nao').click(); await p.waitForTimeout(150);
   ok('3 caixa do pedido avulso volta ao texto normal', /Reprovar solicitação/.test(await p.textContent('#tituloModal')) && (await p.textContent('#btnConfirmarReprova')) === 'Reprovar' && !/pacote/.test(await p.textContent('#notaMotivo')));
   await p.click('#btnCancelar');
@@ -149,10 +154,14 @@ const b = await chromium.launch();
 /* 4 — aprovar selecionadas com pacote e pedido avulso juntos */
 { const p = await tela(b);
   await p.click('#marcarTodas'); await p.waitForTimeout(100);
-  ok('4 marcar todas conta os pacotes como linhas', /Aprovar 3 selecionadas/.test(await p.textContent('#btnLote')));
+  ok('4 marcar todas (Mensal) conta os pacotes como linhas', /Aprovar 2 selecionadas/.test(await p.textContent('#btnLote')), await p.textContent('#btnLote'));
   await p.click('#btnLote'); await p.waitForTimeout(800);
-  ok('4 uma chamada por pacote e uma pelo avulso', ch(p, 'decidir_pacote').length === 2 && ch(p, 'decidir_pedido').length === 1 && ch(p, 'decidir_pedido')[0].c.p_id === 'n1');
-  ok('4 fila vazia depois', (await linhasFila(p)).length === 0 && /3 solicitações aprovadas/.test(await p.textContent('#avisoTopo')));
+  ok('4 uma chamada por pacote, nenhuma pedido a pedido', ch(p, 'decidir_pacote').length === 2 && ch(p, 'decidir_pedido').length === 0);
+  ok('4 Mensal vazio; a avulsa continua no Normal', (await linhasFila(p)).length === 0 && /2 solicitações aprovadas/.test(await p.textContent('#avisoTopo')) && (await p.textContent('#contaFila')) === '1', await p.textContent('#avisoTopo'));
+  await p.click('#segTipo [data-tipo=normal]'); await p.waitForTimeout(120);
+  await p.click('#marcarTodas'); await p.click('#btnLote'); await p.waitForTimeout(800);
+  ok('4 avulsa aprovada pelo pedido', ch(p, 'decidir_pedido').length === 1 && ch(p, 'decidir_pedido')[0].c.p_id === 'n1');
+  ok('4 fila vazia depois', (await linhasFila(p)).length === 0 && (await p.textContent('#contaFila')) === '0');
   await p.close(); }
 
 /* 5 — recusa do banco: aviso e fila recarregada; o pacote continua */
@@ -164,7 +173,9 @@ const b = await chromium.launch();
 
 /* 6 — sem a segunda leitura (fila_do_aprovador fora): cai nos pedidos soltos, e o banco explica */
 { const p = await tela(b, { prep:B => { B.semExtra = true; } });
-  ok('6 sem pacotes, a fila mostra os pedidos como antes', (await linhasFila(p)).length === 4);
+  ok('6 sem pacotes, a fila mostra os pedidos como antes (3 mensais)', (await linhasFila(p)).length === 3);
+  await p.click('#segTipo [data-tipo=normal]'); await p.waitForTimeout(120);
+  ok('6 e a avulsa no Normal', JSON.stringify(await linhasFila(p)) === JSON.stringify(['C2610-00050']));
   await p.close(); }
 
 /* 7 — observador: pacote aparece, botões desligados, pedidos abrem com o acesso do observador */
@@ -183,6 +194,7 @@ const b = await chromium.launch();
     return j({ ok:false });
   });
   await p.goto(base + '?o=fn-x&a=wienfried', { waitUntil:'load' }); await p.waitForTimeout(700);
+  await p.click('#segTipo [data-tipo=mensal]'); await p.waitForTimeout(120);
   ok('7 observador não leva link do relatório', await p.locator('#lnkRelatorio').isHidden());
   ok('7 observador vê os pacotes', await linhaPac(p, 'g1').count() === 1);
   ok('7 botões desligados', await linhaPac(p, 'g1').locator('.btn-linha.sim').isDisabled());

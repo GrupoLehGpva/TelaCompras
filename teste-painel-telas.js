@@ -24,6 +24,9 @@ const LINHAS = [
       { acao: 'devolvido', etapa: 'gerencial', por: 'BRANDÃO', motivo: 'Negociar frete', em: dia(3) },
       { acao: 'cotacao_enviada', etapa: 'cotacao', por: 'HERISSON', motivo: 'Frete zerado', em: dia(0.5) }] }),
   L('T-COT', { etapa_atual: 'cotacao', status: 'em cotacao', entrou_na_etapa_em: dia(0.1) }),
+  L('T-OC', { etapa_atual: null, status: 'aprovado', valor_cotado: 700, fornecedor_cotado: 'ROLAMAX',
+    ordens: [{ situacao: 'no gr', numero_gr: '4120', total: 500, criada: dia(1), lancada: dia(0.5), forn: 'ROLAMAX', ambiente: 'producao', forma_pagamento: 'Boleto', condicao: '28 dias' },
+             { situacao: 'a lancar', total: 200, criada: dia(1), forn: 'CASA <b>X</b>', ambiente: 'producao', forma_pagamento: null, condicao: null }] }),
   L('C-REP', { canal: 'clickup', status: 'reprovado', etapa_atual: null, movimentos: undefined,
     decisoes: [{ etapa: 'lider', resp: 'reprovado', motivo: 'Sem verba', por: 'X', em: dia(2) }] }),
   L('C-COT', { canal: 'clickup', etapa_atual: 'gerencial', movimentos: undefined, cotacoes: [{ forn: 'ACME', status: 'respondida', enviada: dia(4), respondida: dia(3), total: 900 }] }),
@@ -66,6 +69,17 @@ await p.keyboard.press('Escape'); await p.waitForTimeout(200);
 
 await p.click('.card[data-id="T-COT"]'); await p.waitForTimeout(300);
 ok('4 em cotação na Mesa: "ainda na cotação"', /ainda na cotação/.test(await p.textContent('#modal')));
+await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+
+/* 4b card da OC: forma de pagamento obrigatória (02/10) */
+await p.click('.card[data-id="T-OC"]'); await p.waitForTimeout(300);
+{ const mo = await p.textContent('#modal .oc-sec');
+  ok('4b OC mostra fornecedor, valor, condição e forma', /ROLAMAX/.test(mo) && /R\$\s?500,00/.test(mo) && /28 dias/.test(mo) && /Forma: Boleto/.test(mo) && /no GR nº 4120/.test(mo), mo);
+  ok('4b OC sem forma avisa', /sem forma de pagamento/.test(mo) && await p.locator('#modal .oc-sec .pill.crit').count() === 1, mo);
+  ok('4b nome do fornecedor não vira HTML', await p.locator('#modal .oc-sec li b b').count() === 0 && /CASA <b>X<\/b>/.test(mo)); }
+await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+await p.click('.card[data-id="T-GER"]'); await p.waitForTimeout(300);
+ok('4b pedido sem OC não mostra a seção', await p.locator('#modal .oc-sec').count() === 0);
 await p.keyboard.press('Escape'); await p.waitForTimeout(200);
 
 /* 5 modal do cancelado */

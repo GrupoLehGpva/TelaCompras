@@ -1,0 +1,25 @@
+-- FORMA DE PAGAMENTO — telas_28a a 28e (02/10/2026, aplicado no banco)
+--
+-- Pedido do Guilherme: na Mesa, a forma de pagamento é lista de seleção (sem
+-- digitação), com as opções do GR; e a OC precisa ter a forma, obrigatoriamente.
+-- Mapas enviados ANTES desta mudança ficam como estão (decisão dele: "ignore as
+-- que já foram enviadas para aprovação").
+--
+-- Lista (_formas_pagamento()): Não especificado, Boleto, Cheque, Dinheiro,
+-- Depósito em conta corrente, Pix. Check constraint nas duas tabelas do mapa.
+--
+-- Colunas novas: mapa_fornecedores.forma_pagamento, lote_mapa_fornecedores.forma_pagamento,
+-- ordens_compra.forma_pagamento, oc_config.forma_obrigatoria_desde (= hora da mudança).
+--
+-- Mapa avulso: salvar_mapa grava/valida (forma_invalida fora da lista);
+--   _telas_resumo_mapa bloqueia o envio sem forma para quem ganhou item e devolve a forma.
+-- Lote: salvar_mapa_lote grava/valida; lote_mesa devolve; enviar_lote bloqueia sem forma.
+-- OC: oc_montar e oc_montar_pacote levam 'forma_pagamento' em cada OC (OC também se
+--   separa por forma) e bloqueiam a OC sem forma quando o mapa/lote foi enviado depois de
+--   oc_config.forma_obrigatoria_desde. A chave da OC só muda quando há forma — as OCs
+--   antigas mantêm a chave.
+--   oc_preparar grava a forma e PÕE A FORMA DO MAPA no corpo que vai ao GR
+--   (payload.FormaDePagamento), mesmo que o n8n mande "Não especificado".
+-- Funil: painel_diretoria devolve forma e condição de cada OC; o card mostra.
+--
+-- Testes: _teste_lote_mensal 69/69 (P14b–d, O4b–e, O11b–c); _teste_caminho_telas 170/170 (E23b–d).

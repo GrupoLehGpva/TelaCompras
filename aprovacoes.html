@@ -492,6 +492,24 @@
   .selo-urgente{display:inline-block;margin-top:4px;margin-right:4px;padding:1px 8px;border-radius:999px;background:var(--erro-bg);color:var(--erro);font-size:11px;font-weight:700}
   .lnk-rel{color:inherit;text-decoration:none;border:1px solid currentColor;background:transparent}
   .lnk-rel:hover{background:rgba(255,255,255,.12)}
+  /* Tipo primeiro, busca à direita (02/10, igual à Mesa) */
+  .nivel-tipo{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;margin:2px 0 6px}
+  .nivel-tipo .seg-tipo{margin:0}
+  .busca-topo{min-width:300px;margin-left:auto}
+  @media (max-width:600px){ .busca-topo{min-width:0;flex:1 1 100%;margin-left:0} }
+  /* Aprovadas/Reprovadas por mês */
+  .barra-hist[hidden]{display:none}
+  .barra-hist{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin:0 0 12px}
+  .barra-hist label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .sel-mes{padding:8px 12px;border:1px solid var(--borda);border-radius:var(--pilula);background:var(--card);color:var(--texto);font:inherit;font-size:14px;min-height:38px}
+  .sel-mes:focus{outline:none;border-color:var(--verde)}
+  .hist-resumo{font-size:13px;color:var(--muted)}
+  table.hist tr.mes-sep td{background:var(--realce);color:var(--texto);font-weight:700;font-size:13px;padding:9px 12px;text-align:left}
+  table.hist tr.mes-sep td span{font-weight:500;color:var(--muted)}
+  table.hist tr.pac-det td{background:var(--realce);padding:10px 12px 12px}
+  .hist-ped{display:flex;flex-wrap:wrap;gap:6px 12px;margin:0;padding:0;list-style:none;font-size:13px}
+  .hist-ped a{color:var(--verde);font-weight:650;text-decoration:none}
+  .hist-ped a:hover{text-decoration:underline}
   .selo-pacote{display:inline-block;margin-top:4px;margin-right:4px;padding:1px 8px;border-radius:999px;background:var(--verde-claro);color:var(--verde-mata);font-size:11px;font-weight:700}
   .btn-pacote{font:inherit;font-weight:700;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left;text-decoration:underline;text-underline-offset:3px}
   .btn-pacote:focus-visible{outline:2px solid currentColor;outline-offset:2px}
@@ -534,6 +552,18 @@
   <main id="conteudo" hidden>
     <div class="aviso-topo" id="avisoTopo" hidden></div>
 
+    <!-- 02/10: mesma ordem da Mesa — tipo de compra primeiro (sempre um marcado),
+         busca no alto à direita, e só depois as abas da fila. -->
+    <div class="nivel-tipo">
+      <div class="seg-tipo" id="segTipo" role="group" aria-label="Tipo de compra">
+        <button type="button" data-tipo="normal" aria-pressed="false">Normal <span class="c" data-c="normal">0</span></button>
+        <button type="button" data-tipo="urgente" aria-pressed="false">Urgente <span class="c" data-c="urgente">0</span></button>
+        <button type="button" data-tipo="mensal" aria-pressed="false">Mensal <span class="c" data-c="mensal">0</span></button>
+      </div>
+      <input type="search" class="filtro-fila busca-topo" id="filtro" aria-label="Buscar"
+             placeholder="Buscar número, pessoa ou centro de custo">
+    </div>
+
     <div class="abas" role="tablist">
       <button type="button" class="aba" id="abaFila" role="tab" aria-selected="true">
         Esperando você <span class="conta" id="contaFila">0</span>
@@ -546,19 +576,11 @@
       </button>
     </div>
 
-    <div class="seg-tipo" id="segTipo" role="group" aria-label="Tipo de compra">
-      <button type="button" data-tipo="normal" aria-pressed="false">Normal <span class="c" data-c="normal">0</span></button>
-      <button type="button" data-tipo="urgente" aria-pressed="false">Urgente <span class="c" data-c="urgente">0</span></button>
-      <button type="button" data-tipo="mensal" aria-pressed="false">Mensal <span class="c" data-c="mensal">0</span></button>
-    </div>
-
     <div id="painelFila">
     <!-- Fila compartilhada (29/09): financeiro com Wienfried, Elisângela e Isabela. -->
     <div class="fila-grupo" id="filaGrupo" hidden></div>
     <div class="barra-fila">
       <div class="esq">
-        <input type="search" class="filtro-fila" id="filtro"
-               placeholder="Filtrar por número, quem pediu, centro de custo…">
         <button type="button" class="chip ativo" id="chipTodas">Todas</button>
         <button type="button" class="chip" id="chipHoje">Só as de hoje</button>
       </div>
@@ -606,6 +628,11 @@
     </div><!-- /painelFila -->
 
     <div id="painelHist" hidden>
+      <div class="barra-hist" id="barraHist" hidden>
+        <label for="histMes">Mês</label>
+        <select id="histMes" class="sel-mes"><option value="">Todos os meses</option></select>
+        <span class="hist-resumo" id="histResumo"></span>
+      </div>
       <div class="carregando" id="histCarregando">Carregando o seu histórico…</div>
 
       <div class="rolagem" id="histRolagem" hidden>
@@ -757,7 +784,9 @@ let enviando = false;
    acabou de fazer, que é justamente quando ela vai olhar. */
 let HIST = null;
 let aba = 'fila';           // 'fila' | 'aprov' | 'rep'
-let tipoSel = '';           // '' = todos os tipos
+let tipoSel = 'normal';     // sempre um tipo marcado (02/10, igual à Mesa)
+let tipoEscolhido = false;  // a pessoa já clicou num tipo? então não troca sozinho
+let histMes = '';           // '' = todos os meses
 const TIPO_NOME = { normal:'Normal', urgente:'Urgente', mensal:'Mensal' };
 const tipoDe = x => { const t = String((x && x.tipo_compra) || '').toLowerCase(); return TIPO_NOME[t] ? t : 'normal'; };
 /* Ids já em voo ou já decididos. O botão da linha pode ser clicado duas vezes
@@ -1319,6 +1348,7 @@ async function abrir(){
     document.title = (OBSERVADOR ? 'Observando · ' : 'Aprovações · ') + APROVADOR.nome + ' · Grupo Leh';
 
     FILA = await carregarFila();
+    escolherTipoInicial();
     $('carregando').hidden = true;
     $('conteudo').hidden = false;
     desenhar();
@@ -1335,37 +1365,103 @@ const SITUACAO_BOA = /aprovado|em cota/i;
 /* Aprovadas e Reprovadas (02/10): o histórico se divide pela resposta, para
    todos os tipos de compra, e cada linha diz o tipo. */
 const ehAprovada = h => h.resposta === 'aprovado';
+
+/* Mês da decisão, no horário de Brasília: '2026-10'. */
+const FMT_MES = new Intl.DateTimeFormat('en-CA', { timeZone:'America/Sao_Paulo', year:'numeric', month:'2-digit' });
+const mesDe = h => { const d = new Date(h.decidido_em); return isNaN(d) ? '' : FMT_MES.format(d).slice(0, 7); };
+const nomeMes = k => { const [a, m] = String(k).split('-'); return (MESES[Number(m) - 1] || '') + ' de ' + a; };
+
+/* Lote mensal (02/10): o financeiro decide o pacote de uma gerência de uma vez,
+   e o banco grava uma decisão por pedido. No histórico isso volta a ser UMA
+   linha — o pacote — com os pedidos dentro, igual à fila. */
+function agruparPacotes(lista){
+  const fora = [], pac = new Map();
+  lista.forEach(h => {
+    if(!(h.lote_id && h.etapa === 'financeiro')){ fora.push(h); return; }
+    const k = h.lote_id + '|' + (h.gerencia_id || '') + '|' + h.resposta;
+    if(!pac.has(k)){
+      const comp = new Date(String(h.competencia || '').slice(0,10) + 'T12:00:00');
+      pac.set(k, Object.assign({}, h, { pacote:true, chave:'hp:' + k, pedidos:[],
+        numero: isNaN(comp) ? 'Lote mensal' : 'Lote ' + String(comp.getMonth() + 1).padStart(2, '0') + '/' + comp.getFullYear(),
+        facilitador: h.gerencia || 'Sem gerência', ccs:new Set() }));
+    }
+    const P = pac.get(k);
+    P.pedidos.push({ id:h.id, numero:h.numero });
+    if(h.centro_custo_nome) P.ccs.add(h.centro_custo_nome);
+    if(h.aberto_em && (!P.aberto_em || h.aberto_em < P.aberto_em)) P.aberto_em = h.aberto_em;
+    if(h.decidido_em && h.decidido_em > P.decidido_em) P.decidido_em = h.decidido_em;
+  });
+  const pacotes = [...pac.values()].map(P => Object.assign(P, {
+    centro_custo_nome: P.ccs.size === 1 ? [...P.ccs][0] : P.ccs.size + ' centros de custo',
+    pedidos: P.pedidos.sort((x, y) => String(x.numero).localeCompare(String(y.numero))) }));
+  return fora.concat(pacotes).sort((x, y) => String(y.decidido_em).localeCompare(String(x.decidido_em)));
+}
+const passaBusca = h => {
+  const t = termo.trim().toLowerCase();
+  if(!t) return true;
+  return [h.numero, h.facilitador, h.centro_custo_nome, h.motivo, h.situacao, h.decidido_por, h.gerencia,
+          ...(h.pedidos || []).map(p => p.numero)].some(v => String(v || '').toLowerCase().includes(t));
+};
 function histDaAba(){
-  return (HIST || []).filter(h => aba === 'aprov' ? ehAprovada(h) : !ehAprovada(h));
+  return agruparPacotes((HIST || []).filter(h => aba === 'aprov' ? ehAprovada(h) : !ehAprovada(h)));
 }
 function contarHist(){
   if(!HIST) return;
-  const ap = HIST.filter(ehAprovada).length;
+  const ap = agruparPacotes(HIST.filter(ehAprovada)).length;
   $('contaAprov').textContent = ap; $('contaAprov').hidden = false;
-  $('contaRep').textContent = HIST.length - ap; $('contaRep').hidden = false;
+  $('contaRep').textContent = agruparPacotes(HIST.filter(h => !ehAprovada(h))).length; $('contaRep').hidden = false;
+}
+const pacotesHistAbertos = new Set();
+
+function pintarMeses(daAba){
+  const meses = [...new Set(daAba.map(mesDe).filter(Boolean))].sort().reverse();
+  if(histMes && !meses.includes(histMes)) histMes = '';
+  $('histMes').innerHTML = '<option value="">Todos os meses</option>' +
+    meses.map(m => '<option value="' + m + '"' + (m === histMes ? ' selected' : '') + '>' + esc(nomeMes(m)) + '</option>').join('');
+  $('barraHist').hidden = !HIST || !HIST.length;
 }
 
 function desenharHist(){
   const corpo = $('corpoHist');
   corpo.innerHTML = '';
   contarHist();
-  pintarTipos();
 
   const daAba = histDaAba();
-  const lista = daAba.filter(h => !tipoSel || tipoDe(h) === tipoSel);
+  pintarMeses(daAba);
+  pintarTipos();
+  const doTipo = daAba.filter(h => tipoDe(h) === tipoSel);
+  const lista = doTipo.filter(passaBusca).filter(h => !histMes || mesDe(h) === histMes);
+  const decididas = aba === 'aprov' ? 'aprovada' : 'reprovada';
+  $('histResumo').textContent = lista.length ? lista.length + ' ' + decididas + (lista.length === 1 ? '' : 's') + (histMes ? ' em ' + nomeMes(histMes) : '') : '';
   const vazio = !lista.length;
   $('histRolagem').hidden = vazio;
   $('histVazio').hidden   = !vazio;
   if(vazio){
     const b = $('histVazio').querySelector('b');
     b.textContent = !HIST || !HIST.length ? 'Você ainda não decidiu nenhuma solicitação.'
-      : tipoSel && daAba.length ? 'Nenhuma compra ' + TIPO_NOME[tipoSel].toLowerCase() + (aba === 'aprov' ? ' aprovada.' : ' reprovada.')
-      : (aba === 'aprov' ? 'Nenhuma solicitação aprovada ainda.' : 'Nenhuma solicitação reprovada.');
+      : !daAba.length ? (aba === 'aprov' ? 'Nenhuma solicitação aprovada ainda.' : 'Nenhuma solicitação reprovada.')
+      : !doTipo.length ? 'Nenhuma compra ' + TIPO_NOME[tipoSel].toLowerCase() + ' ' + decididas + '.'
+      : (histMes && !termo.trim()) ? 'Nenhuma compra ' + TIPO_NOME[tipoSel].toLowerCase() + ' ' + decididas + ' em ' + nomeMes(histMes) + '.'
+      : 'Nada com esse filtro.';
     return;
   }
   $('thDecisao').textContent = (GRUPO || HIST.some(h => h.fui_eu === false)) ? 'Decisão' : 'Sua decisão';
 
+  /* Sem mês escolhido, a lista vem separada por mês (o mais recente primeiro). */
+  let mesAtual = null;
+  const porMes = {};
+  if(!histMes) lista.forEach(h => { const m = mesDe(h); porMes[m] = (porMes[m] || 0) + 1; });
+
   lista.forEach(h=>{
+    if(!histMes){
+      const m = mesDe(h);
+      if(m !== mesAtual){
+        mesAtual = m;
+        const sep = document.createElement('tr'); sep.className = 'mes-sep';
+        sep.innerHTML = '<td colspan="8">' + esc(m ? nomeMes(m).charAt(0).toUpperCase() + nomeMes(m).slice(1) : 'Sem data') + ' <span>· ' + porMes[m] + '</span></td>';
+        corpo.appendChild(sep);
+      }
+    }
     const tr = document.createElement('tr');
     const aprovou = h.resposta === 'aprovado';
     const rotulo = aprovou ? 'Aprovada' : h.resposta === 'devolvido' ? 'Devolvida' : 'Reprovada';
@@ -1374,8 +1470,13 @@ function desenharHist(){
                : (GRUPO ? '<span class="hist-quem">por você</span>' : '');
     const link = 'pedido.html?id=' + encodeURIComponent(h.id) + sufixoPedido(h.etapa);
 
+    const aberto = h.pacote && pacotesHistAbertos.has(h.chave);
+    const celNum = h.pacote
+      ? '<button type="button" class="btn-pacote" data-hpac="' + esc(h.chave) + '" aria-expanded="' + aberto + '">' + esc(h.numero) + '</button>' +
+        '<br><span class="selo-pacote">Pacote · ' + h.pedidos.length + (h.pedidos.length === 1 ? ' pedido' : ' pedidos') + '</span>'
+      : '<a href="' + link + '">' + esc(h.numero || '—') + '</a>';
     tr.innerHTML =
-      '<td class="num"><a href="' + link + '">' + esc(h.numero || '—') + '</a>' +
+      '<td class="num">' + celNum +
         (h.tipo_compra ? '<br><span class="selo-tipo ' + (tipoDe(h) === 'urgente' ? 'urgente selo-urgente' : tipoDe(h)) + '">' + TIPO_NOME[tipoDe(h)] + '</span>' : '') + '</td>' +
       '<td><span class="corta">' + esc(h.facilitador || '—') + '</span></td>' +
       '<td><span class="corta">' + esc(h.centro_custo_nome || '—') + '</span></td>' +
@@ -1389,8 +1490,21 @@ function desenharHist(){
       '<td class="quando">' + dataBR(h.aberto_em) + '</td>' +
       '<td class="quando">' + dataBR(h.decidido_em) + '</td>';
     corpo.appendChild(tr);
+    if(aberto){
+      const det = document.createElement('tr'); det.className = 'pac-det';
+      det.innerHTML = '<td colspan="8"><p class="pacote-det-nota">Pedidos de ' + esc(h.facilitador) + ' neste pacote — a decisão valeu para todos:</p>' +
+        '<ul class="hist-ped">' + h.pedidos.map(p => '<li><a href="pedido.html?id=' + encodeURIComponent(p.id) + sufixoPedido('financeiro') + '">' +
+        esc(p.numero || '—') + '</a></li>').join('') + '</ul></td>';
+      corpo.appendChild(det);
+    }
   });
 }
+$('corpoHist').addEventListener('click', e => {
+  const b = e.target.closest('[data-hpac]'); if(!b) return;
+  const k = b.dataset.hpac;
+  if(pacotesHistAbertos.has(k)) pacotesHistAbertos.delete(k); else pacotesHistAbertos.add(k);
+  desenharHist();
+});
 
 async function carregarHistorico(){
   if(HIST){ desenharHist(); return; }          /* já está na mão */
@@ -1401,8 +1515,9 @@ async function carregarHistorico(){
     /* historico_do_aprovador traz o tipo de compra; se ainda não existir no banco,
        cai no histórico antigo (sem o tipo) em vez de mostrar erro. */
     let h = null;
-    try{ h = await rpc('historico_do_aprovador', { p_token: TOKEN, p_limite: 120 }); }catch(e){ h = null; }
-    HIST = Array.isArray(h) ? h : await rpc('historico_de_aprovacoes', { p_token: TOKEN, p_limite: 120 });
+    /* 2000 (02/10): a lista se organiza por mês, então precisa dos meses inteiros. */
+    try{ h = await rpc('historico_do_aprovador', { p_token: TOKEN, p_limite: 2000 }); }catch(e){ h = null; }
+    HIST = Array.isArray(h) ? h : await rpc('historico_de_aprovacoes', { p_token: TOKEN, p_limite: 2000 });
   }catch(e){
     HIST = null;
     $('histCarregando').hidden = true;
@@ -1425,22 +1540,30 @@ function trocarAba(qual){
   if(!naFila) carregarHistorico(); else desenhar();
 }
 
+/* Abre no primeiro tipo com pedido esperando (Normal, Urgente, Mensal), como a Mesa. */
+function escolherTipoInicial(){
+  if(tipoEscolhido) return;
+  const t = ['normal','urgente','mensal'].find(x => FILA.some(s => tipoDe(s) === x));
+  tipoSel = t || 'normal';
+}
+
 /* Contagem por tipo na aba aberta, com os outros filtros da fila aplicados. */
 function pintarTipos(){
   let base;
   if(aba === 'fila'){
     const t = tipoSel; tipoSel = ''; base = visiveis(); tipoSel = t;
-  } else base = histDaAba();
+  } else base = histDaAba().filter(passaBusca).filter(h => !histMes || mesDe(h) === histMes);
   document.querySelectorAll('#segTipo [data-tipo]').forEach(b => {
     const t = b.dataset.tipo, n = base.filter(x => tipoDe(x) === t).length;
     b.setAttribute('aria-pressed', String(tipoSel === t));
-    b.title = tipoSel === t ? 'Clique de novo para ver todos os tipos' : 'Mostrar só compra ' + TIPO_NOME[t].toLowerCase();
+    b.title = 'Compra ' + TIPO_NOME[t].toLowerCase();
     const c = b.querySelector('.c'); c.textContent = (aba !== 'fila' && !HIST) ? '–' : n; c.classList.toggle('tem', n > 0);
   });
 }
 
 /* ---- eventos ---- */
-$('filtro').addEventListener('input', e => { termo = e.target.value; desenhar(); });
+$('filtro').addEventListener('input', e => { termo = e.target.value; if(aba === 'fila') desenhar(); else desenharHist(); });
+$('histMes').addEventListener('change', e => { histMes = e.target.value; desenharHist(); });
 $('chipTodas').addEventListener('click', ()=>{
   soHoje = false; $('chipTodas').classList.add('ativo'); $('chipHoje').classList.remove('ativo'); desenhar();
 });
@@ -1462,7 +1585,7 @@ $('abaHist').addEventListener('click', ()=> trocarAba('aprov'));
 $('abaRep').addEventListener('click', ()=> trocarAba('rep'));
 $('segTipo').addEventListener('click', e => {
   const b = e.target.closest('[data-tipo]'); if(!b) return;
-  tipoSel = tipoSel === b.dataset.tipo ? '' : b.dataset.tipo;
+  tipoSel = b.dataset.tipo; tipoEscolhido = true;
   if(aba === 'fila') desenhar(); else desenharHist();
 });
 $('btnCancelar').addEventListener('click', fecharReprova);

@@ -222,6 +222,8 @@ td.r,th.r{text-align:right}
 .kv .v{font-size:14px;margin-top:2px;overflow-wrap:anywhere}
 .kv .v.big{font-family:var(--f-display);font-size:20px;font-weight:700}
 .m-sec h3{font-size:14px;font-weight:600;margin-bottom:8px;letter-spacing:.02em}
+.oc-lista{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:13.5px}
+.oc-lista li{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
 .just{background:var(--surface-2);border-radius:8px;padding:10px 12px;font-size:13.5px;max-width:70ch}
 .items{min-width:520px}
 .budget{display:flex;flex-direction:column;gap:6px}
@@ -929,6 +931,17 @@ function navegar(delta){
   if (n < 0 || n >= state.modalList.length) return;
   state.modalIdx = n; pintarModal(); $('m-close').focus();
 }
+/* Ordens de compra do pedido (02/10): cada OC diz fornecedor, valor, condição e
+   FORMA DE PAGAMENTO — a forma é obrigatória na OC; se faltar, o card avisa. */
+const SIT_OC = { 'a lancar':'a lançar no GR', 'arquivo gerado':'arquivo gerado', 'enviando':'enviando ao GR', 'no gr':'no GR', 'recusada':'recusada', 'incerta':'conferir no GR', 'cancelada':'cancelada' };
+function ordensDoCard(s){
+  const os = (s.raw.ordens || []).filter(o => o.situacao !== 'cancelada' && o.forn);
+  if (!os.length) return '';
+  return `<div class="m-sec oc-sec"><h3>Ordem de compra</h3><ul class="oc-lista">${os.map(o => `<li><b>${esc(o.forn)}</b> · ${brl(num(o.total))}` +
+    ` · ${esc(o.condicao || 'condição não informada')}` +
+    ` · ${o.forma_pagamento ? 'Forma: ' + esc(o.forma_pagamento) : '<span class="pill crit">sem forma de pagamento</span>'}` +
+    ` · <span class="muted">${esc(SIT_OC[o.situacao] || o.situacao || '')}${o.numero_gr ? ' nº ' + esc(o.numero_gr) : ''}</span></li>`).join('')}</ul></div>`;
+}
 const kv = (k, v, extra='') => `<div class="kv"><div class="k">${k}</div><div class="v ${extra}">${v}</div></div>`;
 function pintarModal(){
   const s = SOLICITACOES.find(x => x.id === state.modalList[state.modalIdx]);
@@ -989,6 +1002,7 @@ function pintarModal(){
         ${kv('Cotações', !s.cotacoes.length && s.canal === 'telas' ? (s.raw.cotacao_em ? 'Mesa de cotação' + (s.fornecedor ? ' · ' + esc(s.fornecedor) : '') : '<span class="muted">ainda na cotação</span>') : s.cotacoes.length ? `${s.cotacoes.length} enviada${s.cotacoes.length > 1 ? 's' : ''} · ${respondidas} respondida${respondidas === 1 ? '' : 's'}` : '<span class="muted">nenhuma enviada ainda</span>')}
         ${kv('Local de entrega', esc(s.local || '—'))}
       </div>
+      ${ordensDoCard(s)}
 
       ${s.justForn ? `<div class="m-sec"><h3>Justificativa do fornecedor</h3><div class="just">${esc(s.justForn)}</div></div>` : ''}
       <div class="m-sec"><h3>Motivo</h3><div class="just">${esc(s.motivo || '—')}${s.observacao ? '<br><span class="muted">Obs.: ' + esc(s.observacao) + '</span>' : ''}</div></div>

@@ -403,6 +403,11 @@ td.u input{height:32px;padding:0 10px}
 .map tfoot .campo{display:flex;align-items:center;gap:6px;height:32px;padding:0 10px;justify-content:flex-start}
 .map tfoot .campo input,.map tfoot .campo input.cond{flex:1 1 auto;min-width:0;width:auto;max-width:none;height:30px;border:0;background:transparent;padding:0;box-shadow:none;font-size:13px}
 .map tfoot .campo input:focus{box-shadow:none;outline:0}
+.map tfoot .campo select.forma{flex:1 1 auto;min-width:0;width:100%;max-width:none;height:30px;border:0;background:transparent;padding:0;font:inherit;font-size:13px;color:var(--ink);cursor:pointer}
+.map tfoot .campo select.forma:focus{outline:0}
+.map tfoot .campo:has(select.forma:focus-visible){box-shadow:0 0 0 2px var(--accent)}
+.map tfoot .campo:has(select:disabled){background:var(--surface-2);border-color:var(--line)}
+.map tfoot .campo select.forma:disabled{cursor:default;color:var(--ink-2)}
 .map tfoot .campo .un,.map tfoot .campo .un.pre{min-width:0;font-size:12px;color:var(--ink-2)}
 .map tfoot .campo .un:empty{display:none}
 .map tfoot .campo:has(input:disabled){background:var(--surface-2);border-color:var(--line)}
@@ -507,6 +512,8 @@ const FAMILIAS = {
   FORA:'Fora do catálogo',
 };
 const COND_PAG = ['À vista','PIX à vista','7 dias','14 dias','21 dias','28 dias','30 dias','30/60','30/60/90','Entrada + 30 dias'];
+/* Forma de pagamento (02/10): lista fechada, igual à do GR. */
+const FORMAS_PAG = ['Não especificado','Boleto','Cheque','Dinheiro','Depósito em conta corrente','Pix'];
 // Fornecedores do cadastro do GR (nome fantasia). Amostra de 120 da região,
 // só para o campo de busca do protótipo. Em produção a lista inteira (3.568
 // cadastros ativos) vem da tabela `fornecedores` do banco.
@@ -543,7 +550,7 @@ function familiasDe(s){ const o = []; s.itens.forEach(it => { const k = famKey(i
 function novaCot(s){
   const fams = {};
   familiasDe(s).forEach(k => {
-    fams[k] = { forn:[0,1,2].map(() => ({ nome:'', fid:null, desc:'', frete:'', prazo:'', cond:'', condLivre:'' })), precos:{}, escolha:{} };
+    fams[k] = { forn:[0,1,2].map(() => ({ nome:'', fid:null, desc:'', frete:'', prazo:'', cond:'', condLivre:'', forma:'' })), precos:{}, escolha:{} };
     s.itens.filter(it => famKey(it) === k).forEach(it => fams[k].precos[it.id] = ['','','']);
   });
   return { fams, obs:'', salvoEm:null, iniciada:false };
@@ -625,6 +632,7 @@ function validar(s){
         if (pz === null) erros.push({ k, id:`z-${k}-${j}`, msg:'Informe o prazo de entrega' });
         else if (Number.isNaN(pz) || pz < 0 || !Number.isInteger(pz)) erros.push({ k, id:`z-${k}-${j}`, msg:'Prazo em dias inteiros' });
         if (!f.cond.trim()) erros.push({ k, id:`c-${k}-${j}`, msg:'Informe a condição de pagamento' });
+        if (!FORMAS_PAG.includes(f.forma)) erros.push({ k, id:`fp-${k}-${j}`, msg:'Escolha a forma de pagamento' });
       }
     });
     fc.linhas.forEach(l => {
@@ -1226,6 +1234,8 @@ function pintarTabela(){
     linhaCond('Frete', '0 se incluso no preço', j => `<div class="campo"><span class="un pre">R$</span><input class="money" id="f-${k}-${j}" data-k="frete" data-j="${j}" inputmode="decimal" placeholder="0,00" value="${esc(f(j).frete)}" aria-label="Frete de ${rotulo(j)}" ${ro}><span class="un"></span></div>${errDiv(`f-${k}-${j}`)}`),
     linhaCond('Prazo de entrega', 'dias após o pedido', j => `<div class="campo"><span class="un pre"></span><input class="money" id="z-${k}-${j}" data-k="prazo" data-j="${j}" inputmode="numeric" placeholder="—" value="${esc(f(j).prazo)}" aria-label="Prazo de entrega de ${rotulo(j)} em dias" ${ro}><span class="un">dias</span></div>${errDiv(`z-${k}-${j}`)}`),
     linhaCond('Condição de pagamento', 'digite ou escolha', j => `<div class="campo"><input class="cond" id="c-${k}-${j}" data-k="cond" data-j="${j}" list="dl-cond" autocomplete="off" placeholder="ex.: 28 dias" value="${esc(f(j).cond)}" aria-label="Condição de pagamento de ${rotulo(j)}" ${ro}></div>${errDiv(`c-${k}-${j}`)}`),
+    /* 02/10: forma de pagamento é lista fechada, a mesma do GR (sem digitação) */
+    linhaCond('Forma de pagamento', 'escolha da lista', j => `<div class="campo"><select class="forma" id="fp-${k}-${j}" data-k="forma" data-j="${j}" aria-label="Forma de pagamento de ${rotulo(j)}" ${ro}><option value=""${f(j).forma ? '' : ' selected'}>Escolha…</option>${FORMAS_PAG.map(o => `<option value="${esc(o)}"${f(j).forma === o ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select></div>${errDiv(`fp-${k}-${j}`)}`),
     `<tr class="tr-total"><th class="sticky" colspan="2">Total do fornecedor<span class="hint">itens escolhidos − desconto + frete</span></th>${J.map(j => `<td colspan="3" class="cj-${j}"><div class="tot"><span class="big" id="tt-${k}-${j}">—</span><span class="sm" id="ts-${k}-${j}"></span><span class="sm" id="tu-${k}-${j}"></span></div></td>`).join('')}</tr>`,
   ].join('');
 
@@ -1269,7 +1279,7 @@ function refresh(){
     const x = fc.forn.find(y => y.j === j), nome = fc.F.forn[j].nome.trim();
     const temPreco = fc.linhas.some(l => l.valido[j]);
     const f = fc.F.forn[j];
-    const faltaCond = x.n > 0 && [f.frete, f.prazo, f.cond].some(v => String(v).trim() === '');
+    const faltaCond = x.n > 0 && [f.frete, f.prazo, f.cond, f.forma].some(v => String(v || '').trim() === '');
     const hd = $(`hd-${S.fam}-${j}`), st = $(`st-${S.fam}-${j}`);
     if (hd){
       hd.textContent = x.n ? brl(x.total) : (temPreco ? brl(x.tudo === null ? 0 : x.tudo) : '');
@@ -1338,7 +1348,7 @@ function pintarPassos(s, C, V){
     if (f.F.forn[j].nome.trim()) nomes++;
     if (f.linhas.some(l => l.valido[j])) comPreco++;
     const x = f.forn.find(y => y.j === j), ff = f.F.forn[j];
-    if (x.n){ condPrec++; if ([ff.frete, ff.prazo, ff.cond].every(v => String(v).trim() !== '')) condOk++; }
+    if (x.n){ condPrec++; if ([ff.frete, ff.prazo, ff.cond, ff.forma].every(v => String(v || '').trim() !== '')) condOk++; }
   }));
   escolhidos = C.escolhidos;
   const totalCols = C.fams.length * cols.length;
@@ -1421,7 +1431,7 @@ function pintarResumo(C){
   if (s.lote) pintarRateio(s);
   const linhas = [];
   C.fams.forEach(f => f.forn.forEach(x => { if (!x.n) return; const fo = f.F.forn[x.j];
-    linhas.push(`<tr><td>${esc(fo.nome || 'Fornecedor ' + (x.j+1) + ' (sem nome)')}</td><td>${esc(famNome(f.k))}</td><td class="r num">${x.n}</td><td class="r num">${brl(x.sub)}</td><td class="r num">${x.desc ? n2(x.desc) + '%' : '—'}</td><td class="r num">${brl(x.frete)}</td><td class="r num"><strong>${brl(x.total)}</strong></td><td>${fo.prazo ? esc(fo.prazo) + ' dias' : '—'}</td><td>${esc(fo.cond.trim() || '—')}</td></tr>`); }));
+    linhas.push(`<tr><td>${esc(fo.nome || 'Fornecedor ' + (x.j+1) + ' (sem nome)')}</td><td>${esc(famNome(f.k))}</td><td class="r num">${x.n}</td><td class="r num">${brl(x.sub)}</td><td class="r num">${x.desc ? n2(x.desc) + '%' : '—'}</td><td class="r num">${brl(x.frete)}</td><td class="r num"><strong>${brl(x.total)}</strong></td><td>${fo.prazo ? esc(fo.prazo) + ' dias' : '—'}</td><td>${esc(fo.cond.trim() || '—')}${fo.forma ? ' · ' + esc(fo.forma) : ''}</td></tr>`); }));
   $('resumo').innerHTML = linhas.length
     ? `<div class="tbl-wrap"><table><thead><tr><th>Fornecedor</th><th>Família</th><th class="r">Itens</th><th class="r">Subtotal</th><th class="r">Desconto</th><th class="r">Frete</th><th class="r">Total</th><th>Prazo</th><th>Pagamento</th></tr></thead>
        <tbody>${linhas.join('')}</tbody><tfoot><tr><td colspan="2">${s.lote ? 'Orçamento do lote' : 'Orçamento da solicitação'}</td><td class="r num">${C.escolhidos} de ${C.nItens}</td><td colspan="3"></td><td class="r num">${brl(C.total)}</td><td colspan="2"></td></tr></tfoot></table></div>
@@ -1899,7 +1909,7 @@ function mapaParaCot(s, m){
         desc:f.desconto_pct === null || f.desconto_pct === undefined ? '' : numBR(Number(f.desconto_pct)),
         frete:f.frete === null || f.frete === undefined ? '' : n2(Number(f.frete)),
         prazo:f.prazo_dias === null || f.prazo_dias === undefined ? '' : String(f.prazo_dias),
-        cond:f.condicao || '' });
+        cond:f.condicao || '', forma:FORMAS_PAG.includes(f.forma_pagamento) ? f.forma_pagamento : '' });
     });
   });
   (m.precos || []).forEach(p => { const F = c.fams[famDoItem[p.item_id]]; if (F && F.precos[p.item_id]) F.precos[p.item_id][p.coluna - 1] = nPreco(Number(p.preco)); });
@@ -1916,13 +1926,14 @@ function cotParaMapa(s){
     cols.forEach(j => {
       const f = F.forn[j];
       const d = parseBR(f.desc), fr = parseBR(f.frete), pz = parseBR(f.prazo);
-      const tem = f.nome.trim() || f.fid || String(f.desc).trim() || String(f.frete).trim() || String(f.prazo).trim() || f.cond.trim();
+      const tem = f.nome.trim() || f.fid || String(f.desc).trim() || String(f.frete).trim() || String(f.prazo).trim() || f.cond.trim() || f.forma;
       if (!tem) return;
       fornecedores.push({ familia:k, coluna:j + 1, fornecedor_id:f.fid || null, fornecedor_nome:f.nome.trim() || null,
         desconto_pct: ok(d) && d >= 0 && d <= 100 ? d : null,
         frete: ok(fr) && fr >= 0 ? fr : null,
         prazo_dias: ok(pz) && pz >= 0 && Number.isInteger(pz) ? pz : null,
-        condicao: f.cond.trim() || null });
+        condicao: f.cond.trim() || null,
+        forma_pagamento: FORMAS_PAG.includes(f.forma) ? f.forma : null });
     });
     Object.keys(F.precos).forEach(iid => F.precos[iid].forEach((v, j) => {
       if (!cols.includes(j)) return;

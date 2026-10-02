@@ -15,7 +15,7 @@ const hoje = new Date().toISOString();
 const FILA = [
   {id:'a1', numero:'C2609-01001', card_id:'c1', etapa_atual:'lider',
    facilitador:'Guilherme Pimpão', solicitante_nome:'João da Silva',
-   centro_custo:'20', centro_custo_nome:'FÁBRICA DE RAÇÕES', tipo_compra:'urgente',
+   centro_custo:'20', centro_custo_nome:'FÁBRICA DE RAÇÕES', tipo_compra:'normal',
    data_necessidade:'2026-12-01', motivo:'Pneu careca', observacao:null,
    aberto_em:hoje, total_itens:2}
 ];
@@ -66,7 +66,7 @@ ok('1 não busca à toa',     pediuHistorico(p) === 0, 'buscou o histórico sem 
 ok('1 conta bate',          (await p.locator('#contaFila').textContent()) === String(FILA.length),
    'conta: ' + await p.locator('#contaFila').textContent());
 ok('1 fila desenhada',      await conta(p, '#corpoFila tr') === 1, 'linhas: ' + await conta(p, '#corpoFila tr'));
-ok('1 sem linha de histórico na fila', await conta(p, '#corpoHist tr') === 0, 'histórico vazou para a fila');
+ok('1 sem linha de histórico na fila', await conta(p, '#corpoHist tr:not(.mes-sep)') === 0, 'histórico vazou para a fila');
 
 /* 2 — abrir a aba busca uma vez e desenha */
 await p.click('#abaHist');
@@ -75,19 +75,20 @@ ok('2 troca de painel',   await p.locator('#painelHist').isVisible() && !(await 
    'os dois painéis ao mesmo tempo, ou nenhum');
 ok('2 buscou uma vez',    pediuHistorico(p) === 1, 'buscas: ' + pediuHistorico(p));
 /* 02/10: o histórico se divide em Aprovadas e Reprovadas. */
-ok('2 Aprovadas mostra só a aprovada', await conta(p, '#corpoHist tr') === 1 && /C2608-00901/.test(await p.locator('#corpoHist').textContent()),
-   'linhas: ' + await conta(p, '#corpoHist tr'));
+ok('2 Aprovadas mostra só a aprovada', await conta(p, '#corpoHist tr:not(.mes-sep)') === 1 && /C2608-00901/.test(await p.locator('#corpoHist').textContent()),
+   'linhas: ' + await conta(p, '#corpoHist tr:not(.mes-sep)'));
 ok('2 contas nas abas', (await p.textContent('#contaAprov')) === '1' && (await p.textContent('#contaRep')) === '1');
-ok('2 filtro some',       !(await p.locator('#filtro').isVisible()), 'o filtro da fila ficou na tela do histórico');
+/* 02/10: a busca subiu para o alto (igual à Mesa) e vale também no histórico; os chips da fila somem */
+ok('2 busca fica no alto; chips da fila somem', await p.locator('#filtro').isVisible() && !(await p.locator('#chipHoje').isVisible()), 'busca/chips');
 ok('2 aprovar em lote some', !(await p.locator('#btnLote').isVisible()), 'o botão de aprovar em lote ficou visível');
 ok('2 aba marcada',       (await p.locator('#abaHist').getAttribute('aria-selected')) === 'true'
                        && (await p.locator('#abaFila').getAttribute('aria-selected')) === 'false', 'aba não marcou');
 
 /* 3 — o que a linha mostra */
-{ const linha1 = await p.locator('#corpoHist tr').nth(0).textContent();
+{ const linha1 = await p.locator('#corpoHist tr:not(.mes-sep)').nth(0).textContent();
   await p.click('#abaRep'); await p.waitForTimeout(200);
-  ok('3 Reprovadas mostra só a reprovada', await conta(p, '#corpoHist tr') === 1 && (await p.getAttribute('#abaRep', 'aria-selected')) === 'true');
-  const linha2 = await p.locator('#corpoHist tr').nth(0).textContent();
+  ok('3 Reprovadas mostra só a reprovada', await conta(p, '#corpoHist tr:not(.mes-sep)') === 1 && (await p.getAttribute('#abaRep', 'aria-selected')) === 'true');
+  const linha2 = await p.locator('#corpoHist tr:not(.mes-sep)').nth(0).textContent();
   await p.click('#abaHist'); await p.waitForTimeout(200);
   ok('3 mostra aprovada',  /Aprovada/.test(linha1),  'linha 1: ' + linha1);
   ok('3 mostra reprovada', /Reprovada/.test(linha2), 'linha 2: ' + linha2);
@@ -101,9 +102,9 @@ ok('2 aba marcada',       (await p.locator('#abaHist').getAttribute('aria-select
   ok('3 as duas datas, nesta ordem',
      linha1.indexOf('25/08/2026') < linha1.indexOf('01/09/2026'),
      'aberta precisa vir antes de decidida: ' + linha1);
-  ok('3 etapa ganhou cor', await p.locator('#corpoHist tr').nth(0).locator('.etapa.lider').count() === 1,
+  ok('3 etapa ganhou cor', await p.locator('#corpoHist tr:not(.mes-sep)').nth(0).locator('.etapa.lider').count() === 1,
      'a etapa do histórico ficou sem a cor da etapa');
-  const href = await p.locator('#corpoHist tr').nth(0).locator('a').getAttribute('href');
+  const href = await p.locator('#corpoHist tr:not(.mes-sep)').nth(0).locator('a').getAttribute('href');
   ok('3 abre o pedido',    /pedido\.html\?id=h1/.test(href || ''), 'link: ' + href);
   ok('3 leva o token',     /t=tk-brandao/.test(href || ''), 'link sem token, a barra de aprovação não aparece: ' + href); }
 
@@ -111,7 +112,7 @@ ok('2 aba marcada',       (await p.locator('#abaHist').getAttribute('aria-select
 await p.click('#abaFila'); await p.waitForTimeout(200);
 await p.click('#abaHist'); await p.waitForTimeout(300);
 ok('4 não busca de novo', pediuHistorico(p) === 1, 'buscas: ' + pediuHistorico(p));
-ok('4 volta a desenhar',  await conta(p, '#corpoHist tr') === 1, 'linhas sumiram na volta');
+ok('4 volta a desenhar',  await conta(p, '#corpoHist tr:not(.mes-sep)') === 1, 'linhas sumiram na volta');
 await p.click('#abaRep'); await p.waitForTimeout(200);
 ok('4 Reprovadas não busca de novo', pediuHistorico(p) === 1, 'buscas: ' + pediuHistorico(p));
 await p.close();
@@ -160,7 +161,7 @@ await p.waitForTimeout(500);
 await p.click('#abaHist'); await p.waitForTimeout(400);
 { const m = await p.evaluate(() => ({doc: document.documentElement.scrollWidth, win: innerWidth}));
   ok('8 celular não rola para o lado', m.doc <= m.win + 1, m.doc + ' > ' + m.win);
-  ok('8 celular desenha', await conta(p, '#corpoHist tr') === 1, 'linhas: ' + await conta(p, '#corpoHist tr')); }
+  ok('8 celular desenha', await conta(p, '#corpoHist tr:not(.mes-sep)') === 1, 'linhas: ' + await conta(p, '#corpoHist tr:not(.mes-sep)')); }
 await p.screenshot({path:'t-historico.png', fullPage:true});
 await p.close();
 
