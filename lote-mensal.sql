@@ -23,3 +23,20 @@
 -- Falta (fases 2–5): Mesa do lote, pacotes por gerência no financeiro, relatório,
 -- agendamento do corte no n8n. O corte NÃO está agendado ainda.
 -- ============================================================================
+
+-- =====================================================================
+-- FASE 3 (02/10) — financeiro decide por pacote da gerência (telas_23)
+-- · decidir_pacote(p_token, p_lote_id, p_gerencia_id, p_decisao, p_motivo):
+--   só 'aprovado' ou 'reprovado' (pacote não se devolve); reprovar exige motivo.
+--   Chama decidir_pedido em cada pedido da gerência que está no financeiro,
+--   tudo ou nada (se um falhar, nenhum muda). Marca lote_pacotes (estado,
+--   motivo, decidido_por, decidido_em). Último pacote decidido encerra o lote.
+-- · decidir_pedido recusa ('decida_pelo_pacote') pedido do lote no financeiro
+--   fora do decidir_pacote (setting de transação compras.pacote = id do lote).
+-- · fila_do_aprovador: pedidos trazem lote_id/gerencia_id; pode_devolver falso
+--   no lote; nova chave 'pacotes' (_pacotes_do_aprovador) com os pedidos de cada pacote.
+-- · pedido_telas: lote_id, lote_competencia, gerencia, decide_pelo_pacote;
+--   'decidir'/'devolver' falsos para pedido do lote no financeiro.
+-- · fila_do_comprador: pedido com lote_id nunca aparece solto (só o lote).
+-- · Teste: _teste_lote_mensal P23..P36 (36/36); _teste_caminho_telas 167/167.
+-- =====================================================================

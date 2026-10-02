@@ -490,6 +490,15 @@
   .selo-tipo.mensal{background:var(--demo-bg);color:var(--demo)}
   .selo-unico{display:inline-block;margin-top:4px;padding:1px 8px;border-radius:999px;background:var(--demo-bg);color:var(--demo);font-size:11px;font-weight:700}
   .selo-urgente{display:inline-block;margin-top:4px;margin-right:4px;padding:1px 8px;border-radius:999px;background:var(--erro-bg);color:var(--erro);font-size:11px;font-weight:700}
+  .selo-pacote{display:inline-block;margin-top:4px;margin-right:4px;padding:1px 8px;border-radius:999px;background:var(--verde-claro);color:var(--verde-mata);font-size:11px;font-weight:700}
+  .btn-pacote{font:inherit;font-weight:700;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left;text-decoration:underline;text-underline-offset:3px}
+  .btn-pacote:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+  .pacote-n{display:block;font-size:11.5px;color:var(--muted);font-weight:400}
+  tr.pacote-det > td{background:var(--realce);padding:8px 12px 12px}
+  table.pacote-ped{width:100%;border-collapse:collapse;font-size:12.5px}
+  table.pacote-ped th,table.pacote-ped td{padding:5px 8px;text-align:left;border-bottom:1px solid var(--borda)}
+  table.pacote-ped td.num,table.pacote-ped th.num{text-align:right}
+  .pacote-det-nota{margin:0 0 6px;font-size:12.5px;color:var(--muted)}
   .selo-editado{display:inline-block;margin-top:4px;margin-right:4px;padding:1px 8px;border-radius:999px;background:var(--verde-claro);color:var(--verde-mata);font-size:11px;font-weight:700}
 </style>
 </head>
@@ -720,6 +729,25 @@ let alvoReprova = null;
 let modoModal = 'reprovar';
 /* Pedidos do caminho das telas em edição pelo facilitador (fora da fila). */
 let EM_EDICAO = [];
+/* Lote mensal (fase 3): pacotes por gerência. Um pacote é uma linha da fila;
+   aprovar ou reprovar vale para todos os pedidos daquela gerência no lote. */
+const pacotesAbertos = new Set();
+const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+function pacoteDaFila(p){
+  const comp = new Date(String(p.competencia || '').slice(0,10) + 'T12:00:00');
+  const ok = !isNaN(comp);
+  const peds = Array.isArray(p.pedidos) ? p.pedidos : [];
+  const ccs = [...new Set(peds.map(x => x.centro_custo).filter(Boolean))];
+  const neces = peds.map(x => x.data_necessidade).filter(Boolean).sort()[0] || null;
+  return { pacote:true, id:'pk:' + p.lote_id + ':' + p.gerencia_id, lote_id:p.lote_id, gerencia_id:p.gerencia_id, gerencia:p.gerencia || 'Sem gerência',
+    numero: ok ? 'Lote ' + String(comp.getMonth() + 1).padStart(2, '0') + '/' + comp.getFullYear() : 'Lote mensal',
+    mes: ok ? MESES[comp.getMonth()] + '/' + comp.getFullYear() : '',
+    motivo: 'Compra mensal' + (ok ? ' de ' + MESES[comp.getMonth()] : '') + ' · pacote de ' + (p.gerencia || 'Sem gerência'),
+    tipo_compra:'mensal', solicitante_nome:p.gerencia || 'Sem gerência',
+    centro_custo_nome: ccs.length === 1 ? (peds[0].centro_custo_nome || ccs[0]) : ccs.length + ' centros de custo',
+    total_itens:p.total_itens, valor_cotado:p.total, aberto_em:p.fechado_em || p.desde, data_necessidade:neces,
+    etapa_atual:'financeiro', canal:'telas', pode_devolver:false, pedidos:peds };
+}
 let enviando = false;
 /* O histórico só é buscado quando alguém abre a aba, e é jogado fora depois de
    cada decisão — senão a pessoa aprova, volta ao histórico e não vê o que
@@ -748,7 +776,8 @@ function visiveis(){
     if(tipoSel && tipoDe(s) !== tipoSel) return false;
     if(!t) return true;
     return [s.numero, s.facilitador, s.solicitante_nome, s.centro_custo,
-            s.centro_custo_nome, s.motivo, s.observacao]
+            s.centro_custo_nome, s.motivo, s.observacao,
+            ...(s.pedidos || []).map(p => [p.numero, p.facilitador, p.solicitante_nome, p.centro_custo, p.centro_custo_nome, p.motivo].join(' '))]
       .some(v => String(v||'').toLowerCase().includes(t));
   });
 }
@@ -775,6 +804,14 @@ async function carregarFila(){
              s.editado = x.editado === true; if(x.urgente === true) s.tipo_compra = 'urgente'; }
     });
     EM_EDICAO = Array.isArray(extra.em_edicao) ? extra.em_edicao : [];
+    const doLote = new Set(extra.pedidos.filter(x => x && x.lote_id && x.etapa_atual === 'financeiro').map(x => x.id));
+    const pacotes = Array.isArray(extra.pacotes) ? extra.pacotes.map(pacoteDaFila) : [];
+    if(doLote.size || pacotes.length){
+      const ret = (fila || []).filter(s => !doLote.has(s.id)).concat(pacotes);
+      GRUPO = Array.isArray(extra.compartilhada_com) && extra.compartilhada_com.length ? extra.compartilhada_com : null;
+      desenharGrupo();
+      return ret;
+    }
     GRUPO = Array.isArray(extra.compartilhada_com) && extra.compartilhada_com.length ? extra.compartilhada_com : null;
     desenharGrupo();
   }
@@ -831,12 +868,25 @@ function desenhar(){
     });
     tdC.appendChild(cb); tr.appendChild(tdC);
 
-    const link = document.createElement('a');
-    link.href = 'pedido.html?id=' + encodeURIComponent(s.id) + sufixoPedido(s.etapa_atual);
-    link.className = 'numero-sc';
-    link.textContent = s.numero || '—';
     const tdN = document.createElement('td');
-    tdN.appendChild(link);
+    if(s.pacote){
+      const bp = document.createElement('button');
+      bp.type = 'button'; bp.className = 'btn-pacote'; bp.textContent = s.numero;
+      bp.dataset.pacote = s.id;
+      bp.setAttribute('aria-expanded', String(pacotesAbertos.has(s.id)));
+      bp.title = pacotesAbertos.has(s.id) ? 'Esconder os pedidos do pacote' : 'Ver os pedidos do pacote';
+      bp.addEventListener('click', () => { if(pacotesAbertos.has(s.id)) pacotesAbertos.delete(s.id); else pacotesAbertos.add(s.id); desenhar();
+        const n = document.querySelector('[data-pacote="' + CSS.escape(s.id) + '"]'); if(n) n.focus(); });
+      const pn = document.createElement('span'); pn.className = 'pacote-n';
+      pn.textContent = s.pedidos.length + (s.pedidos.length === 1 ? ' pedido' : ' pedidos');
+      tdN.appendChild(bp); tdN.appendChild(pn);
+    } else {
+      const link = document.createElement('a');
+      link.href = 'pedido.html?id=' + encodeURIComponent(s.id) + sufixoPedido(s.etapa_atual);
+      link.className = 'numero-sc';
+      link.textContent = s.numero || '—';
+      tdN.appendChild(link);
+    }
     tr.appendChild(tdN);
 
     const cel = (txt, cls) => {
@@ -854,6 +904,7 @@ function desenhar(){
     /* Tipo sempre marcado (02/10): Normal, Urgente ou Mensal. */
     if(tipoDe(s) === 'urgente') selo('selo-urgente', 'Urgente');
     else selo('selo-tipo ' + tipoDe(s), TIPO_NOME[tipoDe(s)]);
+    if(s.pacote) selo('selo-pacote', 'Pacote da gerência', 'Aprovar ou reprovar vale para todos os pedidos desta gerência no lote mensal.');
     if(s.editado) selo('selo-editado', 'Editado pelo solicitante', 'O pedido foi alterado depois de aberto. Abra para ver o que mudou.');
     if(s.definicao_fornecedor === 'unico') selo('selo-unico', 'Fornecedor único');
     tr.appendChild(tdM);
@@ -955,6 +1006,7 @@ function desenhar(){
     tr.appendChild(tdA);
 
     corpo.appendChild(tr);
+    if(s.pacote && pacotesAbertos.has(s.id)) corpo.appendChild(linhaDoPacote(s));
   });
 
   desenharEdicao();
@@ -981,6 +1033,37 @@ function desenhar(){
   document.querySelectorAll('.btn-linha').forEach(b => { b.disabled = enviando || OBSERVADOR; if(OBSERVADOR) b.title = 'Modo observador: só leitura'; });
 }
 
+/* Os pedidos de um pacote, abertos embaixo da linha. Cada número abre o pedido. */
+function linhaDoPacote(s){
+  const tr = document.createElement('tr');
+  tr.className = 'pacote-det';
+  const td = document.createElement('td');
+  td.colSpan = 10;
+  const nota = document.createElement('p');
+  nota.className = 'pacote-det-nota';
+  nota.textContent = 'Pedidos de ' + s.gerencia + ' no lote ' + (s.mes || '') + '. A decisão vale para todos; cada pessoa que pediu é avisada.';
+  td.appendChild(nota);
+  const t = document.createElement('table');
+  t.className = 'pacote-ped';
+  t.innerHTML = '<thead><tr><th>Pedido</th><th>Quem pediu</th><th>Centro de custo</th><th>Unidade de negócio</th><th>Motivo</th><th class="num">Itens</th><th class="num">Valor</th></tr></thead>';
+  const tb = document.createElement('tbody');
+  s.pedidos.forEach(p => {
+    const r = document.createElement('tr');
+    r.innerHTML = '<td><a class="numero-sc" href="pedido.html?id=' + encodeURIComponent(p.id) + sufixoPedido('financeiro') + '">' + esc(p.numero || '—') + '</a></td>' +
+      '<td>' + esc(p.solicitante_nome || p.facilitador || '—') + '</td>' +
+      '<td>' + esc((p.centro_custo || '') + (p.centro_custo_nome ? ' · ' + p.centro_custo_nome : '')) + '</td>' +
+      '<td>' + esc(p.unidade_negocio || '—') + '</td>' +
+      '<td>' + esc(p.motivo || '—') + '</td>' +
+      '<td class="num">' + esc(p.total_itens == null ? '—' : p.total_itens) + '</td>' +
+      '<td class="num">' + (p.valor_cotado != null ? dinheiroBR(p.valor_cotado) : '—') + '</td>';
+    tb.appendChild(r);
+  });
+  t.appendChild(tb);
+  const rol = document.createElement('div'); rol.style.overflowX = 'auto';
+  rol.appendChild(t); td.appendChild(rol); tr.appendChild(td);
+  return tr;
+}
+
 /* ============================================================================
    4) DECISÃO
    Quem decide de verdade é o servidor: ele confere a etapa e a coluna do card
@@ -998,10 +1081,20 @@ async function decidir(itens, decisao, motivo){
   desenhar();
 
   const feitos = [], recusados = [];
+  let msgPacote = '';
   for(const s of alvos){
     try{
       /* Caminho das telas: decide direto no banco, que confere token, vez,
          etapa e versão. Nada de card, nada de n8n no meio. */
+      if(s.pacote){
+        const j = await rpc('decidir_pacote', {
+          p_token: TOKEN, p_lote_id: s.lote_id, p_gerencia_id: s.gerencia_id,
+          p_decisao: decisao, p_motivo: motivo || null
+        });
+        if(j && j.ok){ feitos.push(s); marcadas.delete(s.id); pacotesAbertos.delete(s.id); if(j.mensagem) msgPacote = j.mensagem; }
+        else { emVoo.delete(s.id); recusados.push((s.numero + ' · ' + s.gerencia) + (j && j.mensagem ? ' — ' + j.mensagem : '')); }
+        continue;
+      }
       if(s.canal === 'telas'){
         const j = await rpc('decidir_pedido', {
           p_token: TOKEN, p_id: s.id, p_versao: s.versao,
@@ -1076,7 +1169,9 @@ async function decidir(itens, decisao, motivo){
 
   enviando = false;
 
-  if(feitos.length && !recusados.length){
+  if(feitos.length === 1 && !recusados.length && feitos[0].pacote && msgPacote){
+    avisar(msgPacote, 'ok');
+  } else if(feitos.length && !recusados.length){
     avisar(feitos.length === 1
       ? (decisao === 'devolvido'
           ? 'Solicitação devolvida ao comprador.'
@@ -1126,6 +1221,12 @@ function abrirReprova(s, modo){
   $('btnConfirmarReprova').className = 'confirmar' + (dev ? ' dev' : '');
   $('subModal').textContent = 'Solicitação ' + (s.numero||'') +
     (s.motivo ? ' · ' + s.motivo : '');
+  if(s.pacote){
+    $('tituloModal').textContent = 'Reprovar o pacote da gerência';
+    $('subModal').textContent = s.numero + ' · ' + s.gerencia + ' · ' + s.pedidos.length + (s.pedidos.length === 1 ? ' pedido' : ' pedidos') + ' · ' + dinheiroBR(s.valor_cotado);
+    $('notaMotivo').textContent = 'Todos os pedidos de ' + s.gerencia + ' neste lote são reprovados com este motivo, e cada pessoa que pediu é avisada. As outras gerências do lote seguem.';
+    $('btnConfirmarReprova').textContent = 'Reprovar o pacote';
+  }
   $('motivoReprova').value = '';
   $('erroMotivo').hidden = true;
   $('fundoModal').hidden = false;

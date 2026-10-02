@@ -302,7 +302,7 @@ const b = await chromium.launch();
   await p.click('[data-st="aprov"]'); await p.waitForTimeout(100);
   ok('L3 Enviadas · esperando aprovação mostra o lote', await linhas(p) === 1);
   /* só leitura */
-  await verMensal(p); await p.click('[data-open="Lote 10/2026"]'); await p.waitForTimeout(700);
+  await p.click('[data-open="Lote 10/2026"]'); await p.waitForTimeout(700);
   ok('L3 enviado: mapa só leitura', /Lote enviado para a aprovação financeira/.test(await txt(p, '#view')) && await p.locator('#bt-enviar').count() === 0 && await p.locator(`#p-FORA-${ID.cabo}-0`).isDisabled());
   r = await txt(p, '#rateio');
   ok('L3 enviado: custo gravado, pacote no financeiro', /Custo de cada gerência/.test(await txt(p, '#rat-h')) && !/prévia/.test(await txt(p, '#rat-h')) && /No financeiro/.test(r) && /R\$\s?170,00/.test(r), r);
