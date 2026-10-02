@@ -675,7 +675,7 @@ function necessidadePill(s){
 /* Que tipo de cotação é: item único, lista de itens ou serviço — o mesmo rótulo
    da "Natureza" na tela do pedido. Serviço é o pedido de uma linha em "Serviço". */
 function tipoSolicitacao(s){
-  if (s.lote) return 'Lote · ' + plural(s.nItens, 'item', 'itens');
+  if (s.lote) return 'Lote mensal';
   const n = (s.itens || []).length;
   if (n === 1 && /servi/i.test(s.itens[0].un || '')) return 'Serviço';
   if (n === 1) return 'Item único';
@@ -701,7 +701,7 @@ function comQuem(s){
 function estadoCot(s){
   if (s.status === 'lote') return { cls:'neutral', txt:'Entra na cotação em ' + dt(proximoCorte()) };
   if (s.lote && s.status === 'fim') return s.fim === 'aprovado' ? { cls:'ok', txt:'Pacotes aprovados · ' + brl(s.valor) } : { cls:'crit', txt:'Pacotes reprovados' };
-  if (s.lote && s.status === 'fin') return { cls:'accent', txt:'Pacotes no financeiro · ' + brl(s.valor) };
+  if (s.lote && s.status === 'fin') return { cls:'accent', txt:'No financeiro · ' + brl(s.valor) };
   if (s.status === 'fim'){
     const origem = s.canal === 'clickup' ? ' · ClickUp' : '';
     if (s.fim === 'aprovado') return { cls:'ok', txt:'OC liberada · ' + brl(s.valor) + origem };
@@ -789,7 +789,11 @@ function renderFila(){
     || (b.urgente?1:0) - (a.urgente?1:0) || a.necessidade - b.necessidade || a.criada - b.criada);
   const q = S.q.toLowerCase();
   const naEnv = S.tab === 'env', naLote = S.tab === 'lote';
-  const lista = ordenar(grupos[S.tab]).filter(s => naLote ? passaFiltro(s, S.lfFila) : naEnv ? (!S.stEnv || statusEnv(s) === S.stEnv) : (!S.tipo || s.tipo === S.tipo)).filter(s => !q || [s.id, tituloSol(s), s.solicitante, s.ccNome, s.motivo, s.gerNome, ...s.itens.map(i => i.desc + ' ' + (i.cod || ''))].join(' ').toLowerCase().includes(q));
+  /* 02/10 (Guilherme): em Para cotar a compra mensal não se mistura com as outras.
+     Sem tipo marcado aparecem normal e urgente; a mensal (o lote) só no botão Mensal. */
+  const separaMensal = S.tab === 'cotar' && !S.tipo;
+  const mensaisOcultas = separaMensal ? grupos.cotar.filter(s => s.tipo === 'mensal').length : 0;
+  const lista = ordenar(grupos[S.tab]).filter(s => naLote ? passaFiltro(s, S.lfFila) : naEnv ? (!S.stEnv || statusEnv(s) === S.stEnv) : (S.tipo ? s.tipo === S.tipo : !(separaMensal && s.tipo === 'mensal'))).filter(s => !q || [s.id, tituloSol(s), s.solicitante, s.ccNome, s.motivo, s.gerNome, ...s.itens.map(i => i.desc + ' ' + (i.cod || ''))].join(' ').toLowerCase().includes(q));
 
   let flash = '';
   if (S.flash){
@@ -804,7 +808,8 @@ function renderFila(){
     const vazio = { cotar:['Tudo cotado','Nenhuma solicitação esperando cotação agora.'], lote:['Nada aguardando o lote','As compras mensais aprovadas pela gerência ficam aqui até o corte do dia 20. No corte, entram juntas na cotação, como um lote só.'], dev:['Nada devolvido','Quando um aprovador devolver uma cotação, ela aparece aqui com o motivo.'], env:['Nada enviado ainda','As cotações que você enviar para aprovação ficam aqui até virarem ordem de compra.'] }[S.tab];
     const rotuloTipo = (TIPOS.find(t => t.id === S.tipo) || {}).nome;
     const rotuloSt = (STATUS_ENV.find(t => t.id === S.stEnv) || {}).nome;
-    corpo = naLote && filtroAtivo(S.lfFila) && !q ? `<div class="state"><h3>Nada com esses filtros</h3><p>Tire os filtros para ver todos os pedidos que aguardam o lote.</p><button class="btn primary" type="button" id="bt-limpa-lf">Tirar os filtros</button></div>`
+    corpo = mensaisOcultas && !q ? `<div class="state"><h3>Nenhuma compra normal ou urgente para cotar</h3><p>A compra mensal fica separada das outras.</p><button class="btn primary" type="button" id="bt-ver-mensal">Ver a compra mensal (${mensaisOcultas})</button></div>`
+      : naLote && filtroAtivo(S.lfFila) && !q ? `<div class="state"><h3>Nada com esses filtros</h3><p>Tire os filtros para ver todos os pedidos que aguardam o lote.</p><button class="btn primary" type="button" id="bt-limpa-lf">Tirar os filtros</button></div>`
       : naEnv && S.stEnv && !q ? `<div class="state"><h3>Nada em “${esc(rotuloSt || '')}”</h3><p>Veja os outros status das enviadas.</p><button class="btn primary" type="button" id="bt-limpa-st">Ver todas</button></div>`
       : !naEnv && !naLote && S.tipo && !q ? `<div class="state"><h3>Nenhuma compra ${esc((rotuloTipo || '').toLowerCase())} nesta aba</h3><p>Tire o filtro para ver as outras.</p><button class="btn primary" type="button" id="bt-limpa-tipo">Ver todas</button></div>`
       : q ? `<div class="state"><h3>Nada encontrado para “${esc(S.q)}”</h3><p>Busque por número, item, solicitante ou centro de custo.</p><button class="btn primary" type="button" id="bt-limpa">Limpar busca</button></div>`
@@ -851,11 +856,11 @@ function renderFila(){
       </div>`
         : `<div class="seg" role="group" aria-label="Tipo de compra">
         ${TIPOS.map(t => t.ativo
-          ? (n => `<button class="sgb" type="button" data-tipo="${t.id}" aria-pressed="${S.tipo === t.id}" title="${S.tipo === t.id ? 'Clique de novo para ver todos os tipos' : 'Mostrar só compra ' + t.nome.toLowerCase()}">${t.nome}<span class="c num${n ? ' tem' : ''}">${n}</span></button>`)(minhas.filter(x => grupoTab(x) === S.tab && x.tipo === t.id).length)
+          ? (n => `<button class="sgb" type="button" data-tipo="${t.id}" aria-pressed="${S.tipo === t.id}" title="${S.tipo === t.id ? (S.tab === 'cotar' ? 'Clique de novo para voltar a normal e urgente' : 'Clique de novo para ver todos os tipos') : 'Mostrar só compra ' + t.nome.toLowerCase()}">${t.nome}<span class="c num${n ? ' tem' : ''}">${n}</span></button>`)(minhas.filter(x => grupoTab(x) === S.tab && x.tipo === t.id).length)
           : `<button class="sgb off" type="button" data-tipo="${t.id}" aria-disabled="true">${t.nome} <span class="soon">em breve</span></button>`).join('')}
       </div>`}
     </div>
-    ${S.tipo === 'mensal' ? '' : ''}
+    ${mensaisOcultas && lista.length ? `<p class="muted lote-nota" id="nota-mensal">A compra mensal fica separada das outras: clique em <strong>Mensal</strong> para ver${mensaisOcultas === 1 ? '' : ' as ' + mensaisOcultas}.</p>` : ''}
     ${corpo}`;
 
   if (S.flash) $('bt-flash-x').onclick = () => { S.flash = null; render(); };
@@ -870,6 +875,7 @@ function renderFila(){
   if ($('bt-limpa')) $('bt-limpa').onclick = () => { S.q = ''; render(); };
   if ($('bt-limpa-tipo')) $('bt-limpa-tipo').onclick = () => { S.tipo = ''; render(); };
   if ($('bt-limpa-st')) $('bt-limpa-st').onclick = () => { S.stEnv = ''; render(); };
+  if ($('bt-ver-mensal')) $('bt-ver-mensal').onclick = () => { S.tipo = 'mensal'; render(); };
   if ($('bt-limpa-lf')) $('bt-limpa-lf').onclick = () => { S.lfFila = { ger:'', un:'', cc:'' }; render(); };
   ligarFiltrosLote(v, 'lf', S.lfFila, render);
   v.querySelectorAll('[data-st]').forEach(b => b.onclick = () => { S.stEnv = b.dataset.st; render(); });
@@ -1340,7 +1346,7 @@ function pintarResumo(C){
     linhas.push(`<tr><td>${esc(fo.nome || 'Fornecedor ' + (x.j+1) + ' (sem nome)')}</td><td>${esc(famNome(f.k))}</td><td class="r num">${x.n}</td><td class="r num">${brl(x.sub)}</td><td class="r num">${x.desc ? n2(x.desc) + '%' : '—'}</td><td class="r num">${brl(x.frete)}</td><td class="r num"><strong>${brl(x.total)}</strong></td><td>${fo.prazo ? esc(fo.prazo) + ' dias' : '—'}</td><td>${esc(fo.cond.trim() || '—')}</td></tr>`); }));
   $('resumo').innerHTML = linhas.length
     ? `<div class="tbl-wrap"><table><thead><tr><th>Fornecedor</th><th>Família</th><th class="r">Itens</th><th class="r">Subtotal</th><th class="r">Desconto</th><th class="r">Frete</th><th class="r">Total</th><th>Prazo</th><th>Pagamento</th></tr></thead>
-       <tbody>${linhas.join('')}</tbody><tfoot><tr><td colspan="2">Orçamento da solicitação</td><td class="r num">${C.escolhidos} de ${C.nItens}</td><td colspan="3"></td><td class="r num">${brl(C.total)}</td><td colspan="2"></td></tr></tfoot></table></div>
+       <tbody>${linhas.join('')}</tbody><tfoot><tr><td colspan="2">${s.lote ? 'Orçamento do lote' : 'Orçamento da solicitação'}</td><td class="r num">${C.escolhidos} de ${C.nItens}</td><td colspan="3"></td><td class="r num">${brl(C.total)}</td><td colspan="2"></td></tr></tfoot></table></div>
        ${s.cot.obs && soLeitura(s) ? `<div class="obs-box"><label>Observação do comprador</label><div class="just">${esc(s.cot.obs)}</div></div>` : ''}`
     : '<div class="state" style="padding:18px">Nenhum item escolhido ainda. Marque ✓ no fornecedor de cada item e o resumo aparece aqui.</div>';
 }
@@ -1980,7 +1986,7 @@ function tentarEnviar(){
       if (r && r.erro === 'observacao_obrigatoria'){ enviando = false; b.disabled = false; $('dlg-cancel').disabled = false; b.textContent = (s.devolucao ? 'Reenviar' : 'Enviar') + ' · ' + brl(C.total); $('e-dlg-obs').hidden = false; $('e-dlg-obs').textContent = r.mensagem; $('dlg-obs').classList.add('bad'); $('dlg-obs').focus(); return; }
       return falhou('<strong>' + esc((r && r.mensagem) || 'O banco recusou o envio.') + '</strong>' + (lista.length ? '<ul class="warnlist">' + lista.map(x => '<li>' + esc(x.msg) + '</li>').join('') + '</ul>' : ''));
     }
-    S.flash = { cls:'ok', html:`<strong>${esc(s.id)} enviada</strong> · ${esc(r.mensagem || '')} · ${brl(Number(r.total))}` };
+    S.flash = { cls:'ok', html:`<strong>${esc(s.id)} ${s.lote ? 'enviado' : 'enviada'}</strong> · ${esc(r.mensagem || '')} · ${brl(Number(r.total))}` };
     S.tab = 'env'; S.view = 'fila'; S.mostrarErros = false; S.solId = null;
     fecharModal(); window.scrollTo(0,0);
     await carregarFila(); render();

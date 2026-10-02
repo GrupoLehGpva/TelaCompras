@@ -130,6 +130,7 @@ async function abrir(b, { vp={ width:1600, height:1000 }, prep=null }={}){
 }
 const ch = (p, n) => p.B.chamadas.filter(x => x.nome === n);
 const txt = (p, sel) => p.textContent(sel);
+const verMensal = async p => { if (!(await p.locator('[data-tipo="mensal"][aria-pressed="true"]').count())) { await p.click('[data-tipo="mensal"]'); await p.waitForTimeout(150); } };
 const abas = p => p.$$eval('[data-tab]', bs => bs.map(b => b.textContent.replace(/\s+/g, ' ').trim()));
 const linhas = p => p.locator('table.fila tbody tr[data-id]').count();
 async function escolherForn(p, campo, termo, fid){
@@ -193,15 +194,22 @@ const b = await chromium.launch();
 /* L2 — depois do corte: o lote é uma linha só em Para cotar */
 { const p = await abrir(b, { prep:fecharCorte });
   ok('L2 abas depois do corte', JSON.stringify(await abas(p)) === JSON.stringify(['Para cotar2','Aguardando o lote0','Devolvidas0','Enviadas0']), await abas(p));
+  /* 02/10: a mensal não se mistura com as outras em Para cotar */
+  ok('L2 sem tipo marcado: só normal e urgente, o lote fica de fora', await linhas(p) === 1 && !/Lote 10\/2026/.test(await txt(p, 'table.fila')) && /C2610-00001/.test(await txt(p, 'table.fila')));
+  ok('L2 aviso de que a mensal está no botão Mensal', /clique em Mensal para ver/.test(await txt(p, '#nota-mensal')));
+  ok('L2 botão Mensal com contagem destacada', /1/.test(await txt(p, '[data-tipo="mensal"]')) && await p.locator('[data-tipo="mensal"] .c.tem').count() === 1);
+  await p.click('[data-tipo="normal"]'); await p.waitForTimeout(100);
+  ok('L2 Normal mostra só a normal', await linhas(p) === 1 && !(await p.locator('#nota-mensal').count()));
+  await p.click('[data-tipo="normal"]'); await p.waitForTimeout(100);
+  await verMensal(p);
   const t = await txt(p, 'tr[data-id="Lote 10/2026"]');
-  ok('L2 linha do lote', /Compra mensal de outubro\/2026 · 2 pedidos de 2 gerências/.test(t) && /Lote mensal/.test(t) && /Cotar o lote/.test(t) && /3 famílias/.test(t) && /Lote · 4 itens/.test(t), t);
+  ok('L2 linha do lote', /Compra mensal de outubro\/2026 · 2 pedidos de 2 gerências/.test(t) && /Lote mensal/.test(t) && /Cotar o lote/.test(t) && /3 famílias/.test(t) && /Lote mensal/.test(t), t);
   ok('L2 pedidos do lote não aparecem soltos', !/C2610-00010|C2610-00011/.test(await txt(p, '#view')));
-  await p.click('[data-tipo="mensal"]'); await p.waitForTimeout(100);
-  ok('L2 filtro Mensal mostra o lote', await linhas(p) === 1);
-  await p.click('[data-tipo="mensal"]'); await p.waitForTimeout(100);
+  ok('L2 filtro Mensal mostra só o lote', await linhas(p) === 1);
   await p.click('[data-tab="lote"]'); await p.waitForTimeout(100);
   ok('L2 aba do lote vazia explica', /Nada aguardando o lote/.test(await txt(p, '#view')));
   await p.click('[data-tab="cotar"]'); await p.waitForTimeout(100);
+  await verMensal(p);
   /* detalhe do lote */
   await p.click('tr[data-id="Lote 10/2026"]'); await p.waitForTimeout(600);
   ok('L2 detalhe chama lote_mesa com o id do lote', ch(p, 'lote_mesa').some(x => x.c.p_lote_id === 'lt1' && x.c.p_token === TOKEN));
@@ -218,7 +226,7 @@ const b = await chromium.launch();
 
 /* L3 — mapa do lote: ids seguros, quem pediu, filtros, gravação, prévia por gerência, envio */
 { const p = await abrir(b, { prep:fecharCorte });
-  await p.click('[data-open="Lote 10/2026"]'); await p.waitForTimeout(700);
+  await verMensal(p); await p.click('[data-open="Lote 10/2026"]'); await p.waitForTimeout(700);
   const ID = await p.evaluate(c => ({ rol:idSeguro('1201|UN'), sab:idSeguro('7360|UN'), cabo:idSeguro(c) }), CABO);
   ok('L3 ids seguros (sem aspas)', /^L[0-9a-f]{8}$/.test(ID.cabo) && ID.cabo !== ID.rol, ID);
   ok('L3 descrição não vira HTML', await p.locator('#map-wrap .it-d b').count() === 0 && /<b>2m<\/b>/.test(await txt(p, '#map-wrap')));
@@ -288,13 +296,13 @@ const b = await chromium.launch();
   const env = ch(p, 'enviar_lote')[0];
   ok('L3 enviar_lote com id, versão e token', env && env.c.p_lote_id === 'lt1' && env.c.p_versao_mapa === p.B.lote.mapa.versao - 1 && env.c.p_token === TOKEN && env.c.p_observacao === null, env);
   ok('L3 nada foi para enviar_mapa', ch(p, 'enviar_mapa').length === 0);
-  ok('L3 volta para Enviadas com aviso', /Lote 10\/2026 enviada/.test(await txt(p, '#view')) && (await p.getAttribute('[data-tab="env"]', 'aria-selected')) === 'true');
+  ok('L3 volta para Enviadas com aviso', /Lote 10\/2026 enviado/.test(await txt(p, '#view')) && (await p.getAttribute('[data-tab="env"]', 'aria-selected')) === 'true');
   const le = await txt(p, 'tr[data-id="Lote 10/2026"]');
-  ok('L3 lote nas Enviadas, com o financeiro', /Pacotes no financeiro/.test(le) && /R\$\s?170,00/.test(le) && /Ver/.test(le), le);
+  ok('L3 lote nas Enviadas, com o financeiro', /No financeiro/.test(le) && /R\$\s?170,00/.test(le) && /Ver/.test(le), le);
   await p.click('[data-st="aprov"]'); await p.waitForTimeout(100);
   ok('L3 Enviadas · esperando aprovação mostra o lote', await linhas(p) === 1);
   /* só leitura */
-  await p.click('[data-open="Lote 10/2026"]'); await p.waitForTimeout(700);
+  await verMensal(p); await p.click('[data-open="Lote 10/2026"]'); await p.waitForTimeout(700);
   ok('L3 enviado: mapa só leitura', /Lote enviado para a aprovação financeira/.test(await txt(p, '#view')) && await p.locator('#bt-enviar').count() === 0 && await p.locator(`#p-FORA-${ID.cabo}-0`).isDisabled());
   r = await txt(p, '#rateio');
   ok('L3 enviado: custo gravado, pacote no financeiro', /Custo de cada gerência/.test(await txt(p, '#rat-h')) && !/prévia/.test(await txt(p, '#rat-h')) && /No financeiro/.test(r) && /R\$\s?170,00/.test(r), r);
@@ -310,8 +318,9 @@ const b = await chromium.launch();
             { familia:'FORA', coluna:1, fornecedor_id:'f1', nome:'ROLAMAX', desconto_pct:null, frete:0, prazo_dias:2, condicao:'À vista' }],
       precos:[{ item_id:'1201|UN', coluna:1, preco:10 }, { item_id:'7360|UN', coluna:1, preco:5 }, { item_id:CABO, coluna:1, preco:20 }],
       escolhas:[{ item_id:'1201|UN', coluna:1 }, { item_id:'7360|UN', coluna:1 }, { item_id:CABO, coluna:1 }] }; } });
+  await verMensal(p);
   ok('L4 fila: rascunho salvo vira Continuar', /Continuar/.test(await txt(p, 'tr[data-id="Lote 10/2026"]')));
-  await p.click('[data-open="Lote 10/2026"]'); await p.waitForTimeout(700);
+  await verMensal(p); await p.click('[data-open="Lote 10/2026"]'); await p.waitForTimeout(700);
   const ID = await p.evaluate(c => ({ rol:idSeguro('1201|UN'), cabo:idSeguro(c) }), CABO);
   ok('L4 reabre com o que está no banco', (await p.inputValue(`#p-FORA-${ID.cabo}-0`)) === '20,00' && (await p.getAttribute(`#k-FORA-${ID.cabo}-0`, 'aria-pressed')) === 'true' && (await p.inputValue('#n-FORA-0')) === 'ROLAMAX');
   await p.click('#bt-enviar'); await p.waitForTimeout(300);
@@ -324,7 +333,7 @@ const b = await chromium.launch();
 
 /* L5 — conflito de versão, itens que mudaram e pagehide */
 { const p = await abrir(b, { prep:fecharCorte });
-  await p.click('[data-open="Lote 10/2026"]'); await p.waitForTimeout(700);
+  await verMensal(p); await p.click('[data-open="Lote 10/2026"]'); await p.waitForTimeout(700);
   const rol = await p.evaluate(() => idSeguro('1201|UN'));
   await p.click('[data-fam="MG"]'); await p.waitForTimeout(100);
   p.B.lote.mapa = { estado:'rascunho', versao:9, observacao:null, forn:[], precos:[], escolhas:[] };   // outra aba salvou
@@ -334,20 +343,29 @@ const b = await chromium.launch();
   ok('L5 reabre a versão salva', await p.locator('#overlay').isHidden() && /Mapa do lote/.test(await txt(p, '#view')));
   await p.close(); }
 { const p = await abrir(b, { prep:B => { fecharCorte(B); B.itensMudaram = true; } });
-  await p.click('[data-open="Lote 10/2026"]'); await p.waitForTimeout(700);
+  await verMensal(p); await p.click('[data-open="Lote 10/2026"]'); await p.waitForTimeout(700);
   const rol = await p.evaluate(() => idSeguro('1201|UN'));
   await p.click('[data-fam="MG"]'); await p.waitForTimeout(100);
   await p.fill(`#p-MG-${rol}-0`, '11'); await p.waitForTimeout(1800);
   ok('L5 itens do lote mudaram: avisa para reabrir', /Os itens do lote mudaram/.test(await txt(p, '#saved')));
   await p.close(); }
 { const p = await abrir(b, { prep:fecharCorte });
-  await p.click('[data-open="Lote 10/2026"]'); await p.waitForTimeout(700);
+  await verMensal(p); await p.click('[data-open="Lote 10/2026"]'); await p.waitForTimeout(700);
   const rol = await p.evaluate(() => idSeguro('1201|UN'));
   await p.click('[data-fam="MG"]'); await p.waitForTimeout(100);
   await p.fill(`#p-MG-${rol}-0`, '33');
   await p.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted:false }))); await p.waitForTimeout(600);
   ok('L5 pagehide grava no lote', ch(p, 'salvar_mapa_lote').some(x => x.c.p_lote_id === 'lt1' && x.c.p_mapa.precos.some(y => y.item_id === '1201|UN' && y.preco === 33)));
   ok('L5 pagehide não usa salvar_mapa', ch(p, 'salvar_mapa').length === 0);
+  await p.close(); }
+
+/* L2b — só a mensal para cotar: aviso com botão */
+{ const p = await abrir(b, { prep:B => { fecharCorte(B); B.pedidos = B.pedidos.filter(x => x.id !== 'u1'); } });
+  ok('L2b sem normal/urgente: explica e oferece a mensal', /Nenhuma compra normal ou urgente para cotar/.test(await txt(p, '#view')) && /Ver a compra mensal \(1\)/.test(await txt(p, '#bt-ver-mensal')));
+  await p.click('#bt-ver-mensal'); await p.waitForTimeout(150);
+  ok('L2b botão leva ao lote', await linhas(p) === 1 && (await p.getAttribute('[data-tipo="mensal"]', 'aria-pressed')) === 'true');
+  await p.click('[data-tipo="mensal"]'); await p.waitForTimeout(150);
+  ok('L2b desmarcar volta ao aviso', /Nenhuma compra normal ou urgente/.test(await txt(p, '#view')));
   await p.close(); }
 
 /* L6 — corte e nome do mês */
