@@ -410,6 +410,21 @@ td.u input{height:32px;padding:0 10px}
 .map thead tr:first-child th:not(.sticky):not([rowspan]){padding-left:6px;padding-right:6px}
   /* barra do topo na mesma margem do conteúdo */
   @media (min-width:601px){ .brandbar{padding-left:24px;padding-right:24px} }
+/* Lote mensal (02/10) */
+.modal.lg{max-width:1100px}
+.lote-nota{margin:0 0 10px;font-size:13px}
+.lote-filtros{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+#lm-filtros .lote-filtros{margin:0 0 12px}
+.lote-filtros select.ctl{max-width:260px}
+td.qt .qt-f{display:block;font-size:11px;color:var(--accent);font-family:inherit}
+.partes-row > td{background:var(--surface-2);padding:6px 10px 10px}
+table.partes{width:auto;min-width:60%;background:var(--surface);border:1px solid var(--line);border-radius:6px}
+table.partes th,table.partes td{padding:5px 10px;font-size:12.5px}
+table.partes tr.fora-filtro td{color:var(--ink-3);text-decoration:line-through}
+table.rateio tr.ger td{background:var(--surface-2)}
+table.rateio td.ind{padding-left:24px}
+.pacotes-envio{margin-bottom:10px}
+@media (max-width:600px){ .lote-filtros select.ctl{max-width:none;flex:1 1 100%} }
 </style>
 
 <div class="brandbar"><img src="data:image/png;base64,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" alt="Grupo Leh"><span class="sep"></span><span class="txt">Compras</span></div>
@@ -494,8 +509,11 @@ const ETAPAS = [
   { id:'fin', nome:'Aprovação financeiro', curto:'Financeiro', sla:2 },
   { id:'oc',  nome:'Ordem de compra',      curto:'OC',         sla:1 },
 ];
+/* Lote mensal (02/10): a mensal aprovada pela gerência espera o corte da virada
+   do dia 19 para o 20 e entra na Mesa junto com as outras, num lote só. */
+const ETAPA_LOTE = { id:'lote', nome:'Aguardando o lote', curto:'Lote', sla:null };
 /* Compra mensal: a gerência aprova a necessidade ANTES da cotação. */
-const fluxoDe = s => s && s.tipo === 'mensal' ? ['lid','ger','cot','fin','oc'].map(id => ETAPAS.find(e => e.id === id)) : ETAPAS;
+const fluxoDe = s => s && s.tipo === 'mensal' ? ['lid','ger','lote','cot','fin','oc'].map(etapa) : ETAPAS;
 
 /* =====================================================================
    DADOS — vêm do banco (fila_do_comprador e pedido_telas), pelo token do comprador
@@ -632,12 +650,13 @@ const plural = (n, a, b) => n + ' ' + (n === 1 ? a : b);
 /* =====================================================================
    ESTADO DA TELA
    ===================================================================== */
-const S = { view:'fila', tab:'cotar', q:'', tipo:'', stEnv:'', foco:null, soFalta:false, comprador:'', carregado:false, erro:null, solId:null, fam:null, mostrarErros:false,
+const S = { view:'fila', tab:'cotar', lfFila:{ ger:'', un:'', cc:'' }, lfMapa:{ ger:'', un:'', cc:'' }, verPartes:{}, q:'', tipo:'', stEnv:'', foco:null, soFalta:false, comprador:'', carregado:false, erro:null, solId:null, fam:null, mostrarErros:false,
             modalList:[], modalIdx:-1, flash:null };
 const sol = id => SOLS.find(s => s.id === id);
-const etapa = id => ETAPAS.find(e => e.id === id);
+const etapa = id => id === 'lote' ? ETAPA_LOTE : ETAPAS.find(e => e.id === id);
 function entradaEtapa(s){ return s.eventos[s.eventos.length - 1].data; }
 function prazoEtapa(s){
+  if (s.status === 'lote') return { cls:'neutral', txt:'Espera o corte', d:(Date.now() - entradaEtapa(s)) / 864e5, sla:null };
   const e = etapa(s.status); if (!e || !e.sla) return null;
   const d = (Date.now() - entradaEtapa(s)) / 864e5;
   if (d > e.sla) return { cls:'crit', txt:'Atrasada', d, sla:e.sla };
@@ -656,12 +675,14 @@ function necessidadePill(s){
 /* Que tipo de cotação é: item único, lista de itens ou serviço — o mesmo rótulo
    da "Natureza" na tela do pedido. Serviço é o pedido de uma linha em "Serviço". */
 function tipoSolicitacao(s){
+  if (s.lote) return 'Lote · ' + plural(s.nItens, 'item', 'itens');
   const n = (s.itens || []).length;
   if (n === 1 && /servi/i.test(s.itens[0].un || '')) return 'Serviço';
   if (n === 1) return 'Item único';
   return 'Lista · ' + n + ' itens';
 }
 function tituloSol(s){
+  if (s.lote) return 'Compra mensal de ' + s.mesNome + ' · ' + plural(s.nPedidos, 'pedido', 'pedidos') + ' de ' + plural(s.nGerencias, 'gerência', 'gerências');
   const p = s.itens[0]; if (!p) return 'Sem itens';
   const t = p.desc.length > 90 ? p.desc.slice(0,88).trim() + '…' : p.desc;
   return t + (s.itens.length > 1 ? ` + ${s.itens.length - 1} ${s.itens.length === 2 ? 'item' : 'itens'}` : '');
@@ -672,10 +693,15 @@ const FIM_NOME = { aprovado:'Aprovada', reprovado:'Reprovada', cancelado:'Cancel
 function comQuem(s){
   if (s.status === 'fim') return (FIM_NOME[s.fim] || 'Encerrada') + ' · encerrada';
   if (s.status === 'cot') return 'Comprador ' + (s.comprador || S.comprador);
+  if (s.status === 'lote') return 'Lote mensal · entra na cotação em ' + dt(proximoCorte());
+  if (s.lote && s.status === 'fin') return 'Aprovação financeira · ' + plural(s.pacotes.aguardando, 'pacote esperando', 'pacotes esperando');
   const nome = s.comQuemNome ? ' (' + s.comQuemNome + ')' : '';
   return ({ ger:'Aprovação gerencial', fin:'Aprovação financeira' }[s.status] || '—') + nome;
 }
 function estadoCot(s){
+  if (s.status === 'lote') return { cls:'neutral', txt:'Entra na cotação em ' + dt(proximoCorte()) };
+  if (s.lote && s.status === 'fim') return s.fim === 'aprovado' ? { cls:'ok', txt:'Pacotes aprovados · ' + brl(s.valor) } : { cls:'crit', txt:'Pacotes reprovados' };
+  if (s.lote && s.status === 'fin') return { cls:'accent', txt:'Pacotes no financeiro · ' + brl(s.valor) };
   if (s.status === 'fim'){
     const origem = s.canal === 'clickup' ? ' · ClickUp' : '';
     if (s.fim === 'aprovado') return { cls:'ok', txt:'OC liberada · ' + brl(s.valor) + origem };
@@ -693,7 +719,20 @@ function estadoCot(s){
 /* Enviadas (30/09): em vez do tipo de compra, os botões separam pelo status. */
 const STATUS_ENV = [ { id:'aprov', nome:'Esperando aprovação' }, { id:'oc', nome:'OC liberada' }, { id:'rep', nome:'Reprovadas' } ];
 const statusEnv = s => s.status === 'ger' || s.status === 'fin' ? 'aprov' : s.status === 'fim' ? (s.fim === 'aprovado' ? 'oc' : 'rep') : null;
-const grupoTab = s => s.status !== 'cot' ? 'env' : (s.devolucao ? 'dev' : 'cotar');
+const grupoTab = s => s.status === 'lote' ? 'lote' : s.status !== 'cot' ? 'env' : (s.devolucao ? 'dev' : 'cotar');
+/* O corte do lote: dia 20 à 00:00 (horário de Brasília). Quem entra no dia 20 ou
+   depois espera o do mês seguinte. */
+function proximoCorte(agora){
+  const d = agora || new Date();
+  const br = new Date(d.getTime() - 3 * 3600e3);          // Brasília, sem horário de verão
+  let a = br.getUTCFullYear(), m = br.getUTCMonth();
+  if (br.getUTCDate() >= 20){ m++; if (m > 11){ m = 0; a++; } }
+  return new Date(Date.UTC(a, m, 20, 12));
+}
+const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+/* Filtros do lote (gerência, unidade de negócio, centro de custo). */
+const passaFiltro = (x, f) => (!f.ger || (x.gerencia_id || x.gerId || '') === f.ger) && (!f.un || (x.unidade_negocio || x.unNeg || '') === f.un) && (!f.cc || (x.centro_custo || x.cc || '') === f.cc);
+const filtroAtivo = f => !!(f.ger || f.un || f.cc);
 
 /* =====================================================================
    RENDER GERAL
@@ -702,6 +741,29 @@ function render(){
   $('bar').hidden = true; $('pend').hidden = true;
   document.querySelector('.top').hidden = S.view !== 'fila';
   if (S.view === 'fila') renderFila(); else renderMapa();
+}
+
+/* Três caixas de escolha: gerência, unidade de negócio e centro de custo.
+   As opções saem do que está na lista (pedidos, ou as partes dos itens do lote). */
+function opcoesLote(lista){
+  const g = new Map(), u = new Set(), c = new Map();
+  lista.forEach(x => {
+    const gid = x.gerencia_id ?? x.gerId, un = x.unidade_negocio ?? x.unNeg, cc = x.centro_custo ?? x.cc;
+    if (gid) g.set(gid, x.gerencia ?? x.gerNome ?? gid);
+    if (un) u.add(un);
+    if (cc && cc !== '—') c.set(cc, x.centro_custo_nome ?? x.ccNome ?? '');
+  });
+  const ord = (a, b) => String(a[1]).localeCompare(String(b[1]), 'pt-BR');
+  return { ger:[...g].sort(ord), un:[...u].sort((a,b) => a.localeCompare(b, 'pt-BR')).map(x => [x, x]), cc:[...c].sort((a,b) => String(a[0]).localeCompare(String(b[0]), 'pt-BR', { numeric:true })).map(([k,n]) => [k, k + (n ? ' · ' + n : '')]) };
+}
+function filtrosLote(lista, f, pre){
+  const o = opcoesLote(lista);
+  const cx = (k, rot, todos) => `<select class="ctl" id="${pre}-${k}" aria-label="${rot}"><option value="">${todos}</option>${o[k].map(([v,n]) => `<option value="${esc(v)}" ${f[k] === v ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>`;
+  return `<div class="lote-filtros" role="group" aria-label="Filtros do lote">${cx('ger','Gerência','Todas as gerências')}${cx('un','Unidade de negócio','Todas as unidades')}${cx('cc','Centro de custo','Todos os centros de custo')}${filtroAtivo(f) ? `<button class="btn ghost" type="button" id="${pre}-x">Tirar filtros</button>` : ''}</div>`;
+}
+function ligarFiltrosLote(raiz, pre, f, depois){
+  ['ger','un','cc'].forEach(k => { const el = raiz.querySelector('#' + pre + '-' + k); if (el) el.onchange = () => { f[k] = el.value; depois(); const n = document.getElementById(pre + '-' + k); if (n) n.focus(); }; });
+  const x = raiz.querySelector('#' + pre + '-x'); if (x) x.onclick = () => { f.ger = f.un = f.cc = ''; depois(); };
 }
 
 /* =====================================================================
@@ -720,14 +782,14 @@ function renderFila(){
     return;
   }
   const minhas = SOLS;
-  const grupos = { cotar:[], dev:[], env:[] };
+  const grupos = { cotar:[], lote:[], dev:[], env:[] };
   minhas.forEach(s => grupos[grupoTab(s)].push(s));
   const ordenar = l => l.slice().sort((a,b) => (a.status === 'fim') - (b.status === 'fim')
     || (a.status === 'fim' && b.status === 'fim' ? b.criada - a.criada : 0)
     || (b.urgente?1:0) - (a.urgente?1:0) || a.necessidade - b.necessidade || a.criada - b.criada);
   const q = S.q.toLowerCase();
-  const naEnv = S.tab === 'env';
-  const lista = ordenar(grupos[S.tab]).filter(s => naEnv ? (!S.stEnv || statusEnv(s) === S.stEnv) : (!S.tipo || s.tipo === S.tipo)).filter(s => !q || [s.id, tituloSol(s), s.solicitante, s.ccNome, s.motivo, ...s.itens.map(i => i.desc + ' ' + (i.cod || ''))].join(' ').toLowerCase().includes(q));
+  const naEnv = S.tab === 'env', naLote = S.tab === 'lote';
+  const lista = ordenar(grupos[S.tab]).filter(s => naLote ? passaFiltro(s, S.lfFila) : naEnv ? (!S.stEnv || statusEnv(s) === S.stEnv) : (!S.tipo || s.tipo === S.tipo)).filter(s => !q || [s.id, tituloSol(s), s.solicitante, s.ccNome, s.motivo, s.gerNome, ...s.itens.map(i => i.desc + ' ' + (i.cod || ''))].join(' ').toLowerCase().includes(q));
 
   let flash = '';
   if (S.flash){
@@ -739,24 +801,38 @@ function renderFila(){
   if (!minhas.length){
     corpo = `<div class="state"><h3>Nenhuma solicitação com você</h3><p>Quando a liderança aprovar um pedido que cai na sua carteira, ele aparece aqui para cotar. Pedidos que ainda andam pelo ClickUp continuam lá até a virada.</p></div>`;
   } else if (!lista.length){
-    const vazio = { cotar:['Tudo cotado','Nenhuma solicitação esperando cotação agora.'], dev:['Nada devolvido','Quando um aprovador devolver uma cotação, ela aparece aqui com o motivo.'], env:['Nada enviado ainda','As cotações que você enviar para aprovação ficam aqui até virarem ordem de compra.'] }[S.tab];
+    const vazio = { cotar:['Tudo cotado','Nenhuma solicitação esperando cotação agora.'], lote:['Nada aguardando o lote','As compras mensais aprovadas pela gerência ficam aqui até o corte do dia 20. No corte, entram juntas na cotação, como um lote só.'], dev:['Nada devolvido','Quando um aprovador devolver uma cotação, ela aparece aqui com o motivo.'], env:['Nada enviado ainda','As cotações que você enviar para aprovação ficam aqui até virarem ordem de compra.'] }[S.tab];
     const rotuloTipo = (TIPOS.find(t => t.id === S.tipo) || {}).nome;
     const rotuloSt = (STATUS_ENV.find(t => t.id === S.stEnv) || {}).nome;
-    corpo = naEnv && S.stEnv && !q ? `<div class="state"><h3>Nada em “${esc(rotuloSt || '')}”</h3><p>Veja os outros status das enviadas.</p><button class="btn primary" type="button" id="bt-limpa-st">Ver todas</button></div>`
-      : !naEnv && S.tipo && !q ? `<div class="state"><h3>Nenhuma compra ${esc((rotuloTipo || '').toLowerCase())} nesta aba</h3><p>Tire o filtro para ver as outras.</p><button class="btn primary" type="button" id="bt-limpa-tipo">Ver todas</button></div>`
+    corpo = naLote && filtroAtivo(S.lfFila) && !q ? `<div class="state"><h3>Nada com esses filtros</h3><p>Tire os filtros para ver todos os pedidos que aguardam o lote.</p><button class="btn primary" type="button" id="bt-limpa-lf">Tirar os filtros</button></div>`
+      : naEnv && S.stEnv && !q ? `<div class="state"><h3>Nada em “${esc(rotuloSt || '')}”</h3><p>Veja os outros status das enviadas.</p><button class="btn primary" type="button" id="bt-limpa-st">Ver todas</button></div>`
+      : !naEnv && !naLote && S.tipo && !q ? `<div class="state"><h3>Nenhuma compra ${esc((rotuloTipo || '').toLowerCase())} nesta aba</h3><p>Tire o filtro para ver as outras.</p><button class="btn primary" type="button" id="bt-limpa-tipo">Ver todas</button></div>`
       : q ? `<div class="state"><h3>Nada encontrado para “${esc(S.q)}”</h3><p>Busque por número, item, solicitante ou centro de custo.</p><button class="btn primary" type="button" id="bt-limpa">Limpar busca</button></div>`
               : `<div class="state"><h3>${vazio[0]}</h3><p>${vazio[1]}</p></div>`;
+  } else if (naLote){
+    corpo = `<p class="muted lote-nota">Compras mensais já aprovadas pela gerência. Entram na cotação todas juntas no corte de <strong>${dt(proximoCorte())}</strong> (virada do dia 19 para o 20), num lote só, separadas por família. Até lá, dá para ver cada pedido.</p>
+      <div class="tbl-wrap"><table class="fila lote-fila"><thead><tr>
+      <th>Nº</th><th>Solicitação</th><th>Gerência</th><th>Unidade de negócio</th><th>Centro de custo</th><th>Famílias</th><th>No lote há</th><th class="r"><span class="sr-only">Ação</span></th></tr></thead><tbody>
+      ${lista.map(s => { const p = prazoEtapa(s); return `<tr data-id="${s.id}" tabindex="0">
+          <td class="mono">${esc(s.id)}</td>
+          <td><span class="t">${esc(tituloSol(s))}</span><span class="s">${esc(s.solicitante)}${s.facilitador && s.facilitador !== s.solicitante ? ' · por ' + esc(s.facilitador) : ''}</span></td>
+          <td>${esc(s.gerNome || '—')}</td>
+          <td>${esc(s.unNeg || '—')}</td>
+          <td><span class="mono">${esc(s.cc)}</span> ${esc(s.ccNome)}</td>
+          <td>${familiasDe(s).map(k => `<span class="pill neutral" title="${esc(famNome(k))}">${esc(famNome(k))}</span>`).join(' ')}</td>
+          <td>${p ? `<span class="pill neutral">${dias(p.d)}</span>` : '—'}</td>
+          <td class="r"><button class="btn" type="button" data-det="${s.id}">Ver pedido</button></td></tr>`; }).join('')}</tbody></table></div>`;
   } else {
     corpo = `<div class="tbl-wrap"><table class="fila"><thead><tr>
       <th>Nº</th><th>Solicitação</th><th>Tipo</th><th>Famílias</th><th>Precisa até</th><th>Na etapa</th><th>Status</th><th class="r"><span class="sr-only">Ação</span></th></tr></thead><tbody>
       ${lista.map(s => {
         const p = prazoEtapa(s), e = estadoCot(s);
-        const acao = s.status === 'cot' ? ((s.cot && s.cot.iniciada) || s.mapaEstado ? 'Continuar' : 'Cotar') : 'Ver';
+        const acao = s.status === 'cot' ? ((s.cot && s.cot.iniciada) || s.mapaEstado ? 'Continuar' : (s.lote ? 'Cotar o lote' : 'Cotar')) : 'Ver';
         return `<tr data-id="${s.id}" tabindex="0">
           <td class="mono">${esc(s.id)}</td>
-          <td><span class="t">${esc(tituloSol(s))}</span><span class="s">${esc(s.ccNome)} · ${esc(s.solicitante)}</span>${s.urgente ? ' <span class="pill warn">Urgente</span>' : ''}${s.tipo === 'mensal' ? ' <span class="pill neutral">Mensal</span>' : ''}${s.defForn === 'unico' ? ' <span class="pill accent">Fornecedor único</span>' : ''}</td>
+          <td><span class="t">${esc(tituloSol(s))}</span><span class="s">${s.lote ? 'Corte de ' + dt(s.corte) + ' · cotação única por família, de todos os centros de custo' : esc(s.ccNome) + ' · ' + esc(s.solicitante)}</span>${s.lote ? ' <span class="pill accent">Lote mensal</span>' : ''}${s.urgente ? ' <span class="pill warn">Urgente</span>' : ''}${s.tipo === 'mensal' && !s.lote ? ' <span class="pill neutral">Mensal</span>' : ''}${s.defForn === 'unico' ? ' <span class="pill accent">Fornecedor único</span>' : ''}</td>
           <td class="tipo">${tipoSolicitacao(s)}</td>
-          <td>${familiasDe(s).map(k => `<span class="pill neutral" title="${esc(famNome(k))}">${esc(famNome(k))}</span>`).join(' ')}</td>
+          <td>${s.lote && !s.itens.length ? `<span class="pill neutral">${plural(s.nFams, 'família', 'famílias')}</span>` : familiasDe(s).map(k => `<span class="pill neutral" title="${esc(famNome(k))}">${esc(famNome(k))}</span>`).join(' ')}</td>
           <td class="num">${dt(s.necessidade)}</td>
           <td>${p ? `<span class="pill ${p.cls}" title="Prazo da etapa: ${p.sla} dias">${dias(p.d)}</span>` : '—'}</td>
           <td><span class="pill ${e.cls}">${esc(e.txt)}</span></td>
@@ -764,10 +840,11 @@ function renderFila(){
       }).join('')}</tbody></table></div>`;
   }
   v.innerHTML = `${flash}
-    <div class="tabs" role="tablist">${tabBtn('cotar','Para cotar',grupos.cotar.length)}${tabBtn('dev','Devolvidas',grupos.dev.length,true)}${tabBtn('env','Enviadas',grupos.env.length)}</div>
+    <div class="tabs" role="tablist">${tabBtn('cotar','Para cotar',grupos.cotar.length)}${tabBtn('lote','Aguardando o lote',grupos.lote.length)}${tabBtn('dev','Devolvidas',grupos.dev.length,true)}${tabBtn('env','Enviadas',grupos.env.length)}</div>
     <div class="tools">
       <input id="f-q" class="ctl" type="search" placeholder="Buscar nº, item, solicitante…" value="${esc(S.q)}" aria-label="Buscar">
-      ${naEnv
+      ${naLote ? filtrosLote(grupos.lote, S.lfFila, 'lf')
+        : naEnv
         ? `<div class="seg" role="group" aria-label="Status das enviadas">
         <button class="sgb" type="button" data-st="" aria-pressed="${!S.stEnv}">Todas</button>
         ${STATUS_ENV.map(t => `<button class="sgb" type="button" data-st="${t.id}" aria-pressed="${S.stEnv === t.id}">${t.nome}<span class="c num">${grupos.env.filter(x => statusEnv(x) === t.id).length}</span></button>`).join('')}
@@ -793,6 +870,8 @@ function renderFila(){
   if ($('bt-limpa')) $('bt-limpa').onclick = () => { S.q = ''; render(); };
   if ($('bt-limpa-tipo')) $('bt-limpa-tipo').onclick = () => { S.tipo = ''; render(); };
   if ($('bt-limpa-st')) $('bt-limpa-st').onclick = () => { S.stEnv = ''; render(); };
+  if ($('bt-limpa-lf')) $('bt-limpa-lf').onclick = () => { S.lfFila = { ger:'', un:'', cc:'' }; render(); };
+  ligarFiltrosLote(v, 'lf', S.lfFila, render);
   v.querySelectorAll('[data-st]').forEach(b => b.onclick = () => { S.stEnv = b.dataset.st; render(); });
   v.querySelectorAll('tr[data-id]').forEach(tr => {
     const abrir = () => abrirDetalhe(tr.dataset.id, lista.map(s => s.id));
@@ -840,10 +919,13 @@ async function mostrarDetalhe(){
 const kv = (k, v, extra='') => `<div class="kv"><div class="k">${k}</div><div class="v ${extra}">${v}</div></div>`;
 function pintarDetalhe(){
   const s = sol(S.modalList[S.modalIdx]); if (!s){ fecharModal(); return; }
+  if (s.lote) return pintarDetalheLote(s);
   const p = prazoEtapa(s), FL = fluxoDe(s);
   /* encerrada: aprovada fica em Ordem de compra (a OC no GR é o passo seguinte); reprovada ou cancelada, sem etapa atual */
   const idx = s.status === 'fim' ? (s.fim === 'aprovado' ? FL.findIndex(e => e.id === 'oc') : -1) : FL.findIndex(e => e.id === s.status);
-  const holder = p ? `<div class="holder ${p.cls}"><strong>${etapa(s.status).nome}</strong><span>com ${esc(comQuem(s))}</span><span>há <strong>${dias(p.d)}</strong> (prazo da etapa: ${p.sla} dias)</span><span class="pill ${p.cls}">${p.txt}</span></div>` : '';
+  const holder = !p ? '' : s.status === 'lote'
+    ? `<div class="holder info"><strong>Aguardando o lote mensal</strong><span>há <strong>${dias(p.d)}</strong></span><span>entra na cotação junto com as outras mensais em <strong>${dt(proximoCorte())}</strong> (virada do dia 19 para o 20)</span>${s.gerNome ? `<span>gerência: ${esc(s.gerNome)}</span>` : ''}</div>`
+    : `<div class="holder ${p.cls}"><strong>${etapa(s.status).nome}</strong><span>com ${esc(comQuem(s))}</span><span>há <strong>${dias(p.d)}</strong> (prazo da etapa: ${p.sla} dias)</span><span class="pill ${p.cls}">${p.txt}</span></div>`;
   const steps = FL.map((e,i) => `<div class="step ${i < idx ? 'done' : i === idx ? 'cur' : ''}"><span class="ln"></span>${e.curto}</div>`).join('');
   const C = s.cot && s.cot.iniciada ? calcTudo(s) : null;
   const linhaDe = it => { if (!C) return null; const fc = C.fams.find(f => f.k === famKey(it)); return fc.linhas.find(l => l.it.id === it.id); };
@@ -861,7 +943,7 @@ function pintarDetalhe(){
         ? `<li class="now"><span class="b"></span><div><div class="t muted">${esc(FIM_NOME[s.fim] || 'Encerrada')}${s.fim === 'aprovado' ? ' — segue para a ordem de compra' : ''}</div><div class="d">${s.canal === 'clickup' ? 'pedido do ClickUp, de antes das telas' : 'pedido encerrado'}</div></div></li>`
         : `<li class="now"><span class="b"></span><div><div class="t muted">Agora: ${etapa(s.status).nome}</div><div class="d">aguardando ${esc(comQuem(s))}</div></div></li>`);
   const acao = s.status === 'cot' ? (s.cot && s.cot.iniciada ? 'Continuar cotação' : 'Cotar esta solicitação') : 'Ver orçamento enviado';
-  const semMapa = s.status === 'fim' && !s.mapaEstado;   // encerrada sem mapa (ClickUp, ou reprovada na cotação): não há o que abrir
+  const semMapa = (s.status === 'fim' && !s.mapaEstado) || s.status === 'lote';   // encerrada sem mapa (ClickUp, ou reprovada na cotação): não há o que abrir
   const card = s.cardId ? `<li><a href="https://app.clickup.com/t/${encodeURIComponent(s.cardId)}" target="_blank" rel="noopener">Card no ClickUp</a> <span class="muted">· cotação e orçamentos de antes das telas</span></li>` : '';
   abrirModal(`
     <div class="m-head"><div>
@@ -876,6 +958,7 @@ function pintarDetalhe(){
       <div class="grid3">
         ${kv('Valor', brl(valor), 'big num')}${kv('Origem do valor', origem)}${kv('Precisa até', dt(s.necessidade) + ' ' + necessidadePill(s))}
         ${kv('Solicitante', esc(s.solicitante))}${kv('Comprador', esc(s.comprador))}${kv('Setor / unidade', esc(s.setor))}
+        ${s.tipo === 'mensal' && (s.gerNome || s.unNeg) ? kv('Gerência', esc(s.gerNome || '—')) + kv('Unidade de negócio', esc(s.unNeg || '—')) + kv('Centro de custo', esc(s.cc) + ' · ' + esc(s.ccNome)) : ''}
         ${kv('Fornecedor', s.fornecedorCotado ? esc(s.fornecedorCotado) : (s.defForn === 'unico' ? 'Fornecedor único' : 'Por cotação'))}${kv('Cotações', nCot ? plural(nCot,'fornecedor preenchido','fornecedores preenchidos') : '<span class="muted">nenhuma enviada ainda</span>')}${kv('Local de entrega', esc(s.local || '—'))}
       </div>
       ${s.justForn ? `<div class="m-sec"><h3>Justificativa do fornecedor único</h3><div class="just">${esc(s.justForn)}</div></div>` : ''}
@@ -901,6 +984,39 @@ function pintarDetalhe(){
   $('m-close').focus();
   S.modalTipo = 'detalhe';
 }
+/* Detalhe do lote: os pedidos que entraram, por gerência. */
+function pintarDetalheLote(s){
+  const porGer = new Map();
+  (s.pedidosLote || []).forEach(p => { const k = p.gerencia || 'Sem gerência'; if (!porGer.has(k)) porGer.set(k, []); porGer.get(k).push(p); });
+  const RT = rateioPorGerencia(rateioLote(s)), totalPed = {};
+  rateioLote(s).forEach(x => totalPed[x.sol] = (totalPed[x.sol] || 0) + x.total);
+  const SIT = { reprovado:'Reprovado', cancelado:'Cancelado' };
+  const blocos = [...porGer.keys()].sort((a,b) => a.localeCompare(b, 'pt-BR')).map(g => {
+    const lista = porGer.get(g), G = RT.find(x => x.nome === g);
+    return `<div class="m-sec"><h3>${esc(g)} · ${plural(lista.length,'pedido','pedidos')}${G ? ' · ' + brl(G.total) : ''}</h3><div class="tbl-wrap"><table class="items"><thead><tr><th>Pedido</th><th>Unidade de negócio</th><th>Centro de custo</th><th>Quem pediu</th><th>Motivo</th><th class="r">Valor</th></tr></thead><tbody>
+      ${lista.map(p => `<tr><td class="mono">${esc(p.numero)}</td><td>${esc(p.unidade_negocio || '—')}</td><td><span class="mono">${esc(p.centro_custo || '')}</span> ${esc(p.centro_custo_nome || '')}</td><td>${esc(p.solicitante || p.facilitador || '—')}</td><td>${esc(p.motivo || '')}${SIT[p.status] ? ` <span class="pill crit">${SIT[p.status]}</span>` : ''}</td><td class="r num">${totalPed[p.id] !== undefined ? brl(totalPed[p.id]) : '—'}</td></tr>`).join('')}
+      </tbody></table></div></div>`;
+  }).join('');
+  abrirModal(`
+    <div class="m-head"><div>
+      <div class="eyebrow"><span class="mono">${esc(s.id)}</span> · corte de ${s.corte ? dt(s.corte) : '—'}</div>
+      <h2 id="m-title">${esc(tituloSol(s))}</h2>
+      <div class="sub">${plural(s.itens.length,'item','itens')} em ${plural(familiasDe(s).length,'família','famílias')} · ${esc(estadoCot(s).txt)}</div>
+    </div><button class="x" id="m-close" type="button" aria-label="Fechar">✕</button></div>
+    <div class="m-body">${blocos || '<div class="state" style="padding:18px">Nenhum pedido neste lote.</div>'}</div>
+    <div class="m-foot"><span class="pos">${S.modalIdx + 1} de ${S.modalList.length} na lista atual · use ← →</span>
+      <div class="nav">
+        <button class="btn" type="button" id="m-prev" ${S.modalIdx <= 0 ? 'disabled' : ''}>← Anterior</button>
+        <button class="btn" type="button" id="m-next" ${S.modalIdx >= S.modalList.length - 1 ? 'disabled' : ''}>Próxima →</button>
+        <button class="btn primary" type="button" id="m-go">${s.status === 'cot' ? (s.cot && s.cot.iniciada ? 'Continuar o mapa do lote' : 'Cotar o lote') : 'Ver o mapa do lote'}</button>
+      </div></div>`, 'lg');
+  $('m-close').onclick = fecharModal;
+  $('m-prev').onclick = () => navegar(-1);
+  $('m-next').onclick = () => navegar(1);
+  $('m-go').onclick = () => { fecharModal(); if (S.view !== 'mapa' || S.solId !== s.id) abrirMapa(s.id); };
+  $('m-close').focus();
+  S.modalTipo = 'detalhe';
+}
 function navegar(d){ const n = S.modalIdx + d; if (n < 0 || n >= S.modalList.length) return; S.modalIdx = n; mostrarDetalhe(); }
 </script>
 <script>
@@ -917,6 +1033,7 @@ async function abrirMapa(id){
     catch (e){ toast(e.message || 'Não consegui abrir o pedido agora.'); return; }
   }
   cotDe(s);
+  if (S.solId !== id){ S.lfMapa = { ger:'', un:'', cc:'' }; S.verPartes = {}; }
   S.view = 'mapa'; S.solId = id; S.mostrarErros = false; S.foco = null; S.soFalta = false;
   S.fam = familiasDe(s)[0];
   render(); window.scrollTo(0,0);
@@ -932,22 +1049,29 @@ function renderMapa(){
     ? `<div class="banner warn"><span class="grow"><strong>Fornecedor único — o solicitante dispensou a cotação.</strong> Preencha só a coluna desse fornecedor.${s.justForn ? ' <br><span class="just-inline">Justificativa: ' + esc(s.justForn) + '</span>' : ''}</span></div>`
     : '';
   if (s.status === 'cot' && s.devolucao) banner = `<div class="banner crit"><span class="grow"><strong>Devolvida por ${esc(s.devolucao.por)}</strong> em ${dth(s.devolucao.em)}: ${esc(s.devolucao.motivo)}</span></div>`;
-  if (s.status === 'ger' || s.status === 'fin') banner = `<div class="banner info"><span class="grow"><strong>Enviada para ${s.status === 'ger' ? 'aprovação gerencial' : 'aprovação financeira'}</strong>${s.comQuemNome ? ' (' + esc(s.comQuemNome) + ')' : ''} · ${brl(s.valor)} · o mapa fica só para leitura enquanto está com o aprovador.</span></div>`;
+  if (s.lote && s.status !== 'cot') banner = `<div class="banner info"><span class="grow"><strong>Lote enviado para a aprovação financeira</strong>, em ${plural(s.pacotesLista.length || s.nGerencias, 'pacote', 'pacotes')} por gerência · ${brl(s.valor)} · o mapa fica só para leitura.</span></div>`;
+  else if (s.status === 'ger' || s.status === 'fin') banner = `<div class="banner info"><span class="grow"><strong>Enviada para ${s.status === 'ger' ? 'aprovação gerencial' : 'aprovação financeira'}</strong>${s.comQuemNome ? ' (' + esc(s.comQuemNome) + ')' : ''} · ${brl(s.valor)} · o mapa fica só para leitura enquanto está com o aprovador.</span></div>`;
 
   $('view').innerHTML = `
     <button class="btn ghost back" type="button" id="bt-back">← Fila de cotação</button>
     <div class="m-top"><div>
-      <div class="eyebrow"><span class="mono">${esc(s.id)}</span> · Mapa de cotação</div>
+      <div class="eyebrow"><span class="mono">${esc(s.id)}</span> · ${s.lote ? 'Mapa do lote mensal' : 'Mapa de cotação'}</div>
       <h1>${esc(tituloSol(s))}</h1>
-      <div class="sub">${esc(s.empresa)} · ${esc(s.cc)} · ${esc(s.ccNome)}${s.urgente ? ' · <span class="pill warn">Urgente</span>' : ''}${s.tipo === 'mensal' ? ' · <span class="pill neutral">Compra mensal</span>' : ''}</div>
-    </div><div class="m-top-acts">${ro ? '' : '<button class="btn danger-ghost" type="button" id="bt-reprovar">Reprovar pedido</button>'}<button class="btn" type="button" id="bt-det">Ver solicitação completa</button></div></div>
+      <div class="sub">${s.lote ? 'Cotação única por família, juntando todos os centros de custo · <span class="pill accent">Lote mensal</span>' : `${esc(s.empresa)} · ${esc(s.cc)} · ${esc(s.ccNome)}${s.urgente ? ' · <span class="pill warn">Urgente</span>' : ''}${s.tipo === 'mensal' ? ' · <span class="pill neutral">Compra mensal</span>' : ''}`}</div>
+    </div><div class="m-top-acts">${ro || s.lote ? '' : '<button class="btn danger-ghost" type="button" id="bt-reprovar">Reprovar pedido</button>'}<button class="btn" type="button" id="bt-det">${s.lote ? 'Ver os pedidos do lote' : 'Ver solicitação completa'}</button></div></div>
     ${bannerUnico}${banner}
-    <div class="facts">
+    ${s.lote ? `<div class="facts">
+      <div class="fact"><div class="k">Pedidos</div><div class="v">${s.nPedidos}</div></div>
+      <div class="fact"><div class="k">Corte</div><div class="v num">${s.corte ? dt(s.corte) : '—'}</div></div>
+      <div class="fact"><div class="k">Itens</div><div class="v">${s.itens.length} em ${plural(fams.length,'família','famílias')}</div></div>
+      <div class="fact wide"><div class="k">Gerências</div><div class="v">${esc([...new Set(s.pedidosLote.map(p => p.gerencia || 'Sem gerência'))].sort((a,b) => a.localeCompare(b, 'pt-BR')).join(' · ') || '—')}</div></div>
+    </div>
+    <div id="lm-filtros"></div>` : `<div class="facts">
       <div class="fact"><div class="k">Solicitante</div><div class="v">${esc(s.solicitante)}</div></div>
       <div class="fact"><div class="k">Precisa até</div><div class="v num">${dt(s.necessidade)} ${necessidadePill(s)}</div></div>
       <div class="fact"><div class="k">Itens</div><div class="v">${s.itens.length} em ${plural(fams.length,'família','famílias')}</div></div>
       <div class="fact wide"><div class="k">Motivo</div><div class="v">${esc(s.motivo)}</div></div>
-    </div>
+    </div>`}
     <div class="ftabs" role="tablist" id="ftabs" aria-label="Famílias"></div>
     <div class="passos" id="passos" aria-label="Como preencher"></div>
     <div class="map-h"><h2 id="map-title"></h2>
@@ -958,13 +1082,15 @@ function renderMapa(){
     <p class="muted" style="margin:0 0 8px;font-size:12.5px"><span class="fonte-forn">${CADASTRO.online ? `Fornecedores: busca nos ${CADASTRO.total ? CADASTRO.total.toLocaleString('pt-BR') : ''} cadastros ativos do banco — escolha na lista para o fornecedor valer.` : 'Fornecedores: não consegui falar com o cadastro agora. Os preços continuam sendo salvos; o nome do fornecedor precisa ser escolhido na busca antes de enviar.'}</span><br>${ro ? '' : (s.defForn === 'unico' ? 'Digite o preço unitário do fornecedor único e marque ✓ em cada item. <kbd>Enter</kbd> desce para o próximo item.' : 'Digite o preço unitário de cada fornecedor e marque ✓ em quem vai fornecer o item. <kbd>Enter</kbd> desce para o próximo item do mesmo fornecedor.')}</p>
     <div class="map-wrap" id="map-wrap"></div>
     <section class="resumo" aria-labelledby="res-h"><h2 id="res-h">Resumo que vai para o aprovador</h2><div id="resumo"></div></section>
-    <section class="resumo" aria-labelledby="orc-h"><h2 id="orc-h">Orçamentos dos fornecedores</h2><div id="orcamentos"></div></section>`;
+    ${s.lote ? `<section class="resumo" aria-labelledby="rat-h"><h2 id="rat-h">${ro ? 'Custo de cada gerência' : 'Custo de cada gerência (prévia)'}</h2><div id="rateio"></div></section>`
+             : '<section class="resumo" aria-labelledby="orc-h"><h2 id="orc-h">Orçamentos dos fornecedores</h2><div id="orcamentos"></div></section>'}`;
 
   $('bt-back').onclick = voltarFila;
   $('bt-det').onclick = () => abrirDetalhe(s.id, [s.id]);
   if ($('bt-menores')) $('bt-menores').onclick = escolherMenores;
   if ($('bt-reprovar')) $('bt-reprovar').onclick = () => abrirReprovar(s);
   pintarOrcamentos(s);
+  pintarFiltrosMapa();
   pintarTabela();
   $('bar').hidden = false;
   refresh();
@@ -975,9 +1101,10 @@ function pintarTabela(){
   const todos = s.itens.filter(it => famKey(it) === k);
   const F0 = cotDe(s).fams[k];
   const pendentes = todos.filter(it => F0.escolha[it.id] === undefined || !String(F0.precos[it.id][F0.escolha[it.id]] || '').trim());
-  const itens = S.soFalta && pendentes.length ? pendentes : todos;
+  const lf = s.lote && filtroAtivo(S.lfMapa) ? S.lfMapa : null;
+  const itens = (S.soFalta && pendentes.length ? pendentes : todos).filter(it => !lf || (it.partes || []).some(p => passaFiltro(p, lf)));
   $('map-title').textContent = `${famNome(k)} · ${plural(todos.length,'item','itens')}`
-    + (itens.length !== todos.length ? ` · mostrando ${itens.length} pendentes` : '');
+    + (itens.length !== todos.length ? ` · mostrando ${itens.length} ${lf ? 'com os filtros' : 'pendentes'}` : '');
   const J = colunas(s);
   const rotulo = j => s.defForn === 'unico' ? 'Fornecedor único' : 'Fornecedor ' + (j+1);
   const errDiv = id => `<div class="err" id="e-${id}" hidden></div>`;
@@ -997,14 +1124,16 @@ function pintarTabela(){
     const longo = it.desc.length > 110;
     return `<tr class="item-row" id="row-${k}-${it.id}">
       <td class="sticky it"><div class="it-d" id="dd-${it.id}" title="${esc(it.desc)}">${esc(it.desc)}</div>
-        <div class="it-m">${it.cod ? `<span class="mono">${esc(it.cod)}</span>` : ''}${it.fora ? '<span>fora do catálogo</span>' : ''}${longo ? `<button class="more" type="button" data-more="${it.id}">ver tudo</button>` : ''}</div>
+        <div class="it-m">${it.cod ? `<span class="mono">${esc(it.cod)}</span>` : ''}${it.fora ? '<span>fora do catálogo</span>' : ''}${longo ? `<button class="more" type="button" data-more="${it.id}">ver tudo</button>` : ''}${s.lote ? `<button class="more" type="button" data-partes="${esc(it.id)}" aria-expanded="${!!S.verPartes[it.id]}">${S.verPartes[it.id] ? 'esconder' : 'de quem é'} (${plural(it.partes.length,'pedido','pedidos')})</button>` : ''}</div>
         ${errDiv(`row-${k}-${it.id}`)}</td>
-      <td class="qt">${qtd(it.qtd)} ${esc(it.un)}</td>
+      <td class="qt">${qtd(it.qtd)} ${esc(it.un)}${lf ? `<span class="qt-f">${qtd(it.partes.filter(p => passaFiltro(p, lf)).reduce((t,p) => t + p.quantidade, 0))} no filtro</span>` : ''}</td>
       ${J.map(j => `<td class="u cj-${j}" id="td-${k}-${it.id}-${j}"><input class="money" id="p-${k}-${it.id}-${j}" data-k="preco" data-i="${it.id}" data-j="${j}" inputmode="decimal" autocomplete="off" placeholder="0,00" value="${esc(F.precos[it.id][j])}" aria-label="Preço unitário — ${rotulo(j)} — ${esc(it.desc.slice(0,60))}" ${ro}>${errDiv(`p-${k}-${it.id}-${j}`)}</td>
         <td class="t cj-${j}" id="tl-${k}-${it.id}-${j}"></td>
         <td class="k cj-${j}"><button class="pick" type="button" id="k-${k}-${it.id}-${j}" data-pick data-i="${it.id}" data-j="${j}" aria-pressed="false" aria-label="Escolher ${rotulo(j)} para ${esc(it.desc.slice(0,40))}" ${ro}></button></td>`).join('')}
-    </tr>`;
-  }).join('');
+    </tr>${s.lote && S.verPartes[it.id] ? `<tr class="partes-row"><td colspan="${2 + J.length * 3}"><table class="partes"><thead><tr><th>Pedido</th><th>Gerência</th><th>Unidade de negócio</th><th>Centro de custo</th><th>Quem pediu</th><th class="r">Qtd.</th></tr></thead><tbody>
+      ${it.partes.map(p => `<tr class="${lf && !passaFiltro(p, lf) ? 'fora-filtro' : ''}"><td class="mono">${esc(p.numero)}</td><td>${esc(p.gerencia || '—')}</td><td>${esc(p.unidade_negocio || '—')}</td><td><span class="mono">${esc(p.centro_custo || '')}</span> ${esc(p.centro_custo_nome || '')}</td><td>${esc(p.solicitante || p.facilitador || '—')}</td><td class="r num">${qtd(p.quantidade)} ${esc(it.un)}</td></tr>`).join('')}
+      </tbody></table></td></tr>` : ''}`;
+  }).join('') || (lf ? `<tr><td colspan="${2 + J.length * 3}" class="muted" style="padding:14px">Nenhum item desta família com os filtros escolhidos.</td></tr>` : '');
 
   const linhaCond = (rot, dica, fn) => `<tr><th class="sticky" colspan="2">${rot}${dica ? `<span class="hint">${dica}</span>` : ''}</th>${J.map(j => `<td colspan="3" class="cj-${j}">${fn(j)}</td>`).join('')}</tr>`;
   const pe = [
@@ -1142,8 +1271,70 @@ function pintarPassos(s, C, V){
 
 function trocarFam(k){ S.fam = k; pintarTabela(); refresh(); const b = document.querySelector(`[data-fam="${k}"]`); if (b) b.focus(); }
 
+/* ---------- lote: quanto cabe a cada gerência ----------
+   Depois de enviado, vale o rateio gravado no banco (lote_rateio). Antes, a prévia
+   segue a mesma regra do banco: preço × quantidade de cada pedido, menos o desconto
+   do fornecedor, mais o frete dividido pelo valor líquido dentro da família. */
+function rateioLote(s){
+  const ped = {}; (s.pedidosLote || []).forEach(p => ped[p.id] = p);
+  const linha = (sid, ger, fam, total, qtdd) => { const p = ped[sid] || {};
+    return { sol:sid, numero:p.numero || '—', gerId:ger || p.gerencia_id || 'sem_gerencia', gerNome:p.gerencia || 'Sem gerência',
+             cc:p.centro_custo || '—', ccNome:p.centro_custo_nome || '', unNeg:p.unidade_negocio || '—', fam, total, qtd:qtdd }; };
+  if (s.rateio && s.rateio.length) return s.rateio.map(r => linha(r.solicitacao_id, r.gerencia_id, r.familia, r.total, r.quantidade));
+  const C = calcTudo(s), out = [];
+  C.fams.forEach(fc => {
+    const porCol = {};
+    fc.linhas.forEach(l => {
+      if (l.esc === null || !l.valido[l.esc]) return;
+      const d = fc.forn[l.esc].desc;
+      (l.it.partes || []).forEach(pt => {
+        const liq = pt.quantidade * l.p[l.esc] * (1 - d / 100);
+        (porCol[l.esc] = porCol[l.esc] || []).push({ pt, liq });
+      });
+    });
+    Object.keys(porCol).forEach(j => {
+      const lista = porCol[j], soma = lista.reduce((t, x) => t + x.liq, 0), frete = fc.forn[j].frete;
+      lista.forEach(x => out.push(linha(x.pt.solicitacao_id, x.pt.gerencia_id, fc.k, x.liq + (soma > 0 ? frete * x.liq / soma : 0), x.pt.quantidade)));
+    });
+  });
+  return out;
+}
+function rateioPorGerencia(linhas){
+  const g = new Map();
+  linhas.forEach(x => {
+    if (!g.has(x.gerId)) g.set(x.gerId, { id:x.gerId, nome:x.gerNome, total:0, pedidos:new Set(), ccs:new Map() });
+    const G = g.get(x.gerId); G.total += x.total; G.pedidos.add(x.sol);
+    const ck = x.cc + '|' + x.fam;
+    if (!G.ccs.has(ck)) G.ccs.set(ck, { cc:x.cc, ccNome:x.ccNome, unNeg:x.unNeg, fam:x.fam, total:0, pedidos:new Set() });
+    const c = G.ccs.get(ck); c.total += x.total; c.pedidos.add(x.numero);
+  });
+  return [...g.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+}
+const ESTADO_PACOTE = { aguardando:['accent','No financeiro'], aprovado:['ok','Aprovado'], reprovado:['crit','Reprovado'] };
+function pintarRateio(s){
+  const alvo = $('rateio'); if (!alvo) return;
+  const lf = S.lfMapa, todas = rateioLote(s), linhas = todas.filter(x => passaFiltro(x, lf));
+  if (!todas.length){ alvo.innerHTML = '<div class="state" style="padding:18px">Escolha os fornecedores e os preços: a divisão do custo entre as gerências aparece aqui.</div>'; return; }
+  const pac = {}; (s.pacotesLista || []).forEach(p => pac[p.gerencia_id] = p);
+  const grupos = rateioPorGerencia(linhas);
+  const total = linhas.reduce((t, x) => t + x.total, 0);
+  alvo.innerHTML = `<p class="muted" style="margin:0 0 8px;font-size:12.5px">Cada gerência recebe um pacote com a sua parte. Desconto e frete são divididos pelo valor de cada pedido dentro da família.${filtroAtivo(lf) ? ' <strong>Mostrando só o que passa nos filtros.</strong>' : ''}</p>
+    <div class="tbl-wrap"><table class="rateio"><thead><tr><th>Gerência / centro de custo</th><th>Unidade de negócio</th><th>Família</th><th>Pedidos</th><th class="r">Valor</th></tr></thead><tbody>
+    ${grupos.map(G => { const pk = pac[G.id], e = pk && ESTADO_PACOTE[pk.estado];
+      return `<tr class="ger"><td colspan="3"><strong>${esc(G.nome)}</strong>${e ? ` <span class="pill ${e[0]}">${e[1]}</span>` : ''}${pk && pk.motivo ? ` <span class="muted">· ${esc(pk.motivo)}</span>` : ''}</td><td>${plural(G.pedidos.size,'pedido','pedidos')}</td><td class="r num"><strong>${brl(G.total)}</strong></td></tr>`
+        + [...G.ccs.values()].sort((a,b) => String(a.cc).localeCompare(String(b.cc), 'pt-BR', { numeric:true }) || a.fam.localeCompare(b.fam)).map(c =>
+          `<tr><td class="ind"><span class="mono">${esc(c.cc)}</span> ${esc(c.ccNome)}</td><td>${esc(c.unNeg)}</td><td>${esc(famNome(c.fam))}</td><td class="mono">${esc([...c.pedidos].join(', '))}</td><td class="r num">${brl(c.total)}</td></tr>`).join(''); }).join('')}
+    </tbody><tfoot><tr><td colspan="4">${filtroAtivo(lf) ? 'Total com os filtros' : 'Total do lote'}</td><td class="r num">${brl(total)}</td></tr></tfoot></table></div>`;
+}
+function pintarFiltrosMapa(){
+  const alvo = $('lm-filtros'), s = sol(S.solId); if (!alvo || !s || !s.lote) return;
+  alvo.innerHTML = filtrosLote(s.itens.flatMap(it => it.partes || []), S.lfMapa, 'lm');
+  ligarFiltrosLote(alvo, 'lm', S.lfMapa, () => { pintarFiltrosMapa(); pintarTabela(); refresh(); });
+}
+
 function pintarResumo(C){
   const s = sol(S.solId);
+  if (s.lote) pintarRateio(s);
   const linhas = [];
   C.fams.forEach(f => f.forn.forEach(x => { if (!x.n) return; const fo = f.F.forn[x.j];
     linhas.push(`<tr><td>${esc(fo.nome || 'Fornecedor ' + (x.j+1) + ' (sem nome)')}</td><td>${esc(famNome(f.k))}</td><td class="r num">${x.n}</td><td class="r num">${brl(x.sub)}</td><td class="r num">${x.desc ? n2(x.desc) + '%' : '—'}</td><td class="r num">${brl(x.frete)}</td><td class="r num"><strong>${brl(x.total)}</strong></td><td>${fo.prazo ? esc(fo.prazo) + ' dias' : '—'}</td><td>${esc(fo.cond.trim() || '—')}</td></tr>`); }));
@@ -1192,6 +1383,7 @@ function fecharPend(){ $('pend').hidden = true; if ($('bt-pend')) $('bt-pend').s
 function irPara(e){
   fecharPend();
   if (e.k !== S.fam){ S.fam = e.k; pintarTabela(); refresh(); }
+  if (!$(e.foco || e.id) && (filtroAtivo(S.lfMapa) || S.soFalta)){ S.lfMapa = { ger:'', un:'', cc:'' }; S.soFalta = false; pintarFiltrosMapa(); pintarTabela(); refresh(); }
   const alvo = $(e.foco || e.id);
   if (alvo){ alvo.scrollIntoView({ block:'center', behavior:'smooth' }); setTimeout(() => alvo.focus({ preventScroll:true }), 250); }
 }
@@ -1342,6 +1534,8 @@ $('view').addEventListener('click', e => {
   }
   const cel = e.target.closest('td.k');
   if (cel && !e.target.closest('[data-pick]')){ const bt = cel.querySelector('[data-pick]'); if (bt && !bt.disabled) bt.click(); return; }
+  const bp = e.target.closest('[data-partes]');
+  if (bp && S.view === 'mapa'){ const id = bp.dataset.partes; S.verPartes[id] = !S.verPartes[id]; pintarTabela(); refresh(); const n = document.querySelector(`[data-partes="${CSS.escape(id)}"]`); if (n) n.focus(); return; }
   const b = e.target.closest('[data-pick],[data-more]'); if (!b || S.view !== 'mapa') return;
   if (b.dataset.more){
     const d = $('dd-' + b.dataset.more), aberto = d.classList.toggle('open');
@@ -1411,8 +1605,8 @@ const TOKEN = (new URLSearchParams(location.search).get('t') || '').trim();
 const ANEXO_URL = 'https://grupoleh.app.n8n.cloud/webhook/anexo';
 const ORC_MAX = 10 * 1024 * 1024;
 const ORC_TIPOS = /^(application\/pdf|image\/(jpeg|png|webp|heic|heif))$/;
-const ETAPA_BANCO = { cotacao:'cot', gerencial:'ger', financeiro:'fin', lider:'lid' };
-const NOME_ETAPA = { lider:'liderança imediata', gerencial:'aprovação gerencial', financeiro:'aprovação financeira', cotacao:'cotação', edicao:'edição' };
+const ETAPA_BANCO = { cotacao:'cot', gerencial:'ger', financeiro:'fin', lider:'lid', lote:'lote' };
+const NOME_ETAPA = { lider:'liderança imediata', gerencial:'aprovação gerencial', financeiro:'aprovação financeira', cotacao:'cotação', edicao:'edição', lote:'lote mensal' };
 
 function tamanho(b){ b = Number(b) || 0; if (b < 1024) return b + ' B'; if (b < 1048576) return Math.round(b/1024) + ' KB'; return (b/1048576).toFixed(1).replace('.', ',') + ' MB'; }
 const numBR = v => v === null || v === undefined || v === '' ? '' : String(v).replace('.', ',');
@@ -1443,7 +1637,8 @@ async function carregarFila(manual, silencioso){
     $('quem-nome').textContent = S.comprador || '—';
     const velhos = new Map(SOLS.map(x => [x.uid, x]));
     const aberto = S.view === 'mapa' ? sol(S.solId) : null;
-    SOLS = (r.pedidos || []).filter(p => p.e_meu || !p.comprador_responsavel).map(p => deBanco(p, velhos.get(p.id)));
+    SOLS = (r.pedidos || []).filter(p => p.e_meu || !p.comprador_responsavel).map(p => deBanco(p, velhos.get(p.id)))
+      .concat((r.lotes || []).map(l => deLote(l, velhos.get(l.id))));
     S.carregado = true;
     /* 30/09: o pedido aberto no mapa saiu da fila ou mudou de etapa em outro lugar
        (outra aba, outra pessoa). Não deixa ele digitando num mapa que não vale mais. */
@@ -1483,6 +1678,7 @@ function deBanco(p, velho){
           : (p.valor_cotado !== null && p.valor_cotado !== undefined ? Number(p.valor_cotado) : null)),
     devolucao:p.aba === 'devolvidas' && p.devolucao ? { motivo:p.devolucao.motivo || '', por:p.devolucao.por || 'o aprovador', em:new Date(p.devolucao.em), etapa:p.devolucao.etapa } : null,
     itens:(p.itens || []).map(itemDoBanco),
+    gerId:p.gerencia_id || null, gerNome:p.gerencia || null, unNeg:p.unidade_negocio || null, loteId:p.lote_id || null,
     eventos:[{ data:new Date(p.desde || p.aberto_em), titulo:'Chegou nesta etapa', pessoa:null }],
     orcamentosN:p.orcamentos || 0, anexos:[], cot:null, carregado:false, sujo:false
   };
@@ -1499,6 +1695,67 @@ function deBanco(p, velho){
   return s;
 }
 
+/* ---------- lote mensal (02/10) ----------
+   O lote entra na fila como uma linha só. Por dentro, cada item é a soma do mesmo
+   item (código + unidade) de todos os pedidos; "partes" diz de quem é cada pedaço. */
+function deLote(l, velho){
+  const comp = new Date(String(l.competencia).slice(0,10) + 'T12:00:00');
+  const pac = l.pacotes || { aguardando:0, aprovado:0, reprovado:0 };
+  const enviado = l.estado !== 'em_cotacao';
+  const status = !enviado ? 'cot' : (pac.aguardando > 0 || (pac.aprovado + pac.reprovado) === 0 ? 'fin' : 'fim');
+  const s = {
+    lote:true, uid:l.id, id:'Lote ' + String(comp.getMonth() + 1).padStart(2, '0') + '/' + comp.getFullYear(), versao:0,
+    mesNome:MESES[comp.getMonth()] + '/' + comp.getFullYear(), competencia:comp, corte:l.corte_em ? new Date(l.corte_em) : null,
+    nPedidos:Number(l.total_pedidos) || 0, nGerencias:Number(l.gerencias) || 0, nItens:Number(l.total_itens) || 0, nFams:Number(l.familias) || 0,
+    pacotes:pac, empresa:'Várias', cc:'Vários', ccNome:'todos os centros de custo', setor:'—', solicitante:'Vários', facilitador:null,
+    comprador:S.comprador, local:null, motivo:'Compra mensal de ' + MESES[comp.getMonth()] + ': os pedidos aprovados pela gerência até o corte, juntos por família.',
+    criada:new Date(l.fechado_em || l.corte_em || comp), necessidade:null, tipo:'mensal', urgente:false, defForn:'cotacao', justForn:null,
+    status, fim:status === 'fim' ? (pac.aprovado > 0 ? 'aprovado' : 'reprovado') : null, canal:'telas', comQuemNome:null, fornecedorCotado:null, cardId:null,
+    mapaEstado:l.mapa_estado || null, versaoMapa:l.mapa_versao || 0, valor:l.total !== null && l.total !== undefined ? Number(l.total) : null,
+    devolucao:null, itens:[], pedidosLote:[], rateio:[], pacotesLista:[],
+    eventos:[{ data:new Date(enviado && l.enviado_em ? l.enviado_em : (l.fechado_em || l.corte_em || comp)), titulo:'Lote fechado no corte', pessoa:null }],
+    orcamentosN:0, anexos:[], cot:null, carregado:false, sujo:false
+  };
+  if (velho && velho.cot){
+    Object.assign(s, { cot:velho.cot, sujo:velho.sujo, conflito:velho.conflito, erroSalvar:velho.erroSalvar,
+      versaoMapa:velho.versaoMapa, mapaEstado:velho.mapaEstado || s.mapaEstado, carregado:velho.carregado,
+      itens:velho.itens, pedidosLote:velho.pedidosLote, rateio:velho.rateio, pacotesLista:velho.pacotesLista });
+  }
+  return s;
+}
+/* A chave do item no banco é "código|UNIDADE" (ou "#descrição|UNIDADE" fora do
+   catálogo) e pode ter aspas e espaços. Na tela o item ganha um id seguro e fixo
+   (hash da chave); a chave volta no salvar. */
+function idSeguro(chave){ let h = 0x811c9dc5; for (const ch of String(chave)){ h ^= ch.codePointAt(0); h = Math.imul(h, 0x01000193) >>> 0; } return 'L' + h.toString(16).padStart(8, '0'); }
+function itensDoLote(lista){
+  const usados = new Set();
+  return lista.map(i => {
+    let id = idSeguro(i.id), n = 1; while (usados.has(id)) id = idSeguro(i.id) + '-' + (n++); usados.add(id);
+    return Object.assign(itemDoBanco(i), { id, chave:i.id, partes:(i.partes || []).map(p => Object.assign({}, p, { quantidade:Number(p.quantidade) || 0 })) });
+  });
+}
+async function carregarLote(s){
+  let r;
+  try { r = await rpc('lote_mesa', { p_token: TOKEN, p_lote_id: s.uid }); }
+  catch (e){ throw new Error('A rede falhou. Tente de novo.'); }
+  if (!r || r.ok !== true) throw new Error((r && r.mensagem) || 'Não consegui abrir o lote.');
+  s.itens = itensDoLote(r.itens || []);
+  s.pedidosLote = r.pedidos || [];
+  s.rateio = (r.rateio || []).map(x => Object.assign({}, x, { total:Number(x.total) || 0, quantidade:Number(x.quantidade) || 0 }));
+  s.pacotesLista = r.pacotes || [];
+  s.nPedidos = s.pedidosLote.length || s.nPedidos;
+  s.nItens = s.itens.length; s.nFams = familiasDe(s).length;
+  s.nGerencias = new Set(s.pedidosLote.map(p => p.gerencia_id).filter(Boolean)).size || s.nGerencias;
+  if (r.lote && r.lote.estado !== 'em_cotacao' && s.status === 'cot') s.status = 'fin';
+  if (!s.sujo){
+    s.cot = mapaParaCot(s, r.mapa);
+    s.versaoMapa = r.mapa ? r.mapa.versao : 0;
+    s.mapaEstado = r.mapa ? r.mapa.estado : null;
+  }
+  if (s.rateio.length) s.valor = Math.round(s.rateio.reduce((t, x) => t + x.total, 0) * 100) / 100;
+  s.carregado = true;
+}
+
 /* ---------- pedido completo (detalhe e mapa) ---------- */
 function eventoDoBanco(m){
   const et = NOME_ETAPA[m.etapa] || m.etapa || '';
@@ -1507,11 +1764,12 @@ function eventoDoBanco(m){
     criado:'Solicitação aberta', aprovado:'Aprovado em ' + et, reprovado:'Reprovado em ' + et,
     devolvido:'Devolvida ao comprador em ' + et, cotacao_enviada:'Cotação enviada para ' + prox + (m.total ? ' · ' + brl(Number(m.total)) : ''),
     cancelado:'Cancelado', edicao_iniciada:'Edição começou', edicao_salva:'Edição salva', edicao_desistida:'Edição abandonada',
-    edicao_expirada:'Edição desfeita sem salvar'
+    edicao_expirada:'Edição desfeita sem salvar', entrou_no_lote:'Entrou no lote mensal (corte do dia 20)'
   }[m.acao] || m.acao;
   return { data:new Date(m.em), titulo:t, pessoa:m.quem || null, nota:m.motivo || null, bad:m.acao === 'reprovado' || m.acao === 'devolvido' };
 }
 async function carregarPedido(s){
+  if (s.lote) return carregarLote(s);
   let r;
   try { r = await rpc('pedido_telas', { p_token: TOKEN, p_id: s.uid }); }
   catch (e){ throw new Error('A rede falhou. Tente de novo.'); }
@@ -1539,7 +1797,15 @@ function mapaParaCot(s, m){
   const c = novaCot(s);
   if (!m) return c;
   const famDoItem = {}; s.itens.forEach(it => famDoItem[it.id] = famKey(it));
-  ((m.resumo && m.resumo.familias) || []).forEach(fa => {
+  if (s.lote){
+    const idDe = {}; s.itens.forEach(it => idDe[it.chave] = it.id);
+    m = Object.assign({}, m, { precos:(m.precos || []).map(p => Object.assign({}, p, { item_id:idDe[p.item_id] })).filter(p => p.item_id),
+                               escolhas:(m.escolhas || []).map(e => Object.assign({}, e, { item_id:idDe[e.item_id] })).filter(e => e.item_id) });
+  }
+  const familias = m.fornecedores
+    ? Object.values(m.fornecedores.reduce((o, f) => { (o[f.familia] = o[f.familia] || { familia:f.familia, fornecedores:[] }).fornecedores.push(f); return o; }, {}))
+    : ((m.resumo && m.resumo.familias) || []);
+  familias.forEach(fa => {
     const F = c.fams[fa.familia]; if (!F) return;
     (fa.fornecedores || []).forEach(f => {
       const j = Number(f.coluna) - 1; if (!(j >= 0 && j <= 2)) return;
@@ -1579,11 +1845,20 @@ function cotParaMapa(s){
     }));
     Object.keys(F.escolha).forEach(iid => { const j = F.escolha[iid]; if (j !== undefined && j !== null && cols.includes(j)) escolhas.push({ item_id:iid, coluna:j + 1 }); });
   });
+  if (s.lote){
+    const chaveDe = {}; s.itens.forEach(it => chaveDe[it.id] = it.chave);
+    precos.forEach(p => p.item_id = chaveDe[p.item_id]); escolhas.forEach(e => e.item_id = chaveDe[e.item_id]);
+    return { fornecedores, precos:precos.filter(p => p.item_id), escolhas:escolhas.filter(e => e.item_id), observacao:c.obs || '' };
+  }
   return { fornecedores, precos, escolhas, observacao:c.obs || '' };
 }
 
 /* ---------- salvar (rascunho no banco) ---------- */
 const GRAVA = { timer:null, voando:null, tentar:null };
+/* Lote mensal: o mesmo mapa, gravado em salvar_mapa_lote pelo id do lote. */
+const pedidoSalvar = s => s.lote
+  ? ['salvar_mapa_lote', { p_token: TOKEN, p_lote_id: s.uid, p_versao_mapa: s.versaoMapa || 0, p_mapa: cotParaMapa(s) }]
+  : ['salvar_mapa', { p_token: TOKEN, p_id: s.uid, p_versao_mapa: s.versaoMapa || 0, p_mapa: cotParaMapa(s) }];
 function textoSalvo(s){
   if (s.erroSalvar) return '⚠ ' + s.erroSalvar;
   if (s.sujo) return 'Salvando…';
@@ -1604,9 +1879,9 @@ async function salvarAgora(s){
   if (s.conflito) return false;
   GRAVA.voando = (async () => {
     s.sujo = false;
-    const corpo = { p_token: TOKEN, p_id: s.uid, p_versao_mapa: s.versaoMapa || 0, p_mapa: cotParaMapa(s) };
+    const [fn, corpo] = pedidoSalvar(s);
     let r;
-    try { r = await rpc('salvar_mapa', corpo); } catch (e){ r = { ok:false, erro:'rede', mensagem:'Sem conexão.' }; }
+    try { r = await rpc(fn, corpo); } catch (e){ r = { ok:false, erro:'rede', mensagem:'Sem conexão.' }; }
     if (r && r.ok === true){
       s.versaoMapa = r.versao_mapa; s.mapaEstado = r.estado; s.erroSalvar = null;
       s.cot.salvoEm = new Date(); mostrarSalvo(s); return true;
@@ -1617,7 +1892,9 @@ async function salvarAgora(s){
       s.erroSalvar = 'Este mapa foi salvo em outra aba. Atualize para ver a versão de lá.';
       mostrarConflito(s);
     } else if (r && r.erro === 'fora_da_cotacao'){
-      s.conflito = true; s.erroSalvar = 'Este pedido saiu da cotação (reprovado ou já enviado). Volte à fila.';
+      s.conflito = true; s.erroSalvar = s.lote ? 'Este lote já foi enviado. Volte à fila.' : 'Este pedido saiu da cotação (reprovado ou já enviado). Volte à fila.';
+    } else if (r && r.erro === 'itens_desatualizados'){
+      s.conflito = true; s.erroSalvar = 'Os itens do lote mudaram (algum pedido saiu). Volte à fila e abra o lote de novo.';
     } else {
       s.erroSalvar = 'Não consegui salvar: ' + ((r && r.mensagem) || 'erro') + ' Tento de novo em instantes.';
       GRAVA.tentar = setTimeout(() => salvarAgora(s), 6000);
@@ -1641,14 +1918,15 @@ window.addEventListener('pagehide', () => {
   const s = S.solId && sol(S.solId);
   if (!s || !s.sujo || s.conflito || soLeitura(s)) return;
   try {
-    fetch(SUPABASE_URL + '/rest/v1/rpc/salvar_mapa', { method:'POST', keepalive:true,
+    const [fn, corpo] = pedidoSalvar(s);
+    fetch(SUPABASE_URL + '/rest/v1/rpc/' + fn, { method:'POST', keepalive:true,
       headers:{ apikey:SUPABASE_KEY, Authorization:'Bearer ' + SUPABASE_KEY, 'Content-Type':'application/json' },
-      body: JSON.stringify({ p_token: TOKEN, p_id: s.uid, p_versao_mapa: s.versaoMapa || 0, p_mapa: cotParaMapa(s) }) });
+      body: JSON.stringify(corpo) });
   } catch (e){}
 });
 
 /* ---------- enviar para aprovação ---------- */
-const proximaEtapa = s => s.tipo === 'mensal' ? 'aprovação financeira' : 'aprovação gerencial';
+const proximaEtapa = s => s.lote ? 'aprovação financeira' : s.tipo === 'mensal' ? 'aprovação financeira' : 'aprovação gerencial';
 function tentarEnviar(){
   const s = sol(S.solId);
   S.mostrarErros = true;
@@ -1664,10 +1942,11 @@ function tentarEnviar(){
   const destino = proximaEtapa(s);
   abrirModal(`
     <div class="m-head"><div><div class="eyebrow"><span class="mono">${esc(s.id)}</span></div><h2 id="m-title">${s.devolucao ? 'Reenviar' : 'Enviar'} para ${destino}</h2>
-      <div class="sub">Depois de enviar, o mapa fica só para leitura até o aprovador responder.</div></div>
+      <div class="sub">${s.lote ? 'Cada gerência recebe o seu pacote, com a parte dela no custo (desconto e frete divididos pelo valor). O mapa fica só para leitura.' : 'Depois de enviar, o mapa fica só para leitura até o aprovador responder.'}</div></div>
       <button class="x" id="m-close" type="button" aria-label="Fechar">✕</button></div>
     <div class="m-body">
       <div class="sumlines">${linhas.join('')}<div class="grand"><span><strong>Orçamento</strong></span><span class="v">${brl(C.total)}</span></div></div>
+      ${s.lote ? `<div class="sumlines pacotes-envio">${rateioPorGerencia(rateioLote(s)).map(g => `<div><span>${esc(g.nome)} <span class="muted">· ${plural(g.pedidos.size,'pedido','pedidos')}</span></span><span class="v">${brl(g.total)}</span></div>`).join('')}</div>` : ''}
       ${s.defForn === 'unico' ? `<div class="holder info unico-envio" style="flex-direction:column;align-items:flex-start"><strong>Fornecedor único</strong><span>O solicitante dispensou a cotação com outros fornecedores. O aprovador vê isso em destaque, com a justificativa.</span></div>` : ''}
       ${V.avisos.length ? `<div class="holder warn" style="flex-direction:column;align-items:flex-start"><strong>O aprovador vai ver estes pontos</strong><ul class="warnlist">${V.avisos.map(a => `<li>${esc(a.msg)}</li>`).join('')}</ul></div>` : ''}
       <div class="obs-box" style="margin:0">
@@ -1693,7 +1972,8 @@ function tentarEnviar(){
     if (!s.devolucao){ s.cot.obs = obs; s.sujo = true; }
     if (!(await salvarAgora(s))) return falhou(esc(s.erroSalvar || 'Não consegui salvar o mapa antes de enviar.'));
     let r;
-    try { r = await rpc('enviar_mapa', { p_token: TOKEN, p_id: s.uid, p_versao_mapa: s.versaoMapa, p_observacao: obs || null }); }
+    try { r = s.lote ? await rpc('enviar_lote', { p_token: TOKEN, p_lote_id: s.uid, p_versao_mapa: s.versaoMapa, p_observacao: obs || null })
+                     : await rpc('enviar_mapa', { p_token: TOKEN, p_id: s.uid, p_versao_mapa: s.versaoMapa, p_observacao: obs || null }); }
     catch (e){ r = { ok:false, mensagem:'A rede falhou no meio. Confira na fila se a cotação foi enviada antes de tentar de novo.' }; }
     if (!r || r.ok !== true){
       const lista = (r && r.bloqueios) || [];
@@ -1704,7 +1984,7 @@ function tentarEnviar(){
     S.tab = 'env'; S.view = 'fila'; S.mostrarErros = false; S.solId = null;
     fecharModal(); window.scrollTo(0,0);
     await carregarFila(); render();
-    toast('Cotação enviada');
+    toast(s.lote ? 'Lote enviado' : 'Cotação enviada');
   };
   $('dlg-obs').focus();
 }
