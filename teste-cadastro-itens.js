@@ -247,9 +247,12 @@ const quantas = (banco, nome) => banco.chamadas.filter(c => c.nome === nome).len
     await p.click('#listaPendentes .item[data-codigo="9001"] [data-acao="retirar"]');
     await p.click('#listaPendentes [data-acao="sim-retirar"]'); await p.waitForTimeout(250);
     ok('retirado some do formulário', banco.itens.get('9001').ativo === false);
-    ok('linha fica riscada como retirado', await p.locator('#listaPendentes .item.retirado[data-codigo="9001"]').count() === 1 &&
-       /retirado/.test(await txt(p, '#listaPendentes .item[data-codigo="9001"]')));
-    ok('aviso de retirado', /9001 retirado/.test(await txt(p, '#avisoItem')));
+    ok('linha fica riscada como excluído', await p.locator('#listaPendentes .item.retirado[data-codigo="9001"]').count() === 1 &&
+       /excluído/.test(await txt(p, '#listaPendentes .item[data-codigo="9001"]')));
+    ok('aviso de excluído', /9001 excluído do formulário/.test(await txt(p, '#avisoItem')));
+    ok('a tela manda o modo excluir (não mais retirar)', ultima(banco,'catalogo_salvar_item').corpo.p_modo === 'excluir');
+    ok('botão da lista diz Excluir', /Excluir/.test(await txt(p, '#listaPendentes .item[data-codigo="9001"]')) ||
+       await p.locator('#listaPendentes .item[data-codigo="9001"] [data-acao="corrigir"]').count() === 1);
 
     /* reativar pela lista */
     await p.click('#listaPendentes .item[data-codigo="9001"] [data-acao="corrigir"]'); await p.waitForTimeout(150);

@@ -134,3 +134,44 @@ banco de mentira do `mock-supabase.js`. `teste-cadastro-itens.sql` roda as
 mesmas regras no Postgres de verdade e **desfaz tudo** no fim. Para rodar,
 cole no SQL Editor o `cadastro-de-itens.sql` seguido dele. "TESTES OK" na
 mensagem de erro significa que passou.
+
+## Excluir item e cadastrar fornecedor (02/10/2026)
+
+A mesma tela (`cadastro-itens.html`) agora tem duas abas, **Itens** e
+**Fornecedores**, com o mesmo login. O SQL fica em
+`cadastro-fornecedores-e-exclusao.sql`.
+
+**Excluir item.** Funciona para qualquer item, não só para os que foram
+cadastrados pela tela. Excluir é **desativar** (`ativo = false`,
+`excluido = true`), nunca apagar: um pedido antigo guarda o código do item. O
+gatilho `catalogo_manter_excluido` mantém o item desligado mesmo quando a
+importação do CSV manda `ativo = true`. Sem esse gatilho, o item excluído
+voltaria sozinho na próxima importação. Para trazê-lo de volta, é só cadastrar
+o mesmo código na tela e escolher reativar.
+
+Para a conferência do n8n continuar batendo, `ativos_agora` passou a contar
+os itens **que vieram no arquivo**, ativos ou não. Os excluídos que estavam no
+arquivo aparecem em `excluidos_na_tela`.
+
+**Fornecedor.** A tabela `fornecedores` (3.572 cadastros, todos vindos do GR) ganhou:
+- `tipo_pessoa` (PF/PJ), preenchido para os que já existiam pelo tamanho do documento;
+- `cadastrado_por` e `cadastrado_em`;
+- o histórico em `fornecedores_historico`.
+
+As regras:
+- o código do GR é **obrigatório** e vira o `id` (decisão de 02/10);
+- o CPF ou CNPJ é conferido pelos dígitos verificadores;
+- o mesmo documento em outro fornecedor ativo é **barrado**;
+- a mesma razão social com outro documento pede confirmação, porque pode ser filial;
+- o endereço, a cidade e a UF são obrigatórios, e o bairro e o CEP são opcionais.
+
+Excluir fornecedor também é desativar: some de `buscar_fornecedor`, a busca
+que o setor de Compras usa.
+
+**Testes.** `teste-cadastro-fornecedores.js` testa as telas clique a clique, e
+`teste-fornecedores-e-exclusao.sql` testa no Postgres de verdade e desfaz tudo
+no fim.
+
+**Um cuidado ao rodar SQL pela ferramenta do Supabase:** `drop trigger`
+fica parado esperando confirmação e estoura o tempo. Use
+`create or replace trigger`.

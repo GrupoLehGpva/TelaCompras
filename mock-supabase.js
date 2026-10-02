@@ -148,8 +148,11 @@ function corpoPorUrl(url, { pedido = null, itens = [], anexos = [], centros = []
    teste-cadastro-itens.sql confere as mesmas regras no Postgres de verdade.
    Se mudar lá, muda aqui.
    ========================================================================== */
-function bancoDoCadastro({ catalogo = [], logins = { 'compras': { nome:'Compras Teste', senha:'senha-certa-123' } } } = {}){
+function bancoDoCadastro({ catalogo = [], fornecedores = [], logins = { 'compras': { nome:'Compras Teste', senha:'senha-certa-123' } } } = {}){
   const itens = new Map(catalogo.map(i => [String(i.codigo), Object.assign({ ativo:true, pendente_gr:false }, i)]));
+  const forns = new Map(fornecedores.map(f => [String(f.id || f.codigo_gr),
+    Object.assign({ ativo:true }, f, { id:String(f.id || f.codigo_gr), codigo_gr:String(f.codigo_gr || f.id) })]));
+  const historicoForn = [];
   const contas = JSON.parse(JSON.stringify(logins));
   Object.values(contas).forEach(c => { c.falhas = 0; c.bloqueado_ate = null; c.ativo = c.ativo !== false; });
   const chamadas = [];
@@ -183,16 +186,18 @@ function bancoDoCadastro({ catalogo = [], logins = { 'compras': { nome:'Compras 
 
   function salvar(login, senha, modo, p){
     const a = autenticar(login, senha); if(!a.ok) return a;
-    if(!['criar','reativar','corrigir','retirar'].includes(modo)) return { ok:false, erro:'modo_invalido' };
+    if(modo === 'retirar') modo = 'excluir';          // nome antigo, igual ao SQL
+    if(!['criar','reativar','corrigir','excluir'].includes(modo)) return { ok:false, erro:'modo_invalido' };
     let cod = String(p.codigo ?? '').trim();
     if(!/^[0-9]+$/.test(cod)) return { ok:false, erro:'codigo_invalido', campo:'codigo' };
     cod = cod.replace(/^0+/, '');
     if(cod === '' || cod.length > 7) return { ok:false, erro:'codigo_invalido', campo:'codigo' };
     const atual = itens.get(cod);
-    if(modo === 'retirar'){
+    if(modo === 'excluir'){
       if(!atual) return { ok:false, erro:'nao_encontrado' };
-      if(!atual.pendente_gr) return { ok:false, erro:'veio_do_gr', item:atual };
-      atual.ativo = false;
+      if(!atual.ativo) return { ok:false, erro:'ja_excluido', item:atual };
+      if(p.motivo && String(p.motivo).trim().length > 300) return { ok:false, erro:'motivo_longo', campo:'motivo' };
+      atual.ativo = false; atual.excluido = true; atual.motivo = String(p.motivo || '').trim() || null;
       return Object.assign({ ok:true, modo, item:Object.assign({}, atual) }, contexto());
     }
     const fam = String(p.familia||'').trim().toUpperCase(), desc = String(p.descricao||'').trim(),
@@ -215,11 +220,92 @@ function bancoDoCadastro({ catalogo = [], logins = { 'compras': { nome:'Compras 
     /* Sem a chave `especificacao`, o grupo que o item já tinha fica (a tela
        não tem mais o campo). Igual ao `p_item ? 'especificacao'` do SQL. */
     const novo = Object.assign({}, atual || {}, { codigo:cod, familia:fam, descricao:desc, unidade:un,
-                                                  ativo:true, pendente_gr:true });
+                                                  ativo:true, excluido:false, pendente_gr:true });
     if('especificacao' in p || !atual) novo.especificacao = esp;
     if(modo !== 'corrigir'){ novo.cadastrado_por = a.nome; novo.cadastrado_em = agora(); }
     itens.set(cod, novo);
     return Object.assign({ ok:true, modo, item:Object.assign({}, novo) }, contexto());
+  }
+
+  /* ---------- FORNECEDOR: as regras de fornecedor_salvar / fornecedor_buscar ---------- */
+  const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB',
+               'PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO','EX'];
+  function docValido(dig, tipo){
+    const d = String(dig).split('').map(Number);
+    if(tipo === 'PF'){
+      if(!/^\d{11}$/.test(dig) || /^(\d)\1{10}$/.test(dig)) return false;
+      let s = 0; for(let i=0;i<9;i++) s += d[i]*(10-i); let r = (s*10)%11; if(r===10) r=0; if(r!==d[9]) return false;
+      s = 0; for(let i=0;i<10;i++) s += d[i]*(11-i); r = (s*10)%11; if(r===10) r=0; return r===d[10];
+    }
+    if(tipo === 'PJ'){
+      if(!/^\d{14}$/.test(dig) || /^(\d)\1{13}$/.test(dig)) return false;
+      const p1=[5,4,3,2,9,8,7,6,5,4,3,2], p2=[6,5,4,3,2,9,8,7,6,5,4,3,2];
+      let s=0; for(let i=0;i<12;i++) s+=d[i]*p1[i]; let r=s%11; r=r<2?0:11-r; if(r!==d[12]) return false;
+      s=0; for(let i=0;i<13;i++) s+=d[i]*p2[i]; r=s%11; r=r<2?0:11-r; return r===d[13];
+    }
+    return false;
+  }
+  const digitos = t => String(t||'').replace(/\D/g,'');
+  const fmtDoc = (d, t) => t === 'PF' ? d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6,9)+'-'+d.slice(9)
+                                      : d.slice(0,2)+'.'+d.slice(2,5)+'.'+d.slice(5,8)+'/'+d.slice(8,12)+'-'+d.slice(12);
+  function salvarForn(login, senha, modo, p){
+    const a = autenticar(login, senha); if(!a.ok) return a;
+    if(!['criar','corrigir','excluir','reativar'].includes(modo)) return { ok:false, erro:'modo_invalido' };
+    let cod = String(p.codigo_gr ?? '').trim();
+    if(!/^[0-9]+$/.test(cod)) return { ok:false, erro:'codigo_invalido', campo:'codigo_gr' };
+    cod = cod.replace(/^0+/, '');
+    if(cod === '' || cod.length > 7) return { ok:false, erro:'codigo_invalido', campo:'codigo_gr' };
+    const atual = forns.get(cod);
+    if(modo === 'excluir'){
+      if(!atual) return { ok:false, erro:'nao_encontrado' };
+      if(!atual.ativo) return { ok:false, erro:'ja_excluido', fornecedor:atual };
+      if(p.motivo && String(p.motivo).trim().length > 300) return { ok:false, erro:'motivo_longo', campo:'motivo' };
+      atual.ativo = false;
+      historicoForn.push({ id:cod, acao:'excluir', motivo:String(p.motivo||'').trim() || null, por:a.nome });
+      return { ok:true, modo, fornecedor:Object.assign({}, atual) };
+    }
+    const tipo = String(p.tipo_pessoa||'').trim().toUpperCase();
+    if(!['PF','PJ'].includes(tipo)) return { ok:false, erro:'tipo_invalido', campo:'tipo_pessoa' };
+    const dig = digitos(p.documento);
+    if(!docValido(dig, tipo)) return { ok:false, erro:'documento_invalido', campo:'documento' };
+    const razao = String(p.razao_social||'').trim().replace(/\s+/g,' '), end = String(p.endereco||'').trim().replace(/\s+/g,' ');
+    const bairro = String(p.bairro||'').trim() || null, cep = digitos(p.cep), cidade = String(p.cidade||'').trim().replace(/\s+/g,' ');
+    const uf = String(p.uf||'').trim().toUpperCase();
+    if(razao.length < 3 || razao.length > 150) return { ok:false, erro:'razao_invalida', campo:'razao_social' };
+    if(end.length < 5 || end.length > 200) return { ok:false, erro:'endereco_invalido', campo:'endereco' };
+    if(bairro && bairro.length > 100) return { ok:false, erro:'bairro_invalido', campo:'bairro' };
+    if(cep && !/^\d{8}$/.test(cep)) return { ok:false, erro:'cep_invalido', campo:'cep' };
+    if(cidade.length < 2 || cidade.length > 100) return { ok:false, erro:'cidade_invalida', campo:'cidade' };
+    if(!UFS.includes(uf)) return { ok:false, erro:'uf_invalida', campo:'uf' };
+    if(modo === 'criar' && atual) return { ok:false, erro: atual.ativo ? 'codigo_existe' : 'codigo_inativo', campo:'codigo_gr', fornecedor:atual };
+    if(modo === 'corrigir' && !atual) return { ok:false, erro:'nao_encontrado' };
+    if(modo === 'reativar' && (!atual || atual.ativo)) return { ok:false, erro:'nao_reativavel', fornecedor:atual || null };
+    const outros = [...forns.values()].filter(f => f.ativo && f.id !== cod);
+    const mesmoDoc = outros.find(f => digitos(f.cnpj) === dig);
+    if(mesmoDoc) return { ok:false, erro:'documento_repetido', campo:'documento', fornecedor:{ codigo_gr:mesmoDoc.codigo_gr, razao_social:mesmoDoc.razao_social } };
+    if(!p.confirmar_nome){
+      const mesmoNome = outros.find(f => f.razao_social.toLowerCase() === razao.toLowerCase());
+      if(mesmoNome) return { ok:false, erro:'nome_repetido', campo:'razao_social', fornecedor:{ codigo_gr:mesmoNome.codigo_gr, razao_social:mesmoNome.razao_social } };
+    }
+    const novo = Object.assign({}, atual || {}, { id:cod, codigo_gr:cod, razao_social:razao, tipo_pessoa:tipo, cnpj:fmtDoc(dig, tipo),
+      endereco:end, bairro, cep: cep ? cep.slice(0,5)+'-'+cep.slice(5) : null, cidade, uf, ativo:true });
+    if(modo === 'criar'){ novo.cadastrado_por = a.nome; novo.cadastrado_em = agora(); }
+    forns.set(cod, novo);
+    historicoForn.push({ id:cod, acao:modo, por:a.nome });
+    return { ok:true, modo, fornecedor:Object.assign({}, novo) };
+  }
+  function buscarForn(login, senha, termo){
+    const a = autenticar(login, senha); if(!a.ok) return a;
+    const t = String(termo||'').trim(), dig = digitos(termo);
+    if(t.length < 2) return { ok:true, fornecedores:[] };
+    const lista = [...forns.values()].filter(f => f.codigo_gr === t || f.razao_social.toLowerCase().includes(t.toLowerCase()) ||
+                                                  (dig.length >= 5 && digitos(f.cnpj).includes(dig)))
+      .map(f => ({ id:f.id, codigo_gr:f.codigo_gr, razao_social:f.razao_social, tipo_pessoa:f.tipo_pessoa || null,
+                   documento:f.cnpj || null, endereco:f.endereco || null, bairro:f.bairro || null, cep:f.cep || null,
+                   cidade:f.cidade || null, uf:f.uf || null, ativo:f.ativo,
+                   ordem: f.codigo_gr === t ? 0 : f.razao_social.toLowerCase().startsWith(t.toLowerCase()) ? 1 : 2 }))
+      .sort((x,y) => x.ordem - y.ordem || x.razao_social.localeCompare(y.razao_social)).slice(0, 30);
+    return { ok:true, fornecedores:lista };
   }
 
   function trocar(login, senha, nova){
@@ -242,6 +328,8 @@ function bancoDoCadastro({ catalogo = [], logins = { 'compras': { nome:'Compras 
       if(nome === 'catalogo_entrar'){ const a = autenticar(corpo.p_login, corpo.p_senha); return json(a.ok ? Object.assign(a, contexto()) : a); }
       if(nome === 'catalogo_salvar_item') return json(salvar(corpo.p_login, corpo.p_senha, corpo.p_modo, corpo.p_item || {}));
       if(nome === 'catalogo_trocar_senha') return json(trocar(corpo.p_login, corpo.p_senha, corpo.p_nova));
+      if(nome === 'fornecedor_salvar') return json(salvarForn(corpo.p_login, corpo.p_senha, corpo.p_modo, corpo.p_forn || {}));
+      if(nome === 'fornecedor_buscar') return json(buscarForn(corpo.p_login, corpo.p_senha, corpo.p_termo));
       if(url.includes('/rest/v1/catalogo_itens')){
         const u = new URL(url);
         const off = +(u.searchParams.get('offset') || 0), lim = +(u.searchParams.get('limit') || 1000);
@@ -253,7 +341,7 @@ function bancoDoCadastro({ catalogo = [], logins = { 'compras': { nome:'Compras 
     });
   }
 
-  return { instalarNa, chamadas, itens, contas };
+  return { instalarNa, chamadas, itens, contas, forns, historicoForn };
 }
 
 module.exports = {

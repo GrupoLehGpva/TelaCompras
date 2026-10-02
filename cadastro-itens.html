@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
-<title>Cadastro de itens do GR · Compras · Grupo Leh</title>
+<title>Cadastros do GR · Compras · Grupo Leh</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
@@ -191,6 +191,38 @@
   .selo.retirado{background:var(--realce);color:var(--muted);border:1px solid var(--borda)}
   .vazio-lista{font-size:14px;color:var(--muted);margin:0}
 
+  .abas{display:flex;gap:4px;background:var(--card);border:1px solid var(--borda);border-radius:var(--raio);padding:4px;margin-bottom:16px}
+  .abas button{flex:1;border:0;background:none;font:inherit;font-size:15px;font-weight:600;color:var(--muted);
+    padding:11px 8px;border-radius:9px;cursor:pointer;min-height:44px}
+  .abas button[aria-selected="true"]{background:var(--marca);color:var(--sobre-marca)}
+  .abas button:not([aria-selected="true"]):hover{background:var(--realce);color:var(--texto)}
+
+  .tipo-pessoa{display:flex;gap:8px}
+  .tipo-pessoa label{flex:1;display:flex;align-items:center;gap:9px;border:1px solid var(--borda);border-radius:10px;
+    padding:12px 13px;cursor:pointer;font-weight:600;font-size:15px;background:var(--card)}
+  .tipo-pessoa label:hover{border-color:var(--linha-forte)}
+  .tipo-pessoa input{accent-color:var(--verde);width:18px;height:18px;margin:0;flex:none}
+  .tipo-pessoa label.marcada{border-color:var(--verde);background:var(--verde-claro)}
+  .tipo-pessoa small{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+  .campo.invalido .tipo-pessoa label{border-color:var(--erro)}
+  .linha-dupla{display:flex;gap:10px}
+  .linha-dupla > .campo{flex:1;min-width:0}
+  .linha-dupla > .campo.estreito{flex:0 0 96px}
+  #documento,#cep,#fCodigo{font-family:var(--mono);letter-spacing:.3px}
+
+  .resultados-busca .linha{border-top:1px solid var(--borda);padding:12px 0}
+  .resultados-busca .linha:first-child{border-top:0;padding-top:4px}
+  .resultados-busca .cab{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+  .resultados-busca .nome{font-weight:600;font-size:15px;overflow-wrap:anywhere}
+  .resultados-busca .cod{font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap}
+  .resultados-busca .meta{font-size:13px;color:var(--muted);margin-top:2px;overflow-wrap:anywhere}
+  .resultados-busca .acoes{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+  .resultados-busca .confirma{margin-top:8px}
+  .resultados-busca .excluido .nome{text-decoration:line-through;color:var(--muted)}
+  .resultados-busca .vazio-lista{padding-top:4px}
+  .confirma .campo{margin:10px 0 0}
+  .confirma input[type=text]{background:var(--card)}
+
   .rodape-nota{max-width:560px;margin:0 auto;padding:0 16px 20px;font-size:12px;color:var(--muted);line-height:1.5}
 </style>
 </head>
@@ -202,7 +234,7 @@
     <img class="logo-leh" src="data:image/png;base64,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" alt="Grupo Leh">
     <div class="titulo-tela">
       <span class="rot">Compras</span>
-      <h1>Cadastro de itens do GR</h1>
+      <h1>Itens e fornecedores do GR</h1>
     </div>
   </div>
   <span class="status" id="statusConexao">…</span>
@@ -213,7 +245,7 @@
   <!-- ===================================================== ENTRAR ======= -->
   <section id="telaEntrar" class="cartao">
     <h2>Entrar</h2>
-    <p class="sub">Só quem cadastra item no GR tem acesso. O login é pessoal: cada item fica registrado com o nome de quem cadastrou.</p>
+    <p class="sub">Só quem cadastra no GR tem acesso. O login é pessoal: cada item e cada fornecedor fica registrado com o nome de quem mexeu.</p>
     <div id="avisoEntrar" class="aviso erro" hidden role="alert"></div>
     <form id="formEntrar" novalidate autocomplete="on">
       <div class="campo">
@@ -237,6 +269,13 @@
         <button type="button" class="btn-link" id="btnSair">Sair</button>
       </span>
     </div>
+
+    <nav class="abas" role="tablist" aria-label="O que cadastrar">
+      <button type="button" role="tab" id="abaItens" aria-selected="true" aria-controls="painelItens">Itens</button>
+      <button type="button" role="tab" id="abaFornecedores" aria-selected="false" aria-controls="painelFornecedores">Fornecedores</button>
+    </nav>
+
+    <div id="painelItens" role="tabpanel" aria-labelledby="abaItens">
 
     <!-- Cadastro -->
     <section class="cartao" id="cartaoItem">
@@ -292,12 +331,123 @@
       </form>
     </section>
 
+    <!-- Excluir item -->
+    <section class="cartao" id="cartaoExcluir">
+      <h2>Excluir item</h2>
+      <p class="sub">O item some do formulário de compras na hora. Pedido que já usou o item não muda. Se ele continuar no GR, a importação do catálogo <b>não</b> traz ele de volta — para voltar, cadastre o mesmo código de novo e escolha reativar.</p>
+      <div id="avisoExcluir" class="aviso" hidden role="alert"></div>
+      <div class="campo">
+        <label for="buscaExcluir">Buscar pelo código ou pelo nome</label>
+        <input type="text" id="buscaExcluir" autocomplete="off" maxlength="80" placeholder="Ex.: 8555 ou filtro de ar">
+      </div>
+      <div id="resultadosExcluir" class="resultados-busca" aria-live="polite"></div>
+    </section>
+
     <!-- Aguardando o GR -->
     <section class="cartao" id="cartaoPendentes">
       <h2>Cadastrados aqui, aguardando o GR</h2>
       <p class="sub">Até o item aparecer na planilha do GR e o catálogo ser importado de novo, ele fica nesta lista e dá para corrigir. Depois disso, quem manda é o GR.</p>
       <div id="listaPendentes" class="lista-pend"></div>
     </section>
+
+    </div><!-- /painelItens -->
+
+    <!-- ================================================ FORNECEDORES ======= -->
+    <div id="painelFornecedores" role="tabpanel" aria-labelledby="abaFornecedores" hidden>
+
+    <section class="cartao" id="cartaoForn">
+      <h2 id="tituloForn">Novo fornecedor</h2>
+      <p class="sub" id="subForn">Copie do GR, do jeito que está lá. O fornecedor aparece para o setor de Compras assim que for salvo.</p>
+
+      <div class="aviso atencao regras" id="regrasForn">
+        <b>Antes de cadastrar, confira duas coisas:</b>
+        <ol>
+          <li><b>O fornecedor precisa já estar criado no GR.</b> Use o código de lá — é por ele que a ordem de compra encontra o fornecedor no GR.</li>
+          <li><b>Cuidado com duplicidade.</b> Busque o fornecedor no quadro de baixo antes. A tela não deixa salvar um CPF ou CNPJ que já está cadastrado.</li>
+        </ol>
+      </div>
+
+      <div id="avisoForn" class="aviso" hidden role="alert"></div>
+
+      <form id="formForn" novalidate>
+        <div class="campo" data-fcampo="codigo_gr">
+          <label for="fCodigo">Código do fornecedor no GR</label>
+          <input type="text" id="fCodigo" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="Ex.: 10020">
+          <span class="erro-campo">Digite o código numérico do fornecedor no GR.</span>
+        </div>
+
+        <div class="campo" data-fcampo="tipo_pessoa">
+          <span class="titulo" style="display:block;font-weight:600;font-size:15px;margin-bottom:8px">Tipo de pessoa</span>
+          <div class="tipo-pessoa" role="radiogroup" aria-label="Tipo de pessoa">
+            <label id="lblPJ"><input type="radio" name="tipoPessoa" value="PJ"><span>Pessoa jurídica<small>empresa · CNPJ</small></span></label>
+            <label id="lblPF"><input type="radio" name="tipoPessoa" value="PF"><span>Pessoa física<small>CPF</small></span></label>
+          </div>
+          <span class="erro-campo">Escolha se é pessoa jurídica ou física.</span>
+        </div>
+
+        <div class="campo" data-fcampo="documento">
+          <label for="documento" id="lblDocumento">CNPJ ou CPF</label>
+          <input type="text" id="documento" inputmode="numeric" autocomplete="off" maxlength="18" placeholder="Escolha o tipo de pessoa primeiro" disabled>
+          <span class="erro-campo">Documento inválido.</span>
+        </div>
+
+        <div class="campo" data-fcampo="razao_social">
+          <label for="razao" id="lblRazao">Razão social <span class="contador" id="contaRazao">0/150</span></label>
+          <input type="text" id="razao" autocomplete="off" maxlength="150" placeholder="Igual ao GR">
+          <span class="erro-campo">Escreva a razão social (pelo menos 3 letras).</span>
+        </div>
+
+        <div class="campo" data-fcampo="endereco">
+          <label for="endereco">Endereço</label>
+          <input type="text" id="endereco" autocomplete="off" maxlength="200" placeholder="Rua, número e complemento">
+          <span class="erro-campo">Escreva o endereço com rua e número.</span>
+        </div>
+
+        <div class="linha-dupla">
+          <div class="campo" data-fcampo="bairro">
+            <label for="bairro">Bairro <span class="opcional">opcional</span></label>
+            <input type="text" id="bairro" autocomplete="off" maxlength="100">
+            <span class="erro-campo">No máximo 100 caracteres.</span>
+          </div>
+          <div class="campo" data-fcampo="cep">
+            <label for="cep">CEP <span class="opcional">opcional</span></label>
+            <input type="text" id="cep" inputmode="numeric" autocomplete="off" maxlength="9" placeholder="00000-000">
+            <span class="erro-campo">CEP tem 8 números.</span>
+          </div>
+        </div>
+
+        <div class="linha-dupla">
+          <div class="campo" data-fcampo="cidade">
+            <label for="cidade">Cidade</label>
+            <input type="text" id="cidade" autocomplete="off" maxlength="100">
+            <span class="erro-campo">Escreva a cidade.</span>
+          </div>
+          <div class="campo estreito" data-fcampo="uf">
+            <label for="uf">UF</label>
+            <select id="uf"><option value="">—</option></select>
+            <span class="erro-campo">Escolha.</span>
+          </div>
+        </div>
+
+        <div class="botoes">
+          <button type="button" class="btn btn-secundario" id="btnCancelarForn" hidden>Cancelar</button>
+          <button type="submit" class="btn btn-primario" id="btnSalvarForn">Cadastrar fornecedor</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="cartao" id="cartaoBuscaForn">
+      <h2>Buscar fornecedor</h2>
+      <p class="sub">Para conferir se já existe, corrigir, excluir ou reativar. Busca pelo código do GR, pelo nome ou pelo CPF/CNPJ.</p>
+      <div id="avisoBuscaForn" class="aviso" hidden role="alert"></div>
+      <div class="campo">
+        <label for="buscaForn">Código, nome ou documento</label>
+        <input type="text" id="buscaForn" autocomplete="off" maxlength="80" placeholder="Ex.: 518, baterias ou 78.043.593">
+      </div>
+      <div id="resultadosForn" class="resultados-busca" aria-live="polite"></div>
+    </section>
+
+    </div><!-- /painelFornecedores -->
 
   </div>
 </main>
@@ -489,6 +639,16 @@ function sair(motivoHtml){
   $('login').value = ''; $('senha').value = '';
   limparFormulario();
   esconder($('avisoItem'));
+  /* Fornecedor e buscas também: o próximo a sentar não pode ver o que o
+     anterior estava fazendo — nem CPF de fornecedor na tela. */
+  novoForn();
+  clearTimeout(fornEstado.timer);
+  fornEstado.ultimaBusca = ''; fornEstado.resultados = [];
+  ['buscaExcluir','buscaForn'].forEach(id => $(id).value = '');
+  $('resultadosExcluir').innerHTML = ''; $('resultadosForn').innerHTML = '';
+  ['avisoExcluir','avisoBuscaForn'].forEach(id => esconder($(id)));
+  $('abaItens').setAttribute('aria-selected','true'); $('abaFornecedores').setAttribute('aria-selected','false');
+  $('painelItens').hidden = false; $('painelFornecedores').hidden = true;
   if(motivoHtml) mostrarAviso($('avisoEntrar'), 'erro', motivoHtml);
   else esconder($('avisoEntrar'));
   $('login').focus();
@@ -758,7 +918,7 @@ function corrigirItem(codigo){
   $('tituloItem').innerHTML = (it.ativo ? 'Corrigir item ' : 'Reativar item ') + esc(it.codigo) +
     '<span class="modo-selo">' + (it.ativo ? 'correção' : 'reativação') + '</span>';
   $('subItem').textContent = it.ativo
-    ? 'O código não muda. Se o código estiver errado, retire este item e cadastre de novo com o certo.'
+    ? 'O código não muda. Se o código estiver errado, exclua este item e cadastre de novo com o certo.'
     : 'O item volta ao formulário com os dados abaixo.';
   $('btnCancelarEdicao').hidden = false;
   $('btnSalvar').textContent = it.ativo ? 'Salvar correção' : 'Reativar item';
@@ -782,11 +942,11 @@ function desenharPendentes(){
       '<div class="cab"><span class="nome">' + esc(p.descricao) + '</span><span class="cod">' + esc(p.codigo) + '</span></div>' +
       '<div class="meta">' + esc(p.unidade) + ' · ' + esc(nomeFamilia(p.familia)) + '</div>' +
       '<div class="meta">' + (ativo ? '<span class="selo aguardando">no formulário · aguardando o GR</span>'
-                                    : '<span class="selo retirado">retirado</span>') +
+                                    : '<span class="selo retirado">excluído</span>') +
         ' ' + esc(p.cadastrado_por || '') + (p.cadastrado_em ? ', ' + esc(quando(p.cadastrado_em)) : '') + '</div>' +
       '<div class="acoes">' +
         (ativo ? '<button type="button" class="btn-link" data-acao="corrigir">Corrigir</button>' +
-                 '<button type="button" class="btn-link" data-acao="retirar">Retirar do formulário</button>'
+                 '<button type="button" class="btn-link" data-acao="retirar">Excluir</button>'
                : '<button type="button" class="btn-link" data-acao="corrigir">Reativar</button>') +
       '</div>' +
       '<div class="confirma" hidden></div>' +
@@ -801,7 +961,7 @@ function pedirRetirada(linha){
   conf.innerHTML = '<div class="aviso atencao" style="margin:0">O item <b>' + esc(cod) + '</b> some do formulário. ' +
     'Pedido que já citou este código continua como está.' +
     '<div class="botoes"><button type="button" class="btn btn-secundario" data-acao="nao-retirar">Manter</button>' +
-    '<button type="button" class="btn btn-perigo" data-acao="sim-retirar">Retirar</button></div></div>';
+    '<button type="button" class="btn btn-perigo" data-acao="sim-retirar">Excluir</button></div></div>';
   conf.hidden = false;
 }
 
@@ -809,31 +969,482 @@ async function retirar(linha){
   if(estado.ocupado) return;
   const cod = linha.dataset.codigo;
   const btn = linha.querySelector('[data-acao="sim-retirar"]');
-  ocupar(btn, 'Retirando…');
+  ocupar(btn, 'Excluindo…');
   let r;
   try{
-    r = await apiRpc('catalogo_salvar_item', { p_login: estado.login, p_senha: estado.senha, p_modo: 'retirar', p_item: { codigo: cod } });
+    r = await apiRpc('catalogo_salvar_item', { p_login: estado.login, p_senha: estado.senha, p_modo: 'excluir', p_item: { codigo: cod } });
   }catch(e){
-    liberar(btn, 'Retirar');
-    mostrarAviso($('avisoItem'), 'erro', '<b>Não retirei.</b> Não consegui falar com o banco. Tente de novo.');
+    liberar(btn, 'Excluir');
+    mostrarAviso($('avisoItem'), 'erro', '<b>Não excluí.</b> Não consegui falar com o banco. Tente de novo.');
     return;
   }
-  liberar(btn, 'Retirar');
+  liberar(btn, 'Excluir');
   if(tratarErroDeAcesso(r)) return;
   if(r.ok){
     lembrarNoCatalogo(r.item);
     aplicarContexto(r);
     if(estado.modo !== 'criar' && normalizarCodigo($('codigo').value) === String(cod)) novoItem(true);
-    mostrarAviso($('avisoItem'), 'ok', '<b>Item ' + esc(cod) + ' retirado do formulário.</b>');
+    mostrarAviso($('avisoItem'), 'ok', '<b>Item ' + esc(cod) + ' excluído do formulário.</b>');
+    desenharBuscaExcluir();
     return;
   }
-  mostrarAviso($('avisoItem'), 'erro', r.erro === 'veio_do_gr'
-    ? '<b>Não retirei:</b> este item já veio do GR. Para tirar, desative no GR e importe o catálogo.'
-    : '<b>Não retirei.</b> <code>' + esc(JSON.stringify(r).slice(0,200)) + '</code>');
+  mostrarAviso($('avisoItem'), 'erro', r.erro === 'ja_excluido'
+    ? '<b>Este item já estava excluído.</b> Recarregue a página para ver a lista atualizada.'
+    : '<b>Não excluí.</b> <code>' + esc(JSON.stringify(r).slice(0,200)) + '</code>');
 }
 
 /* ============================================================================
-   10) LIGAÇÕES
+   10) ABAS — Itens | Fornecedores
+   ========================================================================== */
+function mostrarAba(qual){
+  const itens = qual !== 'fornecedores';
+  $('abaItens').setAttribute('aria-selected', itens ? 'true' : 'false');
+  $('abaFornecedores').setAttribute('aria-selected', itens ? 'false' : 'true');
+  $('painelItens').hidden = !itens;
+  $('painelFornecedores').hidden = itens;
+  (itens ? $('codigo') : ($('fCodigo').disabled ? $('razao') : $('fCodigo'))).focus();
+}
+
+/* ============================================================================
+   11) EXCLUIR ITEM — busca no catálogo que a tela já carregou
+   O catálogo inteiro já está na memória (para os avisos de duplicado), então
+   a busca é local e instantânea. Quem exclui é o banco, que confere de novo.
+   ========================================================================== */
+function desenharBuscaExcluir(){
+  const caixa = $('resultadosExcluir');
+  const bruto = $('buscaExcluir').value.trim();
+  if(bruto.length < 2){ caixa.innerHTML = ''; return; }
+  if(!estado.catalogoPronto){
+    caixa.innerHTML = '<p class="vazio-lista">Não consegui carregar o catálogo para buscar. Recarregue a página.</p>';
+    return;
+  }
+  const cod = normalizarCodigo(bruto);
+  const palavras = semAcento(bruto).split(/\s+/).filter(Boolean);
+  const achados = [];
+  if(cod && estado.catalogo.has(cod)) achados.push(estado.catalogo.get(cod));
+  for(const i of estado.catalogo.values()){
+    if(achados.length >= 8) break;
+    if(!i.ativo || String(i.codigo) === cod) continue;
+    const alvo = semAcento(i.descricao + ' ' + i.codigo);
+    if(palavras.every(p => alvo.includes(p))) achados.push(i);
+  }
+  if(!achados.length){
+    caixa.innerHTML = '<p class="vazio-lista">Nenhum item com “' + esc(bruto) + '” no formulário.</p>';
+    return;
+  }
+  caixa.innerHTML = achados.map(i => {
+    const ativo = i.ativo !== false;
+    return '<div class="linha' + (ativo ? '' : ' excluido') + '" data-codigo="' + esc(i.codigo) + '">' +
+      '<div class="cab"><span class="nome">' + esc(i.descricao) + '</span><span class="cod">' + esc(i.codigo) + '</span></div>' +
+      '<div class="meta">' + esc(i.unidade) + ' · ' + esc(nomeFamilia(i.familia)) +
+        (ativo ? '' : ' · <b>já está fora do formulário</b>') + '</div>' +
+      (ativo ? '<div class="acoes"><button type="button" class="btn-link" data-acao="pedir-excluir">Excluir</button></div>' : '') +
+      '<div class="confirma" hidden></div>' +
+    '</div>';
+  }).join('');
+}
+
+function pedirExclusaoItem(linha){
+  /* Uma confirmação aberta por vez: duas abertas e um clique no lugar errado
+     excluiria o item vizinho. */
+  document.querySelectorAll('#resultadosExcluir .confirma').forEach(c => { c.hidden = true; c.innerHTML = ''; });
+  const conf = linha.querySelector('.confirma');
+  const cod = linha.dataset.codigo;
+  const it = estado.catalogo.get(String(cod)) || {};
+  conf.innerHTML = '<div class="aviso atencao" style="margin:0">' +
+    '<b>Excluir ' + esc(it.descricao || cod) + '?</b> Some do formulário de compras na hora.' +
+    '<div class="campo"><label for="motivoItem">Motivo <span class="opcional">opcional</span></label>' +
+    '<input type="text" id="motivoItem" maxlength="300" placeholder="Ex.: saiu de linha, duplicado do 8555"></div>' +
+    '<div class="botoes"><button type="button" class="btn btn-secundario" data-acao="cancelar-excluir">Cancelar</button>' +
+    '<button type="button" class="btn btn-perigo" data-acao="confirmar-excluir">Excluir</button></div></div>';
+  conf.hidden = false;
+  $('motivoItem').focus();
+}
+
+async function excluirItem(linha){
+  if(estado.ocupado) return;
+  const cod = linha.dataset.codigo;
+  const motivo = ($('motivoItem') ? $('motivoItem').value : '').trim();
+  const btn = linha.querySelector('[data-acao="confirmar-excluir"]');
+  const aviso = $('avisoExcluir');
+  ocupar(btn, 'Excluindo…');
+  let r;
+  try{
+    r = await apiRpc('catalogo_salvar_item', { p_login: estado.login, p_senha: estado.senha, p_modo: 'excluir',
+                                               p_item: { codigo: cod, motivo: motivo } });
+  }catch(e){
+    liberar(btn, 'Excluir');
+    mostrarAviso(aviso, 'erro', '<b>Não excluí.</b> Não consegui falar com o banco. Confira a internet e tente de novo.');
+    return;
+  }
+  liberar(btn, 'Excluir');
+  if(tratarErroDeAcesso(r)) return;
+  if(r.ok){
+    lembrarNoCatalogo(r.item);
+    aplicarContexto(r);
+    mostrarAviso(aviso, 'ok', '<b>Item ' + esc(r.item.codigo) + ' excluído.</b> ' + esc(r.item.descricao) +
+      ' não aparece mais no formulário de compras.');
+    $('buscaExcluir').value = '';
+    desenharBuscaExcluir();
+    $('buscaExcluir').focus();
+    return;
+  }
+  if(r.erro === 'ja_excluido'){
+    lembrarNoCatalogo(r.item);
+    mostrarAviso(aviso, 'erro', 'Este item já estava excluído — alguém excluiu agora há pouco.');
+    desenharBuscaExcluir();
+    return;
+  }
+  if(r.erro === 'motivo_longo'){
+    mostrarAviso(aviso, 'erro', 'O motivo tem no máximo 300 caracteres.');
+    return;
+  }
+  mostrarAviso(aviso, 'erro', '<b>Não excluí.</b> <code>' + esc(JSON.stringify(r).slice(0,200)) + '</code>');
+}
+
+/* ============================================================================
+   12) FORNECEDOR
+   ========================================================================== */
+const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB',
+             'PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO','EX'];
+const soDigitos = t => String(t || '').replace(/\D/g, '');
+
+/* Mesmos dígitos verificadores do banco (_documento_valido). */
+function documentoValido(dig, tipo){
+  const d = String(dig).split('').map(Number);
+  if(tipo === 'PF'){
+    if(!/^\d{11}$/.test(dig) || /^(\d)\1{10}$/.test(dig)) return false;
+    let s = 0; for(let i = 0; i < 9; i++) s += d[i] * (10 - i);
+    let r = (s * 10) % 11; if(r === 10) r = 0; if(r !== d[9]) return false;
+    s = 0; for(let i = 0; i < 10; i++) s += d[i] * (11 - i);
+    r = (s * 10) % 11; if(r === 10) r = 0; return r === d[10];
+  }
+  if(tipo === 'PJ'){
+    if(!/^\d{14}$/.test(dig) || /^(\d)\1{13}$/.test(dig)) return false;
+    const p1 = [5,4,3,2,9,8,7,6,5,4,3,2], p2 = [6,5,4,3,2,9,8,7,6,5,4,3,2];
+    let s = 0; for(let i = 0; i < 12; i++) s += d[i] * p1[i];
+    let r = s % 11; r = r < 2 ? 0 : 11 - r; if(r !== d[12]) return false;
+    s = 0; for(let i = 0; i < 13; i++) s += d[i] * p2[i];
+    r = s % 11; r = r < 2 ? 0 : 11 - r; return r === d[13];
+  }
+  return false;
+}
+function mascaraDocumento(v, tipo){
+  const d = soDigitos(v).slice(0, tipo === 'PF' ? 11 : 14);
+  if(tipo === 'PF') return d.replace(/^(\d{3})(\d)/, '$1.$2').replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+                            .replace(/\.(\d{3})(\d{1,2})$/, '.$1-$2');
+  return d.replace(/^(\d{2})(\d)/, '$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+          .replace(/\.(\d{3})(\d)/, '.$1/$2').replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+}
+function mascaraCep(v){ const d = soDigitos(v).slice(0, 8); return d.length > 5 ? d.slice(0,5) + '-' + d.slice(5) : d; }
+
+const fornEstado = { modo: 'criar', timer: null, ultimaBusca: '', resultados: [] };
+
+function tipoEscolhido(){ const r = document.querySelector('input[name="tipoPessoa"]:checked'); return r ? r.value : ''; }
+
+function aplicarTipoPessoa(){
+  const t = tipoEscolhido();
+  $('lblPJ').classList.toggle('marcada', t === 'PJ');
+  $('lblPF').classList.toggle('marcada', t === 'PF');
+  const doc = $('documento');
+  doc.disabled = !t;
+  doc.placeholder = t === 'PF' ? '000.000.000-00' : t === 'PJ' ? '00.000.000/0000-00' : 'Escolha o tipo de pessoa primeiro';
+  doc.maxLength = t === 'PF' ? 14 : 18;
+  $('lblDocumento').textContent = t === 'PF' ? 'CPF' : t === 'PJ' ? 'CNPJ' : 'CNPJ ou CPF';
+  $('lblRazao').firstChild.textContent = (t === 'PF' ? 'Nome completo' : 'Razão social') + ' ';
+  if(doc.value) doc.value = mascaraDocumento(doc.value, t);
+}
+
+function lerForn(){
+  return {
+    codigo_gr: $('fCodigo').value.trim(),
+    tipo_pessoa: tipoEscolhido(),
+    documento: $('documento').value.trim(),
+    razao_social: $('razao').value.trim(),
+    endereco: $('endereco').value.trim(),
+    bairro: $('bairro').value.trim(),
+    cep: $('cep').value.trim(),
+    cidade: $('cidade').value.trim(),
+    uf: $('uf').value
+  };
+}
+function marcarForn(campo, msg){
+  const el = document.querySelector('[data-fcampo="' + campo + '"]');
+  if(!el) return;
+  el.classList.add('invalido');
+  if(msg){ const e = el.querySelector('.erro-campo'); if(e) e.textContent = msg; }
+}
+function limparInvalidosForn(){ document.querySelectorAll('#formForn .campo.invalido').forEach(c => c.classList.remove('invalido')); }
+
+function validarForn(d){
+  limparInvalidosForn();
+  const erros = [];
+  if(!normalizarCodigo(d.codigo_gr)) erros.push(['codigo_gr', d.codigo_gr ? 'O código do GR tem só números (até 7 dígitos).' : 'Digite o código numérico do fornecedor no GR.']);
+  if(!d.tipo_pessoa) erros.push(['tipo_pessoa']);
+  else if(!documentoValido(soDigitos(d.documento), d.tipo_pessoa))
+    erros.push(['documento', !soDigitos(d.documento) ? 'Digite o ' + (d.tipo_pessoa === 'PF' ? 'CPF.' : 'CNPJ.')
+      : (d.tipo_pessoa === 'PF' ? 'CPF' : 'CNPJ') + ' inválido — confira os números.']);
+  if(d.razao_social.replace(/\s+/g,' ').length < 3) erros.push(['razao_social', d.tipo_pessoa === 'PF' ? 'Escreva o nome completo.' : 'Escreva a razão social (pelo menos 3 letras).']);
+  if(d.endereco.length < 5) erros.push(['endereco']);
+  if(d.cep && soDigitos(d.cep).length !== 8) erros.push(['cep']);
+  if(d.cidade.length < 2) erros.push(['cidade']);
+  if(!d.uf) erros.push(['uf']);
+  erros.forEach(([c, m]) => marcarForn(c, m));
+  if(erros.length){
+    const alvo = document.querySelector('[data-fcampo="' + erros[0][0] + '"] input:not([disabled]), [data-fcampo="' + erros[0][0] + '"] select');
+    if(alvo) alvo.focus();
+  }
+  return !erros.length;
+}
+
+function textoBotaoForn(){
+  return fornEstado.modo === 'corrigir' ? 'Salvar correção' : fornEstado.modo === 'reativar' ? 'Reativar fornecedor' : 'Cadastrar fornecedor';
+}
+
+function limparForn(){
+  ['fCodigo','documento','razao','endereco','bairro','cep','cidade'].forEach(id => $(id).value = '');
+  $('uf').value = '';
+  document.querySelectorAll('input[name="tipoPessoa"]').forEach(r => r.checked = false);
+  aplicarTipoPessoa();
+  $('contaRazao').textContent = '0/150';
+  limparInvalidosForn();
+}
+
+function novoForn(manterAviso){
+  fornEstado.modo = 'criar';
+  limparForn();
+  $('fCodigo').disabled = false;
+  $('tituloForn').textContent = 'Novo fornecedor';
+  $('subForn').textContent = 'Copie do GR, do jeito que está lá. O fornecedor aparece para o setor de Compras assim que for salvo.';
+  $('btnCancelarForn').hidden = true;
+  $('btnSalvarForn').textContent = textoBotaoForn();
+  if(!manterAviso) esconder($('avisoForn'));
+}
+
+/* Leva um fornecedor da busca para o formulário, para corrigir ou reativar. */
+function abrirFornNoForm(f, modo){
+  esconder($('avisoForn'));
+  limparForn();
+  fornEstado.modo = modo;
+  $('fCodigo').value = f.codigo_gr || f.id;
+  $('fCodigo').disabled = true;
+  const tipo = f.tipo_pessoa || (soDigitos(f.documento).length === 11 ? 'PF' : soDigitos(f.documento).length === 14 ? 'PJ' : '');
+  document.querySelectorAll('input[name="tipoPessoa"]').forEach(r => r.checked = r.value === tipo);
+  aplicarTipoPessoa();
+  $('documento').value = tipo ? mascaraDocumento(f.documento || '', tipo) : '';
+  $('razao').value = f.razao_social || '';
+  $('contaRazao').textContent = $('razao').value.length + '/150';
+  $('endereco').value = f.endereco || '';
+  $('bairro').value = f.bairro || '';
+  $('cep').value = mascaraCep(f.cep || '');
+  $('cidade').value = f.cidade || '';
+  $('uf').value = UFS.includes(f.uf) ? f.uf : '';
+  $('tituloForn').textContent = (modo === 'corrigir' ? 'Corrigir fornecedor ' : 'Reativar fornecedor ') + (f.codigo_gr || f.id);
+  $('subForn').textContent = modo === 'corrigir'
+    ? 'O código não muda. Complete o que estiver faltando — muitos fornecedores vieram do GR sem endereço.'
+    : 'O fornecedor volta a aparecer para o setor de Compras com os dados abaixo.';
+  $('btnCancelarForn').hidden = false;
+  $('btnSalvarForn').textContent = textoBotaoForn();
+  $('cartaoForn').scrollIntoView({ behavior:'smooth', block:'start' });
+  const primeiroVazio = ['documento','razao','endereco','cidade'].map($).find(el => !el.value && !el.disabled);
+  (primeiroVazio || $('razao')).focus({ preventScroll:true });
+}
+
+async function salvarForn(ev, extra){
+  if(ev) ev.preventDefault();
+  if(estado.ocupado) return;
+  const aviso = $('avisoForn');
+  const d = lerForn();
+  if(!validarForn(d)){ esconder(aviso); return; }
+  const modo = (extra && extra.modo) || fornEstado.modo;
+  const corpo = Object.assign({}, d, { codigo_gr: normalizarCodigo(d.codigo_gr), documento: soDigitos(d.documento),
+                                       cep: soDigitos(d.cep) },
+                              extra && extra.confirmarNome ? { confirmar_nome: true } : {});
+  const btn = $('btnSalvarForn');
+  ocupar(btn, 'Salvando…');
+  esconder(aviso);
+  let r;
+  try{
+    r = await apiRpc('fornecedor_salvar', { p_login: estado.login, p_senha: estado.senha, p_modo: modo, p_forn: corpo });
+  }catch(e){
+    liberar(btn, textoBotaoForn());
+    mostrarAviso(aviso, 'erro', '<b>Não salvei.</b> Não consegui falar com o banco — confira a internet e clique de novo. Nada do que você digitou se perdeu.');
+    return;
+  }
+  liberar(btn, textoBotaoForn());
+  if(tratarErroDeAcesso(r)) return;
+
+  if(r.ok){
+    const f = r.fornecedor;
+    const verbo = { criar:'cadastrado', corrigir:'corrigido', reativar:'reativado' }[modo] || 'salvo';
+    novoForn();
+    mostrarAviso(aviso, 'ok', '<b>Fornecedor ' + esc(f.codigo_gr || f.id) + ' ' + verbo + '.</b> ' + esc(f.razao_social) +
+      ' (' + esc(f.cnpj) + ') já aparece para o setor de Compras.');
+    if(fornEstado.ultimaBusca) buscarForn(true);
+    $('fCodigo').focus();
+    return;
+  }
+  const outro = r.fornecedor || {};
+  if(r.erro === 'nome_repetido'){
+    marcarForn('razao_social', 'Já existe fornecedor ativo com este nome.');
+    mostrarAviso(aviso, 'atencao', '<b>Já existe um fornecedor com este nome:</b> ' + esc(outro.razao_social) +
+      ' — código ' + esc(outro.codigo_gr) + ', com outro CPF/CNPJ.<br>Se for filial ou outra empresa com o mesmo nome no GR, pode seguir.' +
+      '<div class="botoes"><button type="button" class="btn btn-secundario" id="btnFornNaoRepetir">Cancelar</button>' +
+      '<button type="button" class="btn btn-primario" id="btnFornRepetir">É outro, salvar</button></div>');
+    $('btnFornRepetir').onclick = () => salvarForn(null, { modo, confirmarNome: true });
+    $('btnFornNaoRepetir').onclick = () => { esconder(aviso); limparInvalidosForn(); $('razao').focus(); };
+    return;
+  }
+  if(r.erro === 'documento_repetido'){
+    marcarForn('documento', 'Este documento já está em outro fornecedor.');
+    mostrarAviso(aviso, 'erro', '<b>Não salvei:</b> este ' + (d.tipo_pessoa === 'PF' ? 'CPF' : 'CNPJ') +
+      ' já está cadastrado no fornecedor <b>' + esc(outro.razao_social) + '</b> (código ' + esc(outro.codigo_gr) +
+      '). É o mesmo fornecedor — use o cadastro que já existe.');
+    $('documento').focus();
+    return;
+  }
+  if(r.erro === 'codigo_inativo'){
+    marcarForn('codigo_gr', 'Este código existe, mas está excluído.');
+    mostrarAviso(aviso, 'atencao', '<b>O código ' + esc(outro.codigo_gr || outro.id) + ' já existiu</b> e foi excluído: ' +
+      esc(outro.razao_social) + '.<br>Se ele voltou a ser usado, reative com os dados que você preencheu.' +
+      '<div class="botoes"><button type="button" class="btn btn-secundario" id="btnFornNaoReativar">Cancelar</button>' +
+      '<button type="button" class="btn btn-primario" id="btnFornReativar">Reativar com estes dados</button></div>');
+    $('btnFornReativar').onclick = () => salvarForn(null, { modo: 'reativar' });
+    $('btnFornNaoReativar').onclick = () => { esconder(aviso); limparInvalidosForn(); $('fCodigo').focus(); };
+    return;
+  }
+  if(r.erro === 'codigo_existe'){
+    marcarForn('codigo_gr', 'Este código já está cadastrado.');
+    mostrarAviso(aviso, 'erro', '<b>Não salvei:</b> o código ' + esc(outro.codigo_gr || outro.id) + ' já é do fornecedor <b>' +
+      esc(outro.razao_social) + '</b>. Para mudar os dados dele, busque no quadro de baixo e clique em Corrigir.');
+    $('fCodigo').focus();
+    return;
+  }
+  const MSG = {
+    codigo_invalido:    ['codigo_gr', 'O código do GR tem só números (até 7 dígitos).'],
+    tipo_invalido:      ['tipo_pessoa', 'Escolha se é pessoa jurídica ou física.'],
+    documento_invalido: ['documento', 'CPF/CNPJ inválido — confira os números.'],
+    razao_invalida:     ['razao_social', 'O nome precisa ter de 3 a 150 caracteres.'],
+    endereco_invalido:  ['endereco', 'Escreva o endereço com rua e número.'],
+    bairro_invalido:    ['bairro', 'No máximo 100 caracteres.'],
+    cep_invalido:       ['cep', 'CEP tem 8 números.'],
+    cidade_invalida:    ['cidade', 'Escreva a cidade.'],
+    uf_invalida:        ['uf', 'Escolha.']
+  };
+  if(MSG[r.erro]){
+    marcarForn(MSG[r.erro][0], MSG[r.erro][1]);
+    mostrarAviso(aviso, 'erro', '<b>Não salvei:</b> ' + esc(MSG[r.erro][1]));
+    return;
+  }
+  if(r.erro === 'nao_encontrado' || r.erro === 'nao_reativavel'){
+    mostrarAviso(aviso, 'erro', '<b>Não salvei:</b> o fornecedor mudou enquanto você editava (alguém pode ter excluído ou reativado agora). Busque de novo.');
+    novoForn(true);
+    return;
+  }
+  mostrarAviso(aviso, 'erro', '<b>Não salvei.</b> O banco respondeu algo que eu não esperava: <code>' + esc(JSON.stringify(r).slice(0,200)) + '</code>');
+}
+
+/* ---------- busca ---------- */
+function agendarBuscaForn(){
+  clearTimeout(fornEstado.timer);
+  fornEstado.timer = setTimeout(() => buscarForn(false), 350);
+}
+
+async function buscarForn(forcar){
+  const termo = $('buscaForn').value.trim();
+  const caixa = $('resultadosForn');
+  /* O aviso só some quando a PESSOA busca. Quando a própria tela refaz a busca
+     depois de excluir, o "fornecedor excluído" precisa continuar visível. */
+  if(!forcar) esconder($('avisoBuscaForn'));
+  if(termo.length < 2){ fornEstado.ultimaBusca = ''; fornEstado.resultados = []; caixa.innerHTML = ''; return; }
+  if(!forcar && termo === fornEstado.ultimaBusca) return;
+  fornEstado.ultimaBusca = termo;
+  caixa.innerHTML = '<p class="vazio-lista">Buscando…</p>';
+  let r;
+  try{
+    r = await apiRpc('fornecedor_buscar', { p_login: estado.login, p_senha: estado.senha, p_termo: termo });
+  }catch(e){
+    fornEstado.ultimaBusca = '';
+    caixa.innerHTML = '';
+    mostrarAviso($('avisoBuscaForn'), 'erro', 'Não consegui buscar — confira a internet e tente de novo.');
+    return;
+  }
+  if(tratarErroDeAcesso(r)) return;
+  if(termo !== $('buscaForn').value.trim()) return;      // a pessoa já digitou outra coisa
+  fornEstado.resultados = (r && r.fornecedores) || [];
+  desenharResultadosForn();
+}
+
+function desenharResultadosForn(){
+  const caixa = $('resultadosForn');
+  const lista = fornEstado.resultados;
+  if(!lista.length){
+    caixa.innerHTML = '<p class="vazio-lista">Nenhum fornecedor com “' + esc(fornEstado.ultimaBusca) + '”.</p>';
+    return;
+  }
+  caixa.innerHTML = lista.map((f, i) => {
+    const ativo = f.ativo !== false;
+    const local = [f.endereco, f.bairro, f.cidade && (f.cidade + (f.uf ? '/' + f.uf : ''))].filter(Boolean).join(' · ');
+    return '<div class="linha' + (ativo ? '' : ' excluido') + '" data-i="' + i + '">' +
+      '<div class="cab"><span class="nome">' + esc(f.razao_social) + '</span><span class="cod">' + esc(f.codigo_gr || f.id) + '</span></div>' +
+      '<div class="meta">' + esc(f.tipo_pessoa === 'PF' ? 'CPF ' : f.tipo_pessoa === 'PJ' ? 'CNPJ ' : '') + esc(f.documento || 'sem documento') +
+        (local ? ' · ' + esc(local) : '') + '</div>' +
+      (ativo ? '' : '<div class="meta"><span class="selo retirado">excluído</span></div>') +
+      '<div class="acoes">' +
+        (ativo ? '<button type="button" class="btn-link" data-acao="corrigir-forn">Corrigir</button>' +
+                 '<button type="button" class="btn-link" data-acao="pedir-excluir-forn">Excluir</button>'
+               : '<button type="button" class="btn-link" data-acao="reativar-forn">Reativar</button>') +
+      '</div><div class="confirma" hidden></div></div>';
+  }).join('') + (lista.length >= 30 ? '<p class="vazio-lista">Mostrando os 30 primeiros. Busque por mais palavras para afinar.</p>' : '');
+}
+
+function pedirExclusaoForn(linha){
+  document.querySelectorAll('#resultadosForn .confirma').forEach(c => { c.hidden = true; c.innerHTML = ''; });
+  const f = fornEstado.resultados[+linha.dataset.i];
+  const conf = linha.querySelector('.confirma');
+  conf.innerHTML = '<div class="aviso atencao" style="margin:0">' +
+    '<b>Excluir ' + esc(f.razao_social) + '?</b> Ele some da busca de fornecedores do setor de Compras. ' +
+    'Cotação e ordem de compra que já usaram este fornecedor continuam como estão.' +
+    '<div class="campo"><label for="motivoForn">Motivo <span class="opcional">opcional</span></label>' +
+    '<input type="text" id="motivoForn" maxlength="300" placeholder="Ex.: duplicado do 518, fechou"></div>' +
+    '<div class="botoes"><button type="button" class="btn btn-secundario" data-acao="cancelar-excluir-forn">Cancelar</button>' +
+    '<button type="button" class="btn btn-perigo" data-acao="confirmar-excluir-forn">Excluir</button></div></div>';
+  conf.hidden = false;
+  $('motivoForn').focus();
+}
+
+async function excluirForn(linha){
+  if(estado.ocupado) return;
+  const f = fornEstado.resultados[+linha.dataset.i];
+  const btn = linha.querySelector('[data-acao="confirmar-excluir-forn"]');
+  const aviso = $('avisoBuscaForn');
+  ocupar(btn, 'Excluindo…');
+  let r;
+  try{
+    r = await apiRpc('fornecedor_salvar', { p_login: estado.login, p_senha: estado.senha, p_modo: 'excluir',
+      p_forn: { codigo_gr: f.codigo_gr || f.id, motivo: ($('motivoForn') ? $('motivoForn').value : '').trim() } });
+  }catch(e){
+    liberar(btn, 'Excluir');
+    mostrarAviso(aviso, 'erro', '<b>Não excluí.</b> Não consegui falar com o banco. Tente de novo.');
+    return;
+  }
+  liberar(btn, 'Excluir');
+  if(tratarErroDeAcesso(r)) return;
+  if(r.ok){
+    mostrarAviso(aviso, 'ok', '<b>Fornecedor ' + esc(r.fornecedor.codigo_gr || r.fornecedor.id) + ' excluído.</b> ' +
+      esc(r.fornecedor.razao_social) + ' não aparece mais para o setor de Compras.');
+    /* Se ele estava aberto em correção, o formulário volta a "novo". */
+    if(fornEstado.modo !== 'criar' && normalizarCodigo($('fCodigo').value) === String(r.fornecedor.codigo_gr || r.fornecedor.id)) novoForn(true);
+    buscarForn(true);
+    return;
+  }
+  if(r.erro === 'ja_excluido'){ mostrarAviso(aviso, 'erro', 'Este fornecedor já estava excluído.'); buscarForn(true); return; }
+  if(r.erro === 'motivo_longo'){ mostrarAviso(aviso, 'erro', 'O motivo tem no máximo 300 caracteres.'); return; }
+  mostrarAviso(aviso, 'erro', '<b>Não excluí.</b> <code>' + esc(JSON.stringify(r).slice(0,200)) + '</code>');
+}
+
+/* ============================================================================
+   13) LIGAÇÕES
    ========================================================================== */
 function iniciar(){
   montarFamilias();
@@ -860,6 +1471,59 @@ function iniciar(){
     else if(acao === 'retirar') pedirRetirada(linha);
     else if(acao === 'nao-retirar'){ const c = linha.querySelector('.confirma'); c.hidden = true; c.innerHTML = ''; }
     else if(acao === 'sim-retirar') retirar(linha);
+  });
+
+  /* Abas */
+  $('abaItens').addEventListener('click', () => mostrarAba('itens'));
+  $('abaFornecedores').addEventListener('click', () => mostrarAba('fornecedores'));
+
+  /* Excluir item */
+  $('buscaExcluir').addEventListener('input', () => { esconder($('avisoExcluir')); desenharBuscaExcluir(); });
+  $('resultadosExcluir').addEventListener('click', e => {
+    const b = e.target.closest('button[data-acao]'); if(!b) return;
+    const linha = b.closest('.linha');
+    if(b.dataset.acao === 'pedir-excluir') pedirExclusaoItem(linha);
+    else if(b.dataset.acao === 'cancelar-excluir'){ const c = linha.querySelector('.confirma'); c.hidden = true; c.innerHTML = ''; }
+    else if(b.dataset.acao === 'confirmar-excluir') excluirItem(linha);
+  });
+  $('resultadosExcluir').addEventListener('keydown', e => {
+    if(e.key === 'Enter' && e.target.id === 'motivoItem'){ e.preventDefault(); excluirItem(e.target.closest('.linha')); }
+  });
+
+  /* Fornecedor */
+  const selUf = $('uf');
+  UFS.forEach(u => { const o = document.createElement('option'); o.value = u; o.textContent = u === 'EX' ? 'EX (exterior)' : u; selUf.appendChild(o); });
+  document.querySelectorAll('input[name="tipoPessoa"]').forEach(r => r.addEventListener('change', () => {
+    document.querySelector('[data-fcampo="tipo_pessoa"]').classList.remove('invalido');
+    aplicarTipoPessoa();
+    $('documento').focus();
+  }));
+  $('documento').addEventListener('input', e => {
+    e.target.value = mascaraDocumento(e.target.value, tipoEscolhido());
+    document.querySelector('[data-fcampo="documento"]').classList.remove('invalido');
+  });
+  $('cep').addEventListener('input', e => { e.target.value = mascaraCep(e.target.value); });
+  $('razao').addEventListener('input', () => { $('contaRazao').textContent = $('razao').value.length + '/150'; });
+  ['fCodigo','razao','endereco','bairro','cep','cidade','uf'].forEach(id => $(id).addEventListener(id === 'uf' ? 'change' : 'input', () => {
+    const c = $(id).closest('.campo'); if(c) c.classList.remove('invalido');
+  }));
+  $('formForn').addEventListener('submit', e => salvarForn(e));
+  $('btnCancelarForn').addEventListener('click', () => novoForn());
+  $('buscaForn').addEventListener('input', agendarBuscaForn);
+  $('buscaForn').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); clearTimeout(fornEstado.timer); buscarForn(true); } });
+  $('resultadosForn').addEventListener('click', e => {
+    const b = e.target.closest('button[data-acao]'); if(!b) return;
+    const linha = b.closest('.linha');
+    const f = fornEstado.resultados[+linha.dataset.i];
+    const acao = b.dataset.acao;
+    if(acao === 'corrigir-forn') abrirFornNoForm(f, 'corrigir');
+    else if(acao === 'reativar-forn') abrirFornNoForm(f, 'reativar');
+    else if(acao === 'pedir-excluir-forn') pedirExclusaoForn(linha);
+    else if(acao === 'cancelar-excluir-forn'){ const c = linha.querySelector('.confirma'); c.hidden = true; c.innerHTML = ''; }
+    else if(acao === 'confirmar-excluir-forn') excluirForn(linha);
+  });
+  $('resultadosForn').addEventListener('keydown', e => {
+    if(e.key === 'Enter' && e.target.id === 'motivoForn'){ e.preventDefault(); excluirForn(e.target.closest('.linha')); }
   });
 
   /* O formulário passa ?nome=&email= no link; o login costuma ser o e-mail
