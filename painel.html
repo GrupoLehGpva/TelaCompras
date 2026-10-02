@@ -320,7 +320,6 @@ td.r,th.r{text-align:right}
   <!-- Tipo de compra: 3 botões logo ACIMA do título "Solicitações por etapa" (30/09). Clicar no que está
        marcado volta a mostrar todos. -->
   <div class="tipos" id="f-tipo" role="group" aria-label="Tipo de compra">
-    <button class="tipo-btn" type="button" data-tipo="" aria-pressed="true">Todas</button>
     <button class="tipo-btn" type="button" data-tipo="normal" aria-pressed="false">Normal <span class="c num" data-conta="normal"></span></button>
     <button class="tipo-btn" type="button" data-tipo="urgente" aria-pressed="false">Urgente <span class="c num" data-conta="urgente"></span></button>
     <button class="tipo-btn" type="button" data-tipo="mensal" aria-pressed="false">Mensal <span class="c num" data-conta="mensal"></span></button>
@@ -596,7 +595,9 @@ function initFiltros(){
   $('f-cc').addEventListener('change', e => { state.cc = e.target.value; render(); });
   $('f-tipo').addEventListener('click', e => {
     const b = e.target.closest('[data-tipo]'); if (!b) return;
-    state.tipo = state.tipo === b.dataset.tipo ? '' : b.dataset.tipo;   // "Todos os tipos", ou clicar no marcado, mostra todos
+    /* Só Normal, Urgente e Mensal (02/10): sem botão "Todas". Nenhum marcado = todos;
+       clicar no marcado de novo desmarca e volta a mostrar todos. */
+    state.tipo = state.tipo === b.dataset.tipo ? '' : b.dataset.tipo;
     render();
   });
   $('f-clear').addEventListener('click', limparFiltros);
@@ -642,7 +643,7 @@ function pintarTipos(){
   document.querySelectorAll('#f-tipo [data-tipo]').forEach(b => {
     const t = b.dataset.tipo;
     b.setAttribute('aria-pressed', String(state.tipo === t));
-    b.title = !t ? 'Mostrar todos os tipos de compra' : state.tipo === t ? 'Clique de novo para ver todos os tipos' : 'Mostrar só compra ' + b.textContent.trim().split(' ')[0].toLowerCase();
+    b.title = state.tipo === t ? 'Clique de novo para ver todos os tipos' : 'Mostrar só compra ' + b.textContent.trim().split(' ')[0].toLowerCase();
     const c = b.querySelector('[data-conta]');
     if (c){ const n = base.filter(s => s.tipoCompra === t).length; c.textContent = n; c.classList.toggle('tem', n > 0); }
   });

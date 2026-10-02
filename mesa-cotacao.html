@@ -768,9 +768,8 @@ function renderFila(){
         ${STATUS_ENV.map(t => `<button class="sgb" type="button" data-st="${t.id}" aria-pressed="${S.stEnv === t.id}">${t.nome}<span class="c num">${grupos.env.filter(x => statusEnv(x) === t.id).length}</span></button>`).join('')}
       </div>`
         : `<div class="seg" role="group" aria-label="Tipo de compra">
-        <button class="sgb" type="button" data-tipo="" aria-pressed="${S.tipo === ''}">Todas</button>
         ${TIPOS.map(t => t.ativo
-          ? `<button class="sgb" type="button" data-tipo="${t.id}" aria-pressed="${S.tipo === t.id}">${t.nome}<span class="c num">${minhas.filter(x => grupoTab(x) === S.tab && x.tipo === t.id).length}</span></button>`
+          ? `<button class="sgb" type="button" data-tipo="${t.id}" aria-pressed="${S.tipo === t.id}" title="${S.tipo === t.id ? 'Clique de novo para ver todos os tipos' : 'Mostrar só compra ' + t.nome.toLowerCase()}">${t.nome}<span class="c num">${minhas.filter(x => grupoTab(x) === S.tab && x.tipo === t.id).length}</span></button>`
           : `<button class="sgb off" type="button" data-tipo="${t.id}" aria-disabled="true">${t.nome} <span class="soon">em breve</span></button>`).join('')}
       </div>`}
     </div>
@@ -782,7 +781,8 @@ function renderFila(){
   v.querySelectorAll('[data-tipo]').forEach(b => b.onclick = () => {
     const t = TIPOS.find(x => x.id === b.dataset.tipo);
     if (t && !t.ativo){ toast(t.nota); return; }
-    S.tipo = b.dataset.tipo; render();
+    /* Só Normal, Urgente e Mensal (02/10): sem "Todas". Clicar no marcado desmarca. */
+    S.tipo = S.tipo === b.dataset.tipo ? '' : b.dataset.tipo; render();
   });
   const fq = $('f-q'); fq.oninput = () => { S.q = fq.value; const pos = fq.selectionStart; render(); const n = $('f-q'); n.focus(); n.setSelectionRange(pos,pos); };
   if ($('bt-limpa')) $('bt-limpa').onclick = () => { S.q = ''; render(); };

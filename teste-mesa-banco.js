@@ -178,7 +178,12 @@ const b = await chromium.launch();
   ok('2 motivo não vira HTML', !(await p.evaluate(() => window.__x)) && await p.locator('table.fila img').count() === 0);
   await p.click('[data-tipo="urgente"]'); await p.waitForTimeout(150);
   ok('2 filtro urgente', await p.locator('table.fila tbody tr').count() === 1);
-  await p.click('[data-tipo=""]'); await p.fill('#f-q', 'retentor'); await p.waitForTimeout(150);
+  /* 02/10: sem botão "Todas" — só Normal, Urgente e Mensal; clicar no marcado desmarca */
+  ok('2 sem botão "Todas" no tipo', await p.locator('[data-tipo=""]').count() === 0 &&
+     JSON.stringify(await p.$$eval('[data-tipo]', bs => bs.map(b => b.dataset.tipo))) === JSON.stringify(['normal','urgente','mensal']));
+  await p.click('[data-tipo="urgente"]'); await p.waitForTimeout(150);
+  ok('2 clicar de novo desmarca e mostra todos', await p.locator('[data-tipo][aria-pressed="true"]').count() === 0 && await p.locator('table.fila tbody tr').count() === 2);
+  await p.fill('#f-q', 'retentor'); await p.waitForTimeout(150);
   ok('2 busca por item', await p.locator('table.fila tbody tr').count() === 1);
   await p.fill('#f-q', ''); await p.waitForTimeout(100);
   await p.click('[data-tab="dev"]'); await p.waitForTimeout(100);
@@ -488,7 +493,7 @@ const b = await chromium.launch();
   await p.click('[data-st="aprov"]'); await p.waitForTimeout(200);
   ok('19 Esperando aprovação: só as enviadas em aprovação', JSON.stringify(await p.$$eval('tr[data-id]', t => t.map(x => x.dataset.id))) === '["C2609-03004"]');
   await p.click('[data-tab="cotar"]'); await p.waitForTimeout(200);
-  ok('19 Para cotar continua com os tipos', await p.locator('[data-tipo]').count() === 4 && await p.locator('[data-st]').count() === 0);
+  ok('19 Para cotar continua com os tipos', await p.locator('[data-tipo]').count() === 3 && await p.locator('[data-st]').count() === 0);
   await p.click('[data-tab="env"]'); await p.waitForTimeout(200);
   ok('19 volta às Enviadas com o status escolhido', await p.getAttribute('[data-st="aprov"]', 'aria-pressed') === 'true');
   await p.click('[data-st=""]'); await p.waitForTimeout(200);
