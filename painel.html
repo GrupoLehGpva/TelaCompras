@@ -224,6 +224,15 @@ td.r,th.r{text-align:right}
 .m-sec h3{font-size:14px;font-weight:600;margin-bottom:8px;letter-spacing:.02em}
 .oc-lista{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:13.5px}
 .oc-lista li{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.oc-itens{width:100%;border-collapse:collapse;margin-top:8px;font-size:12.5px}
+.oc-itens th,.oc-itens td{padding:4px 6px;border-top:1px solid var(--line);text-align:left}
+.oc-itens th{font-size:11px;color:var(--ink-3);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.oc-itens .r{text-align:right}
+.oc-orc{margin-top:10px}
+.oc-orc h4{margin:0 0 6px;font-size:12.5px;color:var(--ink-2)}
+.card.pacote{border-left:4px solid var(--accent)}
+.pedidos-pacote button{background:none;border:0;padding:0;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline}
+.m-voltar{margin-right:auto}
 .just{background:var(--surface-2);border-radius:8px;padding:10px 12px;font-size:13.5px;max-width:70ch}
 .items{min-width:520px}
 .budget{display:flex;flex-direction:column;gap:6px}
@@ -381,6 +390,8 @@ const ETAPAS = [
   { id:'ger', nome:'Aprovação gerencial',  curto:'Gerencial',  sla:2 },
   { id:'fin', nome:'Aprovação financeiro', curto:'Financeiro', sla:2 },
   { id:'oc',  nome:'Ordem de compra',      curto:'OC',         sla:1 },
+  /* 03/10: depois da OC. Só chega aqui quando TODAS as OCs do pedido estão no GR. Sem prazo. */
+  { id:'conc', nome:'Concluído',           curto:'Concluído',  sla:null },
 ];
 /* "Efetuar compra" e "Complete" saíram do quadro a pedido da diretoria: o que
    está em ordem de compra já saiu do fluxo de aprovação. Pedido que o banco
@@ -394,7 +405,7 @@ const ETAPAS = [
    (botão "Fechar mês" na Mesa) e só então entra na cotação, num lote único. Etapa própria,
    só do fluxo mensal; no quadro geral a coluna só aparece quando há pedido nela. */
 const ETAPA_LOTE = { id:'lote', nome:'Aguardando o lote', curto:'Lote', sla:31 };
-const ETAPAS_MENSAL = ['lid','ger','lote','cot','fin','oc'].map(id => id === 'lote' ? ETAPA_LOTE : ETAPAS.find(e => e.id === id));
+const ETAPAS_MENSAL = ['lid','ger','lote','cot','fin','oc','conc'].map(id => id === 'lote' ? ETAPA_LOTE : ETAPAS.find(e => e.id === id));
 const fluxoDe = s => s && s.tipoCompra === 'mensal' ? ETAPAS_MENSAL : ETAPAS;
 const colunasDoQuadro = () => state.tipo === 'mensal' ? ETAPAS_MENSAL
   : (SOLICITACOES.some(s => s.status === 'lote') ? ETAPAS.slice(0, 3).concat(ETAPA_LOTE, ETAPAS.slice(3)) : ETAPAS);
@@ -412,7 +423,9 @@ function etapaDaLinha(r){
   if (r.status === 'reprovado' || r.decisoes.some(d => d.resp === 'reprovado')) return 'rep';
   if (r.status === 'cancelado') return 'can';   /* caminho das telas (29/09): o solicitante cancelou */
   if (r.etapa_atual && ETAPA_DB[r.etapa_atual]) return ETAPA_DB[r.etapa_atual];
-  const oc = r.ordens.filter(o => o.situacao !== 'cancelada').slice(-1)[0];
+  const vivas = r.ordens.filter(o => o.situacao !== 'cancelada');
+  if (vivas.length && vivas.every(o => o.situacao === 'no gr')) return 'conc';
+  const oc = vivas.slice(-1)[0];
   if (oc) return 'oc';
   if (r.status === 'aprovado') return 'oc';
   if (r.status === 'em cotacao') return 'cot';
@@ -421,8 +434,9 @@ function etapaDaLinha(r){
 function valorDaLinha(r){
   const dec = r.decisoes.filter(d => num(d.valor) !== null).slice(-1)[0];
   if (dec) return { v:num(dec.valor), fonte:'valor aprovado' };
-  const oc = r.ordens.filter(o => num(o.total) !== null).slice(-1)[0];
-  if (oc) return { v:num(oc.total), fonte:'ordem de compra' };
+  /* soma das OCs vivas (a cancelada não conta; o pedido pode virar mais de uma OC) */
+  const ocs = r.ordens.filter(o => o.situacao !== 'cancelada' && !o.pacote && num(o.total) !== null);   // OC do pacote do lote é de vários pedidos
+  if (ocs.length) return { v:ocs.reduce((t,o) => t + num(o.total), 0), fonte:ocs.length > 1 ? 'ordens de compra' : 'ordem de compra' };
   const cots = r.cotacoes.filter(c => num(c.total) !== null).map(c => num(c.total));
   if (cots.length) return { v:Math.min(...cots), fonte:'menor cotação' };
   if (num(r.valor_cotado) !== null) return { v:num(r.valor_cotado), fonte:'valor cotado' };   /* Mesa de cotação */
@@ -471,6 +485,7 @@ function normalizar(r){
     valor: val.v, valorFonte: val.fonte,
     fornecedor: ultimaOC?.forn || r.fornecedor_cotado || null,
     canal: r.canal || null,
+    lote: r.lote || null,
     cotacoes: r.cotacoes, motivo: r.motivo, observacao: r.observacao,
     necessidade: r.data_necessidade ? new Date(r.data_necessidade + 'T12:00:00') : null,
     local: r.local_entrega, defForn: r.definicao_fornecedor, justForn: r.justificativa_fornecedor,
@@ -479,7 +494,8 @@ function normalizar(r){
     etapaRep: status === 'can' ? 'cancelado' : (r.decisoes.find(d => d.resp === 'reprovado') || {}).etapa || null,
     criada, eventos,
     /* o banco sabe quando o pedido entrou na etapa atual (caminho das telas); sem isso, o último evento */
-    entradaEtapa: status !== 'rep' && status !== 'can' && r.entrou_na_etapa_em ? D(r.entrou_na_etapa_em)
+    entradaEtapa: status === 'conc' ? (r.ordens.map(o => D(o.lancada || o.criada)).filter(Boolean).sort((a,b) => b - a)[0] || eventos[eventos.length - 1].data)
+                : status !== 'rep' && status !== 'can' && r.entrou_na_etapa_em ? D(r.entrou_na_etapa_em)
                 : status === 'can' && r.cancelado_em ? D(r.cancelado_em) : eventos[eventos.length - 1].data,
   };
 }
@@ -507,11 +523,13 @@ function tamanhoLegivel(b){
   if(b < 1024*1024) return Math.round(b/1024) + ' KB';
   return (b/1024/1024).toFixed(1).replace('.', ',') + ' MB';
 }
-function anexosHTML(lista){
+/* todos = a lista que ligarAnexos recebe; o índice aponta nela (orçamentos e anexos do
+   solicitante saem da mesma lista, em seções diferentes do card). */
+function anexosHTML(lista, todos = lista){
   if(!lista.length) return '<div class="muted">Nenhum arquivo anexado.</div>';
-  return '<div class="anexos">' + lista.map((a,i) => `
+  return '<div class="anexos">' + lista.map(a => `
     <div class="anexo-item">
-      <button class="anexo-cab" type="button" data-anexo="${i}" aria-expanded="false">
+      <button class="anexo-cab" type="button" data-anexo="${todos.indexOf(a)}" aria-expanded="false">
         <span>${ehImagem(a.mime) ? '🖼️' : '📄'}</span>
         <span class="nome">${esc(a.nome)}</span>
         <span class="meta">${tamanhoLegivel(a.tamanho)} · ver</span>
@@ -550,10 +568,12 @@ let AGORA = new Date();
 const etapa = id => id === 'lote' ? ETAPA_LOTE : ETAPAS.find(e => e.id === id);
 const diasNaEtapa = s => (AGORA - s.entradaEtapa) / 864e5;
 const fechada = s => s.status === 'rep' || s.status === 'can';
-const aberta = s => !fechada(s);
+const concluida = s => s.status === 'conc';
+const aberta = s => !fechada(s) && !concluida(s);
 function prazo(s){
   if (!aberta(s)) return null;
   const sla = etapa(s.status).sla, d = diasNaEtapa(s);
+  if (!sla) return null;
   if (d > sla) return { cls:'crit', txt:'Atrasada', d, sla };
   if (d > sla*.75) return { cls:'warn', txt:'Vence logo', d, sla };
   return { cls:'ok', txt:'No prazo', d, sla };
@@ -566,6 +586,7 @@ function comQuem(s){
     case 'lote': return 'Lote mensal (entra na cotação quando Compras fechar o mês)';
     case 'fin': return s.aprovador ? s.aprovador + ' (financeiro)' : 'Financeiro';
     case 'oc':  return 'Lançamento da ordem no GR';
+    case 'conc': return 'Ninguém — OC lançada no GR';
     default: return '—';
   }
 }
@@ -589,7 +610,7 @@ const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 /* =====================================================================
    ESTADO + FILTROS
    ===================================================================== */
-const state = { q:'', per:'all', emp:'', und:'', cc:'', cat:'', tipo:'', modalList:[], modalIdx:-1, carregou:false,
+const state = { q:'', per:'all', emp:'', und:'', cc:'', cat:'', tipo:'', modalList:[], modalIdx:-1, voltar:null, carregou:false,
                 vista:'quadro', ord:null };   // vista: 'quadro' | 'lista'; ord: { col, dir } na lista
 /* A escolha Quadro/Lista fica guardada neste navegador (só conveniência). */
 try { const v = localStorage.getItem('funil.vista'); if (v === 'lista' || v === 'quadro') state.vista = v; } catch (e) {}
@@ -666,7 +687,7 @@ function filtradas(){
     if (state.cc && s.ccNome !== state.cc) return false;
     if (state.tipo && s.tipoCompra !== state.tipo) return false;
     if (state.q){
-      const hay = [s.id, s.titulo, s.solicitante, s.facilitador, s.comprador, s.cc, s.empresa, s.motivo, s.fornecedor, ...s.itens.map(i => i.desc + ' ' + (i.cod || ''))].join(' ').toLowerCase();
+      const hay = [s.id, s.titulo, s.solicitante, s.facilitador, s.comprador, s.cc, s.empresa, s.motivo, s.fornecedor, s.lote && s.lote.numero, s.lote && s.lote.gerencia, ...s.itens.map(i => i.desc + ' ' + (i.cod || ''))].join(' ').toLowerCase();
       if (!hay.includes(state.q)) return false;
     }
     return true;
@@ -739,6 +760,57 @@ function ordenar(lst){
     return diasNaEtapa(b) - diasNaEtapa(a);
   });
 }
+/* =====================================================================
+   LOTE MENSAL EM PACOTES (03/10) — da cotação em diante, os pedidos mensais do
+   lote aparecem juntos, um card por gerência (o "pacote" L2610-<gerência> que o
+   financeiro aprova e que vira as OCs). Os filtros valem pedido a pedido; o
+   pacote junta os que sobraram. Clicando: o pacote, com os pedidos e as OCs.
+   ===================================================================== */
+const ETAPAS_PACOTE = ['cot','fin','oc','conc'];
+let PACOTES = new Map();
+const achar = id => SOLICITACOES.find(x => x.id === id) || PACOTES.get(id);
+const uniq = a => [...new Set(a.filter(Boolean))];
+function emPacotes(lst){
+  PACOTES = new Map();
+  const out = [];
+  lst.forEach(s => {
+    if (!s.lote || !s.lote.numero || !ETAPAS_PACOTE.includes(s.status)){ out.push(s); return; }
+    const id = 'pacote:' + s.lote.numero + ':' + s.status;
+    if (!PACOTES.has(id)){ const P = { pacote:true, id, numero:s.lote.numero, lote:s.lote, status:s.status, membros:[] }; PACOTES.set(id, P); out.push(P); }
+    PACOTES.get(id).membros.push(s);
+  });
+  PACOTES.forEach(completarPacote);
+  return out;
+}
+function completarPacote(P){
+  const M = P.membros.slice().sort((a,b) => a.id < b.id ? -1 : 1), L = P.lote;
+  const comp = L.competencia ? String(L.competencia).slice(5, 7) + '/' + String(L.competencia).slice(0, 4) : '';
+  const vals = M.filter(s => s.valor !== null);
+  const ordens = new Map(); M.forEach(s => (s.raw.ordens || []).forEach(o => ordens.set(o.id || JSON.stringify(o), o)));
+  Object.assign(P, {
+    membros:M, titulo:'Lote ' + comp + ' · ' + (L.gerencia || 'Sem gerência'), competencia:comp,
+    tipoCompra:'mensal', tipoCompraNome:'Mensal', urgencia:'Normal',
+    ccNome:uniq(M.map(s => s.ccNome)).join(', ') || '—', empresa:uniq(M.map(s => s.empresa)).join(', ') || '—',
+    solicitante:M.length + (M.length === 1 ? ' pedido' : ' pedidos'),
+    aprovador:M[0].aprovador, comprador:M[0].comprador,
+    valor: P.status !== 'cot' && L.pacote_total !== null && L.pacote_total !== undefined ? num(L.pacote_total)
+         : vals.length ? vals.reduce((t,s) => t + s.valor, 0) : null,
+    entradaEtapa:new Date(Math.min(...M.map(s => +s.entradaEtapa))), criada:new Date(Math.min(...M.map(s => +s.criada))),
+    necessidade:M.some(s => s.necessidade) ? new Date(Math.min(...M.filter(s => s.necessidade).map(s => +s.necessidade))) : null,
+    fornecedor:uniq([...ordens.values()].map(o => o.forn)).join(', ') || null,
+    itens:M.flatMap(s => s.itens), ordens:[...ordens.values()],
+  });
+}
+function cardPacote(P){
+  const p = prazo(P);
+  return `<button class="card pacote" type="button" data-id="${esc(P.id)}" aria-label="Abrir pacote ${esc(P.numero)}">
+    <span class="r1"><span class="id">${esc(P.numero)}</span><span class="pill accent">Pacote · ${P.membros.length} ${P.membros.length === 1 ? 'pedido' : 'pedidos'}</span></span>
+    <span class="ttl">${esc(P.titulo)}</span>
+    <span class="meta">${esc(P.ccNome)} · ${esc(P.empresa)}</span>
+    <span class="r3"><span class="v">${P.valor !== null ? brl(P.valor) : '<span class="muted" style="font-weight:500">Sem valor ainda</span>'}</span>${p ? `<span class="pill ${p.cls}" title="Há ${dias(p.d)} nesta etapa · prazo ${p.sla} dias"><span class="dot"></span>${dias(p.d)}</span>` : ''}</span>
+    ${aberta(P) ? `<span class="who">Com ${esc(comQuem(P))}</span>` : ''}
+  </button>`;
+}
 function somaValor(lst){
   const com = lst.filter(s => s.valor !== null);
   if (!lst.length) return 'nenhuma';
@@ -746,6 +818,7 @@ function somaValor(lst){
   return brlC(com.reduce((t,s) => t + s.valor, 0)) + (com.length < lst.length ? ` · ${lst.length - com.length} sem valor` : '');
 }
 function cardHTML(s){
+  if (s.pacote) return cardPacote(s);
   const p = prazo(s);
   const urg = (s.urgencia === 'Urgente' ? '<span class="pill warn">Urgente</span>' : '') +
               (s.tipoCompra === 'mensal' && state.tipo !== 'mensal' ? ' <span class="pill neutral">Mensal</span>' : '');
@@ -759,8 +832,9 @@ function cardHTML(s){
     ${aberta(s) ? `<span class="who">Com ${esc(comQuem(s))}</span>` : ''}
   </button>`;
 }
-function renderQuadro(base){
+function renderQuadro(pedidos){
   const COLS = colunasDoQuadro();
+  const base = emPacotes(pedidos);
   const mensal = state.tipo === 'mensal';
   $('quadro-titulo').textContent = 'Solicitações por etapa' + (mensal ? ' · compra mensal' : '');
   pintarTipos();
@@ -805,7 +879,7 @@ const COLS_LISTA = [
   { id:'num',   nome:'Nº',            chave:s => s.id },
   { id:'sol',   nome:'Solicitação',   chave:s => s.titulo.toLowerCase() },
   { id:'tipo',  nome:'Tipo',          chave:s => s.tipoCompraNome },
-  { id:'etapa', nome:'Etapa',         chave:s => ['lid','cot','ger','lote','fin','oc'].indexOf(s.status) },
+  { id:'etapa', nome:'Etapa',         chave:s => ['lid','cot','ger','lote','fin','oc','conc'].indexOf(s.status) },
   { id:'quem',  nome:'Com quem',      chave:s => quemNaLista(s).toLowerCase() },
   { id:'na',    nome:'Na etapa',      chave:s => diasNaEtapa(s) },
   { id:'valor', nome:'Valor',         chave:s => s.valor === null ? -1 : s.valor, r:true },
@@ -820,6 +894,7 @@ function quemNaLista(s){
     case 'cot': return s.comprador || 'Compras';
     case 'fin': return s.aprovador || 'Financeiro';
     case 'oc':  return 'Lançamento no GR';
+    case 'conc': return 'OC no GR';
     default: return '—';
   }
 }
@@ -828,9 +903,10 @@ function linhaDaLista(s){
   const tipo = s.tipoCompra === 'urgente' ? '<span class="pill warn">Urgente</span>'
              : s.tipoCompra === 'mensal' ? '<span class="pill neutral">Mensal</span>' : esc(s.tipoCompraNome);
   const et = etapa(s.status);
-  return `<tr data-id="${esc(s.id)}" tabindex="0">
-    <td class="mono nowrap">${esc(s.id)}</td>
-    <td class="ttl"><span class="corta" title="${esc(s.titulo)}">${esc(s.titulo)}</span><span class="sub corta" title="Pedido de ${esc(s.solicitante)} · ${esc(s.ccNome)} · ${esc(s.empresa)}">${esc(s.solicitante)} · ${esc(s.ccNome)}</span></td>
+  const sub = s.pacote ? `Pacote com ${s.solicitante} · ${s.ccNome}` : `${s.solicitante} · ${s.ccNome}`;
+  return `<tr data-id="${esc(s.id)}" tabindex="0"${s.pacote ? ' class="pacote"' : ''}>
+    <td class="mono nowrap">${esc(s.pacote ? s.numero : s.id)}</td>
+    <td class="ttl"><span class="corta" title="${esc(s.titulo)}">${esc(s.titulo)}</span><span class="sub corta" title="${esc(s.pacote ? sub : 'Pedido de ' + s.solicitante + ' · ' + s.ccNome + ' · ' + s.empresa)}">${esc(sub)}</span></td>
     <td class="nowrap">${tipo}</td>
     <td class="nowrap">${et ? esc(et.curto) : '—'}</td>
     <td class="quem"><span class="corta" title="${esc(comQuem(s))}">${esc(quemNaLista(s))}</span></td>
@@ -861,6 +937,7 @@ function renderLista(base, COLS, aviso){
     return `<th class="${c.r ? 'r ' : ''}nowrap" aria-sort="${sort}"><button type="button" data-ord="${c.id}" title="Ordenar por ${c.nome.toLowerCase()}">${c.nome}</button></th>`;
   };
   const comValor = abertos.filter(s => s.valor !== null);
+  const nPed = abertos.reduce((t,s) => t + (s.pacote ? s.membros.length : 1), 0);
   /* Ordenado por uma coluna: aviso com o caminho de volta à lista por etapa (30/09 —
      o terceiro clique no título também volta, mas ninguém adivinha isso). */
   let avisoOrd = '';
@@ -872,7 +949,7 @@ function renderLista(base, COLS, aviso){
   $('board-area').innerHTML = aviso + avisoOrd + `<div class="tbl-wrap lista-scroll"><table class="lista">
     <thead><tr>${COLS_LISTA.map(th).join('')}</tr></thead>
     <tbody>${corpo}</tbody>
-    <tfoot><tr><td colspan="6">${abertos.length} ${abertos.length === 1 ? 'solicitação em andamento' : 'solicitações em andamento'}</td>
+    <tfoot><tr><td colspan="6">${nPed} ${nPed === 1 ? 'solicitação no quadro' : 'solicitações no quadro'}${nPed !== abertos.length ? ' (pacotes do lote contam cada pedido)' : ''}</td>
       <td class="r num nowrap">${comValor.length ? brl(comValor.reduce((t,s) => t + s.valor, 0)) : '—'}</td>
       <td colspan="3" class="muted" style="font-weight:500">${abertos.length - comValor.length ? (abertos.length - comValor.length) + ' sem valor ainda' : ''}</td></tr></tfoot>
   </table></div>`;
@@ -913,7 +990,7 @@ function renderReprovadas(base){
    ===================================================================== */
 let ultimoFoco = null;
 function abrirModal(id, lista){
-  ultimoFoco = document.activeElement;
+  ultimoFoco = document.activeElement; state.voltar = null;
   state.modalList = lista.map(s => s.id);
   state.modalIdx = state.modalList.indexOf(id);
   pintarModal();
@@ -922,6 +999,7 @@ function abrirModal(id, lista){
   $('m-close').focus();
 }
 function fecharModal(){
+  state.voltar = null;
   $('overlay').hidden = true;
   document.body.style.overflow = '';
   if (ultimoFoco && document.contains(ultimoFoco)) ultimoFoco.focus();
@@ -934,18 +1012,30 @@ function navegar(delta){
 /* Ordens de compra do pedido (02/10): cada OC diz fornecedor, valor, condição e
    FORMA DE PAGAMENTO — a forma é obrigatória na OC; se faltar, o card avisa. */
 const SIT_OC = { 'a lancar':'a lançar no GR', 'arquivo gerado':'arquivo gerado', 'enviando':'enviando ao GR', 'no gr':'no GR', 'recusada':'recusada', 'incerta':'conferir no GR', 'cancelada':'cancelada' };
-function ordensDoCard(s){
-  const os = (s.raw.ordens || []).filter(o => o.situacao !== 'cancelada' && o.forn);
-  if (!os.length) return '';
-  return `<div class="m-sec oc-sec"><h3>Ordem de compra</h3><ul class="oc-lista">${os.map(o => `<li><b>${esc(o.forn)}</b> · ${brl(num(o.total))}` +
+/* 03/10: cada OC mostra os itens dela (o que foi para o GR: quantidade, unitário,
+   total) e, logo abaixo, os orçamentos que o comprador anexou na Mesa. */
+const ehOrcamento = a => /^Orçamento · /.test(a.nome || '');
+function itensDaOC(o){
+  const it = o.itens || [];
+  if (!it.length) return '<div class="muted" style="font-size:12.5px;margin-top:6px">Os itens aparecem quando a OC for montada.</div>';
+  return `<table class="oc-itens"><thead><tr><th>Item</th><th class="r">Qtd.</th><th class="r">Unitário</th><th class="r">Total</th></tr></thead><tbody>` +
+    it.map(i => `<tr><td>${esc(i.nome || '—')}</td><td class="r num">${num(i.qtd) !== null ? num(i.qtd).toLocaleString('pt-BR') : '—'}</td><td class="r num">${brl(num(i.unit))}</td><td class="r num">${brl(num(i.total))}</td></tr>`).join('') +
+    `</tbody></table>`;
+}
+function ordensDoCard(ordens, orcs, todos){
+  const os = (ordens || []).filter(o => o.situacao !== 'cancelada' && o.forn);
+  const orcHTML = orcs.length ? `<div class="oc-orc"><h4>Orçamentos dos fornecedores (${orcs.length})</h4>${anexosHTML(orcs, todos)}</div>` : '';
+  if (!os.length) return orcs.length ? `<div class="m-sec oc-sec"><h3>Orçamentos dos fornecedores</h3>${anexosHTML(orcs, todos)}</div>` : '';
+  return `<div class="m-sec oc-sec"><h3>${os.length > 1 ? 'Ordens de compra · ' + os.length : 'Ordem de compra'}</h3><ul class="oc-lista">${os.map(o => `<li><b>${esc(o.forn)}</b> · ${brl(num(o.total))}` +
     ` · ${esc(o.condicao || 'condição não informada')}` +
     ` · ${o.forma_pagamento ? 'Forma: ' + esc(o.forma_pagamento) : '<span class="pill crit">sem forma de pagamento</span>'}` +
-    ` · <span class="muted">${esc(SIT_OC[o.situacao] || o.situacao || '')}${o.numero_gr ? ' nº ' + esc(o.numero_gr) : ''}</span></li>`).join('')}</ul></div>`;
+    ` · <span class="muted">${esc(SIT_OC[o.situacao] || o.situacao || '')}${o.numero_gr ? ' nº ' + esc(o.numero_gr) : ''}</span>${itensDaOC(o)}</li>`).join('')}</ul>${orcHTML}</div>`;
 }
 const kv = (k, v, extra='') => `<div class="kv"><div class="k">${k}</div><div class="v ${extra}">${v}</div></div>`;
 function pintarModal(){
-  const s = SOLICITACOES.find(x => x.id === state.modalList[state.modalIdx]);
+  const s = achar(state.modalList[state.modalIdx]);
   if (!s){ fecharModal(); return; }
+  if (s.pacote){ pintarPacote(s); return; }
   const p = prazo(s);
   const rep = s.status === 'rep', can = s.status === 'can';
   const FLUXO = fluxoDe(s);
@@ -954,6 +1044,8 @@ function pintarModal(){
   let holder;
   if (can) holder = `<div class="holder crit"><strong>Cancelada</strong><span>pelo solicitante · ${dt(s.entradaEtapa)}</span>${s.motivoRep ? `<span>Motivo: ${esc(s.motivoRep)}</span>` : ''}</div>`;
   else if (rep) holder = `<div class="holder crit"><strong>Reprovada</strong><span>em ${esc(NOME_ETAPA_DECISAO[s.etapaRep] || s.etapaRep || '—')} · ${dt(s.entradaEtapa)}</span>${s.motivoRep ? `<span>Motivo: ${esc(s.motivoRep)}</span>` : ''}</div>`;
+  else if (s.status === 'conc') holder = `<div class="holder ok"><strong>Concluído</strong><span>OC lançada no GR · ${dt(s.entradaEtapa)}</span></div>`;
+  else if (!p) holder = `<div class="holder"><strong>${etapa(s.status).nome}</strong><span>com ${esc(comQuem(s))}</span></div>`;
   else holder = `<div class="holder ${p.cls}"><strong>${etapa(s.status).nome}</strong><span>com ${esc(comQuem(s))}</span><span>há <strong>${dias(p.d)}</strong> (prazo da etapa: ${p.sla} ${p.sla === 1 ? 'dia' : 'dias'})</span><span class="pill ${p.cls}"><span class="dot"></span>${p.txt}</span></div>`;
 
   const steps = FLUXO.map((e,i) => {
@@ -1002,7 +1094,8 @@ function pintarModal(){
         ${kv('Cotações', !s.cotacoes.length && s.canal === 'telas' ? (s.raw.cotacao_em ? 'Mesa de cotação' + (s.fornecedor ? ' · ' + esc(s.fornecedor) : '') : '<span class="muted">ainda na cotação</span>') : s.cotacoes.length ? `${s.cotacoes.length} enviada${s.cotacoes.length > 1 ? 's' : ''} · ${respondidas} respondida${respondidas === 1 ? '' : 's'}` : '<span class="muted">nenhuma enviada ainda</span>')}
         ${kv('Local de entrega', esc(s.local || '—'))}
       </div>
-      ${ordensDoCard(s)}
+      ${s.lote && s.lote.numero ? `<div class="m-sec"><h3>Lote mensal</h3><div class="just">Pacote <b class="mono">${esc(s.lote.numero)}</b> · ${esc(s.lote.gerencia || '')}</div></div>` : ''}
+      ${ordensDoCard(s.raw.ordens, s.anexos.filter(ehOrcamento), s.anexos)}
 
       ${s.justForn ? `<div class="m-sec"><h3>Justificativa do fornecedor</h3><div class="just">${esc(s.justForn)}</div></div>` : ''}
       <div class="m-sec"><h3>Motivo</h3><div class="just">${esc(s.motivo || '—')}${s.observacao ? '<br><span class="muted">Obs.: ' + esc(s.observacao) + '</span>' : ''}</div></div>
@@ -1012,9 +1105,63 @@ function pintarModal(){
         <tbody>${itensRows || '<tr><td colspan="6" class="muted">Sem itens</td></tr>'}</tbody></table></div>
       </div>
 
-      <div class="m-sec"><h3>Anexos do solicitante${s.anexos.length ? ' <span class="pill neutral">' + s.anexos.length + '</span>' : ''}</h3>${anexosHTML(s.anexos)}</div>
+      <div class="m-sec"><h3>Anexos do solicitante${s.anexos.filter(a => !ehOrcamento(a)).length ? ' <span class="pill neutral">' + s.anexos.filter(a => !ehOrcamento(a)).length + '</span>' : ''}</h3>${anexosHTML(s.anexos.filter(a => !ehOrcamento(a)), s.anexos)}</div>
 
       <div class="m-sec"><h3>Histórico</h3><ol class="tl">${tl}</ol></div>
+    </div>
+    <div class="m-foot">
+      ${state.voltar ? `<button class="btn ghost m-voltar" type="button" id="m-voltar">← Voltar ao pacote ${esc(achar(state.voltar.list[state.voltar.idx])?.numero || '')}</button>` : ''}
+      <span class="pos">${state.modalIdx + 1} de ${state.modalList.length} ${state.voltar ? 'pedidos do pacote' : 'na lista atual'} · use ← →</span>
+      <div class="nav">
+        <button class="btn" type="button" id="m-prev" ${state.modalIdx <= 0 ? 'disabled' : ''}>← Anterior</button>
+        <button class="btn" type="button" id="m-next" ${state.modalIdx >= state.modalList.length - 1 ? 'disabled' : ''}>Próxima →</button>
+        <button class="btn primary" type="button" id="m-ok">Fechar</button>
+      </div>
+    </div>`;
+  ligarAnexos(s.anexos);
+  ligarRodape();
+}
+/* Pacote do lote (03/10): os pedidos dele, as OCs (com itens) e o caminho. Clicar num
+   pedido abre o detalhe dele; "← Voltar ao pacote" volta para cá. */
+const ESTADO_PACOTE = { aguardando:'esperando o financeiro', aprovado:'aprovado pelo financeiro', reprovado:'reprovado pelo financeiro', devolvido:'devolvido ao comprador' };
+function pintarPacote(P){
+  const p = prazo(P), FLUXO = ETAPAS_MENSAL, idxAtual = FLUXO.findIndex(e => e.id === P.status);
+  const holder = P.status === 'conc'
+    ? `<div class="holder ok"><strong>Concluído</strong><span>todas as OCs do pacote lançadas no GR · ${dt(P.entradaEtapa)}</span></div>`
+    : `<div class="holder ${p ? p.cls : ''}"><strong>${etapa(P.status).nome}</strong><span>com ${esc(comQuem(P))}</span>${p ? `<span>há <strong>${dias(p.d)}</strong> (prazo da etapa: ${p.sla} ${p.sla === 1 ? 'dia' : 'dias'})</span><span class="pill ${p.cls}"><span class="dot"></span>${p.txt}</span>` : ''}</div>`;
+  const steps = FLUXO.map((e,i) => `<div class="step ${i < idxAtual ? 'done' : i === idxAtual ? 'cur' : ''}"><span class="ln"></span>${e.curto}</div>`).join('');
+  const L = P.lote;
+  const pedRows = P.membros.map(m => `<tr><td class="mono"><button type="button" data-ped="${esc(m.id)}" title="Abrir o pedido">${esc(m.id)}</button></td><td>${esc(m.solicitante)}</td><td>${esc(m.ccNome)}</td><td class="r num">${m.itens.length}</td><td class="r num">${brl(m.valor)}</td></tr>`).join('');
+  const itRows = P.membros.flatMap(m => m.itens.map(i => `<tr><td class="mono">${esc(m.id)}</td><td>${esc(i.desc)}${i.fora ? ' <span class="pill neutral">fora do catálogo</span>' : ''}</td><td>${esc(i.fam || '—')}</td><td class="r num">${num(i.qtd).toLocaleString('pt-BR')} ${esc(i.un || '')}</td></tr>`)).join('');
+  $('modal').innerHTML = `
+    <div class="m-head">
+      <div>
+        <div class="eyebrow"><span class="mono">${esc(P.numero)}</span> · pacote do lote mensal</div>
+        <h2 id="m-title">${esc(P.titulo)}</h2>
+        <div class="sub">${esc(P.empresa)} · ${esc(P.solicitante)}</div>
+      </div>
+      <button class="x" id="m-close" type="button" aria-label="Fechar">✕</button>
+    </div>
+    <div class="m-body">
+      ${holder}
+      <div class="steps" aria-label="Etapas">${steps}</div>
+      <div class="grid2">
+        ${kv(P.status === 'cot' ? 'Valor (soma dos pedidos)' : 'Valor do pacote', P.valor !== null ? brl(P.valor) : '—', 'big num')}
+        ${kv('Situação do pacote', L.pacote_estado ? esc(cap(ESTADO_PACOTE[L.pacote_estado] || L.pacote_estado)) : '<span class="muted">ainda na cotação do lote</span>')}
+        ${kv('Gerência', esc(L.gerencia || '—'))}
+        ${kv('Competência', esc(P.competencia || '—'))}
+        ${kv('Pedidos', String(P.membros.length))}
+        ${kv('Centros de custo', esc(P.ccNome))}
+      </div>
+      ${ordensDoCard(P.ordens, [], [])}
+      <div class="m-sec"><h3>Pedidos do pacote</h3>
+        <div class="tbl-wrap"><table class="items pedidos-pacote"><thead><tr><th>Nº</th><th>Solicitante</th><th>Centro de custo</th><th class="r">Itens</th><th class="r">Valor</th></tr></thead>
+        <tbody>${pedRows}</tbody></table></div>
+      </div>
+      <div class="m-sec"><h3>Itens</h3>
+        <div class="tbl-wrap"><table class="items"><thead><tr><th>Pedido</th><th>Item</th><th>Família</th><th class="r">Qtd.</th></tr></thead>
+        <tbody>${itRows || '<tr><td colspan="4" class="muted">Sem itens</td></tr>'}</tbody></table></div>
+      </div>
     </div>
     <div class="m-foot">
       <span class="pos">${state.modalIdx + 1} de ${state.modalList.length} na lista atual · use ← →</span>
@@ -1024,7 +1171,22 @@ function pintarModal(){
         <button class="btn primary" type="button" id="m-ok">Fechar</button>
       </div>
     </div>`;
-  ligarAnexos(s.anexos);
+  $('modal').querySelectorAll('[data-ped]').forEach(b => b.addEventListener('click', () => abrirDoPacote(P, b.dataset.ped)));
+  ligarRodape();
+}
+function abrirDoPacote(P, id){
+  state.voltar = { list:state.modalList, idx:state.modalIdx };
+  state.modalList = P.membros.map(m => m.id);
+  state.modalIdx = state.modalList.indexOf(id);
+  pintarModal(); $('m-close').focus();
+}
+function voltarAoPacote(){
+  const v = state.voltar; if (!v) return;
+  state.voltar = null; state.modalList = v.list; state.modalIdx = v.idx;
+  pintarModal(); $('m-close').focus();
+}
+function ligarRodape(){
+  if ($('m-voltar')) $('m-voltar').addEventListener('click', voltarAoPacote);
   $('m-close').addEventListener('click', fecharModal);
   $('m-ok').addEventListener('click', fecharModal);
   $('m-prev').addEventListener('click', () => navegar(-1));

@@ -41,7 +41,7 @@ ok('1 dica fala de linha', /numa linha/.test(await p.textContent('#quadro-dica')
 const cab = await p.$$eval('table.lista thead th', t => t.map(x => x.textContent.trim()));
 ok('1 colunas relevantes', JSON.stringify(cab) === JSON.stringify(['Nº','Solicitação','Tipo','Etapa','Com quem','Na etapa','Valor','Fornecedor','Precisa até','Aberta em']), JSON.stringify(cab));
 const grupos = await p.$$eval('table.lista tr.grupo td', t => t.map(x => x.textContent.trim()));
-ok('2 grupos por etapa na ordem do fluxo', grupos.length === 5 && /^Liderança imediata · 1/.test(grupos[0]) && /^Compras · cotação · 1/.test(grupos[1]) && /^Aprovação gerencial · 3/.test(grupos[2]) && /^Aprovação financeiro · 1/.test(grupos[3]) && /^Ordem de compra · 0/.test(grupos[4]), JSON.stringify(grupos));
+ok('2 grupos por etapa na ordem do fluxo', grupos.length === 6 && /^Liderança imediata · 1/.test(grupos[0]) && /^Compras · cotação · 1/.test(grupos[1]) && /^Aprovação gerencial · 3/.test(grupos[2]) && /^Aprovação financeiro · 1/.test(grupos[3]) && /^Ordem de compra · 0/.test(grupos[4]) && /^Concluído · 0/.test(grupos[5]), JSON.stringify(grupos));
 ok('2 subtotal do grupo', /R\$\s?1\.000|R\$\s?1 mil|1 mil/.test(grupos[2]) && /1 sem valor/.test(grupos[2]), grupos[2]);
 const ids = await p.$$eval('table.lista tbody tr[data-id]', t => t.map(x => x.dataset.id));
 ok('2 só em andamento (reprovada fica embaixo)', ids.length === 6 && !ids.includes('C-REP'), JSON.stringify(ids));
@@ -52,7 +52,7 @@ ok('3 largura: cabe inteira numa tela de 1440', await (async () => { await p.set
    const r = await p.evaluate(() => { const w = document.querySelector('.lista-scroll'); return w.scrollWidth <= w.clientWidth + 1; }); await p.setViewportSize({ width:1600, height:1000 }); return r; })());
 ok('3 urgente e mensal em destaque', /Urgente/.test(await p.textContent('tr[data-id="C-COT"] td:nth-child(3)')) && /Mensal/.test(await p.textContent('tr[data-id="M-GER"] td:nth-child(3)')));
 ok('3 prazo da etapa colorido', await p.locator('tr[data-id="C-COT"] .pill.crit').count() === 1);
-ok('3 rodapé com total', /6 solicitações em andamento/.test(await p.textContent('table.lista tfoot')) && /6\.000,00/.test(await p.textContent('table.lista tfoot')) && /3 sem valor/.test(await p.textContent('table.lista tfoot')), await p.textContent('table.lista tfoot'));
+ok('3 rodapé com total', /6 solicitações no quadro/.test(await p.textContent('table.lista tfoot')) && /6\.000,00/.test(await p.textContent('table.lista tfoot')) && /3 sem valor/.test(await p.textContent('table.lista tfoot')), await p.textContent('table.lista tfoot'));
 
 /* ordenar */
 await p.click('[data-ord=valor]'); await p.waitForTimeout(200);
@@ -64,11 +64,11 @@ ord = await p.$$eval('table.lista tbody tr[data-id]', t => t.map(x => x.dataset.
 ok('4 segundo clique: decrescente', ord[0] === 'C-FIN' && await p.getAttribute('th:has([data-ord=valor])', 'aria-sort') === 'descending', JSON.stringify(ord));
 ok('4 ordenado: aviso com o botão de voltar', /Ordenado por Valor ↓ decrescente/.test(await p.textContent('.ord-aviso')) && await p.isVisible('#ord-volta'));
 await p.click('[data-ord=valor]'); await p.waitForTimeout(200);
-ok('4 terceiro clique: volta aos grupos', await p.locator('tr.grupo').count() === 5 && await p.locator('.ord-aviso').count() === 0);
+ok('4 terceiro clique: volta aos grupos', await p.locator('tr.grupo').count() === 6 && await p.locator('.ord-aviso').count() === 0);
 await p.click('[data-ord=num]'); await p.waitForTimeout(200);
 ok('4b ordenar por Nº: aviso aparece', /Ordenado por Nº ↑ crescente/.test(await p.textContent('.ord-aviso')) && await p.locator('tr.grupo').count() === 0);
 await p.click('#ord-volta'); await p.waitForTimeout(200);
-ok('4b botão "Voltar à lista por etapa" devolve os grupos', await p.locator('tr.grupo').count() === 5 && await p.locator('.ord-aviso').count() === 0 && await p.getAttribute('th:has([data-ord=num])', 'aria-sort') === 'none');
+ok('4b botão "Voltar à lista por etapa" devolve os grupos', await p.locator('tr.grupo').count() === 6 && await p.locator('.ord-aviso').count() === 0 && await p.getAttribute('th:has([data-ord=num])', 'aria-sort') === 'none');
 await p.click('[data-ord=na]'); await p.waitForTimeout(200);
 await p.click('[data-ord=na]'); await p.waitForTimeout(200);
 ok('4 na etapa decrescente: mais parado primeiro', (await p.$$eval('table.lista tbody tr[data-id]', t => t.map(x => x.dataset.id)))[0] === 'C-COT');
@@ -79,7 +79,7 @@ await p.click('#f-tipo [data-tipo=urgente]'); await p.waitForTimeout(200);
 ok('5 botão Urgente filtra a lista', JSON.stringify(await p.$$eval('table.lista tbody tr[data-id]', t => t.map(x => x.dataset.id))) === '["C-COT"]');
 await p.click('#f-tipo [data-tipo=mensal]'); await p.waitForTimeout(200);
 const gm = await p.$$eval('table.lista tr.grupo td', t => t.map(x => x.textContent.trim().split(' · ')[0]));
-ok('5 mensal: grupos na ordem da mensal', JSON.stringify(gm) === JSON.stringify(['Liderança imediata','Aprovação gerencial','Aguardando o lote','Compras · cotação','Aprovação financeiro','Ordem de compra']) || JSON.stringify(gm) === JSON.stringify(['Liderança imediata','Aprovação gerencial','Aguardando o lote','Compras','Aprovação financeiro','Ordem de compra']), JSON.stringify(gm));
+ok('5 mensal: grupos na ordem da mensal', JSON.stringify(gm) === JSON.stringify(['Liderança imediata','Aprovação gerencial','Aguardando o lote','Compras · cotação','Aprovação financeiro','Ordem de compra','Concluído']) || JSON.stringify(gm) === JSON.stringify(['Liderança imediata','Aprovação gerencial','Aguardando o lote','Compras','Aprovação financeiro','Ordem de compra','Concluído']), JSON.stringify(gm));
 await p.click('#f-tipo [data-tipo=mensal]'); await p.waitForTimeout(200);
 await p.fill('#f-q', 'ger1'); await p.waitForTimeout(300);
 ok('5 busca filtra a lista', JSON.stringify(await p.$$eval('table.lista tbody tr[data-id]', t => t.map(x => x.dataset.id))) === '["C-GER1"]');

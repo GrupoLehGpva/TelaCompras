@@ -42,13 +42,13 @@ ok('1 botões logo acima do título', await p.evaluate(() => { const h = documen
   ok('1 cada tipo mostra quantos há', conta.length === 3 && conta.every(c => /^\d+$/.test(c)) && Number(conta[2]) === 5, JSON.stringify(conta)); }
 ok('1 número colorido só quando há pedido', await p.$eval('#f-tipo [data-tipo=mensal] .c', c => c.classList.contains('tem')));
 /* 02/10: com pedido aguardando o lote mensal, a coluna aparece também no quadro geral */
-ok('1 todos: ordem normal + lote (há mensal aguardando)', JSON.stringify(await cols()) === JSON.stringify(['Liderança imediata','Compras · cotação','Aprovação gerencial','Aguardando o lote','Aprovação financeiro','Ordem de compra']), JSON.stringify(await cols()));
+ok('1 todos: ordem normal + lote (há mensal aguardando)', JSON.stringify(await cols()) === JSON.stringify(['Liderança imediata','Compras · cotação','Aprovação gerencial','Aguardando o lote','Aprovação financeiro','Ordem de compra','Concluído']), JSON.stringify(await cols()));
 ok('1 M-05 na coluna do lote', await p.$eval('.card[data-id="M-05"]', c => c.closest('.col').querySelector('h3').textContent.trim()) === 'Aguardando o lote');
 ok('1 lote diz com quem', /Lote mensal \(entra na cotação quando Compras fechar o mês\)/.test(await p.textContent('.card[data-id="M-05"]')));
 ok('1 todos: card mensal com etiqueta', /Mensal/.test(await p.textContent('.card[data-id="M-02"]')) && !/Mensal/.test(await p.textContent('.card[data-id="N-03"]')));
 
 await p.click('#f-tipo [data-tipo=mensal]'); await p.waitForTimeout(300);
-ok('2 mensal: colunas na ordem da mensal (com o lote)', JSON.stringify(await cols()) === JSON.stringify(['Liderança imediata','Aprovação gerencial','Aguardando o lote','Compras · cotação','Aprovação financeiro','Ordem de compra']), JSON.stringify(await cols()));
+ok('2 mensal: colunas na ordem da mensal (com o lote)', JSON.stringify(await cols()) === JSON.stringify(['Liderança imediata','Aprovação gerencial','Aguardando o lote','Compras · cotação','Aprovação financeiro','Ordem de compra','Concluído']), JSON.stringify(await cols()));
 ok('2 mensal: título diz compra mensal', /compra mensal/.test(await p.textContent('#quadro-titulo')));
 ok('2 mensal: dica explica o fluxo', /gerência aprova, o pedido espera Compras fechar o mês/.test(await p.textContent('#quadro-dica')));
 ok('2 mensal: só pedidos mensais', await p.locator('.card[data-id^="N-"]').count() === 0 && await p.locator('.card[data-id^="M-"]').count() === 5);
@@ -94,10 +94,10 @@ ok('4 limpar filtros volta à ordem normal', (await cols())[1] === 'Compras · c
   await q.goto('file://' + __dirname + '/painel.html?t=pd-teste'); await q.waitForTimeout(900);
   await q.click('#f-tipo [data-tipo=mensal]'); await q.waitForTimeout(300);
   const c = await q.$$eval('#board-area .col h3', hs => hs.map(h => h.textContent.trim()));
-  ok('6 sem mensal: colunas da mensal aparecem vazias', JSON.stringify(c) === JSON.stringify(['Liderança imediata','Aprovação gerencial','Aguardando o lote','Compras · cotação','Aprovação financeiro','Ordem de compra']), JSON.stringify(c));
+  ok('6 sem mensal: colunas da mensal aparecem vazias', JSON.stringify(c) === JSON.stringify(['Liderança imediata','Aprovação gerencial','Aguardando o lote','Compras · cotação','Aprovação financeiro','Ordem de compra','Concluído']), JSON.stringify(c));
   ok('6 sem mensal: aviso de que ainda não há compra mensal', /Ainda não há compra mensal/.test(await q.textContent('#board-area')));
   await q.click('#f-tipo [data-tipo=urgente]'); await q.fill('#f-q', 'zzzz-nada'); await q.waitForTimeout(400);
-  ok('6 filtro sem resultado: colunas + aviso com limpar', await q.locator('#board-area .col').count() === 5 && /Nenhuma solicitação com esses filtros/.test(await q.textContent('#board-area')));
+  ok('6 filtro sem resultado: colunas + aviso com limpar', await q.locator('#board-area .col').count() === 6 && /Nenhuma solicitação com esses filtros/.test(await q.textContent('#board-area')));
   await q.click('#empty-clear'); await q.waitForTimeout(300);
   ok('6 limpar filtros pelo aviso', await q.locator('.card').count() === 3 && await q.locator('#f-tipo [aria-pressed=true]').count() === 0);
   await q.close(); }
