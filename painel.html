@@ -488,7 +488,7 @@ function normalizar(r){
     lote: r.lote || null,
     cotacoes: r.cotacoes, motivo: r.motivo, observacao: r.observacao,
     necessidade: r.data_necessidade ? new Date(r.data_necessidade + 'T12:00:00') : null,
-    local: r.local_entrega, defForn: r.definicao_fornecedor, justForn: r.justificativa_fornecedor,
+    local: r.local_entrega, defForn: r.definicao_fornecedor, destino: r.destino || null, justForn: r.justificativa_fornecedor,
     motivoRep: status === 'can' ? ((r.movimentos.find(m => m.acao === 'cancelado') || {}).motivo || null)
                                 : (r.decisoes.find(d => d.resp === 'reprovado') || {}).motivo || null,
     etapaRep: status === 'can' ? 'cancelado' : (r.decisoes.find(d => d.resp === 'reprovado') || {}).etapa || null,
@@ -1093,6 +1093,7 @@ function pintarModal(){
         ${kv('Fornecedor', s.defForn === 'unico' ? 'Fornecedor único' : s.defForn === 'cotacao' ? 'Por cotação' : esc(s.defForn || '—'))}
         ${kv('Cotações', !s.cotacoes.length && s.canal === 'telas' ? (s.raw.cotacao_em ? 'Mesa de cotação' + (s.fornecedor ? ' · ' + esc(s.fornecedor) : '') : '<span class="muted">ainda na cotação</span>') : s.cotacoes.length ? `${s.cotacoes.length} enviada${s.cotacoes.length > 1 ? 's' : ''} · ${respondidas} respondida${respondidas === 1 ? '' : 's'}` : '<span class="muted">nenhuma enviada ainda</span>')}
         ${kv('Local de entrega', esc(s.local || '—'))}
+        ${kv('Consumo ou estoque', s.destino === 'estoque' ? 'Estoque' : s.destino === 'consumo' ? 'Consumo' : '<span class="muted">não informado (pedido antigo)</span>')}
       </div>
       ${s.lote && s.lote.numero ? `<div class="m-sec"><h3>Lote mensal</h3><div class="just">Pacote <b class="mono">${esc(s.lote.numero)}</b> · ${esc(s.lote.gerencia || '')}</div></div>` : ''}
       ${ordensDoCard(s.raw.ordens, s.anexos.filter(ehOrcamento), s.anexos)}

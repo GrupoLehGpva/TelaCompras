@@ -42,7 +42,7 @@ async function tela(b, { fila = FILA, hist = HIST, histNovoFalha = false, vw = 1
     const j = x => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(x) });
     if (nome === 'aprovador_do_token') return j([{ id: 'g', nome: 'GERENTE', etapas: ['lider', 'gerencial'] }]);
     if (nome === 'fila_de_aprovacao') return j(fila);
-    if (nome === 'fila_do_aprovador') return j({ ok: true, pedidos: fila.map(s => ({ id: s.id, canal: 'telas', versao: 1, pode_devolver: false })), em_edicao: [] });
+    if (nome === 'fila_do_aprovador') return j({ ok: true, pedidos: fila.map(s => ({ id: s.id, canal: 'telas', versao: 1, pode_devolver: false, destino: { n1: 'estoque', u1: 'consumo' }[s.id] || null })), em_edicao: [] });
     if (nome.startsWith('historico')) p.__lim.push(JSON.parse(r.request().postData() || '{}').p_limite);
     if (nome === 'historico_do_aprovador') return histNovoFalha ? r.fulfill({ status: 404, contentType: 'application/json', body: '{"message":"nao existe"}' }) : j(hist);
     if (nome === 'historico_de_aprovacoes') return j(hist.map(h => { const x = { ...h }; delete x.tipo_compra; return x; }));
@@ -69,6 +69,9 @@ const T = (todos, n, u, m, sel = '') => JSON.stringify([':' + (sel === '') + ':'
     const abas = r(document.querySelector('.abas')), tipo = r(document.getElementById('segTipo')), busca = r(document.getElementById('filtro')), lin = r(document.querySelector('.nivel-tipo'));
     return { abasY: abas.top, tipoY: tipo.top, buscaY: busca.top, buscaX: busca.right, linX: lin.right };
   });
+  { const lin = await p.$$eval('table.fila tbody tr', t => t.map(x => x.textContent.replace(/\s+/g, ' ')));
+    const de = n => lin.find(x => x.includes(n)) || '';
+    ok('1 consumo ou estoque marcado na fila (03/10)', /Estoque/.test(de('C2610-00101')) && /Consumo/.test(de('C2610-00103')) && !/Estoque|Consumo/.test(de('C2610-00104')), lin); }
   ok('1 abas acima dos tipos', pos.abasY < pos.tipoY, JSON.stringify(pos));
   ok('1 busca na linha dos tipos, encostada à direita', Math.abs(pos.buscaY - pos.tipoY) < 12 && Math.abs(pos.buscaX - pos.linX) < 2, JSON.stringify(pos));
   ok('1 botões: Todos, Normal, Urgente, Mensal', JSON.stringify(await p.$$eval('#segTipo [data-tipo]', bs => bs.map(x => x.firstChild.textContent.trim()))) === JSON.stringify(['Todos', 'Normal', 'Urgente', 'Mensal']));

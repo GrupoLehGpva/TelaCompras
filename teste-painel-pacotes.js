@@ -23,7 +23,7 @@ const LINHAS = [
                                        OC({ situacao:'a lancar', numero_gr:null, lancada:null, total:200, forn:'CASA', itens:[] })],
               anexos:[FOTO, ORC] }),
   /* todas no GR → Concluído */
-  L('T-CONC', { valor_cotado:300, ordens:[OC({ total:300, itens:[{ nome:'SAL', qtd:300, unit:1, total:300 }] }), OC({ situacao:'cancelada', total:1 })] }),
+  L('T-CONC', { valor_cotado:300, destino:'estoque', ordens:[OC({ total:300, itens:[{ nome:'SAL', qtd:300, unit:1, total:300 }] }), OC({ situacao:'cancelada', total:1 })] }),
   /* orçamento sem OC ainda (gerencial) */
   L('T-GER', { etapa_atual:'gerencial', status:'aguardando aprovacao', valor_cotado:80, anexos:[ORC] }),
   /* lote mensal: g1 com 2 pedidos no financeiro, g2 com 1; g3 concluído; g4 na OC */
@@ -69,6 +69,7 @@ ok('1 coluna Concluído sem prazo', !/prazo/.test(await p.$$eval('#board-area .c
 await p.click('.card[data-id="T-CONC"]'); await p.waitForTimeout(300);
 { const m = await p.textContent('#modal');
   ok('1 modal do concluído', /Concluído/.test(await p.textContent('#modal .holder')) && /OC lançada no GR/.test(m) && await p.locator('#modal .step.cur').count() === 1 && /Concluído/.test(await p.textContent('#modal .step.cur')), m.slice(0, 300));
+  ok('1 consumo ou estoque no detalhe (03/10)', /Consumo ou estoque\s*Estoque/.test(m), m);
   ok('1 OC cancelada não aparece no card', (await p.locator('#modal .oc-lista li').count()) === 1);
   ok('1 valor = OCs vivas (cancelada não soma)', /R\$\s?300,00/.test(await p.textContent('#modal .kv .v.big')), await p.textContent('#modal .kv .v.big')); }
 await p.keyboard.press('Escape'); await p.waitForTimeout(200);
@@ -90,6 +91,7 @@ await p.click('.card[data-id="T-OC"]'); await p.waitForTimeout(300);
   ok('2 abrir a foto pede o arquivo certo', p.assinados.slice(-1)[0] === FOTO.caminho, p.assinados); }
 await p.keyboard.press('Escape'); await p.waitForTimeout(200);
 await p.click('.card[data-id="T-GER"]'); await p.waitForTimeout(300);
+ok('2 pedido antigo sem consumo/estoque', /Consumo ou estoque\s*não informado/.test(await p.textContent('#modal')));
 ok('2 sem OC: orçamentos numa seção própria', /Orçamentos dos fornecedores/.test(await p.textContent('#modal .oc-sec')) && !/Ordem de compra/.test(await p.textContent('#modal .oc-sec')));
 await p.keyboard.press('Escape'); await p.waitForTimeout(200);
 

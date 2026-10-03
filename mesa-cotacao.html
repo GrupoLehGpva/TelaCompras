@@ -1124,7 +1124,7 @@ function pintarDetalhe(){
         ${kv('Valor', brl(valor), 'big num')}${kv('Origem do valor', origem)}${kv('Precisa até', dt(s.necessidade) + ' ' + necessidadePill(s))}
         ${kv('Solicitante', esc(s.solicitante))}${kv('Comprador', esc(s.comprador))}${kv('Setor / unidade', esc(s.setor))}
         ${s.tipo === 'mensal' && (s.gerNome || s.unNeg) ? kv('Gerência', esc(s.gerNome || '—')) + kv('Unidade de negócio', esc(s.unNeg || '—')) + kv('Centro de custo', esc(s.cc) + ' · ' + esc(s.ccNome)) : ''}
-        ${kv('Fornecedor', s.fornecedorCotado ? esc(s.fornecedorCotado) : (s.defForn === 'unico' ? 'Fornecedor único' : 'Por cotação'))}${kv('Cotações', nCot ? plural(nCot,'fornecedor preenchido','fornecedores preenchidos') : '<span class="muted">nenhuma enviada ainda</span>')}${kv('Local de entrega', esc(s.local || '—'))}
+        ${kv('Fornecedor', s.fornecedorCotado ? esc(s.fornecedorCotado) : (s.defForn === 'unico' ? 'Fornecedor único' : 'Por cotação'))}${kv('Cotações', nCot ? plural(nCot,'fornecedor preenchido','fornecedores preenchidos') : '<span class="muted">nenhuma enviada ainda</span>')}${kv('Local de entrega', esc(s.local || '—'))}${s.lote ? '' : kv('Consumo ou estoque', s.destino === 'estoque' ? 'Estoque' : s.destino === 'consumo' ? 'Consumo' : '<span class="muted">não informado</span>')}
       </div>
       ${s.justForn ? `<div class="m-sec"><h3>Justificativa do fornecedor único</h3><div class="just">${esc(s.justForn)}</div></div>` : ''}
       <div class="m-sec"><h3>Motivo</h3><div class="just">${esc(s.motivo)}</div></div>
@@ -1875,7 +1875,7 @@ function deBanco(p, velho){
     motivo:p.motivo || p.assunto || '',
     criada:new Date(p.aberto_em || p.desde), necessidade:p.data_necessidade ? new Date(String(p.data_necessidade).slice(0,10) + 'T12:00:00') : null,
     tipo:p.tipo_compra || 'normal', urgente:p.tipo_compra === 'urgente',
-    defForn:p.definicao_fornecedor === 'unico' ? 'unico' : 'cotacao', justForn:p.justificativa_fornecedor || null,
+    defForn:p.definicao_fornecedor === 'unico' ? 'unico' : 'cotacao', justForn:p.justificativa_fornecedor || null, destino:p.destino || null,
     status:p.etapa_atual ? (ETAPA_BANCO[p.etapa_atual] || 'cot') : 'fim', comQuemNome:p.com_quem || null,
     fim:p.etapa_atual ? null : (p.status || null), canal:p.canal || 'telas',
     fornecedorCotado:p.etapa_atual === 'cotacao' ? null : (p.fornecedor_cotado || null), cardId:p.card_id || null,

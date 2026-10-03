@@ -72,7 +72,7 @@ const preencherNovo = p => p.evaluate(()=>{
   $('escopoServico').dispatchEvent(new Event('input'));
   const sel=$('empresa'); sel.value=sel.options[1].value; sel.dispatchEvent(new Event('change'));
   escolherCentroPorTermo('fabrica');
-  marcarRadio('tipoCompra','urgente'); marcarRadio('definicaoFornecedor','cotacao');
+  marcarRadio('tipoCompra','urgente'); marcarRadio('destino','estoque'); marcarRadio('definicaoFornecedor','cotacao');
   const d = new Date(); d.setDate(d.getDate()+10);
   $('dataLimite').value = d.toISOString().slice(0,10); $('dataLimite').dispatchEvent(new Event('change'));
   $('motivoCompra').value = 'Peletizadora parada'; $('motivoCompra').dispatchEvent(new Event('input'));
@@ -96,6 +96,7 @@ const b = await chromium.launch();
   ok('1 com o token', a && a.corpo.p_token === 'fc-ana');
   ok('1 cabeçalho só com o conteúdo', a && a.corpo.p_cabecalho.tipo_compra === 'urgente' && a.corpo.p_cabecalho.centro_custo === '20' &&
      !('facilitador' in a.corpo.p_cabecalho) && !('slack_user_id' in a.corpo.p_cabecalho), JSON.stringify(a && a.corpo.p_cabecalho));
+  ok('1 consumo ou estoque vai no cabeçalho (03/10)', a && a.corpo.p_cabecalho.destino === 'estoque', JSON.stringify(a && a.corpo.p_cabecalho));
   ok('1 item do serviço', a && a.corpo.p_itens.length === 1 && a.corpo.p_itens[0].unidade === 'Serviço');
   ok('1 não usou o caminho do ClickUp', chamou(p,'criar_solicitacao').length === 0 && p.__hook.length === 0, 'hook: ' + p.__hook.length);
   ok('1 confirmação', /Solicitação enviada/.test(await p.textContent('#okTitulo')) && /C2609-02011/.test(await p.textContent('#okNumero')));

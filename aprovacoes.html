@@ -836,6 +836,7 @@ async function carregarFila(){
     (fila || []).forEach(s => {
       const x = por[s.id];
       if(x){ s.canal = x.canal; s.versao = x.versao; s.pode_devolver = x.pode_devolver === true; s.definicao_fornecedor = x.definicao_fornecedor || s.definicao_fornecedor;
+             s.destino = x.destino || s.destino || null;
              s.editado = x.editado === true; if(x.urgente === true) s.tipo_compra = 'urgente'; }
     });
     EM_EDICAO = Array.isArray(extra.em_edicao) ? extra.em_edicao : [];
@@ -942,6 +943,8 @@ function desenhar(){
     if(s.pacote) selo('selo-pacote', 'Pacote da gerência', 'Aprovar ou reprovar vale para todos os pedidos desta gerência no lote mensal.');
     if(s.editado) selo('selo-editado', 'Editado pelo solicitante', 'O pedido foi alterado depois de aberto. Abra para ver o que mudou.');
     if(s.definicao_fornecedor === 'unico') selo('selo-unico', 'Fornecedor único');
+    /* 03/10: consumo ou estoque, escolhido no formulário (pedidos antigos não têm) */
+    if(s.destino === 'estoque' || s.destino === 'consumo') selo('selo-tipo normal', s.destino === 'estoque' ? 'Estoque' : 'Consumo', 'A compra é para ' + s.destino + '.');
     tr.appendChild(tdM);
 
     /* Quem pediu e centro de custo dividem uma coluna, em duas linhas.

@@ -77,7 +77,7 @@ const preencher = p => p.evaluate(()=>{
   $('escopoServico').value = 'Escopo de teste com tamanho mais do que suficiente para a trava.';
   $('escopoServico').dispatchEvent(new Event('input'));
   (()=>{const sel=$('empresa'); if(sel&&sel.options.length>1){sel.value=sel.options[1].value;sel.dispatchEvent(new Event('change'));}})(), escolherCentroPorTermo('manuten');
-  marcarRadio('tipoCompra','normal'); marcarRadio('definicaoFornecedor','cotacao');
+  marcarRadio('tipoCompra','normal'); marcarRadio('destino','consumo'); marcarRadio('definicaoFornecedor','cotacao');
   const d = new Date(); d.setDate(d.getDate()+10);
   $('dataLimite').value = d.toISOString().slice(0,10); $('dataLimite').dispatchEvent(new Event('change'));
   $('motivoCompra').value = 'Motivo de teste com tamanho suficiente';

@@ -19,7 +19,7 @@ function banco(){
     aberto_em:dia(3), desde:dia(1), data_necessidade:futuro(10), comprador_responsavel:'HERISSON', e_meu:true, com_quem:null,
     mapa:null, anexos:[], linha:[{ acao:'criado', quem:'Ana Paula', em:dia(3) }, { acao:'aprovado', etapa:'lider', etapa_seguinte:'cotacao', quem:'Brandão', em:dia(1) }] }, o);
   return { pedidos:[
-    P({ id:'u1', numero:'C2609-03001', motivo:'Rolamentos da peletizadora', itens:[
+    P({ id:'u1', numero:'C2609-03001', motivo:'Rolamentos da peletizadora', destino:'estoque', itens:[
       { id:'i1', codigo:'1201', descricao:'ROLAMENTO 6205', unidade:'UN', quantidade:4, fora_catalogo:false, familia:'MG' },
       { id:'i2', codigo:'1207', descricao:'RETENTOR 35X52', unidade:'UN', quantidade:2, fora_catalogo:false, familia:'MG' }] }),
     P({ id:'u2', numero:'C2609-03002', motivo:'Balança <img src=x onerror="window.__x=1">', tipo_compra:'urgente', definicao_fornecedor:'unico',
@@ -86,7 +86,7 @@ function responder(B, nome, c){
     empresa_nome:p.empresa_nome, centro_custo:p.centro_custo, setor:p.setor, itens:p.itens, orcamentos:p.anexos.filter(a => /^Orçamento · /.test(a.nome)).length,
     data_necessidade:p.data_necessidade, facilitador:p.facilitador, unidade:p.unidade, centro_custo_nome:p.centro_custo_nome,
     comprador_responsavel:p.comprador_responsavel, e_meu:p.e_meu, total_itens:p.itens.length, etapa_atual:p.etapa_atual, com_quem:p.com_quem,
-    desde:p.desde, mapa_estado:p.mapa ? p.mapa.estado : null, mapa_versao:p.mapa ? p.mapa.versao : null, total:p.total || null,
+    desde:p.desde, destino:p.destino || null, mapa_estado:p.mapa ? p.mapa.estado : null, mapa_versao:p.mapa ? p.mapa.versao : null, total:p.total || null,
     devolucao:p.devolvida || null, canal:p.canal || 'telas', status:p.status || null, valor_cotado:p.valor_cotado || null,
     fornecedor_cotado:p.fornecedor_cotado || null, card_id:p.card_id || null })) };
   const p = achar(c.p_id);
@@ -215,6 +215,7 @@ const b = await chromium.launch();
   await p.click('tr[data-id="C2609-03001"]'); await p.waitForTimeout(500);
   ok('3 detalhe pede pedido_telas', ch(p, 'pedido_telas').some(x => x.c.p_id === 'u1' && x.c.p_token === TOKEN));
   const m = await txt(p, '#modal');
+  ok('3 consumo ou estoque no detalhe (03/10)', /Consumo ou estoque\s*Estoque/.test(m), m.slice(0, 600));
   ok('3 histórico do banco', /Solicitação aberta/.test(m) && /Aprovado em liderança imediata/.test(m), m.slice(0, 300));
   ok('3 anexos com link seguro', (await p.getAttribute('#modal .anexos-lista a', 'href')) === 'https://grupoleh.app.n8n.cloud/webhook/anexo?id=a1');
   ok('3 botão reprovar no detalhe', await p.locator('#m-reprovar').count() === 1);

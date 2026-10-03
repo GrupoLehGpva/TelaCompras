@@ -563,6 +563,13 @@
         <span class="ajuda">Define a tratativa que o setor de compras vai dar ao pedido.</span>
       </div>
 
+      <!-- 03/10: consumo ou estoque — obrigatório, vale para o pedido todo -->
+      <div class="campo" data-campo="destino">
+        <span class="titulo">A compra é para consumo ou para estoque?</span>
+        <div class="opcoes" id="destinoOpcoes"></div>
+        <span class="ajuda">Vale para todos os itens do pedido. Vai junto na ordem de compra.</span>
+      </div>
+
       <div class="campo" data-campo="definicaoFornecedor">
         <span class="titulo">Selecione a definição de fornecedor</span>
         <div class="opcoes" id="fornecedorOpcoes"></div>
@@ -753,6 +760,12 @@ const DADOS = {
        apagar as duas linhas abaixo. */
     { id:'mensal',  titulo:'Mensal',  ajuda:'Compra programada, que se repete todo mês: material de limpeza, copa e cozinha, escritório. Entra na fila normal e permite cotação com calma',
       desabilitado:true, selo:'indisponível por enquanto' }
+  ],
+
+  /* 03/10: obrigatório, por pedido (não por item) */
+  destinos: [
+    { id:'consumo', titulo:'Consumo', ajuda:'Usado direto na atividade: não entra no almoxarifado' },
+    { id:'estoque', titulo:'Estoque', ajuda:'Entra no almoxarifado para ser usado depois' }
   ],
 
   definicoesFornecedor: [
@@ -981,7 +994,7 @@ const estado = {
   quantidade:'', itensLista:[],
   empresa:'', empresaNome:'',
   centroCusto:'', centroCustoNome:'', centroCustoUnidade:'',
-  tipoCompra:'', definicaoFornecedor:'', justificativaFornecedor:'',
+  tipoCompra:'', destino:'', definicaoFornecedor:'', justificativaFornecedor:'',
   dataLimite:'', motivoCompra:'', anexos:[]
 };
 const rascunho = { item:null, quantidade:'', unidade:'' };
@@ -1076,6 +1089,7 @@ async function iniciar(){
 
   montarOpcoes('tipoOpcoes','tipo',DADOS.tipos,aoTrocarTipo);
   montarOpcoes('tipoCompraOpcoes','tipoCompra',DADOS.tiposCompra);
+  montarOpcoes('destinoOpcoes','destino',DADOS.destinos);
   montarOpcoes('fornecedorOpcoes','definicaoFornecedor',DADOS.definicoesFornecedor, aoTrocarFornecedor);
 
   $('dataLimite').min = hoje.toISOString().slice(0,10);
@@ -1787,6 +1801,7 @@ function validar(passo){
   }
   if(passo === 'compra'){
     if(!estado.tipoCompra)          falhar('tipoCompra','Selecione o tipo de compra.');
+    if(!estado.destino)             falhar('destino','Diga se a compra é para consumo ou para estoque.');
     if(!estado.definicaoFornecedor) falhar('definicaoFornecedor','Selecione a definição de fornecedor.');
     if(estado.definicaoFornecedor === 'unico' && estado.justificativaFornecedor.trim().length < 10)
       falhar('justificativaFornecedor','Justifique o fornecedor único com pelo menos uma frase.');
@@ -1898,6 +1913,7 @@ function preencherExemplo(){
     $('escopoServico').dispatchEvent(new Event('input'));
     escolherCentroPorTermo('manuten');
     marcarRadio('tipoCompra','normal');
+    marcarRadio('destino','consumo');
     marcarRadio('definicaoFornecedor','cotacao');
     $('motivoCompra').value = 'Telhado do galpão de máquinas com goteira sobre os equipamentos';
   } else if(estado.tipo === 'lista'){
@@ -1921,6 +1937,7 @@ function preencherExemplo(){
        tipo de compra e sem passar na validação. Volta para 'mensal' quando a
        opção for religada. */
     marcarRadio('tipoCompra','normal');
+    marcarRadio('destino','consumo');
     marcarRadio('definicaoFornecedor','cotacao');
     $('motivoCompra').value = 'Reposição mensal de material de limpeza da casa dos moradores da Granja 103';
   } else {
@@ -1930,6 +1947,7 @@ function preencherExemplo(){
     $('quantidade').value = 4; $('quantidade').dispatchEvent(new Event('input'));
     escolherCentroPorTermo('frota');
     marcarRadio('tipoCompra','urgente');
+    marcarRadio('destino','consumo');
     marcarRadio('definicaoFornecedor','unico');
     $('justificativaFornecedor').value = 'Peça original: apenas a concessionária fornece esta medida para o modelo do caminhão.';
     $('justificativaFornecedor').dispatchEvent(new Event('input'));
@@ -1988,6 +2006,8 @@ function montarPacote(solicitacaoId, cabecalho, itens, anexosEnviados){
     tipo_compra_nome:          tipoCompra,
     definicao_fornecedor:      cabecalho.definicao_fornecedor,
     definicao_fornecedor_nome: defForn,
+    destino:                   cabecalho.destino || null,
+    destino_nome:              (DADOS.destinos.find(d=>d.id===cabecalho.destino)||{}).titulo || '',
     justificativa_fornecedor:  cabecalho.justificativa_fornecedor,
     data_necessidade:          cabecalho.data_necessidade,
     motivo:                    cabecalho.motivo,
@@ -2036,6 +2056,7 @@ function montarPacote(solicitacaoId, cabecalho, itens, anexosEnviados){
       '**Empresa:** ' + (estado.empresaNome || '—') + '\n' +
       '**Centro de custo:** ' + centro + ' (' + (cabecalho.centro_custo || '—') + ')' + '\n' +
       '**Tipo de compra:** ' + tipoCompra + '\n' +
+      '**Consumo ou estoque:** ' + ((DADOS.destinos.find(d=>d.id===cabecalho.destino)||{}).titulo || '—') + '\n' +
       '**Definição de fornecedor:** ' + defForn +
         (cabecalho.justificativa_fornecedor ? ' — ' + cabecalho.justificativa_fornecedor : '') + '\n' +
       '**Entrega até:** ' + (cabecalho.data_necessidade || '—') + '\n' +
@@ -2116,6 +2137,7 @@ async function enviar(){
     empresa_id:               estado.empresa || null,
     centro_custo:             estado.centroCusto || null,
     tipo_compra:              estado.tipoCompra || null,
+    destino:                  estado.destino || null,
     definicao_fornecedor:     estado.definicaoFornecedor || null,
     justificativa_fornecedor: estado.definicaoFornecedor === 'unico' ? (estado.justificativaFornecedor || null) : null,
     data_necessidade:         estado.dataLimite || null,
@@ -2326,6 +2348,7 @@ function preencherDoPedido(p, itens){
       { codigo: p.centro_custo, nome: p.centro_custo_nome || p.centro_custo, unidade: '' });
   }
   marcarRadio('tipoCompra', p.tipo_compra);
+  if(p.destino) marcarRadio('destino', p.destino);
   marcarRadio('definicaoFornecedor', p.definicao_fornecedor);
   if(p.definicao_fornecedor === 'unico') por('justificativaFornecedor', 'justificativaFornecedor', p.justificativa_fornecedor);
   por('dataLimite', 'dataLimite', p.data_necessidade ? String(p.data_necessidade).slice(0, 10) : '');
@@ -2401,7 +2424,7 @@ async function desistirEdicao(){
 
 const CAMPO_TELAS = {
   solicitante_nome:'para quem é', observacao:'observação', empresa_id:'empresa', centro_custo:'centro de custo',
-  unidade_destino:'unidade de destino', local_entrega:'local de entrega', tipo_compra:'tipo de compra',
+  unidade_destino:'unidade de destino', local_entrega:'local de entrega', tipo_compra:'tipo de compra', destino:'consumo ou estoque',
   definicao_fornecedor:'definição de fornecedor', justificativa_fornecedor:'justificativa',
   data_necessidade:'data de necessidade', motivo:'motivo', itens:'itens'
 };
@@ -2414,7 +2437,7 @@ async function enviarTelas(cabecalho, itens, botao){
   const cab = {
     solicitante_nome: cabecalho.solicitante_nome, observacao: cabecalho.observacao,
     empresa_id: cabecalho.empresa_id, centro_custo: cabecalho.centro_custo,
-    tipo_compra: cabecalho.tipo_compra, definicao_fornecedor: cabecalho.definicao_fornecedor,
+    tipo_compra: cabecalho.tipo_compra, destino: cabecalho.destino, definicao_fornecedor: cabecalho.definicao_fornecedor,
     justificativa_fornecedor: cabecalho.justificativa_fornecedor,
     data_necessidade: cabecalho.data_necessidade, motivo: cabecalho.motivo
   };
