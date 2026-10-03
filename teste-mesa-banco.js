@@ -58,7 +58,7 @@ function resumo(p){
   let total = 0;
   [...new Set(p.itens.map(i => i.familia))].forEach(fam => {
     const fs = [];
-    [1,2,3].forEach(col => {
+    [1,2,3,4].forEach(col => {
       const f = m.forn.find(x => x.familia === fam && x.coluna === col);
       const ganhos = p.itens.filter(i => i.familia === fam && m.escolhas.find(x => x.item_id === i.id && x.coluna === col));
       const sub = ganhos.reduce((t, i) => t + ((m.precos.find(x => x.item_id === i.id && x.coluna === col) || {}).preco || 0) * i.quantidade, 0);
@@ -67,7 +67,7 @@ function resumo(p){
         if (!f || !f.nome) bloq.push({ msg:'Falta o nome' }); else if (!f.fornecedor_id) bloq.push({ msg:'não está no cadastro' });
         if (!f || f.frete === null) bloq.push({ msg:'frete' }); if (!f || f.prazo_dias === null) bloq.push({ msg:'prazo' }); if (!f || !f.condicao) bloq.push({ msg:'condição' }); if (!f || !f.forma_pagamento) bloq.push({ msg:'forma de pagamento' });
       }
-      if (f || ganhos.length) fs.push(Object.assign({ coluna:col, itens_ganhos:ganhos.length, subtotal:sub, total:tot }, f ? { fornecedor_id:f.fornecedor_id, nome:f.nome, desconto_pct:f.desconto_pct, frete:f.frete, prazo_dias:f.prazo_dias, condicao:f.condicao, forma_pagamento:f.forma_pagamento } : {}));
+      if (f || ganhos.length) fs.push(Object.assign({ coluna:col, itens_ganhos:ganhos.length, subtotal:sub, total:tot }, f ? { fornecedor_id:f.fornecedor_id, nome:f.nome, desconto_pct:f.desconto_pct, frete:f.frete, prazo_dias:f.prazo_dias, condicao:f.condicao, forma_pagamento:f.forma_pagamento, grupo:f.grupo || null } : {}));
       total += tot;
     });
     fams[fam] = fs;
@@ -289,7 +289,9 @@ const b = await chromium.launch();
   const ops = await p.$$eval('#fp-MG-0 option', o => o.map(x => x.textContent));
   ok('4b opções exatamente as do GR', JSON.stringify(ops) === JSON.stringify(['Escolha…', 'Não especificado', 'Boleto', 'Cheque', 'Dinheiro', 'Depósito em conta corrente', 'Pix']), JSON.stringify(ops));
   ok('4b começa sem escolha', (await p.inputValue('#fp-MG-0')) === '');
-  ok('4b uma por fornecedor (3 colunas)', await p.locator('select[data-k="forma"]').count() === 3);
+  ok('4b uma por fornecedor (4 colunas)', await p.locator('select[data-k="forma"]').count() === 4);
+  /* 03/10: quarto fornecedor */
+  ok('4c quatro fornecedores no cabeçalho', await p.locator('#n-MG-3').count() === 1 && /Fornecedor 4/i.test(await txt(p, '#map-wrap thead')), await txt(p, '#map-wrap thead'));
   await p.click('#n-MG-0'); await p.type('#n-MG-0', 'ro', { delay:30 }); await p.waitForTimeout(600);
   await p.click('.sug [data-fid="f1"]'); await p.waitForTimeout(200);
   await p.fill('#p-MG-i1-0', '100'); await p.fill('#p-MG-i2-0', '50');
@@ -300,10 +302,18 @@ const b = await chromium.launch();
   ok('4b enviar sem forma mostra a pendência', /Escolha a forma de pagamento/.test(await txt(p, '#pend')), await txt(p, '#pend'));
   ok('4b e não chama o banco', ch(p, 'enviar_mapa').length === 0);
   await p.keyboard.press('Escape');
-  await p.selectOption('#fp-MG-0', 'Pix'); await p.waitForTimeout(1800);
+  await p.selectOption('#fp-MG-0', 'Pix');
+  /* item 2 vai para o 4º fornecedor */
+  await p.click('#n-MG-3'); await p.type('#n-MG-3', 'ca', { delay:30 }); await p.waitForTimeout(600);
+  await p.click('.sug [data-fid="f2"]'); await p.waitForTimeout(200);
+  await p.fill('#p-MG-i2-3', '40'); await p.click('#k-MG-i2-3');
+  await p.fill('#f-MG-3', '0'); await p.fill('#z-MG-3', '2'); await p.fill('#c-MG-3', 'À vista'); await p.selectOption('#fp-MG-3', 'Boleto');
+  await p.waitForTimeout(1800);
   const sv = ch(p, 'salvar_mapa'), u = sv[sv.length - 1] && sv[sv.length - 1].c;
+  ok('4c 4º fornecedor vai ao banco como coluna 4 (preço, escolha e condições)', u && u.p_mapa.fornecedores.some(f => f.coluna === 4 && f.fornecedor_id === 'f2' && f.forma_pagamento === 'Boleto')
+     && u.p_mapa.precos.some(x => x.item_id === 'i2' && x.coluna === 4 && x.preco === 40) && u.p_mapa.escolhas.some(x => x.item_id === 'i2' && x.coluna === 4), u && u.p_mapa);
   ok('4b escolher salva sozinho, com a forma', u && u.p_mapa.fornecedores.some(f => f.coluna === 1 && f.forma_pagamento === 'Pix'), u && u.p_mapa.fornecedores);
-  ok('4b coluna sem forma vai como vazia (não inventa)', u && u.p_mapa.fornecedores.every(f => f.coluna === 1 || f.forma_pagamento === null || f.forma_pagamento === undefined));
+  ok('4b coluna sem forma vai como vazia (não inventa)', u && u.p_mapa.fornecedores.every(f => f.coluna === 1 || f.coluna === 4 || f.forma_pagamento === null || f.forma_pagamento === undefined));
   ok('4b resumo mostra a forma junto da condição', /28 dias · Pix/.test(await txt(p, '#resumo')), await txt(p, '#resumo'));
   await p.click('#bt-salvar'); await p.waitForTimeout(900);
   await p.click('[data-open="C2609-03001"]'); await p.waitForTimeout(700);
@@ -553,6 +563,76 @@ const b = await chromium.launch();
   ok('19 volta às Enviadas com o status escolhido', await p.getAttribute('[data-st="aprov"]', 'aria-pressed') === 'true');
   await p.click('[data-st=""]'); await p.waitForTimeout(200);
   ok('19 Todas mostra tudo de novo', await p.locator('tr[data-id]').count() === 4);
+  await p.close(); }
+
+/* 4d — juntar famílias num mapa só (03/10) */
+const comU6 = (B, extra) => B.pedidos.push(Object.assign({ id:'u6', numero:'C2609-03006X', motivo:'Manutenção e limpeza', versao:1, etapa_atual:'cotacao', tipo_compra:'normal', definicao_fornecedor:'cotacao',
+  facilitador:'Ana Paula', unidade:'Fábrica', setor:'Ração', centro_custo:'20', centro_custo_nome:'FABRICA', empresa_nome:'EMPRESA 1', solicitante_nome:'João',
+  aberto_em:dia(2), desde:dia(1), data_necessidade:futuro(10), comprador_responsavel:'HERISSON', e_meu:true, com_quem:null, mapa:null, anexos:[], linha:[],
+  itens:[{ id:'i7', codigo:'1201', descricao:'ROLAMENTO 6206', unidade:'UN', quantidade:2, fora_catalogo:false, familia:'MG' },
+         { id:'i8', codigo:'7360', descricao:'SABAO EM PO', unidade:'UN', quantidade:3, fora_catalogo:false, familia:'HL' },
+         { id:'i9', codigo:'7361', descricao:'DETERGENTE', unidade:'UN', quantidade:4, fora_catalogo:false, familia:'HL' }] }, extra || {}));
+const escolher = async (p, campo, termo, fid) => { await p.fill(campo, ''); await p.click(campo); await p.type(campo, termo, { delay:30 }); await p.waitForTimeout(500); await p.click('.sug [data-fid="' + fid + '"]'); await p.waitForTimeout(150); };
+{ const p = await abrir(b, '?t=' + TOKEN, { prep:B => comU6(B) });
+  await p.click('[data-open="C2609-03006X"]'); await p.waitForTimeout(700);
+  ok('4d duas famílias: botão juntar', await p.locator('#bt-juntar').count() === 1 && await p.locator('#bt-separar').count() === 0);
+  /* MG: ROLAMAX e DISTRIBUIDORA; HL: ROLAMAX e CASA → coluna 2 diferente */
+  await escolher(p, '#n-MG-0', 'ro', 'f1'); await p.fill('#f-MG-0', '10'); await p.fill('#z-MG-0', '5'); await p.fill('#c-MG-0', '28 dias'); await p.selectOption('#fp-MG-0', 'Boleto');
+  await escolher(p, '#n-MG-1', 'di', 'f3');
+  await p.fill('#p-MG-i7-0', '100'); await p.click('#k-MG-i7-0');
+  await p.click('[data-fam="HL"]'); await p.waitForTimeout(200);
+  await escolher(p, '#n-HL-0', 'ro', 'f1'); await p.fill('#f-HL-0', '5');
+  await escolher(p, '#n-HL-1', 'ca', 'f2'); await p.fill('#f-HL-1', '7'); await p.fill('#z-HL-1', '2'); await p.fill('#c-HL-1', 'À vista'); await p.selectOption('#fp-HL-1', 'Pix');
+  await p.fill('#p-HL-i8-0', '20'); await p.fill('#p-HL-i9-1', '8'); await p.click('#k-HL-i8-0'); await p.click('#k-HL-i9-1');
+  await p.click('#bt-juntar'); await p.waitForTimeout(200);
+  ok('4d painel com as famílias, a aberta já marcada', await p.locator('.juntar-painel input[type=checkbox]').count() === 2 && await p.isChecked('.juntar-painel input[value="HL"]') && !(await p.isChecked('.juntar-painel input[value="MG"]')));
+  await p.click('#bt-juntar-ok'); await p.waitForTimeout(150);
+  ok('4d uma família só: pede duas', /pelo menos duas/.test(await txt(p, '#e-juntar')));
+  await p.check('.juntar-painel input[value="MG"]'); await p.click('#bt-juntar-ok'); await p.waitForTimeout(200);
+  ok('4d fornecedor diferente na mesma coluna: não junta e explica', /Fornecedor 2 é diferente/.test(await txt(p, '#e-juntar')) && await p.locator('[data-fam="MG"]').count() === 1, await txt(p, '#juntar-cx'));
+  await p.click('#bt-juntar-cancel'); await p.waitForTimeout(150);
+  ok('4d cancelar fecha o painel', await p.locator('.juntar-painel').count() === 0);
+  await p.click('[data-fam="MG"]'); await p.waitForTimeout(150);
+  await escolher(p, '#n-MG-1', 'ca', 'f2');
+  await p.click('#bt-juntar'); await p.check('.juntar-painel input[value="HL"]'); await p.click('#bt-juntar-ok'); await p.waitForTimeout(400);
+  ok('4d juntou: uma aba MG + HL', await p.locator('[data-fam="MG__HL"]').count() === 1 && await p.locator('[data-fam="MG"]').count() === 0 && await p.locator('[data-fam="HL"]').count() === 0);
+  ok('4d mesmo fornecedor nas colunas', (await p.inputValue('#n-MG__HL-0')) === 'ROLAMAX' && (await p.inputValue('#n-MG__HL-1')) === 'CASA DO ROLAMENTO');
+  ok('4d frete somado, condições completadas', (await p.inputValue('#f-MG__HL-0')) === '15,00' && (await p.inputValue('#f-MG__HL-1')) === '7,00' && (await p.inputValue('#c-MG__HL-1')) === 'À vista' && (await p.inputValue('#fp-MG__HL-1')) === 'Pix',
+     [await p.inputValue('#f-MG__HL-0'), await p.inputValue('#f-MG__HL-1')]);
+  ok('4d itens das duas famílias e escolhas mantidas', await p.locator('#p-MG__HL-i7-0').count() === 1 && await p.locator('#p-MG__HL-i9-1').count() === 1
+     && (await p.getAttribute('#k-MG__HL-i7-0', 'aria-pressed')) === 'true' && (await p.getAttribute('#k-MG__HL-i9-1', 'aria-pressed')) === 'true');
+  ok('4d botão separar', /Separar MG \+ HL/.test(await txt(p, '#bt-separar')));
+  await p.waitForTimeout(1800);
+  const sv = ch(p, 'salvar_mapa'), u = sv[sv.length - 1].c.p_mapa;
+  const linha = (fam, col) => u.fornecedores.find(f => f.familia === fam && f.coluna === col);
+  ok('4d grava as linhas em cada família com o grupo', ['MG','HL'].every(fm => [1,2].every(cl => linha(fm, cl) && linha(fm, cl).grupo === 'MG+HL')), u.fornecedores);
+  ok('4d frete vai para uma família só (a que ganhou item)', linha('MG',1).frete === 15 && linha('HL',1).frete === 0 && linha('HL',2).frete === 7 && linha('MG',2).frete === 0, u.fornecedores.map(f => f.familia + f.coluna + ':' + f.frete));
+  ok('4d preços e escolhas uma vez só', u.precos.length === 3 && u.escolhas.length === 3, u);
+  /* reabre: volta junto */
+  await p.click('#bt-back'); await p.waitForTimeout(500);
+  await p.click('[data-open="C2609-03006X"]'); await p.waitForTimeout(700);
+  ok('4d reabriu junto', await p.locator('[data-fam="MG__HL"]').count() === 1 && (await p.inputValue('#f-MG__HL-0')) === '15,00' && (await p.inputValue('#f-MG__HL-1')) === '7,00', await txt(p, '#ftabs'));
+  /* separa */
+  await p.click('#bt-separar'); await p.waitForTimeout(300);
+  ok('4d separou: duas abas de novo', await p.locator('[data-fam="MG"]').count() === 1 && await p.locator('[data-fam="HL"]').count() === 1 && await p.locator('[data-fam="MG__HL"]').count() === 0);
+  ok('4d separado: frete fica com quem ganhou', (await p.inputValue('#f-MG-0')) === '15,00' && (await p.inputValue('#f-MG-1')) === '0,00', [await p.inputValue('#f-MG-0'), await p.inputValue('#f-MG-1')]);
+  await p.click('[data-fam="HL"]'); await p.waitForTimeout(150);
+  ok('4d separado: HL com os seus itens e escolhas', (await p.inputValue('#f-HL-1')) === '7,00' && (await p.inputValue('#f-HL-0')) === '0,00' && (await p.getAttribute('#k-HL-i9-1', 'aria-pressed')) === 'true' && await p.locator('#p-HL-i7-0').count() === 0);
+  await p.waitForTimeout(1800);
+  const u2 = ch(p, 'salvar_mapa').slice(-1)[0].c.p_mapa;
+  ok('4d separado grava sem grupo', u2.fornecedores.every(f => !f.grupo) && u2.precos.length === 3, u2.fornecedores);
+  await p.close(); }
+/* 4e — enviada com famílias juntas: só leitura, sem juntar/separar */
+{ const p = await abrir(b, '?t=' + TOKEN, { prep:B => comU6(B, { etapa_atual:'gerencial', com_quem:'Gerente W', total:300,
+    mapa:{ estado:'enviada', versao:5, observacao:'ok', forn:[
+      { familia:'MG', coluna:1, fornecedor_id:'f1', nome:'ROLAMAX', desconto_pct:null, frete:15, prazo_dias:5, condicao:'28 dias', forma_pagamento:'Boleto', grupo:'MG+HL' },
+      { familia:'HL', coluna:1, fornecedor_id:'f1', nome:'ROLAMAX', desconto_pct:null, frete:0, prazo_dias:5, condicao:'28 dias', forma_pagamento:'Boleto', grupo:'MG+HL' }],
+      precos:[{ item_id:'i7', coluna:1, preco:100 }, { item_id:'i8', coluna:1, preco:20 }, { item_id:'i9', coluna:1, preco:8 }],
+      escolhas:[{ item_id:'i7', coluna:1 }, { item_id:'i8', coluna:1 }, { item_id:'i9', coluna:1 }] } }) });
+  await p.click('[data-tab="env"]'); await p.waitForTimeout(200);
+  await p.click('[data-open="C2609-03006X"]'); await p.waitForTimeout(700);
+  ok('4e enviada mostra as famílias juntas', await p.locator('[data-fam="MG__HL"]').count() === 1 && (await p.inputValue('#f-MG__HL-0')) === '15,00');
+  ok('4e só leitura: sem juntar nem separar', await p.locator('#bt-juntar').count() === 0 && await p.locator('#bt-separar').count() === 0);
   await p.close(); }
 
 /* 11 — celular */

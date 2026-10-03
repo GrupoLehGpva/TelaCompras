@@ -160,6 +160,13 @@ td.r,th.r{text-align:right}
 .fact .v{font-size:14px;margin-top:1px}
 .fact.wide{flex:1 1 280px}
 .ftabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.juntar-cx:empty{display:none}
+.juntar-cx{margin:-2px 0 12px}
+.juntar-acoes{display:flex;gap:8px;flex-wrap:wrap}
+.juntar-painel{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:12px 14px;display:grid;gap:10px;max-width:760px}
+.juntar-painel p{margin:0;font-size:13px;color:var(--ink-2)}
+.juntar-opcoes{display:flex;flex-wrap:wrap;gap:8px 18px}
+.juntar-opcoes label{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;cursor:pointer}
 .ftab{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 12px;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:150px;text-align:left}
 .ftab .n{font-family:var(--f-display);font-weight:700;font-size:15px}
 .ftab .st{font-size:12px;color:var(--ink-2);display:flex;gap:6px;align-items:center}
@@ -542,16 +549,82 @@ const fluxoDe = s => s && s.tipo === 'mensal' ? ['lid','ger','lote','cot','fin',
 let SOLS = [];
 /* ---------- cotação (rascunho) ---------- */
 const famKey = it => it.fam || 'FORA';
-// Fornecedor único ocupa uma coluna só; por cotação, as três do card.
-const colunas = s => s.defForn === 'unico' ? [0] : [0,1,2];
+// Fornecedor único ocupa uma coluna só; por cotação, até 4 fornecedores (03/10 — eram 3).
+const NFORN = 4;
+const TODAS_COLS = Array.from({ length:NFORN }, (_, j) => j);
+const colunas = s => s.defForn === 'unico' ? [0] : TODAS_COLS;
 const minPrecos = s => s.defForn === 'unico' ? 1 : REGRAS.minPrecosPorItem;
-const famNome = k => k === 'FORA' ? FAMILIAS.FORA : (FAMILIAS[k] ? k + ' · ' + FAMILIAS[k] : k);
+const famNome1 = k => k === 'FORA' ? FAMILIAS.FORA : (FAMILIAS[k] ? k + ' · ' + FAMILIAS[k] : k);
 function familiasDe(s){ const o = []; s.itens.forEach(it => { const k = famKey(it); if (!o.includes(k)) o.push(k); }); return o; }
+/* ---------- famílias juntas (03/10) ----------
+   O comprador junta 2+ famílias num mapa só quando o mesmo fornecedor atende
+   todas. Na tela é uma "unidade" (chave 'HL__CC'), com um jogo de fornecedores e
+   condições; no banco cada família continua com as suas linhas, iguais, e o
+   campo grupo ('HL+CC') lembra a junção. O frete vai inteiro para uma família
+   que tenha item ganho naquele fornecedor (as outras ficam com 0). */
+const SEP_GRUPO = '__';
+const ehGrupo = k => String(k).includes(SEP_GRUPO);
+const membros = k => String(k).split(SEP_GRUPO);
+const famNome = k => ehGrupo(k) ? membros(k).map(famNome1).join(' + ') : famNome1(k);
+const famCurto = k => ehGrupo(k) ? membros(k).join(' + ') : k;
+function grupoDe(s, f){ return ((cotDe(s).grupos) || []).find(g => g.includes(f)) || null; }
+function unidDe(s, it){ const f = famKey(it), g = grupoDe(s, f); return g ? g.join(SEP_GRUPO) : f; }
+function unidadesDe(s){ const us = []; familiasDe(s).forEach(f => { const g = grupoDe(s, f), k = g ? g.join(SEP_GRUPO) : f; if (!us.includes(k)) us.push(k); }); return us; }
+const vazioForn = f => !(f.nome.trim() || f.fid || String(f.desc).trim() || String(f.frete).trim() || String(f.prazo).trim() || f.cond.trim() || f.forma);
+const mesmoForn = (a, b) => (a.fid && b.fid) ? a.fid === b.fid : a.nome.trim().toLowerCase() === b.nome.trim().toLowerCase();
+/* Junta unidades (famílias soltas ou grupos) numa só. Devolve a chave nova, ou
+   { erro } se duas famílias têm fornecedores diferentes na mesma coluna. */
+function juntarUnidades(s, chaves){
+  const c = cotDe(s);
+  const ordem = familiasDe(s);
+  const fams = [...new Set(chaves.flatMap(membros))].sort((a, b) => ordem.indexOf(a) - ordem.indexOf(b));
+  if (fams.length < 2) return { erro:'Escolha pelo menos duas famílias.' };
+  const Fs = chaves.map(k => c.fams[k]).filter(Boolean);
+  const forn = TODAS_COLS.map(j => {
+    const cheios = Fs.map(F => F.forn[j]).filter(f => !vazioForn(f));
+    const comNome = cheios.filter(f => f.nome.trim() || f.fid);
+    for (let a = 1; a < comNome.length; a++) if (!mesmoForn(comNome[0], comNome[a]))
+      return { erro:`O Fornecedor ${j + 1} é diferente entre as famílias (${comNome[0].nome.trim() || '?'} × ${comNome[a].nome.trim() || '?'}). Deixe o mesmo fornecedor na mesma coluna, ou limpe uma delas, antes de juntar.` };
+    const base = Object.assign({ nome:'', fid:null, desc:'', frete:'', prazo:'', cond:'', condLivre:'', forma:'' }, comNome[0] || cheios[0] || {});
+    const novo = Object.assign({}, base);
+    ['desc','prazo','cond','forma'].forEach(x => { if (!String(novo[x] || '').trim()){ const o = cheios.find(f => String(f[x] || '').trim()); if (o) novo[x] = o[x]; } });
+    const fretes = cheios.map(f => parseBR(f.frete)).filter(v => ok(v) && v >= 0);
+    novo.frete = fretes.length ? n2(fretes.reduce((t, v) => t + v, 0)) : '';
+    return novo;
+  });
+  const erro = forn.find(f => f && f.erro); if (erro) return erro;
+  const novaChave = fams.join(SEP_GRUPO);
+  const F = { forn, precos:Object.assign({}, ...Fs.map(x => x.precos)), escolha:Object.assign({}, ...Fs.map(x => x.escolha)) };
+  chaves.forEach(k => { delete c.fams[k]; });
+  c.fams[novaChave] = F;
+  c.grupos = (c.grupos || []).filter(g => !g.some(f => fams.includes(f))).concat([fams]);
+  return { chave:novaChave };
+}
+/* Em cada coluna, a família do grupo que leva o frete: a primeira que ganhou item ali. */
+function freteDoGrupo(s, k){
+  const F = cotDe(s).fams[k], fams = membros(k);
+  return TODAS_COLS.map(j => fams.find(f => s.itens.some(it => famKey(it) === f && F.escolha[it.id] === j)) || fams[0]);
+}
+/* Separa um grupo: cada família volta a ter o seu mapa, com os mesmos fornecedores. */
+function separarUnidade(s, k){
+  const c = cotDe(s), F = c.fams[k]; if (!F || !ehGrupo(k)) return;
+  const fams = membros(k);
+  const fretePara = freteDoGrupo(s, k);
+  fams.forEach(f => {
+    const meus = s.itens.filter(it => famKey(it) === f).map(it => it.id);
+    c.fams[f] = {
+      forn: F.forn.map((x, j) => Object.assign({}, x, { frete: fretePara[j] === f ? x.frete : (String(x.frete).trim() ? '0,00' : '') })),
+      precos: Object.fromEntries(meus.map(id => [id, F.precos[id]])),
+      escolha: Object.fromEntries(meus.filter(id => F.escolha[id] !== undefined).map(id => [id, F.escolha[id]])) };
+  });
+  delete c.fams[k];
+  c.grupos = (c.grupos || []).filter(g => g.join(SEP_GRUPO) !== k);
+}
 function novaCot(s){
   const fams = {};
   familiasDe(s).forEach(k => {
-    fams[k] = { forn:[0,1,2].map(() => ({ nome:'', fid:null, desc:'', frete:'', prazo:'', cond:'', condLivre:'', forma:'' })), precos:{}, escolha:{} };
-    s.itens.filter(it => famKey(it) === k).forEach(it => fams[k].precos[it.id] = ['','','']);
+    fams[k] = { forn:TODAS_COLS.map(() => ({ nome:'', fid:null, desc:'', frete:'', prazo:'', cond:'', condLivre:'', forma:'' })), precos:{}, escolha:{} };
+    s.itens.filter(it => famKey(it) === k).forEach(it => fams[k].precos[it.id] = TODAS_COLS.map(() => ''));
   });
   return { fams, obs:'', salvoEm:null, iniciada:false };
 }
@@ -572,7 +645,7 @@ function parseBR(v){
 function ok(n){ return n !== null && !Number.isNaN(n); }
 function calcFam(s, k){
   const F = cotDe(s).fams[k];
-  const itens = s.itens.filter(it => famKey(it) === k);
+  const itens = s.itens.filter(it => unidDe(s, it) === k);
   const desc = F.forn.map(f => { const d = parseBR(f.desc); return ok(d) && d >= 0 && d <= 100 ? d : 0; });
   const frete = F.forn.map(f => { const v = parseBR(f.frete); return ok(v) && v >= 0 ? v : 0; });
   const linhas = itens.map(it => {
@@ -585,7 +658,7 @@ function calcFam(s, k){
     const esc = F.escolha[it.id];
     return { it, p, valido, efet, menor, nPrecos:vals.length, esc: esc === undefined ? null : esc };
   });
-  const forn = [0,1,2].map(j => {
+  const forn = TODAS_COLS.map(j => {
     const ganhos = linhas.filter(l => l.esc === j && l.valido[j]);
     const sub = ganhos.reduce((t,l) => t + l.p[j] * l.it.qtd, 0);
     const total = ganhos.length ? sub * (1 - desc[j]/100) + frete[j] : 0;
@@ -597,7 +670,7 @@ function calcFam(s, k){
   return { k, itens, linhas, forn, total:forn.reduce((t,f) => t + f.total, 0), escolhidos, F };
 }
 function calcTudo(s){
-  const fams = familiasDe(s).map(k => calcFam(s,k));
+  const fams = unidadesDe(s).map(k => calcFam(s,k));
   const nomes = new Set();
   fams.forEach(f => f.forn.forEach(x => { if (x.n) nomes.add((f.F.forn[x.j].nome || ('F' + (x.j+1) + '·' + f.k)).trim().toLowerCase()); }));
   return { fams, total:fams.reduce((t,f) => t + f.total, 0), escolhidos:fams.reduce((t,f) => t + f.escolhidos, 0), nItens:s.itens.length, nForn:nomes.size };
@@ -1127,15 +1200,15 @@ async function abrirMapa(id){
   cotDe(s);
   if (S.solId !== id){ S.lfMapa = { ger:'', un:'', cc:'' }; S.verPartes = {}; }
   S.view = 'mapa'; S.solId = id; S.mostrarErros = false; S.foco = null; S.soFalta = false;
-  S.fam = familiasDe(s)[0];
+  S.fam = unidadesDe(s)[0];
   render(); window.scrollTo(0,0);
 }
 const soLeitura = s => s.status !== 'cot';
 
 function renderMapa(){
   const s = sol(S.solId), c = cotDe(s), ro = soLeitura(s);
-  const fams = familiasDe(s);
-  if (!fams.includes(S.fam)) S.fam = fams[0];
+  const fams = familiasDe(s), unids = unidadesDe(s);
+  if (!unids.includes(S.fam)) S.fam = unids[0];
   let banner = '';
   const bannerUnico = s.defForn === 'unico'
     ? `<div class="banner warn"><span class="grow"><strong>Fornecedor único — o solicitante dispensou a cotação.</strong> Preencha só a coluna desse fornecedor.${s.justForn ? ' <br><span class="just-inline">Justificativa: ' + esc(s.justForn) + '</span>' : ''}</span></div>`
@@ -1165,6 +1238,7 @@ function renderMapa(){
       <div class="fact wide"><div class="k">Motivo</div><div class="v">${esc(s.motivo)}</div></div>
     </div>`}
     <div class="ftabs" role="tablist" id="ftabs" aria-label="Famílias"></div>
+    <div class="juntar-cx" id="juntar-cx"></div>
     <div class="passos" id="passos" aria-label="Como preencher"></div>
     <div class="map-h"><h2 id="map-title"></h2>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -1190,7 +1264,7 @@ function renderMapa(){
 
 function pintarTabela(){
   const s = sol(S.solId), k = S.fam, F = cotDe(s).fams[k], ro = soLeitura(s) ? 'disabled' : '';
-  const todos = s.itens.filter(it => famKey(it) === k);
+  const todos = s.itens.filter(it => unidDe(s, it) === k);
   const F0 = cotDe(s).fams[k];
   const pendentes = todos.filter(it => F0.escolha[it.id] === undefined || !String(F0.precos[it.id][F0.escolha[it.id]] || '').trim());
   const lf = s.lote && filtroAtivo(S.lfMapa) ? S.lfMapa : null;
@@ -1327,6 +1401,7 @@ function refresh(){
       <span class="st exemplo">${esc(exemplos)}</span><span class="st">${st}</span><span class="st num">${f.total ? brl(f.total) : '<span class="muted">sem valor</span>'}</span></button>`;
   }).join('');
   $('ftabs').querySelectorAll('[data-fam]').forEach(b => b.onclick = () => trocarFam(b.dataset.fam));
+  pintarJuntar(s, C, ro);
   // erros
   document.querySelectorAll('#map-wrap .err').forEach(e => { e.hidden = true; e.textContent = ''; });
   document.querySelectorAll('#map-wrap .bad').forEach(e => e.classList.remove('bad'));
@@ -1363,6 +1438,38 @@ function pintarPassos(s, C, V){
       <span class="n">${p.feito ? '✓' : p.n}</span>${p.txt} <b>${p.v}</b></span>`).join('');
 }
 
+/* Juntar / separar famílias (03/10) */
+function pintarJuntar(s, C, ro){
+  const cx = $('juntar-cx'); if (!cx) return;
+  if (ro || C.fams.length < 2 && !ehGrupo(S.fam)){ cx.innerHTML = ''; return; }
+  if (S.juntando){
+    cx.innerHTML = `<div class="juntar-painel" role="group" aria-label="Juntar famílias num mapa só">
+      <p><strong>Juntar famílias num mapa só</strong> — quando o mesmo fornecedor atende todas: um jogo de fornecedores e condições para os itens delas.</p>
+      <div class="juntar-opcoes">${C.fams.map(f => `<label><input type="checkbox" value="${esc(f.k)}" ${S.juntando.includes(f.k) ? 'checked' : ''}> ${esc(famNome(f.k))} <span class="muted">· ${plural(f.linhas.length,'item','itens')}</span></label>`).join('')}</div>
+      <div class="err" id="e-juntar" ${S.erroJuntar ? '' : 'hidden'}>${esc(S.erroJuntar || '')}</div>
+      <div class="juntar-acoes"><button class="btn primary" type="button" id="bt-juntar-ok">Juntar as marcadas</button><button class="btn ghost" type="button" id="bt-juntar-cancel">Cancelar</button></div>
+    </div>`;
+    cx.querySelectorAll('input[type=checkbox]').forEach(i => i.onchange = () => {
+      S.juntando = [...cx.querySelectorAll('input[type=checkbox]:checked')].map(x => x.value); S.erroJuntar = null; });
+    $('bt-juntar-cancel').onclick = () => { S.juntando = null; S.erroJuntar = null; refresh(); };
+    $('bt-juntar-ok').onclick = () => {
+      if ((S.juntando || []).length < 2){ S.erroJuntar = 'Marque pelo menos duas famílias.'; refresh(); return; }
+      const r = juntarUnidades(s, S.juntando);
+      if (r.erro){ S.erroJuntar = r.erro; refresh(); return; }
+      S.juntando = null; S.erroJuntar = null; S.fam = r.chave; S.soFalta = false;
+      marcarSalvo(); pintarTabela(); refresh();
+      toast('Famílias juntas: ' + famCurto(r.chave) + '. Um mapa só, com os mesmos fornecedores.');
+    };
+    return;
+  }
+  cx.innerHTML = `<div class="juntar-acoes">${C.fams.length > 1 ? '<button class="btn ghost" type="button" id="bt-juntar">Juntar famílias num mapa só</button>' : ''}${ehGrupo(S.fam) ? `<button class="btn ghost" type="button" id="bt-separar">Separar ${esc(famCurto(S.fam))}</button>` : ''}</div>`;
+  if ($('bt-juntar')) $('bt-juntar').onclick = () => { S.juntando = [S.fam]; S.erroJuntar = null; refresh(); };
+  if ($('bt-separar')) $('bt-separar').onclick = () => {
+    const k = S.fam; separarUnidade(s, k); S.fam = membros(k)[0]; S.soFalta = false;
+    marcarSalvo(); pintarTabela(); refresh();
+    toast('Famílias separadas: cada uma volta a ter o seu mapa, com os mesmos fornecedores.');
+  };
+}
 function trocarFam(k){ S.fam = k; pintarTabela(); refresh(); const b = document.querySelector(`[data-fam="${k}"]`); if (b) b.focus(); }
 
 /* ---------- lote: quanto cabe a cada gerência ----------
@@ -1377,18 +1484,22 @@ function rateioLote(s){
   if (s.rateio && s.rateio.length) return s.rateio.map(r => linha(r.solicitacao_id, r.gerencia_id, r.familia, r.total, r.quantidade));
   const C = calcTudo(s), out = [];
   C.fams.forEach(fc => {
+    /* famílias juntas: o banco grava o frete inteiro na primeira família que ganhou
+       item naquele fornecedor e rateia dentro dela; a prévia faz igual */
     const porCol = {};
+    const fretePara = freteDoGrupo(s, fc.k);
     fc.linhas.forEach(l => {
       if (l.esc === null || !l.valido[l.esc]) return;
-      const d = fc.forn[l.esc].desc;
+      const d = fc.forn[l.esc].desc, fam = famKey(l.it);
       (l.it.partes || []).forEach(pt => {
         const liq = pt.quantidade * l.p[l.esc] * (1 - d / 100);
-        (porCol[l.esc] = porCol[l.esc] || []).push({ pt, liq });
+        (porCol[fam + '|' + l.esc] = porCol[fam + '|' + l.esc] || []).push({ pt, liq });
       });
     });
-    Object.keys(porCol).forEach(j => {
-      const lista = porCol[j], soma = lista.reduce((t, x) => t + x.liq, 0), frete = fc.forn[j].frete;
-      lista.forEach(x => out.push(linha(x.pt.solicitacao_id, x.pt.gerencia_id, fc.k, x.liq + (soma > 0 ? frete * x.liq / soma : 0), x.pt.quantidade)));
+    Object.keys(porCol).forEach(ch => {
+      const [fam, j] = ch.split('|');
+      const lista = porCol[ch], soma = lista.reduce((t, x) => t + x.liq, 0), frete = fretePara[j] === fam ? fc.forn[j].frete : 0;
+      lista.forEach(x => out.push(linha(x.pt.solicitacao_id, x.pt.gerencia_id, fam, x.liq + (soma > 0 ? frete * x.liq / soma : 0), x.pt.quantidade)));
     });
   });
   return out;
@@ -1595,7 +1706,7 @@ $('view').addEventListener('keydown', e => {
   if (e.key !== 'Enter' || !t.dataset || !['preco','desc','frete','prazo'].includes(t.dataset.k)) return;
   e.preventDefault();
   const s = sol(S.solId), j = t.dataset.j;
-  const itens = s.itens.filter(it => famKey(it) === S.fam);
+  const itens = s.itens.filter(it => unidDe(s, it) === S.fam);
   let prox;
   if (t.dataset.k === 'preco'){
     const i = itens.findIndex(it => it.id === t.dataset.i);
@@ -1903,7 +2014,7 @@ function mapaParaCot(s, m){
   familias.forEach(fa => {
     const F = c.fams[fa.familia]; if (!F) return;
     (fa.fornecedores || []).forEach(f => {
-      const j = Number(f.coluna) - 1; if (!(j >= 0 && j <= 2)) return;
+      const j = Number(f.coluna) - 1; if (!(j >= 0 && j < NFORN)) return;
       Object.assign(F.forn[j], {
         nome:f.nome || '', fid:f.fornecedor_id || null,
         desc:f.desconto_pct === null || f.desconto_pct === undefined ? '' : numBR(Number(f.desconto_pct)),
@@ -1914,6 +2025,15 @@ function mapaParaCot(s, m){
   });
   (m.precos || []).forEach(p => { const F = c.fams[famDoItem[p.item_id]]; if (F && F.precos[p.item_id]) F.precos[p.item_id][p.coluna - 1] = nPreco(Number(p.preco)); });
   (m.escolhas || []).forEach(e => { const F = c.fams[famDoItem[e.item_id]]; if (F) F.escolha[e.item_id] = e.coluna - 1; });
+  /* famílias que o comprador tinha juntado */
+  const grupos = [];
+  familias.forEach(fa => (fa.fornecedores || []).forEach(f => {
+    const g = String(f.grupo || '').split('+').map(x => x.trim()).filter(x => c.fams[x]);
+    if (g.length > 1 && !grupos.some(x => x.join('+') === g.join('+'))) grupos.push(g);
+  }));
+  const antes = s.cot; s.cot = c;
+  grupos.forEach(g => { if (g.every(f => c.fams[f])) juntarUnidades(s, g); });
+  s.cot = antes;
   c.obs = m.observacao || '';
   c.iniciada = true;
   return c;
@@ -1923,17 +2043,21 @@ function cotParaMapa(s){
   const cols = colunas(s);
   Object.keys(c.fams).forEach(k => {
     const F = c.fams[k];
+    const fams = membros(k);
+    /* grupo: cada família recebe as mesmas linhas; o frete vai para a família que ganhou item naquele fornecedor */
+    const fretePara = freteDoGrupo(s, k);
     cols.forEach(j => {
       const f = F.forn[j];
       const d = parseBR(f.desc), fr = parseBR(f.frete), pz = parseBR(f.prazo);
       const tem = f.nome.trim() || f.fid || String(f.desc).trim() || String(f.frete).trim() || String(f.prazo).trim() || f.cond.trim() || f.forma;
       if (!tem) return;
-      fornecedores.push({ familia:k, coluna:j + 1, fornecedor_id:f.fid || null, fornecedor_nome:f.nome.trim() || null,
+      fams.forEach(fam => fornecedores.push({ familia:fam, coluna:j + 1, fornecedor_id:f.fid || null, fornecedor_nome:f.nome.trim() || null,
         desconto_pct: ok(d) && d >= 0 && d <= 100 ? d : null,
-        frete: ok(fr) && fr >= 0 ? fr : null,
+        frete: ok(fr) && fr >= 0 ? (fams.length > 1 && fretePara[j] !== fam ? 0 : fr) : null,
         prazo_dias: ok(pz) && pz >= 0 && Number.isInteger(pz) ? pz : null,
         condicao: f.cond.trim() || null,
-        forma_pagamento: FORMAS_PAG.includes(f.forma) ? f.forma : null });
+        forma_pagamento: FORMAS_PAG.includes(f.forma) ? f.forma : null,
+        grupo: fams.length > 1 ? fams.join('+') : null }));
     });
     Object.keys(F.precos).forEach(iid => F.precos[iid].forEach((v, j) => {
       if (!cols.includes(j)) return;

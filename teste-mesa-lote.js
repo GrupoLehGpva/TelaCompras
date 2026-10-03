@@ -424,6 +424,35 @@ const b = await chromium.launch();
   ok('L7 celular: Mensal > aguardando fechamento sem rolagem lateral', await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   await p.close(); }
 
+/* L3b — juntar famílias no lote (03/10): HL + MG com o mesmo fornecedor */
+{ const p = await abrir(b, { prep:fecharCorte });
+  await verMensal(p); await p.click('[data-open="Lote 10/2026"]'); await p.waitForTimeout(700);
+  const ID = await p.evaluate(() => ({ rol:idSeguro('1201|UN'), sab:idSeguro('7360|UN') }));
+  await p.click('[data-fam="HL"]'); await p.waitForTimeout(150);
+  await escolherForn(p, 'n-HL-0', 'ro', 'f1'); await p.fill('#f-HL-0', '6'); await p.fill('#z-HL-0', '3'); await p.fill('#c-HL-0', 'À vista'); await p.selectOption('#fp-HL-0', 'Pix');
+  await p.fill(`#p-HL-${ID.sab}-0`, '5'); await p.click(`#k-HL-${ID.sab}-0`);
+  await p.click('[data-fam="MG"]'); await p.waitForTimeout(150);
+  await escolherForn(p, 'n-MG-0', 'ro', 'f1');
+  await p.fill(`#p-MG-${ID.rol}-0`, '10'); await p.click(`#k-MG-${ID.rol}-0`);
+  await p.click('#bt-juntar'); await p.waitForTimeout(150);
+  ok('L3b lote: três famílias no painel', await p.locator('.juntar-painel input[type=checkbox]').count() === 3);
+  await p.check('.juntar-painel input[value="HL"]'); await p.click('#bt-juntar-ok'); await p.waitForTimeout(300);
+  ok('L3b lote: HL + MG numa aba, FORA continua', await p.locator('[data-fam="HL__MG"]').count() === 1 && await p.locator('[data-fam="FORA"]').count() === 1 && await p.locator('[data-fam="MG"]').count() === 0);
+  ok('L3b lote: condições vieram da HL', (await p.inputValue('#f-HL__MG-0')) === '6,00' && (await p.inputValue('#c-HL__MG-0')) === 'À vista' && (await p.inputValue('#fp-HL__MG-0')) === 'Pix');
+  /* prévia: frete 6 fica na HL (sabão, g2): g1 = 40; g2 = 50 + 6 + 20 = 76 */
+  const r = await txt(p, '#rateio');
+  ok('L3b lote: prévia com o frete na família que leva (igual ao banco)', /R\$\s?40,00/.test(r) && /R\$\s?76,00/.test(r) && /R\$\s?116,00/.test(r), r);
+  await p.waitForTimeout(1800);
+  const u = ch(p, 'salvar_mapa_lote').slice(-1)[0].c.p_mapa;
+  const ln = fam => u.fornecedores.find(f => f.familia === fam && f.coluna === 1);
+  ok('L3b lote: grava o grupo e o frete numa família só', ln('HL') && ln('MG') && ln('HL').grupo === 'HL+MG' && ln('MG').grupo === 'HL+MG' && ln('HL').frete === 6 && ln('MG').frete === 0 && ln('MG').forma_pagamento === 'Pix', u.fornecedores);
+  ok('L3b lote: chaves originais', u.precos.some(x => x.item_id === '1201|UN') && u.escolhas.some(x => x.item_id === '7360|UN'));
+  await p.click('#bt-back'); await p.waitForTimeout(500);
+  await verMensal(p); await p.click('[data-open="Lote 10/2026"]'); await p.waitForTimeout(700);
+  await p.click('[data-fam="HL__MG"]'); await p.waitForTimeout(150);
+  ok('L3b lote: reabre junto', await p.locator('[data-fam="HL__MG"]').count() === 1 && (await p.inputValue('#f-HL__MG-0')) === '6,00', await txt(p, '#ftabs'));
+  await p.close(); }
+
 await b.close();
 console.log('\n===== FALHAS (' + falhas.length + ') =====');
 falhas.forEach(f => console.log(' ✗ ' + f));
