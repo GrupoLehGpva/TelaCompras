@@ -485,6 +485,7 @@
   .seg-tipo .c.tem[data-c="normal"]{background:var(--sg-acc-s);color:var(--sg-acc);border-color:color-mix(in srgb,var(--sg-acc) 25%,transparent)}
   .seg-tipo .c.tem[data-c="urgente"]{background:var(--sg-crit-s);color:var(--sg-crit);border-color:color-mix(in srgb,var(--sg-crit) 25%,transparent)}
   .seg-tipo .c.tem[data-c="mensal"]{background:var(--sg-warn-s);color:var(--sg-warn);border-color:color-mix(in srgb,var(--sg-warn) 25%,transparent)}
+  .seg-tipo .c.tem[data-c="todos"]{color:var(--sg-tinta);font-weight:700}
   .selo-tipo{display:inline-block;margin-top:4px;margin-right:4px;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700}
   .selo-tipo.normal{background:var(--realce);color:var(--muted);border:1px solid var(--borda)}
   .selo-tipo.mensal{background:var(--demo-bg);color:var(--demo)}
@@ -493,7 +494,7 @@
   .lnk-rel{color:inherit;text-decoration:none;border:1px solid currentColor;background:transparent}
   .lnk-rel:hover{background:rgba(255,255,255,.12)}
   /* Tipo primeiro, busca à direita (02/10, igual à Mesa) */
-  .nivel-tipo{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;margin:2px 0 6px}
+  .nivel-tipo{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;margin:0 0 14px}
   .nivel-tipo .seg-tipo{margin:0}
   .busca-topo{min-width:300px;margin-left:auto}
   @media (max-width:600px){ .busca-topo{min-width:0;flex:1 1 100%;margin-left:0} }
@@ -553,18 +554,9 @@
   <main id="conteudo" hidden>
     <div class="aviso-topo" id="avisoTopo" hidden></div>
 
-    <!-- 02/10: mesma ordem da Mesa — tipo de compra primeiro (sempre um marcado),
-         busca no alto à direita, e só depois as abas da fila. -->
-    <div class="nivel-tipo">
-      <div class="seg-tipo" id="segTipo" role="group" aria-label="Tipo de compra">
-        <button type="button" data-tipo="normal" aria-pressed="false">Normal <span class="c" data-c="normal">0</span></button>
-        <button type="button" data-tipo="urgente" aria-pressed="false">Urgente <span class="c" data-c="urgente">0</span></button>
-        <button type="button" data-tipo="mensal" aria-pressed="false">Mensal <span class="c" data-c="mensal">0</span></button>
-      </div>
-      <input type="search" class="filtro-fila busca-topo" id="filtro" aria-label="Buscar"
-             placeholder="Buscar número, pessoa ou centro de custo">
-    </div>
-
+    <!-- 03/10 (escolha do Guilherme): abas primeiro, com o total de tudo;
+         embaixo, Todos | Normal | Urgente | Mensal com o total daquela aba,
+         "Todos" marcado ao abrir; busca à direita. -->
     <div class="abas" role="tablist">
       <button type="button" class="aba" id="abaFila" role="tab" aria-selected="true">
         Esperando você <span class="conta" id="contaFila">0</span>
@@ -575,6 +567,17 @@
       <button type="button" class="aba" id="abaRep" role="tab" aria-selected="false">
         Reprovadas <span class="conta" id="contaRep" hidden></span>
       </button>
+    </div>
+
+    <div class="nivel-tipo">
+      <div class="seg-tipo" id="segTipo" role="group" aria-label="Tipo de compra">
+        <button type="button" data-tipo="" aria-pressed="true">Todos <span class="c" data-c="todos">0</span></button>
+        <button type="button" data-tipo="normal" aria-pressed="false">Normal <span class="c" data-c="normal">0</span></button>
+        <button type="button" data-tipo="urgente" aria-pressed="false">Urgente <span class="c" data-c="urgente">0</span></button>
+        <button type="button" data-tipo="mensal" aria-pressed="false">Mensal <span class="c" data-c="mensal">0</span></button>
+      </div>
+      <input type="search" class="filtro-fila busca-topo" id="filtro" aria-label="Buscar"
+             placeholder="Buscar número, pessoa ou centro de custo">
     </div>
 
     <div id="painelFila">
@@ -785,8 +788,7 @@ let enviando = false;
    acabou de fazer, que é justamente quando ela vai olhar. */
 let HIST = null;
 let aba = 'fila';           // 'fila' | 'aprov' | 'rep'
-let tipoSel = 'normal';     // sempre um tipo marcado (02/10, igual à Mesa)
-let tipoEscolhido = false;  // a pessoa já clicou num tipo? então não troca sozinho
+let tipoSel = '';           // '' = Todos (padrão ao abrir, 03/10)
 let histMes = '';           // '' = todos os meses
 const TIPO_NOME = { normal:'Normal', urgente:'Urgente', mensal:'Mensal' };
 const tipoDe = x => { const t = String((x && x.tipo_compra) || '').toLowerCase(); return TIPO_NOME[t] ? t : 'normal'; };
@@ -1160,7 +1162,7 @@ async function decidir(itens, decisao, motivo){
   }
 
   FILA = FILA.filter(s => !feitos.includes(s));
-  if(feitos.length) HIST = null;   /* o que acabou de ser decidido precisa aparecer lá */
+  if(feitos.length){ HIST = null; carregarHistorico(); }   /* o que acabou de ser decidido precisa aparecer lá (e nos totais) */
 
   /* --------------------------------------------------------------------------
      RECUSA RECARREGA A FILA. SEMPRE.
@@ -1348,10 +1350,11 @@ async function abrir(){
     document.title = (OBSERVADOR ? 'Observando · ' : 'Aprovações · ') + APROVADOR.nome + ' · Grupo Leh';
 
     FILA = await carregarFila();
-    escolherTipoInicial();
     $('carregando').hidden = true;
     $('conteudo').hidden = false;
     desenhar();
+    /* 03/10: os totais de Aprovadas e Reprovadas aparecem logo ao abrir */
+    carregarHistorico();
   }catch(e){
     falhar('Não consegui carregar a sua fila.', String(e.message).slice(0,220));
   }
@@ -1420,12 +1423,11 @@ function histDaAba(qual){
   const a = qual || aba;
   return agruparPacotes(umPorPedido(HIST || []).filter(h => a === 'aprov' ? ehAprovada(h) : !ehAprovada(h)));
 }
-/* Números das abas = do tipo escolhido (o tipo vem primeiro, como na Mesa). */
+/* Números das abas = total de todos os tipos (fixo). */
 function contarHist(){
   if(!HIST) return;
-  const doTipo = l => l.filter(h => tipoDe(h) === tipoSel).length;
-  $('contaAprov').textContent = doTipo(histDaAba('aprov')); $('contaAprov').hidden = false;
-  $('contaRep').textContent = doTipo(histDaAba('rep')); $('contaRep').hidden = false;
+  $('contaAprov').textContent = histDaAba('aprov').length; $('contaAprov').hidden = false;
+  $('contaRep').textContent = histDaAba('rep').length; $('contaRep').hidden = false;
 }
 const pacotesHistAbertos = new Set();
 
@@ -1445,7 +1447,7 @@ function desenharHist(){
   const daAba = histDaAba();
   pintarMeses(daAba);
   pintarTipos();
-  const doTipo = daAba.filter(h => tipoDe(h) === tipoSel);
+  const doTipo = daAba.filter(h => !tipoSel || tipoDe(h) === tipoSel);
   const lista = doTipo.filter(passaBusca).filter(h => !histMes || mesDe(h) === histMes);
   const decididas = aba === 'aprov' ? 'aprovada' : 'reprovada';
   $('histResumo').textContent = lista.length ? lista.length + ' ' + decididas + (lista.length === 1 ? '' : 's') + (histMes ? ' em ' + nomeMes(histMes) : '') : '';
@@ -1457,7 +1459,7 @@ function desenharHist(){
     b.textContent = !HIST || !HIST.length ? 'Você ainda não decidiu nenhuma solicitação.'
       : !daAba.length ? (aba === 'aprov' ? 'Nenhuma solicitação aprovada ainda.' : 'Nenhuma solicitação reprovada.')
       : !doTipo.length ? 'Nenhuma compra ' + TIPO_NOME[tipoSel].toLowerCase() + ' ' + decididas + '.'
-      : (histMes && !termo.trim()) ? 'Nenhuma compra ' + TIPO_NOME[tipoSel].toLowerCase() + ' ' + decididas + ' em ' + nomeMes(histMes) + '.'
+      : (histMes && !termo.trim()) ? 'Nenhuma compra ' + (tipoSel ? TIPO_NOME[tipoSel].toLowerCase() + ' ' : '') + decididas + ' em ' + nomeMes(histMes) + '.'
       : 'Nada com esse filtro.';
     return;
   }
@@ -1556,23 +1558,25 @@ function trocarAba(qual){
   if(!naFila) carregarHistorico(); else desenhar();
 }
 
-/* Abre no primeiro tipo com pedido esperando (Normal, Urgente, Mensal), como a Mesa. */
-function escolherTipoInicial(){
-  if(tipoEscolhido) return;
-  const t = ['normal','urgente','mensal'].find(x => FILA.some(s => tipoDe(s) === x));
-  tipoSel = t || 'normal';
+/* Abas = total de tudo; botões de tipo = total DAQUELA aba (03/10, escolha do
+   Guilherme). Nas Aprovadas/Reprovadas o mês escolhido vale; a busca não mexe
+   nos números (só na lista). */
+function baseDaAba(){
+  if(aba === 'fila') return FILA;
+  if(!HIST) return null;
+  return histDaAba().filter(h => !histMes || mesDe(h) === histMes);
 }
-
-/* Número de cada tipo = quantos ESPERAM a decisão, como na Mesa (02/10). Fixo:
-   não muda ao trocar de aba, de mês ou de busca — antes mudava e confundia. */
 function pintarTipos(){
+  const base = baseDaAba();
+  const nomeAba = aba === 'fila' ? 'esperando você' : aba === 'aprov' ? 'aprovadas' : 'reprovadas';
   document.querySelectorAll('#segTipo [data-tipo]').forEach(b => {
-    const t = b.dataset.tipo, n = FILA.filter(x => tipoDe(x) === t).length;
+    const t = b.dataset.tipo;
+    const n = base ? base.filter(x => !t || tipoDe(x) === t).length : null;
     b.setAttribute('aria-pressed', String(tipoSel === t));
-    b.title = 'Compra ' + TIPO_NOME[t].toLowerCase() + ' · ' + n + (n === 1 ? ' esperando você' : ' esperando você');
-    const c = b.querySelector('.c'); c.textContent = n; c.classList.toggle('tem', n > 0);
+    b.title = (t ? 'Compra ' + TIPO_NOME[t].toLowerCase() : 'Todos os tipos') + (n === null ? '' : ' · ' + n + ' ' + nomeAba);
+    const c = b.querySelector('.c'); c.textContent = n === null ? '–' : n; c.classList.toggle('tem', !!n);
   });
-  $('contaFila').textContent = FILA.filter(x => tipoDe(x) === tipoSel).length;
+  $('contaFila').textContent = FILA.length;
   contarHist();
 }
 
@@ -1600,7 +1604,7 @@ $('abaHist').addEventListener('click', ()=> trocarAba('aprov'));
 $('abaRep').addEventListener('click', ()=> trocarAba('rep'));
 $('segTipo').addEventListener('click', e => {
   const b = e.target.closest('[data-tipo]'); if(!b) return;
-  tipoSel = b.dataset.tipo; tipoEscolhido = true;
+  tipoSel = b.dataset.tipo || '';
   if(aba === 'fila') desenhar(); else desenharHist();
 });
 $('btnCancelar').addEventListener('click', fecharReprova);

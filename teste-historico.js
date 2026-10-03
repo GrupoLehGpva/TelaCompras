@@ -62,11 +62,12 @@ const b = await chromium.launch();
 let p = await tela(b);
 ok('1 abre na fila',        await p.locator('#painelFila').isVisible(), 'não abriu na fila');
 ok('1 histórico escondido', !(await p.locator('#painelHist').isVisible()), 'histórico apareceu sem pedir');
-ok('1 não busca à toa',     pediuHistorico(p) === 0, 'buscou o histórico sem ninguém abrir a aba');
+/* 03/10: o histórico vem junto ao abrir — os totais de Aprovadas e Reprovadas aparecem nas abas */
+ok('1 busca o histórico uma vez, para os totais', pediuHistorico(p) === 1, 'pedidos: ' + pediuHistorico(p));
 ok('1 conta bate',          (await p.locator('#contaFila').textContent()) === String(FILA.length),
    'conta: ' + await p.locator('#contaFila').textContent());
 ok('1 fila desenhada',      await conta(p, '#corpoFila tr') === 1, 'linhas: ' + await conta(p, '#corpoFila tr'));
-ok('1 sem linha de histórico na fila', await conta(p, '#corpoHist tr:not(.mes-sep)') === 0, 'histórico vazou para a fila');
+ok('1 histórico não aparece na fila', await p.locator('#painelHist').isHidden() && !(await p.locator('#corpoHist').isVisible()), 'histórico vazou para a fila');
 
 /* 2 — abrir a aba busca uma vez e desenha */
 await p.click('#abaHist');

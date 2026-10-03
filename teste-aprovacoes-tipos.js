@@ -1,9 +1,10 @@
 /* ============================================================================
-   TELA DE APROVAÇÃO — TIPO DE COMPRA, APROVADAS / REPROVADAS POR MÊS (02/10)
-   Igual à Mesa: o tipo de compra vem primeiro (Normal | Urgente | Mensal,
-   sempre um marcado), a busca fica no alto à direita, e só depois as abas
-   Esperando você | Aprovadas | Reprovadas. Aprovadas e Reprovadas se separam
-   por mês, com filtro de mês. O pacote do lote mensal é UMA linha no histórico.
+   TELA DE APROVAÇÃO — ABAS, TIPO DE COMPRA, APROVADAS / REPROVADAS POR MÊS
+   03/10 (escolha do Guilherme): abas primeiro — Esperando você | Aprovadas |
+   Reprovadas, com o total de tudo —; embaixo, Todos | Normal | Urgente |
+   Mensal com o total DAQUELA aba ("Todos" marcado ao abrir); busca à direita.
+   Aprovadas e Reprovadas se separam por mês, com filtro de mês. Um pedido por
+   linha; o pacote do lote mensal é UMA linha.
    ========================================================================== */
 const { chromium } = require('playwright');
 const base = 'file://' + __dirname + '/aprovacoes.html';
@@ -58,96 +59,94 @@ const meses = p => p.$$eval('#corpoHist tr.mes-sep', t => t.map(x => x.textConte
 
 (async () => {
 const b = await chromium.launch();
+const T = (todos, n, u, m, sel = '') => JSON.stringify([':' + (sel === '') + ':' + todos, 'normal:' + (sel === 'normal') + ':' + n,
+  'urgente:' + (sel === 'urgente') + ':' + u, 'mensal:' + (sel === 'mensal') + ':' + m]);
 
-/* 1 — ordem igual à Mesa: tipo primeiro, busca no alto à direita, abas depois */
+/* 1 — abas primeiro, tipo depois; "Todos" marcado; busca à direita */
 { const p = await tela(b);
   const pos = await p.evaluate(() => {
-    const r = id => document.getElementById(id).getBoundingClientRect();
-    const abas = document.querySelector('.abas').getBoundingClientRect();
-    return { tipoY: r('segTipo').top, buscaY: r('filtro').top, abasY: abas.top, buscaX: r('filtro').right, tipoX: r('segTipo').left, larg: document.querySelector('.nivel-tipo').getBoundingClientRect().right };
+    const r = el => el.getBoundingClientRect();
+    const abas = r(document.querySelector('.abas')), tipo = r(document.getElementById('segTipo')), busca = r(document.getElementById('filtro')), lin = r(document.querySelector('.nivel-tipo'));
+    return { abasY: abas.top, tipoY: tipo.top, buscaY: busca.top, buscaX: busca.right, linX: lin.right };
   });
-  ok('1 tipo de compra acima das abas', pos.tipoY < pos.abasY, JSON.stringify(pos));
-  ok('1 busca na mesma linha do tipo, encostada à direita', Math.abs(pos.buscaY - pos.tipoY) < 12 && Math.abs(pos.buscaX - pos.larg) < 2, JSON.stringify(pos));
-  ok('1 busca fora da barra da fila', await p.locator('.barra-fila #filtro').count() === 0);
-  ok('1 abre no primeiro tipo com pedido (Normal), com contagem', JSON.stringify(await tipos(p)) === JSON.stringify(['normal:true:2', 'urgente:false:1', 'mensal:false:3']), JSON.stringify(await tipos(p)));
-  ok('1 sem "Todas"', !/Todas/.test(await p.textContent('#segTipo')));
-  ok('1 abas: Esperando você, Aprovadas, Reprovadas', /Esperando você/.test(await p.textContent('#abaFila')) && /Aprovadas/.test(await p.textContent('#abaHist')) && /Reprovadas/.test(await p.textContent('#abaRep')));
+  ok('1 abas acima dos tipos', pos.abasY < pos.tipoY, JSON.stringify(pos));
+  ok('1 busca na linha dos tipos, encostada à direita', Math.abs(pos.buscaY - pos.tipoY) < 12 && Math.abs(pos.buscaX - pos.linX) < 2, JSON.stringify(pos));
+  ok('1 botões: Todos, Normal, Urgente, Mensal', JSON.stringify(await p.$$eval('#segTipo [data-tipo]', bs => bs.map(x => x.firstChild.textContent.trim()))) === JSON.stringify(['Todos', 'Normal', 'Urgente', 'Mensal']));
+  ok('1 abre em Todos, com o total de cada tipo da fila', JSON.stringify(await tipos(p)) === T(6, 2, 1, 3), JSON.stringify(await tipos(p)));
+  ok('1 aba mostra o total de tudo', (await p.textContent('#contaFila')) === '6');
   { const st = await p.evaluate(() => { const g = getComputedStyle(document.getElementById('segTipo')); return g.backgroundColor + '|' + g.borderRadius + '|' + g.padding; });
     ok('1 mesmo desenho do funil (faixa cinza arredondada)', st === 'rgb(231, 236, 238)|10px|4px', st); }
-  ok('1 não busca o histórico à toa', !p.__rpc.some(n => n.startsWith('historico')));
-  /* 2 — só o tipo marcado aparece, cada linha diz o tipo */
+  ok('1 já mostra os totais de Aprovadas e Reprovadas ao abrir', (await p.textContent('#contaAprov')) === '5' && (await p.textContent('#contaRep')) === '2' && !(await p.locator('#painelFila').isHidden()));
   const selos = await p.$$eval('#corpoFila tr', t => t.map(x => (x.querySelector('.selo-tipo, .selo-urgente') || {}).textContent));
-  ok('2 só as normais, cada linha diz o tipo', JSON.stringify(selos) === JSON.stringify(['Normal', 'Normal']), JSON.stringify(selos));
-  ok('2 número da aba é do tipo escolhido', (await p.textContent('#contaFila')) === '2');
-  /* 3 — trocar de tipo; clicar no marcado não desmarca */
+  ok('2 Todos: todas as linhas, cada uma diz o tipo', JSON.stringify(selos) === JSON.stringify(['Normal', 'Normal', 'Urgente', 'Mensal', 'Mensal', 'Mensal']), JSON.stringify(selos));
+  /* 3 — filtrar e voltar a Todos; os números não mudam */
   await p.click('#segTipo [data-tipo=mensal]'); await p.waitForTimeout(150);
   ok('3 Mensal: só as 3 mensais', await linhas(p, '#corpoFila') === 3 && (await nums(p, '#corpoFila')).every(n => /0010[456]/.test(n)), JSON.stringify(await nums(p, '#corpoFila')));
-  ok('3 Mensal marcado, Normal desmarcado', (await tipos(p))[2] === 'mensal:true:3' && (await tipos(p))[0] === 'normal:false:2');
+  ok('3 números iguais, Mensal marcado', JSON.stringify(await tipos(p)) === T(6, 2, 1, 3, 'mensal') && (await p.textContent('#contaFila')) === '6', JSON.stringify(await tipos(p)));
   ok('3 marcado em branco com sombra', await p.$eval('#segTipo [data-tipo=mensal]', b => getComputedStyle(b).backgroundColor === 'rgb(255, 255, 255)' && getComputedStyle(b).boxShadow !== 'none'));
   await p.click('#segTipo [data-tipo=mensal]'); await p.waitForTimeout(150);
-  ok('3 clicar de novo no marcado continua nele', (await tipos(p))[2] === 'mensal:true:3' && await linhas(p, '#corpoFila') === 3);
+  ok('3 clicar de novo no marcado continua nele', await linhas(p, '#corpoFila') === 3);
   await p.click('#segTipo [data-tipo=urgente]'); await p.waitForTimeout(150);
-  ok('3 troca para Urgente', await linhas(p, '#corpoFila') === 1 && (await tipos(p))[1] === 'urgente:true:1' && (await tipos(p))[2] === 'mensal:false:3');
-  /* 4 — tipo + busca + "Só as de hoje" convivem */
+  ok('3 troca para Urgente', await linhas(p, '#corpoFila') === 1 && JSON.stringify(await tipos(p)) === T(6, 2, 1, 3, 'urgente'));
+  await p.click('#segTipo [data-tipo=""]'); await p.waitForTimeout(150);
+  ok('3 Todos volta a mostrar tudo', await linhas(p, '#corpoFila') === 6 && JSON.stringify(await tipos(p)) === T(6, 2, 1, 3));
+  /* 4 — tipo + busca + "Só as de hoje" convivem; números fixos */
   await p.click('#segTipo [data-tipo=normal]'); await p.fill('#filtro', '00102'); await p.waitForTimeout(150);
-  ok('4 tipo e busca juntos; o número do tipo não muda com a busca', await linhas(p, '#corpoFila') === 1 && (await tipos(p))[0] === 'normal:true:2', JSON.stringify(await tipos(p)));
+  ok('4 tipo e busca juntos; a busca não mexe nos números', await linhas(p, '#corpoFila') === 1 && JSON.stringify(await tipos(p)) === T(6, 2, 1, 3, 'normal'), JSON.stringify(await tipos(p)));
   await p.fill('#filtro', ''); await p.click('#chipHoje'); await p.waitForTimeout(150);
   ok('4 só as de hoje + tipo', await linhas(p, '#corpoFila') === 2);
   await p.click('#chipTodas'); await p.waitForTimeout(100);
   /* 5 — aprovar selecionadas respeita o tipo */
   await p.click('#marcarTodas'); await p.waitForTimeout(100);
   ok('5 marcar todas marca só as normais visíveis', /Aprovar 2 selecionadas/.test(await p.textContent('#btnLote')), await p.textContent('#btnLote'));
+  await p.click('#marcarTodas'); await p.click('#segTipo [data-tipo=""]'); await p.waitForTimeout(100);
   await p.click('#marcarTodas'); await p.waitForTimeout(100);
+  ok('5 em Todos, marca as 6', /Aprovar 6 selecionadas/.test(await p.textContent('#btnLote')), await p.textContent('#btnLote'));
   await p.close(); }
 
-/* 6 — abre no primeiro tipo que tem pedido; tipo vazio explica */
-{ const p = await tela(b, { fila: FILA.filter(s => s.tipo_compra === 'mensal') });
-  ok('6 sem normal nem urgente: abre no Mensal', (await tipos(p))[2] === 'mensal:true:3' && await linhas(p, '#corpoFila') === 3, JSON.stringify(await tipos(p)));
-  await p.close(); }
+/* 6 — tipo vazio e fila vazia explicam */
 { const p = await tela(b, { fila: FILA.filter(s => s.tipo_compra !== 'mensal') });
-  ok('6 contagem zero no Mensal', (await tipos(p))[2] === 'mensal:false:0');
+  ok('6 contagem zero no Mensal', JSON.stringify(await tipos(p)) === T(3, 2, 1, 0));
   await p.click('#segTipo [data-tipo=mensal]'); await p.waitForTimeout(150);
   ok('6 aviso "Nenhuma compra mensal esperando por você."', await p.locator('#filaVazia').isVisible() && /Nenhuma compra mensal esperando por você/.test(await p.textContent('#filaVazia')));
   await p.close(); }
 { const p = await tela(b, { fila: [] });
-  ok('6 fila vazia: abre no Normal e diz que não há nada', (await tipos(p))[0] === 'normal:true:0' && /Nada esperando por você/.test(await p.textContent('#filaVazia')));
+  ok('6 fila vazia: Todos marcado, zeros, "Nada esperando por você."', JSON.stringify(await tipos(p)) === T(0, 0, 0, 0) && /Nada esperando por você/.test(await p.textContent('#filaVazia')));
   await p.close(); }
 
-/* 7 — Aprovadas e Reprovadas, separadas por mês */
+/* 7 — Aprovadas e Reprovadas: números da aba, por mês */
 { const p = await tela(b);
   await p.click('#abaHist'); await p.waitForTimeout(400);
   ok('7 buscou o histórico novo, com meses inteiros', p.__rpc.filter(n => n === 'historico_do_aprovador').length === 1 && !p.__rpc.includes('historico_de_aprovacoes') && p.__lim[0] === 2000, JSON.stringify(p.__lim));
-  ok('7 números das abas são do tipo escolhido (Normal)', (await p.textContent('#contaAprov')) === '3' && (await p.textContent('#contaRep')) === '0' && (await p.textContent('#contaFila')) === '2');
-  ok('7 números dos tipos não mudam ao trocar de aba (são os que esperam)', JSON.stringify(await tipos(p)) === JSON.stringify(['normal:true:2', 'urgente:false:1', 'mensal:false:3']), JSON.stringify(await tipos(p)));
-  ok('7 Aprovadas normais: mais recente primeiro', JSON.stringify(await nums(p, '#corpoHist')) === JSON.stringify(['C2609-00201', 'C2609-00150', 'C2609-00120']), JSON.stringify(await nums(p, '#corpoHist')));
-  ok('7 separadas por mês, com a quantidade', JSON.stringify(await meses(p)) === JSON.stringify(['Outubro de 2026 · 1', 'Setembro de 2026 · 2']), JSON.stringify(await meses(p)));
-  const ordem = await p.$$eval('#corpoHist tr', t => t.map(x => x.classList.contains('mes-sep') ? 'M' : 'L').join(''));
-  ok('7 cada mês antes das suas linhas', ordem === 'MLMLL', ordem);
+  ok('7 abas com o total de tudo', (await p.textContent('#contaAprov')) === '5' && (await p.textContent('#contaRep')) === '2' && (await p.textContent('#contaFila')) === '6');
+  ok('7 botões com o total das Aprovadas', JSON.stringify(await tipos(p)) === T(5, 3, 0, 2), JSON.stringify(await tipos(p)));
+  ok('7 Todos: aprovadas de todos os tipos, mais recente primeiro', JSON.stringify(await nums(p, '#corpoHist')) === JSON.stringify(['C2609-00201', 'C2609-00202', 'C2609-00203', 'C2609-00150', 'C2609-00120']), JSON.stringify(await nums(p, '#corpoHist')));
+  ok('7 separadas por mês, com a quantidade', JSON.stringify(await meses(p)) === JSON.stringify(['Outubro de 2026 · 3', 'Setembro de 2026 · 2']), JSON.stringify(await meses(p)));
   ok('7 seletor de mês: todos + os meses que têm decisão', JSON.stringify(await p.$$eval('#histMes option', o => o.map(x => x.textContent))) === JSON.stringify(['Todos os meses', 'outubro de 2026', 'setembro de 2026']));
-  ok('7 resumo', /3 aprovadas/.test(await p.textContent('#histResumo')), await p.textContent('#histResumo'));
+  ok('7 resumo', /5 aprovadas/.test(await p.textContent('#histResumo')), await p.textContent('#histResumo'));
   await p.selectOption('#histMes', '2026-09'); await p.waitForTimeout(150);
   ok('7 filtro de mês: só setembro, sem separador', JSON.stringify(await nums(p, '#corpoHist')) === JSON.stringify(['C2609-00150', 'C2609-00120']) && (await meses(p)).length === 0);
+  ok('7 com mês escolhido, os botões contam o mês', JSON.stringify(await tipos(p)) === T(2, 2, 0, 0), JSON.stringify(await tipos(p)));
   ok('7 resumo do mês', /2 aprovadas em setembro de 2026/.test(await p.textContent('#histResumo')), await p.textContent('#histResumo'));
-  ok('7 números dos tipos não mudam com o mês', JSON.stringify(await tipos(p)) === JSON.stringify(['normal:true:2', 'urgente:false:1', 'mensal:false:3']), JSON.stringify(await tipos(p)));
   await p.click('#segTipo [data-tipo=mensal]'); await p.waitForTimeout(150);
   ok('7 mês sem esse tipo: aviso claro', await p.locator('#histVazio').isVisible() && /Nenhuma compra mensal aprovada em setembro de 2026/.test(await p.textContent('#histVazio')), await p.textContent('#histVazio'));
   await p.selectOption('#histMes', ''); await p.waitForTimeout(150);
   ok('7 Aprovadas + Mensal (todos os meses)', JSON.stringify(await nums(p, '#corpoHist')) === JSON.stringify(['C2609-00202', 'C2609-00203']));
   await p.click('#abaRep'); await p.waitForTimeout(200);
-  ok('7 o tipo escolhido vale nas Reprovadas', JSON.stringify(await nums(p, '#corpoHist')) === JSON.stringify(['C2609-00205']) && (await tipos(p))[2] === 'mensal:true:3' && (await p.textContent('#contaRep')) === '1');
+  ok('7 o tipo escolhido vale nas Reprovadas; botões com o total delas', JSON.stringify(await nums(p, '#corpoHist')) === JSON.stringify(['C2609-00205']) && JSON.stringify(await tipos(p)) === T(2, 0, 1, 1, 'mensal'), JSON.stringify(await tipos(p)));
   ok('7 Reprovadas mostra o motivo', /Fora do orçamento/.test(await p.textContent('#corpoHist')) && /Reprovada/.test(await p.textContent('#corpoHist')));
   await p.click('#segTipo [data-tipo=normal]'); await p.waitForTimeout(150);
   ok('7 sem reprovada normal: aviso', await p.locator('#histVazio').isVisible() && /Nenhuma compra normal reprovada/.test(await p.textContent('#histVazio')));
-  await p.click('#segTipo [data-tipo=urgente]'); await p.waitForTimeout(150);
-  ok('7 urgente reprovada', JSON.stringify(await nums(p, '#corpoHist')) === JSON.stringify(['C2609-00204']));
-  /* 7b — a busca do alto vale no histórico */
-  await p.click('#abaHist'); await p.click('#segTipo [data-tipo=normal]'); await p.fill('#filtro', '00150'); await p.waitForTimeout(150);
-  ok('7b busca no histórico', JSON.stringify(await nums(p, '#corpoHist')) === JSON.stringify(['C2609-00150']));
+  await p.click('#segTipo [data-tipo=""]'); await p.waitForTimeout(150);
+  ok('7 Todos nas Reprovadas', JSON.stringify(await nums(p, '#corpoHist')) === JSON.stringify(['C2609-00204', 'C2609-00205']));
+  /* 7b — a busca vale no histórico e não mexe nos números */
+  await p.click('#abaHist'); await p.fill('#filtro', '00150'); await p.waitForTimeout(150);
+  ok('7b busca no histórico', JSON.stringify(await nums(p, '#corpoHist')) === JSON.stringify(['C2609-00150']) && JSON.stringify(await tipos(p)) === T(5, 3, 0, 2));
   await p.fill('#filtro', 'nada-disso'); await p.waitForTimeout(150);
   ok('7b busca sem resultado explica', /Nada com esse filtro/.test(await p.textContent('#histVazio')));
   await p.fill('#filtro', ''); await p.waitForTimeout(100);
   await p.click('#abaFila'); await p.waitForTimeout(200);
-  ok('7 volta à fila no mesmo tipo', await linhas(p, '#corpoFila') === 2 && await p.locator('#painelHist').isHidden() && (await tipos(p))[0] === 'normal:true:2');
+  ok('7 volta à fila: números da fila', await linhas(p, '#corpoFila') === 6 && await p.locator('#painelHist').isHidden() && JSON.stringify(await tipos(p)) === T(6, 2, 1, 3));
   ok('7 histórico buscado uma vez só', p.__rpc.filter(n => n.startsWith('historico')).length === 1);
   await p.click('#abaHist'); await p.waitForTimeout(200);
   const href = await p.locator('#corpoHist a').first().getAttribute('href');
@@ -165,13 +164,14 @@ const b = await chromium.launch();
 { const p = await tela(b, { hist: [] });
   await p.click('#abaHist'); await p.waitForTimeout(400);
   ok('9 vazio explica, sem seletor de mês', /ainda não decidiu nenhuma/.test(await p.textContent('#histVazio')) && (await p.textContent('#contaAprov')) === '0' && await p.locator('#barraHist').isHidden());
+  ok('9 botões zerados', JSON.stringify(await tipos(p)) === T(0, 0, 0, 0), JSON.stringify(await tipos(p)));
   await p.close(); }
 
 /* 10 — lote mensal: o pacote é uma linha no histórico, com os pedidos dentro */
 { const p = await tela(b, { hist: HIST_LOTE });
   await p.click('#abaHist'); await p.click('#segTipo [data-tipo=mensal]'); await p.waitForTimeout(300);
   ok('10 pacote aprovado vira uma linha só', JSON.stringify(await nums(p, '#corpoHist')) === JSON.stringify(['Lote 10/2026', 'C2609-00202', 'C2609-00203']), JSON.stringify(await nums(p, '#corpoHist')));
-  ok('10 contagem conta o pacote como um', (await p.textContent('#contaAprov')) === '3' && (await tipos(p))[2] === 'mensal:true:3', (await p.textContent('#contaAprov')) + JSON.stringify(await tipos(p)));
+  ok('10 contagem conta o pacote como um', (await p.textContent('#contaAprov')) === '6' && JSON.parse(await tipos(p).then(JSON.stringify))[3] === 'mensal:true:3', (await p.textContent('#contaAprov')) + JSON.stringify(await tipos(p)));
   const lp = p.locator('#corpoHist tr', { hasText: 'Lote 10/2026' });
   ok('10 linha do pacote: gerência, 3 pedidos, 2 centros', /Pacote · 3 pedidos/.test(await lp.textContent()) && /ALVARO BRANDAO/.test(await lp.textContent()) && /2 centros de custo/.test(await lp.textContent()), await lp.textContent());
   ok('10 pacote fechado: pedidos escondidos', await p.locator('#corpoHist tr.pac-det').count() === 0 && (await p.getAttribute('[data-hpac]', 'aria-expanded')) === 'false');
@@ -195,27 +195,23 @@ const b = await chromium.launch();
                H('d3', 'C2609-00030', 'normal', 'aprovado', '2026-09-20T12:00:00Z', { etapa:'lider' }),
                H('d3', 'C2609-00030', 'normal', 'reprovado', '2026-09-21T12:00:00Z', { etapa:'gerencial' })];
   const p = await tela(b, { hist: dup });
-  const antes = JSON.stringify(await tipos(p));
-  await p.click('#abaHist'); await p.click('#segTipo [data-tipo=mensal]'); await p.waitForTimeout(300);
-  ok('10b pedido decidido em duas etapas aparece uma vez', JSON.stringify(await nums(p, '#corpoHist')) === JSON.stringify(['C2610-00014']) && (await p.textContent('#contaAprov')) === '1', JSON.stringify(await nums(p, '#corpoHist')));
+  await p.click('#abaHist'); await p.waitForTimeout(300);
+  ok('10b Todos: cada pedido uma vez, abas contam pedidos', JSON.stringify(await nums(p, '#corpoHist')) === JSON.stringify(['C2610-00014', 'C2609-00018']) && (await p.textContent('#contaAprov')) === '2' && (await p.textContent('#contaRep')) === '1' && JSON.stringify(await tipos(p)) === T(2, 0, 1, 1), JSON.stringify(await tipos(p)));
+  await p.click('#segTipo [data-tipo=mensal]'); await p.waitForTimeout(150);
   ok('10b etapa diz as duas', JSON.stringify(await p.$$eval('#corpoHist .etapas .etapa', e => e.map(x => x.textContent))) === JSON.stringify(['Liderança', 'Gerencial']));
   await p.click('#segTipo [data-tipo=urgente]'); await p.waitForTimeout(150);
   ok('10b urgente: uma linha, no mês da última decisão', JSON.stringify(await nums(p, '#corpoHist')) === JSON.stringify(['C2609-00018']) && JSON.stringify(await meses(p)) === JSON.stringify(['Outubro de 2026 · 1']), JSON.stringify(await meses(p)));
-  await p.click('#segTipo [data-tipo=normal]'); await p.waitForTimeout(150);
-  ok('10b vale a decisão mais recente (reprovou depois): não está nas Aprovadas', (await linhas(p, '#corpoHist')) === 0 && (await p.textContent('#contaRep')) === '1');
-  await p.click('#abaRep'); await p.waitForTimeout(150);
-  ok('10b e está nas Reprovadas', JSON.stringify(await nums(p, '#corpoHist')) === JSON.stringify(['C2609-00030']));
-  await p.click('#abaFila'); await p.waitForTimeout(150);
-  ok('10b números dos tipos iguais em todas as abas', JSON.stringify(await tipos(p)) === antes, antes + ' ' + JSON.stringify(await tipos(p)));
+  await p.click('#abaRep'); await p.click('#segTipo [data-tipo=""]'); await p.waitForTimeout(150);
+  ok('10b vale a decisão mais recente (reprovou depois): está nas Reprovadas', JSON.stringify(await nums(p, '#corpoHist')) === JSON.stringify(['C2609-00030']));
   await p.close(); }
 
-/* 11 — larguras: sem rolagem lateral; tipo e busca numa linha */
+/* 11 — larguras: sem rolagem lateral; tipos e busca numa linha */
 for (const w of [1366, 1440, 1920]) {
   const p = await tela(b, { vw: w });
   const sobra = await p.evaluate(() => document.documentElement.scrollWidth - innerWidth);
   ok('11 ' + w + 'px sem rolagem lateral da página', sobra <= 0, 'sobra ' + sobra);
   const alt = await p.evaluate(() => document.querySelector('.nivel-tipo').getBoundingClientRect().height);
-  ok('11 ' + w + 'px tipo e busca numa linha', alt < 50, 'altura ' + alt);
+  ok('11 ' + w + 'px tipos e busca numa linha', alt < 50, 'altura ' + alt);
   await p.close();
 }
 { const p = await tela(b, { vw: 390 });
