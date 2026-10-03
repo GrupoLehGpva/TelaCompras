@@ -312,11 +312,16 @@ const ETAPAS = [
   { id:'ger', nome:'Aprovação gerencial',  curto:'Gerencial',  cor:'--st3' },
   { id:'fin', nome:'Aprovação financeiro', curto:'Financeiro', cor:'--st4' },
 ];
-const FLUXO_PADRAO = ['lid','cot','ger','fin','oc'];
-const FLUXO_MENSAL = ['lid','ger','cot','fin','oc'];
+/* Mensal aguardando o fechamento do mês (03/10: antes caía em "liderança"). Etapa só da mensal. */
+const ETAPA_LOTE = { id:'lote', nome:'Aguardando o lote', curto:'Lote', cor:'--tp-mensal' };
+ETAPAS.splice(3, 0, ETAPA_LOTE);
+const FLUXO_PADRAO = ['lid','cot','ger','fin','oc','conc'];
+const FLUXO_MENSAL = ['lid','ger','lote','cot','fin','oc','conc'];
 const SITUACOES = [
   ...ETAPAS.map(e => ({ id:e.id, nome:'Em ' + e.curto.toLowerCase(), cor:e.cor })),
   { id:'oc',  nome:'Aprovado · ordem de compra', cor:'--st-ok' },
+  /* 03/10, igual ao funil: todas as OCs do pedido já estão no GR */
+  { id:'conc', nome:'Concluído · OC no GR', cor:'--st-ok' },
   { id:'rep', nome:'Reprovado', cor:'--st-rep' },
   { id:'can', nome:'Cancelado', cor:'--st-can' },
 ];
@@ -327,8 +332,10 @@ const TIPOS = [
 ];
 const TIPOS_COMPRA = { normal:'Normal', programada:'Programada', urgente:'Urgente', mensal:'Mensal' };
 const NOME_ETAPA_DECISAO = { lider:'liderança imediata', compras:'cotação (comprador)', cotacao:'cotação (comprador)', gerencial:'aprovação gerencial', financeiro:'aprovação financeiro' };
-const ETAPA_DB = { lider:'lid', cotacao:'cot', compras:'cot', gerencial:'ger', financeiro:'fin' };
-const NOME_CURTO = { lid:'Liderança', cot:'Cotação', ger:'Gerencial', fin:'Financeiro', oc:'Ordem de compra' };
+const ETAPA_DB = { lider:'lid', cotacao:'cot', compras:'cot', gerencial:'ger', lote:'lote', financeiro:'fin' };
+const NOME_CURTO = { lid:'Liderança', cot:'Cotação', ger:'Gerencial', lote:'Lote', fin:'Financeiro', oc:'Ordem de compra', conc:'Concluído' };
+/* aprovado em todas as etapas: em ordem de compra ou já concluído no GR */
+const aprovado = s => s.status === 'oc' || s.status === 'conc';
 
 /* =====================================================================
    NORMALIZAÇÃO — mesma leitura do funil (etapa, valor), para os números
@@ -341,7 +348,9 @@ function etapaDaLinha(r){
   if (r.status === 'reprovado' || r.decisoes.some(d => d.resp === 'reprovado')) return 'rep';
   if (r.status === 'cancelado') return 'can';
   if (r.etapa_atual && ETAPA_DB[r.etapa_atual]) return ETAPA_DB[r.etapa_atual];
-  const oc = r.ordens.filter(o => o.situacao !== 'cancelada').slice(-1)[0];
+  const vivas = r.ordens.filter(o => o.situacao !== 'cancelada');
+  if (vivas.length && vivas.every(o => o.situacao === 'no gr')) return 'conc';
+  const oc = vivas.slice(-1)[0];
   if (oc) return 'oc';
   if (r.status === 'aprovado') return 'oc';
   if (r.status === 'em cotacao') return 'cot';
@@ -350,14 +359,29 @@ function etapaDaLinha(r){
 function valorDaLinha(r){
   const dec = r.decisoes.filter(d => num(d.valor) !== null).slice(-1)[0];
   if (dec) return { v:num(dec.valor), fonte:'valor aprovado' };
-  const oc = r.ordens.filter(o => num(o.total) !== null).slice(-1)[0];
-  if (oc) return { v:num(oc.total), fonte:'ordem de compra' };
+  /* soma das OCs vivas do pedido (igual ao funil, 03/10): cancelada não conta; OC de pacote do lote é de vários pedidos */
+  const ocs = r.ordens.filter(o => o.situacao !== 'cancelada' && !o.pacote && num(o.total) !== null);
+  if (ocs.length) return { v:ocs.reduce((t,o) => t + num(o.total), 0), fonte:ocs.length > 1 ? 'ordens de compra' : 'ordem de compra' };
   const cots = r.cotacoes.filter(c => num(c.total) !== null).map(c => num(c.total));
   if (cots.length) return { v:Math.min(...cots), fonte:'menor cotação' };
   if (num(r.valor_cotado) !== null) return { v:num(r.valor_cotado), fonte:'valor cotado' };
   const itens = r.itens.map(i => { const ps = [i.p1,i.p2,i.p3].map(num).filter(x => x !== null); return ps.length ? Math.min(...ps) * num(i.qtd) : null; });
   if (itens.length && itens.every(x => x !== null)) return { v:itens.reduce((a,b)=>a+b,0), fonte:'preços informados' };
   return { v:null, fonte:null };
+}
+
+/* Economia na cotação (03/10). Pedido das telas: o banco lê o mapa da Mesa (e o
+   rateio do lote) e devolve, só dos itens escolhidos com 2+ preços:
+     maior = maior preço × qtd · media = preço médio × qtd · escolhido = preço escolhido × qtd
+   (preços já com o desconto do fornecedor; frete fica de fora).
+   Pedido antigo do ClickUp: pelas propostas registradas (maior proposta − valor). */
+function economiaDe(r, valor){
+  const e = r.economia;
+  if (e && num(e.maior) > 0) return { valor:num(e.valor), maior:num(e.maior), media:num(e.media), esc:num(e.escolhido), itens:num(e.itens), fonte:'mapa' };
+  const ts = (r.cotacoes || []).map(c => num(c.total)).filter(x => x !== null);
+  if (ts.length >= 2 && valor !== null){ const mx = Math.max(...ts);
+    return { valor:Math.max(0, mx - valor), maior:mx, media:ts.reduce((a,b) => a + b, 0) / ts.length, esc:valor, itens:null, fonte:'propostas' }; }
+  return null;
 }
 
 /* Marcos = cada vez que o pedido saiu de uma etapa (decisão, cotação enviada,
@@ -388,12 +412,12 @@ function normalizar(r){
   const marcos = marcosDe(r, criada, r.comprador_nome);
   const ultimo = marcos[marcos.length - 1];
   const tipo = String(r.tipo_compra || '').toLowerCase();
-  const aprovEm = status === 'oc'
+  const aprovEm = (status === 'oc' || status === 'conc')
     ? (D(r.decidido_em) || (r.decisoes.filter(d => d.resp === 'aprovado').map(d => D(d.em)).filter(Boolean).sort((a,b)=>a-b).slice(-1)[0]) || (r.ordens[0] && D(r.ordens[0].criada)) || null)
     : null;
   const fechadoEm = status === 'rep' ? ((r.decisoes.find(d => d.resp === 'reprovado') && D(r.decisoes.find(d => d.resp === 'reprovado').em)) || D(r.decidido_em))
                   : status === 'can' ? (D(r.cancelado_em) || D(((r.movimentos.find(m => m.acao === 'cancelado')) || {}).em))
-                  : status === 'oc' ? aprovEm : null;
+                  : (status === 'oc' || status === 'conc') ? aprovEm : null;
   const repDec = r.decisoes.find(d => d.resp === 'reprovado') || {};
   const canMov = r.movimentos.find(m => m.acao === 'cancelado') || {};
   return {
@@ -414,6 +438,7 @@ function normalizar(r){
     motivoRep:status === 'can' ? (canMov.motivo || null) : (repDec.motivo || null),
     porRep:status === 'can' ? (canMov.por || r.facilitador || null) : (repDec.por || null),
     cotacoes:r.cotacoes,
+    eco:economiaDe(r, val.v),
     entradaEtapa:(status !== 'rep' && status !== 'can' && r.entrou_na_etapa_em) ? D(r.entrou_na_etapa_em) : (ultimo ? ultimo.em : criada),
   };
 }
@@ -641,7 +666,7 @@ function cartao(id, titulo, sub, viz, tabela, rodape){
 /* =====================================================================
    CÁLCULOS
    ===================================================================== */
-const abertoAgora = s => ['lid','cot','ger','fin'].includes(s.status);
+const abertoAgora = s => ['lid','cot','ger','lote','fin'].includes(s.status);
 const diasNaEtapa = s => (AGORA - s.entradaEtapa) / DIA;
 function comQuem(s){
   switch (s.status){
@@ -649,13 +674,14 @@ function comQuem(s){
     case 'cot': return s.comprador || 'Compras';
     case 'ger': return s.aprovador || 'Aprovação gerencial';
     case 'fin': return s.aprovador || 'Financeiro';
+    case 'lote': return 'Lote mensal (fechamento do mês)';
     default: return '—';
   }
 }
 function fluxoDe(s){ return s.tipo === 'mensal' ? FLUXO_MENSAL : FLUXO_PADRAO; }
 /* passou por um portão? (liderança aprovou, cotação enviada, gerência aprovou, financeiro aprovou) */
 function passou(s, et){
-  if (s.status === 'oc') return true;
+  if (aprovado(s)) return true;
   const fl = fluxoDe(s);
   const onde = s.status === 'rep' ? (ETAPA_DB[s.etapaRep] || 'lid') : s.status === 'can' ? 'lid' : s.status;
   return fl.indexOf(et) < fl.indexOf(onde);
@@ -673,9 +699,9 @@ function calcular(){
   const base = SOLICITACOES.filter(passaFiltros);
   const noPer = base.filter(s => dentro(s.criada, J.ini, J.fim));
   const noAnt = J.pIni ? base.filter(s => dentro(s.criada, J.pIni, J.pFim)) : null;
-  const aprov = base.filter(s => s.status === 'oc' && dentro(s.aprovEm, J.ini, J.fim));
-  const aprovAnt = J.pIni ? base.filter(s => s.status === 'oc' && dentro(s.aprovEm, J.pIni, J.pFim)) : null;
-  const encerr = base.filter(s => ['oc','rep','can'].includes(s.status) && dentro(s.fechadoEm, J.ini, J.fim));
+  const aprov = base.filter(s => aprovado(s) && dentro(s.aprovEm, J.ini, J.fim));
+  const aprovAnt = J.pIni ? base.filter(s => aprovado(s) && dentro(s.aprovEm, J.pIni, J.pFim)) : null;
+  const encerr = base.filter(s => ['oc','conc','rep','can'].includes(s.status) && dentro(s.fechadoEm, J.ini, J.fim));
   const carteira = base.filter(abertoAgora);
   const marcos = base.flatMap(s => s.marcos.map(m => Object.assign({ s }, m))).filter(m => dentro(m.em, J.ini, J.fim));
   return { J, base, noPer, noAnt, aprov, aprovAnt, encerr, carteira, marcos };
@@ -694,8 +720,46 @@ function render(){
   const semNada = !C.base.length;
   $('conteudo').innerHTML =
     (semNada ? `<div class="state" style="margin-bottom:18px"><h3>Nenhum pedido com esses filtros</h3><p>Tente outra empresa, unidade ou centro de custo, ou limpe os filtros.</p><button class="btn primary" type="button" id="empty-clear">Limpar filtros</button></div>` : '') +
-    secPosicao(C) + secPeriodo(C) + secGargalos(C) + secDinheiro(C) + secRitmo(C) + secDecisoes(C);
+    secEconomia(C) + secPosicao(C) + secPeriodo(C) + secGargalos(C) + secDinheiro(C) + secRitmo(C) + secDecisoes(C);
   ligar();
+}
+
+/* ---------- 0. Economia na cotação (03/10: em % e em valor, no alto da tela) ----------
+   Pedidos aprovados no período (todos os filtros valem). Economia = maior proposta −
+   valor escolhido; a % é sobre a maior proposta. A média das propostas fica ao lado,
+   para quem prefere essa régua. */
+function somaEco(lst){
+  const l = lst.filter(s => s.eco);
+  return { n:l.length, valor:soma(l.map(s => s.eco.valor)), maior:soma(l.map(s => s.eco.maior)), media:soma(l.map(s => s.eco.media)), esc:soma(l.map(s => s.eco.esc)) };
+}
+const pctEco = (a, b) => b ? (a / b * 100).toLocaleString('pt-BR', { maximumFractionDigits:1 }) + '%' : '—';
+function secEconomia(C){
+  const E = somaEco(C.aprov), A = C.aprovAnt ? somaEco(C.aprovAnt) : null;
+  const vsMedia = E.media - E.esc;
+  const tiles = `<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">
+    ${tile('t-eco-valor', 'Economia em valor', E.n ? brlC(E.valor) : '—', E.n ? 'contra a maior proposta · ' + plural(E.n, 'pedido', 'pedidos') : 'nenhum pedido aprovado com 2+ preços ' + C.J.rot, E.n && A ? delta(E.valor, A.valor, C.J.comp) : '')}
+    ${tile('t-eco-pct', 'Economia em %', E.n ? pctEco(E.valor, E.maior) : '—', E.n ? 'sobre ' + brl(E.maior) + ' (maior proposta)' : 'maior proposta − valor escolhido')}
+    ${tile('t-eco-media', 'Contra a média das propostas', E.n ? brlC(vsMedia) : '—', E.n ? pctEco(vsMedia, E.media) + ' sobre a média (' + brl(E.media) + ')' : 'média dos preços cotados − escolhido')}
+    ${tile('t-eco-cob', 'Pedidos comparados', E.n ? inteiro(E.n) + ' de ' + inteiro(C.aprov.length) : '—', 'aprovados ' + C.J.rot + ' com 2+ preços cotados')}
+  </div>`;
+  const porTipo = TIPOS.map(t => ({ t, e:somaEco(C.aprov.filter(s => s.tipo === t.id)) })).filter(x => x.e.n);
+  const hb = hbarsHTML(porTipo.map(x => ({ rot:x.t.nome, v:x.e.valor, vTxt:brlC(x.e.valor), sub:pctEco(x.e.valor, x.e.maior) + ' · ' + plural(x.e.n, 'pedido', 'pedidos'), cor:x.t.cor,
+    tip:`${x.t.nome}: ${brl(x.e.valor)} de economia (${pctEco(x.e.valor, x.e.maior)} sobre ${brl(x.e.maior)})\nClique para filtrar`, filtro:{ k:'tipo', v:x.t.id, rot:'Tipo de compra' } })),
+    { vazio:'Nenhum pedido aprovado com 2+ preços neste recorte.' });
+  const tabTipo = tabelaHTML([{t:'Tipo',cls:'l'},{t:'Pedidos'},{t:'Maior proposta',cls:'r'},{t:'Escolhido',cls:'r'},{t:'Economia',cls:'r'},{t:'%'}],
+    porTipo.map(x => ({ cels:[x.t.nome, inteiro(x.e.n), brl(x.e.maior), brl(x.e.esc), brl(x.e.valor), pctEco(x.e.valor, x.e.maior)] })));
+  const tipoC = cartao('c-eco-tipo', 'Economia por tipo de compra', 'Pedidos aprovados ' + C.J.rot + ' · clique para filtrar', hb, tabTipo);
+  const top = C.aprov.filter(s => s.eco).sort((a,b) => b.eco.valor - a.eco.valor).slice(0, 8);
+  const tabTop = tabelaHTML([{t:'Nº'},{t:'Pedido',cls:'l'},{t:'Maior proposta',cls:'r'},{t:'Escolhido',cls:'r'},{t:'Economia',cls:'r'},{t:'%'}],
+    top.map(s => ({ attrs:`class="link" tabindex="0" data-href="${esc(linkFunil(s.id))}" data-tip="${esc('Abrir ' + s.id + ' no funil')}"`,
+      cels:[`<span class="mono">${esc(s.id)}</span>`, esc(s.titulo) + (s.eco.fonte === 'propostas' ? ' <span class="pill neutral">propostas</span>' : ''), brl(s.eco.maior), brl(s.eco.esc), brl(s.eco.valor), pctEco(s.eco.valor, s.eco.maior)] })),
+    { vazio:'Nenhum pedido aprovado com 2+ preços neste recorte.' });
+  const topC = `<article class="card" id="c-eco-top"><div class="card-h"><div><h3>Maiores economias</h3><div class="sub">Clique para abrir no funil</div></div></div>${tabTop}</article>`;
+  return `<section class="sec" id="s-economia">
+    <div class="sec-h"><h2>Economia na cotação</h2><span class="hint">${cap(C.J.rot)} · pedidos aprovados · preços com desconto, sem frete</span></div>
+    ${tiles}
+    <div class="grid g2" style="margin-top:14px">${tipoC}${topC}</div>
+  </section>`;
 }
 
 /* ---------- 1. Posição da carteira agora ---------- */
@@ -745,7 +809,7 @@ function cartaoLeituras(C){
   if (C.noPer.length >= 3 && urg / C.noPer.length >= .3) L.push({ c:'warn', t:`<b>${pct(urg, C.noPer.length)}% dos pedidos ${C.J.rot} foram urgentes</b> (${urg} de ${C.noPer.length}).` });
   const vAp = somaValor(C.aprov), vUn = somaValor(C.aprov.filter(s => s.unico));
   if (vAp > 0 && vUn / vAp >= .3) L.push({ c:'warn', t:`<b>${pct(vUn, vAp)}% do valor aprovado ${C.J.rot} foi com fornecedor único</b>, sem disputa de preço.` });
-  const rep = C.encerr.filter(s => s.status === 'rep').length, ap = C.encerr.filter(s => s.status === 'oc').length;
+  const rep = C.encerr.filter(s => s.status === 'rep').length, ap = C.encerr.filter(aprovado).length;
   if (rep + ap >= 3) L.push({ c:rep / (rep + ap) >= .25 ? 'warn' : 'ok', t:`Taxa de aprovação ${C.J.rot}: <b>${pctTxt(ap, ap + rep)}</b> (${plural(ap, 'aprovado', 'aprovados')}, ${plural(rep, 'reprovado', 'reprovados')}).` });
   if (!L.length) L.push({ c:'ok', t:'Nada fora do normal com os filtros atuais.' });
   const ic = { crit:'!', warn:'!', info:'i', ok:'✓' };
@@ -765,7 +829,7 @@ function secPeriodo(C){
   const n = C.noPer.length, nAnt = C.noAnt ? C.noAnt.length : null;
   const vAp = somaValor(C.aprov), vApAnt = C.aprovAnt ? somaValor(C.aprovAnt) : null;
   const ticket = C.aprov.length ? vAp / C.aprov.length : null;
-  const ap = C.encerr.filter(s => s.status === 'oc').length, rp = C.encerr.filter(s => s.status === 'rep').length, cn = C.encerr.filter(s => s.status === 'can').length;
+  const ap = C.encerr.filter(aprovado).length, rp = C.encerr.filter(s => s.status === 'rep').length, cn = C.encerr.filter(s => s.status === 'can').length;
   const lead = media(C.aprov.filter(s => s.aprovEm).map(s => (s.aprovEm - s.criada) / DIA));
   const urg = C.noPer.filter(s => s.urgente).length;
   const tiles = `<div class="tiles">
@@ -934,8 +998,8 @@ function secDecisoes(C){
   const cot = C.marcos.filter(m => m.et === 'cot' && m.resp === 'cotado');
   const tCot = media(cot.filter(m => m.dur !== null).map(m => m.dur));
   const devolv = C.marcos.filter(m => m.resp === 'devolvido').length;
-  const multi = C.noPer.filter(s => s.status === 'oc' && s.valor !== null && s.cotacoes.filter(c => num(c.total) !== null).length >= 2);
-  const economia = soma(multi.map(s => Math.max(...s.cotacoes.map(c => num(c.total)).filter(x => x !== null)) - s.valor).filter(x => x > 0));
+  const multi = C.aprov.filter(s => s.eco);
+  const economia = soma(multi.map(s => s.eco.valor));
   const naFila = C.carteira.filter(s => s.status === 'cot');
   const cotC = `<article class="card" id="c-cotacao"><div class="card-h"><div><h3>Cotação</h3><div class="sub">Trabalho do comprador ${C.J.rot}</div></div></div>
     <div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
@@ -943,7 +1007,7 @@ function secDecisoes(C){
       ${tile('t-tcot', 'Tempo médio de cotação', dias(tCot), 'da chegada ao envio')}
       ${tile('t-filacot', 'Na fila de cotação agora', inteiro(naFila.length), naFila.length ? 'mais antigo há ' + diasInt(Math.max(...naFila.map(diasNaEtapa))) : 'fila vazia')}
       ${tile('t-devolv', 'Devolvidos ao comprador', inteiro(devolv), 'pelos aprovadores')}
-      ${tile('t-economia', 'Diferença para a maior proposta', multi.length ? brlC(economia) : '—', multi.length ? plural(multi.length, 'pedido com 2+ propostas', 'pedidos com 2+ propostas') : 'aparece quando houver pedido aprovado com 2 ou mais propostas registradas')}
+      ${tile('t-economia', 'Diferença para a maior proposta', multi.length ? brlC(economia) : '—', multi.length ? plural(multi.length, 'pedido com 2+ propostas', 'pedidos com 2+ propostas') : 'aparece quando houver pedido aprovado com 2 ou mais preços no mapa')}
     </div></article>`;
   return `<section class="sec" id="s-decisoes"><div class="sec-h"><h2>Quem decide e quanto tempo leva</h2></div>
     <div class="grid g2">${aprovC}${repC}</div>
@@ -996,11 +1060,12 @@ function celulaCSV(v){
 function linhasCSV(){
   const C = calcular();
   const SIT = Object.fromEntries(SITUACOES.map(x => [x.id, x.nome]));
-  const cab = ['Número','Aberto em','Tipo de compra','Situação','Com quem','Dias na etapa','Empresa','Unidade de negócio','Centro de custo','Solicitante','Comprador','Fornecedor','Fornecedor único','Valor (R$)','Origem do valor','Precisa até','Aprovado em','Itens'];
+  const cab = ['Número','Aberto em','Tipo de compra','Situação','Com quem','Dias na etapa','Empresa','Unidade de negócio','Centro de custo','Solicitante','Comprador','Fornecedor','Fornecedor único','Valor (R$)','Origem do valor','Precisa até','Aprovado em','Maior proposta (R$)','Economia (R$)','Economia (%)','Itens'];
   const linhas = C.noPer.slice().sort((a,b) => a.criada - b.criada).map(s => [
     s.id, dt(s.criada), s.tipoNome, SIT[s.status] || s.status, abertoAgora(s) ? comQuem(s) : '', abertoAgora(s) ? Math.floor(diasNaEtapa(s)) : '',
     s.empresa, s.unidadeNegocio, s.ccNome, s.solicitante, s.comprador || '', s.fornecedor || '', s.unico ? 'Sim' : 'Não',
     s.valor === null ? '' : s.valor.toFixed(2).replace('.', ','), s.valorFonte || '', s.necessidade ? dt(s.necessidade) : '', s.aprovEm ? dt(s.aprovEm) : '',
+    s.eco ? s.eco.maior.toFixed(2).replace('.', ',') : '', s.eco ? s.eco.valor.toFixed(2).replace('.', ',') : '', s.eco && s.eco.maior ? (s.eco.valor / s.eco.maior * 100).toFixed(1).replace('.', ',') : '',
     s.raw.itens.map(i => `${i.qtd ?? ''} ${i.un || ''} ${i.desc}`.trim()).join(' | ')]);
   return [cab, ...linhas];
 }

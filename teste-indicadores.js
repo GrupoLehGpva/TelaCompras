@@ -55,6 +55,9 @@ const LINHAS = [
     movimentos: [mv('cancelado', null, 1, 'Carlos', 'Comprei de outro jeito')] }),
   P('T-OK3', { status: 'aprovado', etapa_atual: null, cc_unidade: 'ESCRITÓRIO', empresa: 'EMPRESA C', centro_custo: '4', cc_nome: 'ADM',
     aberto_em: dia(5), cotacao_em: dia(4), decidido_em: dia(2), valor_cotado: 5000, data_necessidade: '2026-09-26', itens: [it('NOTEBOOK', 'ME')],
+    /* 03/10: OC já no GR (Concluído) e economia lida do mapa pelo banco */
+    ordens: [{ id: 'o1', situacao: 'no gr', numero_gr: '9', total: 5000, criada: dia(1.5), lancada: dia(1), forn: 'Z' }, { id: 'o2', situacao: 'cancelada', total: 99, criada: dia(1.8), forn: 'W' }],
+    economia: { valor: 500, maior: 5500, media: 5250, escolhido: 5000, itens: 2 },
     decisoes: [dec('lider', 4.8, 'ANA LÍDER'), dec('gerencial', 3, 'BRUNO GERENTE'), dec('financeiro', 2, 'WIENFRIED')],
     movimentos: [mv('cotacao_enviada', 'cotacao', 4, 'HERISSON')] }),
 ];
@@ -135,7 +138,7 @@ ok('2 taxa de aprovação', /50%/.test(await txt(p, '#t-taxa')) && /2 aprovados 
 ok('2 tempo até aprovar', /4 dias/.test(await txt(p, '#t-lead')), await txt(p, '#t-lead'));
 ok('2 urgentes', /22%/.test(await txt(p, '#t-urg')) && /2 de 9/.test(await txt(p, '#t-urg')), await txt(p, '#t-urg'));
 const sit = nb(await txt(p, '#c-situacao'));
-ok('2 situação', /Aprovado · ordem de compra · 2/.test(sit) && /Reprovado · 2/.test(sit) && /Cancelado · 1/.test(sit), sit);
+ok('2 situação', /Aprovado · ordem de compra · 1/.test(sit) && /Concluído · OC no GR · 1/.test(sit) && /Reprovado · 2/.test(sit) && /Cancelado · 1/.test(sit), sit);
 const fn = await p.$$eval('#c-funil .fn-row', rs => rs.map(r => r.querySelector('.n').textContent));
 ok('2 funil 9 → 6 → 4 → 3 → 2', JSON.stringify(fn) === '["9","6","4","3","2"]', fn);
 const tempo = nb(await txt(p, '#c-tempo'));
@@ -157,7 +160,19 @@ const rep = nb(await txt(p, '#c-reprovacoes'));
 ok('2 reprovações', /Na liderança 1 pedido/.test(rep) && /Na cotação 1 pedido/.test(rep) && /Cancelados por quem pediu 1 pedido/.test(rep) && /Sem verba/.test(rep) && /Item sem fornecedor/.test(rep) && /Comprei de outro jeito/.test(rep), rep);
 ok('2 reprovações: último primeiro', /^Reprovações.*T-CAN.*C-REP.*T-REPCOT/.test(rep), rep);
 const cot = nb(await txt(p, '#c-cotacao'));
-ok('2 cotação', /Cotações enviadas 5/.test(cot) && /Tempo médio de cotação 1,3 dias/.test(cot) && /Na fila de cotação agora 1 mais antigo há 9 dias/.test(cot) && /Devolvidos ao comprador 1/.test(cot) && /R\$ 30 mil 1 pedido com 2\+ propostas/.test(cot), cot);
+ok('2 cotação', /Cotações enviadas 5/.test(cot) && /Tempo médio de cotação 1,3 dias/.test(cot) && /Na fila de cotação agora 1 mais antigo há 9 dias/.test(cot) && /Devolvidos ao comprador 1/.test(cot) && /R\$ 30,5 mil 2 pedidos com 2\+ propostas/.test(cot), cot);
+/* 03/10: economia no alto, em valor e em % (C-OK1 pelas propostas: 130 mil − 100 mil; T-OK3 pelo mapa: 5.500 − 5.000) */
+ok('2 economia é a primeira seção', await p.evaluate(() => document.querySelector('#conteudo .sec').id) === 's-economia');
+ok('2 economia em valor', /R\$ 30,5 mil/.test(nb(await txt(p, '#t-eco-valor'))) && /2 pedidos/.test(await txt(p, '#t-eco-valor')), await txt(p, '#t-eco-valor'));
+ok('2 economia em %', /22,5%/.test(await txt(p, '#t-eco-pct')) && /135\.500,00/.test(await txt(p, '#t-eco-pct')), await txt(p, '#t-eco-pct'));
+ok('2 economia contra a média', /R\$ 15,3 mil/.test(nb(await txt(p, '#t-eco-media'))) && /12,7%/.test(await txt(p, '#t-eco-media')), await txt(p, '#t-eco-media'));
+ok('2 pedidos comparados', /2 de 2/.test(nb(await txt(p, '#t-eco-cob'))), await txt(p, '#t-eco-cob'));
+{ const top = await p.$$eval('#c-eco-top tbody tr', t => t.map(x => x.textContent.replace(/\s+/g, ' ').trim()));
+  ok('2 maiores economias: ordem e %', top.length === 2 && /^C-OK1/.test(top[0]) && /23,1%/.test(top[0]) && /propostas/.test(top[0]) && /^T-OK3/.test(top[1]) && /9,1%/.test(top[1]), top); }
+ok('2 economia por tipo', /Normal/.test(await txt(p, '#c-eco-tipo')) && /22,5%/.test(await txt(p, '#c-eco-tipo')), await txt(p, '#c-eco-tipo'));
+ok('2 etapa do lote e concluído reconhecidos', await p.evaluate(() => [etapaDaLinha({ etapa_atual:'lote', status:'aguardando lote', decisoes:[], ordens:[] }),
+   etapaDaLinha({ etapa_atual:null, status:'aprovado', decisoes:[], ordens:[{ situacao:'no gr' }, { situacao:'a lancar' }] }),
+   etapaDaLinha({ etapa_atual:null, status:'aprovado', decisoes:[], ordens:[{ situacao:'no gr' }, { situacao:'cancelada' }] })].join()) === 'lote,oc,conc');
 ok('2 colunas por dia', /Pedidos abertos por dia/.test(await txt(p, '#c-abertos')) && await p.locator('#c-abertos .cols .c').count() === 30, await p.locator('#c-abertos .cols .c').count());
 
 /* ===== 3. Períodos ===== */
@@ -221,10 +236,15 @@ await p.click('#c-tipo .seg[data-valor="urgente"]'); await p.waitForTimeout(150)
 ok('5 clique no tipo', await p.inputValue('#f-tipo') === 'urgente' && /Pedidos abertos 2/.test(nb(await txt(p, '#t-pedidos'))));
 await p.click('#c-tipo .seg[data-valor="urgente"]'); await p.waitForTimeout(150);
 ok('5 tudo sem filtro de novo', await p.inputValue('#f-tipo') === '' && /Pedidos abertos 9/.test(nb(await txt(p, '#t-pedidos'))));
+await p.click('#c-eco-tipo .hb-row[data-valor="normal"]'); await p.waitForTimeout(150);
+ok('5 clique na economia por tipo filtra a tela', await p.inputValue('#f-tipo') === 'normal' && /R\$ 30,5 mil/.test(nb(await txt(p, '#t-eco-valor'))));
+await p.selectOption('#f-tipo', 'urgente'); await p.waitForTimeout(150);
+ok('5 sem pedido comparável: economia vazia e explica', /—/.test(await txt(p, '#t-eco-valor')) && /nenhum pedido aprovado com 2\+ preços/.test(await txt(p, '#t-eco-valor')) && /Nenhum pedido aprovado com 2\+ preços/.test(await txt(p, '#c-eco-top')));
+await p.selectOption('#f-tipo', ''); await p.waitForTimeout(150);
 
 /* ===== 6. Ver tabela em todos os cartões ===== */
 const cards = await p.$$eval('#conteudo [data-vista]', bs => bs.map(x => x.dataset.vista));
-ok('6 cartões com tabela', cards.length === 12, cards);
+ok('6 cartões com tabela', cards.length === 13, cards);
 for (const id of cards){
   await p.click(`[data-vista="${id}"]`); await p.waitForTimeout(60);
   const vis = await p.evaluate(i => { const c = document.getElementById(i); return [c.querySelector('.viz').hidden, c.querySelector('.tab').hidden, c.querySelector('[data-vista]').textContent]; }, id);
@@ -291,6 +311,9 @@ ok('10 indicadores → funil (sem busca)', /painel\.html\?t=pd-teste$/.test(p.ur
 await p.goBack(); await p.waitForTimeout(600);
 await p.focus('#c-parados tbody tr:nth-child(2)'); await p.keyboard.press('Enter'); await p.waitForTimeout(700);
 ok('10 Enter no parado também abre', /q=T-GER$/.test(p.url()), p.url());
+await p.goBack(); await p.waitForTimeout(600);
+await p.click('#c-eco-top tbody tr:first-child'); await p.waitForTimeout(700);
+ok('10 maior economia abre no funil', /q=C-OK1$/.test(p.url()), p.url());
 await p.context().close();
 
 /* ===== 11. Larguras, tema escuro, sem rolagem de lado ===== */
