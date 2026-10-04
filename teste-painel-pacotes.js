@@ -111,6 +111,7 @@ ok('3 coluna conta os cards', /^2$/.test((await p.$$eval('#board-area .col', cs 
 await p.click('.card[data-id="pacote:L2610-g1:fin"]'); await p.waitForTimeout(300);
 { const m = await p.textContent('#modal');
   ok('4 modal do pacote', /L2610-g1/.test(m) && /pacote do lote mensal/.test(m) && /Esperando o financeiro/.test(m) && /GERENTE UM/.test(m) && /10\/2026/.test(m), m.slice(0, 500));
+  ok('4 valor = soma dos pedidos, e o aprovado do pacote à parte', /Valor \(soma dos pedidos\)\s*R\$\s?3\.400,00/.test(m) && /Aprovado no pacote da gerência\s*R\$\s?3\.400,00/.test(m), m.slice(0, 600));
   ok('4 pedidos do pacote com link', await p.locator('#modal [data-ped]').count() === 2 && /SABAO EM PO/.test(m));
   ok('4 trilha da mensal no financeiro', /Financeiro/.test(await p.textContent('#modal .step.cur'))); }
 await p.click('#modal [data-ped="M2"]'); await p.waitForTimeout(300);
@@ -137,6 +138,7 @@ await p.keyboard.press('Escape'); await p.waitForTimeout(200);
 
 /* 5 filtros valem por pedido */
 await p.selectOption('#f-cc', 'LAVOURA'); await p.waitForTimeout(200);
+ok('5 filtro de centro de custo: o valor do pacote é só do pedido que ficou', /R\$\s?2\.400,00/.test(await p.textContent('.card[data-id="pacote:L2610-g1:fin"]')) && !/3\.400/.test(await p.textContent('.card[data-id="pacote:L2610-g1:fin"]')));
 ok('5 filtro de centro de custo: o pacote fica só com o pedido que bate', /Pacote · 1 pedido/.test(await p.textContent('.card[data-id="pacote:L2610-g1:fin"]')) && await p.locator('.card[data-id="pacote:L2610-g2:fin"]').count() === 0);
 await p.selectOption('#f-cc', ''); await p.waitForTimeout(200);
 await p.fill('#f-q', 'L2610-g1'); await p.waitForTimeout(300);
@@ -157,6 +159,10 @@ await p.click('#f-vista [data-vista=lista]'); await p.waitForTimeout(300);
   await p.click('tr[data-id="pacote:L2610-g1:fin"]'); await p.waitForTimeout(300);
   ok('6 lista: clique abre o pacote', /pacote do lote mensal/.test(await p.textContent('#modal')));
   await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+  await p.click('[data-ord=num]'); await p.waitForTimeout(200);
+  { const ids = await p.$$eval('table.lista tbody tr[data-id] td:first-child', t => t.map(x => x.textContent.trim()));
+    ok('6 ordenar por Nº usa o número do pacote', JSON.stringify(ids) === JSON.stringify(ids.slice().sort()), ids); }
+  await p.click('#ord-volta'); await p.waitForTimeout(200);
   await p.click('[data-ord=etapa]'); await p.waitForTimeout(200);
   ok('6 ordenar por etapa: concluído por último', (await p.$$eval('table.lista tbody tr[data-id]', t => t.map(x => x.dataset.id))).slice(-2).every(x => /CONC|g3/.test(x)));
 }

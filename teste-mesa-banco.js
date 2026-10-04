@@ -636,6 +636,35 @@ const escolher = async (p, campo, termo, fid) => { await p.fill(campo, ''); awai
   ok('4e só leitura: sem juntar nem separar', await p.locator('#bt-juntar').count() === 0 && await p.locator('#bt-separar').count() === 0);
   await p.close(); }
 
+/* 4f — revisão 03/10: junção sem fornecedor ainda fica gravada; seleção de juntar não passa para outro pedido */
+{ const p = await abrir(b, '?t=' + TOKEN, { prep:B => comU6(B) });
+  await p.click('[data-open="C2609-03006X"]'); await p.waitForTimeout(700);
+  await p.click('#bt-juntar'); await p.check('.juntar-painel input[value="HL"]'); await p.click('#bt-juntar-ok'); await p.waitForTimeout(1900);
+  const u = (ch(p, 'salvar_mapa').slice(-1)[0] || {}).c;
+  ok('4f juntou sem fornecedor: grava a coluna 1 vazia só com o grupo', u && u.p_mapa.fornecedores.length === 2 && u.p_mapa.fornecedores.every(f => f.grupo === 'MG+HL' && f.coluna === 1 && !f.fornecedor_id && !f.fornecedor_nome), u && u.p_mapa.fornecedores);
+  await p.click('#bt-back'); await p.waitForTimeout(500);
+  await p.click('[data-open="C2609-03006X"]'); await p.waitForTimeout(700);
+  ok('4f reabre junto', await p.locator('[data-fam="MG__HL"]').count() === 1 && (await p.inputValue('#n-MG__HL-0')) === '', await txt(p, '#ftabs'));
+  await p.click('#bt-separar'); await p.waitForTimeout(200);
+  await p.click('#bt-juntar'); await p.waitForTimeout(150);
+  await p.click('#bt-back'); await p.waitForTimeout(500);
+  await p.click('[data-open="C2609-03001"]'); await p.waitForTimeout(700);
+  ok('4f painel de juntar não passa para o próximo pedido', await p.locator('.juntar-painel').count() === 0 && await p.locator('#bt-juntar').count() === 0);
+  await p.close(); }
+/* 4g — revisão 03/10: detalhe de pedido com famílias juntas abre (antes dava erro) */
+{ const p = await abrir(b, '?t=' + TOKEN, { prep:B => comU6(B, { etapa_atual:'gerencial', com_quem:'Gerente W', total:300,
+    mapa:{ estado:'enviada', versao:5, observacao:'ok', forn:[
+      { familia:'MG', coluna:1, fornecedor_id:'f1', nome:'ROLAMAX', desconto_pct:null, frete:15, prazo_dias:5, condicao:'28 dias', forma_pagamento:'Boleto', grupo:'MG+HL' },
+      { familia:'HL', coluna:1, fornecedor_id:'f1', nome:'ROLAMAX', desconto_pct:null, frete:0, prazo_dias:5, condicao:'28 dias', forma_pagamento:'Boleto', grupo:'MG+HL' }],
+      precos:[{ item_id:'i7', coluna:1, preco:100 }, { item_id:'i8', coluna:1, preco:20 }, { item_id:'i9', coluna:1, preco:8 }],
+      escolhas:[{ item_id:'i7', coluna:1 }, { item_id:'i8', coluna:1 }, { item_id:'i9', coluna:1 }] } }) });
+  await p.click('[data-tab="env"]'); await p.waitForTimeout(200);
+  await p.click('[data-open="C2609-03006X"]'); await p.waitForTimeout(700);
+  await p.click('#bt-det'); await p.waitForTimeout(700);
+  const m = await p.textContent('#modal').catch(() => '');
+  ok('4g detalhe com famílias juntas mostra os preços', /SABAO EM PO/.test(m) && /R\$\s?200,00/.test(m) && /R\$\s?32,00/.test(m), m.slice(0, 400));
+  await p.close(); }
+
 /* 11 — celular */
 { const p = await abrir(b, '?t=' + TOKEN, { vp:{ width:390, height:800 } });
   ok('11 celular: fila sem rolagem lateral', await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));

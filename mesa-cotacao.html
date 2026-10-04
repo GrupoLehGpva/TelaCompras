@@ -576,6 +576,7 @@ const mesmoForn = (a, b) => (a.fid && b.fid) ? a.fid === b.fid : a.nome.trim().t
    { erro } se duas famílias têm fornecedores diferentes na mesma coluna. */
 function juntarUnidades(s, chaves){
   const c = cotDe(s);
+  chaves = (chaves || []).filter(k => c.fams[k]);   // só unidades que existem neste pedido
   const ordem = familiasDe(s);
   const fams = [...new Set(chaves.flatMap(membros))].sort((a, b) => ordem.indexOf(a) - ordem.indexOf(b));
   if (fams.length < 2) return { erro:'Escolha pelo menos duas famílias.' };
@@ -1093,7 +1094,7 @@ function pintarDetalhe(){
     : `<div class="holder ${p.cls}"><strong>${etapa(s.status).nome}</strong><span>com ${esc(comQuem(s))}</span><span>há <strong>${dias(p.d)}</strong> (prazo da etapa: ${p.sla} dias)</span><span class="pill ${p.cls}">${p.txt}</span></div>`;
   const steps = FL.map((e,i) => `<div class="step ${i < idx ? 'done' : i === idx ? 'cur' : ''}"><span class="ln"></span>${e.curto}</div>`).join('');
   const C = s.cot && s.cot.iniciada ? calcTudo(s) : null;
-  const linhaDe = it => { if (!C) return null; const fc = C.fams.find(f => f.k === famKey(it)); return fc.linhas.find(l => l.it.id === it.id); };
+  const linhaDe = it => { if (!C) return null; const fc = C.fams.find(f => f.k === unidDe(s, it)); return fc ? fc.linhas.find(l => l.it.id === it.id) : null; };
   const itens = s.itens.map(it => {
     const l = linhaDe(it), u = l && l.esc !== null && l.valido[l.esc] ? l.p[l.esc] : null;
     return `<tr><td class="mono">${esc(it.cod || '—')}</td><td>${esc(it.desc)}${it.fora ? ' <span class="pill neutral">fora do catálogo</span>' : ''}</td><td>${esc(it.fam || '—')}</td><td class="r num">${qtd(it.qtd)} ${esc(it.un)}</td><td class="r num">${brlUnit(u)}</td><td class="r num">${u !== null ? brl(u * it.qtd) : '—'}</td></tr>`;
@@ -1190,6 +1191,7 @@ function navegar(d){ const n = S.modalIdx + d; if (n < 0 || n >= S.modalList.len
    ===================================================================== */
 async function abrirMapa(id){
   const s = sol(id); if (!s) return;
+  S.juntando = null; S.erroJuntar = null;   // a escolha de juntar é deste mapa, não passa para o próximo
   /* Sempre relê do banco ao abrir (outra aba, devolução, envio) — menos quando
      há mudança local ainda não gravada. */
   if (!s.sujo){
@@ -2050,7 +2052,9 @@ function cotParaMapa(s){
       const f = F.forn[j];
       const d = parseBR(f.desc), fr = parseBR(f.frete), pz = parseBR(f.prazo);
       const tem = f.nome.trim() || f.fid || String(f.desc).trim() || String(f.frete).trim() || String(f.prazo).trim() || f.cond.trim() || f.forma;
-      if (!tem) return;
+      /* grupo sem nenhum fornecedor ainda: a coluna 1 vai vazia só para lembrar a junção (03/10) */
+      const soGrupo = !tem && fams.length > 1 && j === cols[0] && cols.every(x => vazioForn(F.forn[x]));
+      if (!tem && !soGrupo) return;
       fams.forEach(fam => fornecedores.push({ familia:fam, coluna:j + 1, fornecedor_id:f.fid || null, fornecedor_nome:f.nome.trim() || null,
         desconto_pct: ok(d) && d >= 0 && d <= 100 ? d : null,
         frete: ok(fr) && fr >= 0 ? (fams.length > 1 && fretePara[j] !== fam ? 0 : fr) : null,

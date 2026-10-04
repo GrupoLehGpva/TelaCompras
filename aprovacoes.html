@@ -1527,8 +1527,10 @@ $('corpoHist').addEventListener('click', e => {
   desenharHist();
 });
 
+let histSeq = 0;   /* só a resposta da chamada mais nova vale (03/10: a carga inicial não pode sobrescrever a de depois de uma decisão) */
 async function carregarHistorico(){
   if(HIST){ desenharHist(); return; }          /* já está na mão */
+  const seq = ++histSeq;
   $('histCarregando').hidden = false;
   $('histRolagem').hidden = true;
   $('histVazio').hidden = true;
@@ -1538,8 +1540,11 @@ async function carregarHistorico(){
     let h = null;
     /* 2000 (02/10): a lista se organiza por mês, então precisa dos meses inteiros. */
     try{ h = await rpc('historico_do_aprovador', { p_token: TOKEN, p_limite: 2000 }); }catch(e){ h = null; }
-    HIST = Array.isArray(h) ? h : await rpc('historico_de_aprovacoes', { p_token: TOKEN, p_limite: 2000 });
+    const novo = Array.isArray(h) ? h : await rpc('historico_de_aprovacoes', { p_token: TOKEN, p_limite: 2000 });
+    if(seq !== histSeq) return;
+    HIST = novo;
   }catch(e){
+    if(seq !== histSeq) return;
     HIST = null;
     $('histCarregando').hidden = true;
     $('histVazio').hidden = false;

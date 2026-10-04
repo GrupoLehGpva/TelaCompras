@@ -793,8 +793,9 @@ function completarPacote(P){
     ccNome:uniq(M.map(s => s.ccNome)).join(', ') || '—', empresa:uniq(M.map(s => s.empresa)).join(', ') || '—',
     solicitante:M.length + (M.length === 1 ? ' pedido' : ' pedidos'),
     aprovador:M[0].aprovador, comprador:M[0].comprador,
-    valor: P.status !== 'cot' && L.pacote_total !== null && L.pacote_total !== undefined ? num(L.pacote_total)
-         : vals.length ? vals.reduce((t,s) => t + s.valor, 0) : null,
+    /* soma dos pedidos que estão no card: com filtro, ou com pedidos do pacote em etapas
+       diferentes, o total aprovado do pacote contaria em dobro (03/10) */
+    valor: vals.length ? vals.reduce((t,s) => t + s.valor, 0) : null,
     entradaEtapa:new Date(Math.min(...M.map(s => +s.entradaEtapa))), criada:new Date(Math.min(...M.map(s => +s.criada))),
     necessidade:M.some(s => s.necessidade) ? new Date(Math.min(...M.filter(s => s.necessidade).map(s => +s.necessidade))) : null,
     fornecedor:uniq([...ordens.values()].map(o => o.forn)).join(', ') || null,
@@ -876,7 +877,7 @@ function renderQuadro(pedidos){
    vez volta ao agrupamento.
    ===================================================================== */
 const COLS_LISTA = [
-  { id:'num',   nome:'Nº',            chave:s => s.id },
+  { id:'num',   nome:'Nº',            chave:s => s.pacote ? s.numero : s.id },
   { id:'sol',   nome:'Solicitação',   chave:s => s.titulo.toLowerCase() },
   { id:'tipo',  nome:'Tipo',          chave:s => s.tipoCompraNome },
   { id:'etapa', nome:'Etapa',         chave:s => ['lid','cot','ger','lote','fin','oc','conc'].indexOf(s.status) },
@@ -1147,7 +1148,8 @@ function pintarPacote(P){
       ${holder}
       <div class="steps" aria-label="Etapas">${steps}</div>
       <div class="grid2">
-        ${kv(P.status === 'cot' ? 'Valor (soma dos pedidos)' : 'Valor do pacote', P.valor !== null ? brl(P.valor) : '—', 'big num')}
+        ${kv('Valor (soma dos pedidos)', P.valor !== null ? brl(P.valor) : '—', 'big num')}
+        ${L.pacote_total !== null && L.pacote_total !== undefined ? kv('Aprovado no pacote da gerência', brl(num(L.pacote_total))) : ''}
         ${kv('Situação do pacote', L.pacote_estado ? esc(cap(ESTADO_PACOTE[L.pacote_estado] || L.pacote_estado)) : '<span class="muted">ainda na cotação do lote</span>')}
         ${kv('Gerência', esc(L.gerencia || '—'))}
         ${kv('Competência', esc(P.competencia || '—'))}
