@@ -1079,7 +1079,7 @@ function abrirAcao(acao, id){
   $('subAcao').textContent = (s.numero || '') + ' · ' + (s.assunto || '');
   $('textoAcao').innerHTML = ed
     ? '<b>Dá para editar este pedido uma vez só.</b><ul>' +
-      '<li>Só os itens podem mudar: quantidades, incluir ou tirar itens. O resto do pedido fica como está.</li>' +
+      '<li>Só os itens e a data de entrega podem mudar: quantidades, incluir ou tirar itens, e a data. O resto do pedido fica como está.</li>' +
       '<li>Enquanto a tela de edição está aberta, a liderança vê que o pedido está sendo editado e não aprova no meio da mudança.</li>' +
       '<li>Se sair da tela sem salvar ou desistir, o pedido volta como estava e a edição fica gasta: não dá para editar de novo.</li>' +
       '<li>Ao salvar, a liderança recebe o pedido de volta e vê o que mudou.</li></ul>'

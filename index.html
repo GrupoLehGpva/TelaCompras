@@ -1017,9 +1017,10 @@ let SLACK_UID = '';        // id do usuário no Slack, vindo da query string (va
 
    TODA A NUMERAÇÃO SAI DAQUI: "Passo 3 de 5" e o "1., 2., 3." da página única
    são calculados desta lista, então tirar um passo acerta os dois sozinho. */
-/* Na edição do caminho das telas só os ITENS mudam (decisão de 24/09): o
-   formulário mostra apenas esse passo. O banco também ignora o resto. */
-const sequencia = () => EDICAO ? ['item'] : ['solicitante','entrega','item','compra','prazo'];
+/* Na edição do caminho das telas só os ITENS mudam (decisão de 24/09) e, desde
+   05/10, a DATA DE ENTREGA (pedido do Alisson): o formulário mostra esses dois
+   passos. O banco ignora o resto do cabeçalho. */
+const sequencia = () => EDICAO ? ['item','prazo'] : ['solicitante','entrega','item','compra','prazo'];
 
 const TITULOS = {
   solicitante:'Solicitante',
@@ -1028,7 +1029,8 @@ const TITULOS = {
 };
 
 /* O passo "item" muda de nome quando a solicitação é de serviço. */
-const tituloDe = k => (k === 'item' && estado.tipo === 'servico') ? 'Escopo do serviço' : TITULOS[k];
+const tituloDe = k => (k === 'item' && estado.tipo === 'servico') ? 'Escopo do serviço'
+                     : (k === 'prazo' && EDICAO) ? 'Data de entrega' : TITULOS[k];
 
 /* ============================================================================
    5) MONTAGEM INICIAL
@@ -1810,7 +1812,7 @@ function validar(passo){
     if(!estado.dataLimite) falhar('dataLimite','Informe a data limite para entrega.');
     else if(estado.dataLimite < hojeISO())
       falhar('dataLimite','A data limite não pode estar no passado.');
-    if(estado.motivoCompra.trim().length < 5) falhar('motivoCompra','Descreva o motivo da compra.');
+    if(!EDICAO && estado.motivoCompra.trim().length < 5) falhar('motivoCompra','Descreva o motivo da compra.');   // na edição o motivo não muda
   }
   return ok;
 }
@@ -2322,8 +2324,15 @@ async function prepararTelas(){
   preencherDoPedido(r.pedido, r.itens || []);
   /* Só os itens: o tipo (item, lista, serviço) fica como está. */
   const campoTipo = document.querySelector('.campo[data-campo="tipo"]');
-  if(campoTipo) campoTipo.innerHTML = '<span class="ajuda">Na edição só os itens podem mudar: quantidades, ' +
-    'incluir ou tirar itens. Motivo, centro de custo, tipo de compra e o resto do pedido ficam como estão.</span>';
+  if(campoTipo) campoTipo.innerHTML = '<span class="ajuda">Na edição só os itens e a data de entrega podem mudar: quantidades, ' +
+    'incluir ou tirar itens e, no passo seguinte, a data. Motivo, centro de custo, tipo de compra e o resto do pedido ficam como estão.</span>';
+  /* Passo do prazo: só a data de entrega muda; o motivo fica como está. */
+  const passoPrazo = document.querySelector('section.passo[data-passo="prazo"]');
+  if(passoPrazo){
+    passoPrazo.querySelector('h2').textContent = 'Data de entrega';
+    const motivo = passoPrazo.querySelector('.campo[data-campo="motivoCompra"]');
+    if(motivo) motivo.hidden = true;
+  }
   document.querySelector('h1').textContent = 'Editar solicitação';
   $('autoNumero').textContent = EDICAO.numero || '—';
   /* Anexo não muda na edição: o que foi enviado continua no pedido. */
@@ -2379,7 +2388,7 @@ function iniciarRelogio(){
   /* 29/09: sem prazo na tela — a edição vale enquanto este formulário estiver aberto.
      O banco ainda descarta uma edição esquecida (aba que travou), como rede de segurança. */
   $('textoEdicao').innerHTML = '<b>Editando ' + escT(EDICAO.numero) + '</b>' +
-    'Só os itens podem mudar. Se sair desta tela sem salvar ou desistir, o pedido volta para a liderança como estava, e não dá para editar de novo.';
+    'Só os itens e a data de entrega podem mudar. Se sair desta tela sem salvar ou desistir, o pedido volta para a liderança como estava, e não dá para editar de novo.';
   $('faixaEdicao').hidden = false;
   edicaoAberta = true;
 }

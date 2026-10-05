@@ -185,14 +185,16 @@ const b = await chromium.launch();
      est.tipoCompra === 'normal' && est.definicaoFornecedor === 'cotacao' && est.dataLimite === '2027-01-15' &&
      est.solicitanteNome === 'João' && est.observacao === 'Urgente para a linha 2', JSON.stringify(est));
   ok('4 campo de anexo trocado por aviso', await p.locator('#anexos').count() === 0 && /Na edição não dá para trocar arquivo/.test(await p.textContent('body')));
-  /* Só os itens: um passo só, sem tipo, sem motivo, sem centro de custo (decisão de 24/09) */
-  ok('4 passo único dos itens', /Passo 1 de 1/.test(await p.textContent('#progTexto')) && await p.locator('section.passo[data-passo="item"]').isVisible(),
+  /* Itens e, desde 05/10, a data de entrega: dois passos, sem tipo, sem motivo, sem centro de custo */
+  ok('4 dois passos: itens e data', /Passo 1 de 2/.test(await p.textContent('#progTexto')) && await p.locator('section.passo[data-passo="item"]').isVisible(),
      await p.textContent('#progTexto'));
-  ok('4 sem escolha de tipo', await p.locator('input[name="tipo"]').count() === 0 && /só os itens podem mudar/.test(await p.textContent('section.passo[data-passo="item"]')));
-  ok('4 faixa diz que só os itens mudam', /Só os itens podem mudar/.test(await p.textContent('#textoEdicao')));
+  ok('4 sem escolha de tipo', await p.locator('input[name="tipo"]').count() === 0 && /só os itens e a data de entrega podem mudar/.test(await p.textContent('section.passo[data-passo="item"]')));
+  ok('4 faixa diz que só os itens e a data mudam', /Só os itens e a data de entrega podem mudar/.test(await p.textContent('#textoEdicao')));
   await p.click('#verPagina');
-  for(const k of ['solicitante','entrega','compra','prazo'])
+  for(const k of ['solicitante','entrega','compra'])
     ok('4 página única sem o passo ' + k, !(await p.locator('section.passo[data-passo="' + k + '"]').isVisible()));
+  ok('4 página única com a data de entrega', await p.locator('#dataLimite').isVisible() && /Data de entrega/.test(await p.textContent('section.passo[data-passo="prazo"] h2')));
+  ok('4 motivo escondido na edição', !(await p.locator('#motivoCompra').isVisible()));
   ok('4 botão diz salvar', (await p.textContent('#btnAvancar')).trim() === 'Salvar alterações');
   /* muda a quantidade de um item e salva */
   await p.evaluate(() => { estado.itensLista[0].quantidade = 6; renderLista(); });
@@ -207,6 +209,29 @@ const b = await chromium.launch();
   ok('4 diz o que mudou', /Mudou: itens\./.test(await p.textContent('#okAviso')), await p.textContent('#okAviso'));
   ok('4 sem nova solicitação', !(await p.locator('#btnRecomecar').isVisible()));
   ok('4 faixa some', !(await p.locator('#faixaEdicao').isVisible()));
+  await p.close(); }
+
+/* 4b — 05/10: muda a data de entrega pelos passos; data no passado é barrada na tela */
+{ const p = await abrir(b, '?t=fc-ana&editar=' + ID);
+  ok('4b começa nos itens', /Passo 1 de 2/.test(await p.textContent('#progTexto')));
+  await p.click('#btnAvancar'); await p.waitForTimeout(300);
+  ok('4b segundo passo é a data', /Passo 2 de 2/.test(await p.textContent('#progTexto')) && await p.locator('#dataLimite').isVisible() &&
+     !(await p.locator('#motivoCompra').isVisible()), await p.textContent('#progTexto'));
+  ok('4b data gravada vem preenchida', await p.inputValue('#dataLimite') === '2027-01-15');
+  ok('4b anexos seguem com o aviso', /Na edição não dá para trocar arquivo/.test(await p.textContent('section.passo[data-passo="prazo"]')));
+  await p.fill('#dataLimite', '2020-01-01'); await p.dispatchEvent('#dataLimite', 'change');
+  await p.click('#btnAvancar'); await p.waitForTimeout(400);
+  ok('4b data no passado não salva', chamou(p,'salvar_edicao').length === 0 && /passado/.test(await p.textContent('section.passo[data-passo="prazo"]')));
+  await p.fill('#dataLimite', '2027-03-20'); await p.dispatchEvent('#dataLimite', 'change');
+  await p.click('#btnAvancar'); await p.waitForTimeout(600);
+  const s = chamou(p,'salvar_edicao')[0];
+  ok('4b salvou com a data nova', s && s.corpo.p_cabecalho.data_necessidade === '2027-03-20' && s.corpo.p_cabecalho.motivo === 'Rolamentos da peletizadora',
+     JSON.stringify(s && s.corpo.p_cabecalho));
+  ok('4b confirmação', /Alterações salvas/.test(await p.textContent('#okTitulo')));
+  await p.close(); }
+{ const p = await abrir(b, '?t=fc-ana&editar=' + ID, {ped:()=>({ok:true, pedido:PEDIDO({motivo:'abc'}), itens:ITENS_LISTA})});
+  await enviarPagina(p);
+  ok('4c motivo antigo curto não trava a edição', chamou(p,'salvar_edicao').length === 1, JSON.stringify(p.__rpc.map(x => x.nome)));
   await p.close(); }
 
 /* 5 — edição de item único e de serviço preenchem o tipo certo */
