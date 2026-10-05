@@ -120,6 +120,13 @@ function responder(B, nome, c){
     if (c.p_versao !== p.versao) return { ok:false, erro:'versao_mudou', mensagem:'Este pedido foi alterado, atualize a tela.' };
     p.etapa_atual = null; return { ok:true, status:'reprovado', mensagem:'Pedido reprovado. Quem pediu foi avisado com o motivo.' };
   }
+  if (nome === 'remover_orcamento'){
+    if (p.etapa_atual !== 'cotacao') return { ok:false, erro:'fora_da_cotacao', mensagem:'O pedido já saiu da cotação: o orçamento não pode mais ser removido.' };
+    const k = p.anexos.findIndex(a => a.id === c.p_anexo && /^Orçamento · /.test(a.nome));
+    if (k < 0) return { ok:false, erro:'anexo_nao_encontrado', mensagem:'Este orçamento não está mais no pedido. Atualize a tela.' };
+    p.anexos.splice(k, 1);
+    return { ok:true, removidos:1, orcamentos:p.anexos.filter(a => /^Orçamento · /.test(a.nome)) };
+  }
   if (nome === 'registrar_orcamentos'){
     (c.p_anexos || []).forEach((a, k) => { if (a.caminho.startsWith(p.id + '/orcamento-')) p.anexos.push({ id:'an' + p.anexos.length, nome:'Orçamento · ' + a.nome, mime:a.mime, tamanho:a.tamanho }); });
     return { ok:true, gravados:(c.p_anexos || []).length, orcamentos:p.anexos.filter(a => /^Orçamento · /.test(a.nome)) };
@@ -384,6 +391,29 @@ const b = await chromium.launch();
   ok('8 registrou com token', rg && rg.c.p_token === TOKEN && rg.c.p_id === 'u1' && rg.c.p_anexos[0].caminho === p.B.storage[0]);
   ok('8 lista o orçamento', /orc rolamax\.pdf/.test(await txt(p, '#orcamentos')));
   ok('8 recusa tipo errado e diz por quê', /planilha\.xlsx \(só PDF ou foto\)/.test(await txt(p, '#orc-st')));
+  /* 05/10 (Herisson): remover orçamento anexado errado, com segundo clique */
+  await p.setInputFiles('#orc-arq', [{ name:'errado.pdf', mimeType:'application/pdf', buffer:Buffer.from('%PDF-1.4') }]);
+  await p.waitForTimeout(800);
+  ok('8 dois orçamentos com botão remover', await p.locator('#orcamentos .orc-rm').count() === 2);
+  const rm = p.locator('#orcamentos li', { hasText:'errado.pdf' }).locator('.orc-rm');
+  await rm.click(); await p.waitForTimeout(200);
+  ok('8 primeiro clique só pede confirmação', ch(p, 'remover_orcamento').length === 0 && /Clique de novo/.test(await rm.textContent()));
+  await p.waitForTimeout(5200);
+  ok('8 confirmação volta sozinha', (await rm.textContent()).trim() === 'Remover');
+  await rm.click(); await rm.click(); await p.waitForTimeout(600);
+  const rr = ch(p, 'remover_orcamento');
+  ok('8 removeu o certo', rr.length === 1 && rr[0].c.p_token === TOKEN && rr[0].c.p_id === 'u1' &&
+     p.B.pedidos[0].anexos.every(a => !/errado/.test(a.nome)) && p.B.pedidos[0].anexos.some(a => /orc rolamax/.test(a.nome)), rr);
+  ok('8 tela mostra só o que ficou', !/errado\.pdf/.test(await txt(p, '#orcamentos')) && /orc rolamax\.pdf/.test(await txt(p, '#orcamentos')) &&
+     /Orçamento removido/.test(await txt(p, '#orc-st')));
+  /* outra aba já removeu: tela se acerta e avisa */
+  const id2 = p.B.pedidos[0].anexos.find(a => /orc rolamax/.test(a.nome)).id;
+  p.B.pedidos[0].anexos = p.B.pedidos[0].anexos.filter(a => a.id !== id2);
+  await p.locator('#orcamentos .orc-rm').click(); await p.locator('#orcamentos .orc-rm').click(); await p.waitForTimeout(600);
+  ok('8 já removido em outro lugar: some da lista e avisa', /Nenhum orçamento anexado/.test(await txt(p, '#orcamentos')) && /não está mais no pedido/.test(await txt(p, '#orc-st')));
+  /* fora da cotação (enviada, só leitura): orçamento aparece sem botão remover nem anexar */
+  await p.evaluate(() => { const x = sol(S.solId); x.anexos = [{ id:'anx1', nome:'Orçamento · fora.pdf', tamanho:10 }]; x.status = 'ger'; pintarOrcamentos(x); });
+  ok('8 fora da cotação: sem remover nem anexar', /fora\.pdf/.test(await txt(p, '#orcamentos')) && await p.locator('.orc-rm').count() === 0 && await p.locator('#orc-arq').count() === 0);
   await p.close(); }
 
 /* 9 — conflito de versão e falha de rede ao salvar */

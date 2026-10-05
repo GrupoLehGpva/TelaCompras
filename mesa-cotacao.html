@@ -369,6 +369,7 @@ textarea.inp{min-height:70px;resize:vertical;line-height:1.45}
 .anexos-lista a{color:var(--accent);font-weight:500}
 .bar .saved.erro,#orc-st.erro{color:var(--crit)}
 #orc-lbl{cursor:pointer}
+.anexos-lista .orc-rm{min-height:28px;padding:2px 8px;margin-left:6px}
 </style>
 <style>
 .tbl-wrap,.map-wrap{position:relative}
@@ -2250,10 +2251,38 @@ function pintarOrcamentos(s){
   const alvo = $('orcamentos'); if (!alvo) return;
   const lista = orcamentosDe(s), ro = soLeitura(s);
   alvo.innerHTML = (lista.length
-      ? `<ul class="anexos-lista">${lista.map(a => `<li><a href="${ANEXO_URL}?id=${encodeURIComponent(a.id)}" target="_blank" rel="noopener">${esc(a.nome.replace(/^Orçamento · /, ''))}</a> <span class="muted">· ${tamanho(a.tamanho)}</span></li>`).join('')}</ul>`
+      ? `<ul class="anexos-lista">${lista.map(a => `<li><a href="${ANEXO_URL}?id=${encodeURIComponent(a.id)}" target="_blank" rel="noopener">${esc(a.nome.replace(/^Orçamento · /, ''))}</a> <span class="muted">· ${tamanho(a.tamanho)}</span>${ro ? '' : `<button type="button" class="btn danger-ghost orc-rm" data-id="${esc(a.id)}" title="Tira este orçamento do pedido (só enquanto está na cotação)">Remover</button>`}</li>`).join('')}</ul>`
       : `<p class="muted" style="margin:0 0 8px">${ro ? 'Nenhum orçamento anexado.' : 'Nenhum orçamento anexado ainda. Anexe o PDF ou a foto que cada fornecedor mandou — o aprovador vê junto com o pedido.'}</p>`)
     + (ro ? '' : `<label class="btn" id="orc-lbl"><input type="file" id="orc-arq" accept="application/pdf,image/*" multiple hidden>Anexar orçamento</label><span class="muted" id="orc-st" style="margin-left:10px;font-size:12.5px">PDF ou foto, até 10 MB cada.</span>`);
   if ($('orc-arq')) $('orc-arq').onchange = e => subirOrcamentos(s, [...e.target.files]);
+  alvo.querySelectorAll('.orc-rm').forEach(b => b.onclick = () => removerOrcamento(s, b));
+}
+/* 05/10 (Herisson): tirar orçamento anexado errado, só enquanto o pedido está na cotação.
+   Pede um segundo clique em vez de janela do navegador; volta ao normal em 5 s. */
+async function removerOrcamento(s, b){
+  if (b.dataset.conf !== '1'){
+    alvoConf(b);
+    return;
+  }
+  clearTimeout(b._t); b.disabled = true; b.textContent = 'Removendo…';
+  let r;
+  try { r = await rpc('remover_orcamento', { p_token: TOKEN, p_id: s.uid, p_anexo: b.dataset.id }); } catch (e){ r = null; }
+  if (r && r.ok === true){
+    s.anexos = (s.anexos || []).filter(a => !/^Orçamento · /.test(a.nome || '')).concat(r.orcamentos || []);
+    s.orcamentosN = (r.orcamentos || []).length;
+    pintarOrcamentos(s);
+    const st = $('orc-st'); if (st){ st.textContent = 'Orçamento removido.'; st.classList.remove('erro'); }
+    return;
+  }
+  if (r && r.erro === 'anexo_nao_encontrado'){
+    s.anexos = (s.anexos || []).filter(a => a.id !== b.dataset.id);
+    pintarOrcamentos(s);
+  } else { b.disabled = false; b.textContent = 'Remover'; b.dataset.conf = ''; }
+  const st = $('orc-st'); if (st){ st.textContent = 'Não removi: ' + ((r && r.mensagem) || 'a rede falhou. Tente de novo.'); st.classList.add('erro'); }
+}
+function alvoConf(b){
+  b.dataset.conf = '1'; b.textContent = 'Clique de novo para remover';
+  b._t = setTimeout(() => { b.dataset.conf = ''; b.textContent = 'Remover'; }, 5000);
 }
 async function subirOrcamentos(s, arquivos){
   if (!arquivos.length) return;
