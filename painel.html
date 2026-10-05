@@ -275,6 +275,7 @@ td.r,th.r{text-align:right}
 .state h3{font-size:17px;color:var(--ink);margin-bottom:6px}
 .state p{max-width:60ch;margin:0 auto 12px}
 .muted{color:var(--ink-3)}
+.forn-item{font-size:12px;margin-top:2px}
 .m-head>div{min-width:0}
 .m-head h2,.card .ttl,.card .meta,td,.just,.kv .v{overflow-wrap:anywhere}
 .items td:nth-child(2){min-width:220px}
@@ -440,9 +441,16 @@ function valorDaLinha(r){
   const cots = r.cotacoes.filter(c => num(c.total) !== null).map(c => num(c.total));
   if (cots.length) return { v:Math.min(...cots), fonte:'menor cotação' };
   if (num(r.valor_cotado) !== null) return { v:num(r.valor_cotado), fonte:'valor cotado' };   /* Mesa de cotação */
-  const itens = r.itens.map(i => { const ps = [i.p1,i.p2,i.p3].map(num).filter(x => x !== null); return ps.length ? Math.min(...ps) * num(i.qtd) : null; });
+  const itens = r.itens.map(i => { const u = unitDoItem(i); return u !== null ? u * num(i.qtd) : null; });
   if (itens.length && itens.every(x => x !== null)) return { v:itens.reduce((a,b)=>a+b,0), fonte:'preços informados' };
   return { v:null, fonte:null };
+}
+/* preço unitário do item: o escolhido na cotação (Mesa ou lote, já com desconto); senão o menor dos preços antigos (ClickUp) */
+function unitDoItem(i){
+  const e = i.esc ? num(i.esc.preco) : null;
+  if (e !== null && !isNaN(e)) return e;
+  const ps = [i.p1,i.p2,i.p3].map(num).filter(x => x !== null);
+  return ps.length ? Math.min(...ps) : null;
 }
 function normalizar(r){
   r.itens = r.itens || []; r.decisoes = r.decisoes || []; r.cotacoes = r.cotacoes || []; r.ordens = r.ordens || []; r.movimentos = r.movimentos || [];
@@ -1063,9 +1071,9 @@ function pintarModal(){
   const atrasoNec = s.necessidade && aberta(s) && s.necessidade < AGORA;
   const respondidas = s.cotacoes.filter(c => c.status === 'respondida').length;
   const itensRows = s.itens.map(i => {
-    const ps = [i.p1,i.p2,i.p3].map(num).filter(x => x !== null);
-    const unit = ps.length ? Math.min(...ps) : null;
-    return `<tr><td class="mono">${esc(i.cod || '—')}</td><td>${esc(i.desc)}${i.fora ? ' <span class="pill neutral">fora do catálogo</span>' : ''}</td><td>${esc(i.fam || '—')}</td><td class="r num">${num(i.qtd).toLocaleString('pt-BR')} ${esc(i.un || '')}</td><td class="r num">${brl(unit)}</td><td class="r num">${unit !== null ? brl(unit*num(i.qtd)) : '—'}</td></tr>`;
+    const unit = unitDoItem(i);
+    const forn = i.esc && i.esc.forn ? `<div class="muted forn-item">${esc(i.esc.forn)}</div>` : '';
+    return `<tr><td class="mono">${esc(i.cod || '—')}</td><td>${esc(i.desc)}${i.fora ? ' <span class="pill neutral">fora do catálogo</span>' : ''}${forn}</td><td>${esc(i.fam || '—')}</td><td class="r num">${num(i.qtd).toLocaleString('pt-BR')} ${esc(i.un || '')}</td><td class="r num">${brl(unit)}</td><td class="r num">${unit !== null ? brl(unit*num(i.qtd)) : '—'}</td></tr>`;
   }).join('');
 
   const tl = s.eventos.map((e,i) => {

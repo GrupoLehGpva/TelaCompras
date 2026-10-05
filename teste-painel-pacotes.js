@@ -37,6 +37,10 @@ const LINHAS = [
   /* 05/10: aberto no mês passado e ainda em andamento (aparece com o filtro do mês); concluído do mês passado não */
   L('T-VELHO', { etapa_atual:'gerencial', status:'aguardando aprovacao', aberto_em:dia(40), entrou_na_etapa_em:dia(0.2), valor_cotado:10 }),
   L('T-VELHO-CONC', { aberto_em:dia(40), ordens:[OC({ total:10 })] }),
+  /* 05/10: card mostra o preço escolhido na cotação (Mesa) e o fornecedor; item antigo cai no menor preço */
+  L('T-PRECO', { etapa_atual:'gerencial', status:'aguardando aprovacao', entrou_na_etapa_em:dia(0.2),
+                 itens:[{ desc:'LISINA (25 KG)', qtd:4000, un:'KG', fam:'IA', esc:{ preco:12.5, forn:'CARGILL' } },
+                        { desc:'ITEM ANTIGO', qtd:2, un:'UN', fam:'MG', p1:30, p2:20, p3:null }] }),
   /* mensal aguardando o lote: continua solto */
   L('M8', { tipo_compra:'mensal', etapa_atual:'lote', status:'aguardando aprovacao' }),
 ];
@@ -180,6 +184,16 @@ await p.close();
   ok('8 concluído do mês passado sai com o filtro do mês', await q.locator('.card[data-id="T-VELHO-CONC"]').count() === 0);
   await q.selectOption('#f-per', 'all'); await q.waitForTimeout(300);
   ok('8 todo o período mostra o concluído antigo', await q.locator('.card[data-id="T-VELHO-CONC"]').count() === 1);
+  await q.close(); }
+
+/* 9 preço da cotação no card (05/10) */
+{ const q = await abrir();
+  await q.click('.card[data-id="T-PRECO"]'); await q.waitForTimeout(300);
+  const linhas = await q.$$eval('#modal table.items tbody tr', t => t.map(x => x.textContent.replace(/\s+/g, ' ')));
+  ok('9 item da Mesa: unitário e total da cotação', /LISINA/.test(linhas[0]) && /R\$\s?12,50/.test(linhas[0]) && /R\$\s?50\.000,00/.test(linhas[0]), linhas);
+  ok('9 item da Mesa: fornecedor escolhido', /CARGILL/.test(linhas[0]), linhas);
+  ok('9 item antigo: menor preço', /R\$\s?20,00/.test(linhas[1]) && /R\$\s?40,00/.test(linhas[1]) && !/CARGILL/.test(linhas[1]), linhas);
+  ok('9 valor do card soma os itens', /R\$\s?50\.040,00/.test(await q.textContent('#modal')), (await q.textContent('#modal')).slice(0, 400));
   await q.close(); }
 
 /* 7 celular */
