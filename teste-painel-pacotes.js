@@ -34,6 +34,9 @@ const LINHAS = [
   L('M5', { tipo_compra:'mensal', valor_cotado:50, lote:LOTE('g3','GERENTE TRES', { pacote_estado:'aprovado', pacote_total:50 }), ordens:[OC({ total:50, pacote:'L2610-g3' })] }),
   L('M6', { tipo_compra:'mensal', valor_cotado:900, lote:LOTE('g4','GERENTE QUATRO', { pacote_estado:'aprovado', pacote_total:900 }), ordens:[Object.assign({}, ocLote, { situacao:'a lancar', numero_gr:null, lancada:null })] }),
   L('M7', { tipo_compra:'mensal', etapa_atual:'cotacao', status:'em cotacao', lote:LOTE('g1','GERENTE UM', { pacote_estado:null, pacote_total:null }) }),
+  /* 05/10: aberto no mês passado e ainda em andamento (aparece com o filtro do mês); concluído do mês passado não */
+  L('T-VELHO', { etapa_atual:'gerencial', status:'aguardando aprovacao', aberto_em:dia(40), entrou_na_etapa_em:dia(0.2), valor_cotado:10 }),
+  L('T-VELHO-CONC', { aberto_em:dia(40), ordens:[OC({ total:10 })] }),
   /* mensal aguardando o lote: continua solto */
   L('M8', { tipo_compra:'mensal', etapa_atual:'lote', status:'aguardando aprovacao' }),
 ];
@@ -154,7 +157,7 @@ await p.click('#f-tipo [data-tipo=mensal]'); await p.waitForTimeout(200);
 await p.click('#f-vista [data-vista=lista]'); await p.waitForTimeout(300);
 { const tr = await p.textContent('tr[data-id="pacote:L2610-g1:fin"]');
   ok('6 lista: pacote numa linha', /L2610-g1/.test(tr) && /Pacote com 2 pedidos/.test(tr) && /Mensal/.test(tr), tr);
-  ok('6 lista: grupo Concluído', (await p.$$eval('tr.grupo', t => t.map(x => x.textContent))).some(x => /^Concluído · 2/.test(x.trim())));
+  ok('6 lista: grupo Concluído', (await p.$$eval('tr.grupo', t => t.map(x => x.textContent))).some(x => /^Concluído · 3/.test(x.trim())));
   ok('6 rodapé conta cada pedido', /solicitações no quadro \(pacotes do lote contam cada pedido\)/.test(await p.textContent('table.lista tfoot')), await p.textContent('table.lista tfoot'));
   await p.click('tr[data-id="pacote:L2610-g1:fin"]'); await p.waitForTimeout(300);
   ok('6 lista: clique abre o pacote', /pacote do lote mensal/.test(await p.textContent('#modal')));
@@ -168,6 +171,16 @@ await p.click('#f-vista [data-vista=lista]'); await p.waitForTimeout(300);
 }
 await p.click('#f-vista [data-vista=quadro]'); await p.waitForTimeout(200);
 await p.close();
+
+/* 8 período (05/10): em andamento aparece sempre; o período recorta só os encerrados */
+{ const q = await abrir();
+  const mesAtual = await q.$$eval('#f-per option', o => o.map(x => x.value).filter(v => v !== 'all')[0]);   // o mês mais recente
+  await q.selectOption('#f-per', mesAtual); await q.waitForTimeout(300);
+  ok('8 aberto no mês passado e em andamento aparece no filtro do mês', await q.locator('.card[data-id="T-VELHO"]').count() === 1);
+  ok('8 concluído do mês passado sai com o filtro do mês', await q.locator('.card[data-id="T-VELHO-CONC"]').count() === 0);
+  await q.selectOption('#f-per', 'all'); await q.waitForTimeout(300);
+  ok('8 todo o período mostra o concluído antigo', await q.locator('.card[data-id="T-VELHO-CONC"]').count() === 1);
+  await q.close(); }
 
 /* 7 celular */
 { const q = await abrir({ width:390, height:800 });

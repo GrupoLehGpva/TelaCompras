@@ -320,7 +320,7 @@ td.r,th.r{text-align:right}
   <!-- ============ FILTROS ============ -->
   <section class="filters" aria-label="Filtros">
     <div class="field grow"><label for="f-q">Buscar</label><input id="f-q" class="ctl" type="search" placeholder="Nº, item, solicitante, centro de custo…"></div>
-    <div class="field"><label for="f-per">Período</label><select id="f-per" class="ctl"><option value="all">Todo o período</option></select></div>
+    <div class="field"><label for="f-per" title="Os pedidos em andamento aparecem sempre; o período recorta só os concluídos, reprovados e cancelados, pelo mês em que foram abertos">Período</label><select id="f-per" class="ctl"><option value="all">Todo o período</option></select></div>
     <div class="field"><label for="f-emp">Empresa</label><select id="f-emp" class="ctl"><option value="">Todas</option></select></div>
     <div class="field"><label for="f-und">Unidade de negócio</label><select id="f-und" class="ctl"><option value="">Todas</option></select></div>
     <div class="field"><label for="f-cc">Centro de custo</label><select id="f-cc" class="ctl"><option value="">Todos</option></select></div>
@@ -680,7 +680,10 @@ function pintarTipos(){
 }
 function filtradas(){
   return SOLICITACOES.filter(s => {
-    if (state.per !== 'all' && chaveMes(s.criada) !== state.per) return false;
+    /* 05/10: pedido em andamento aparece SEMPRE, seja de que mês for (o C2609-00023, aberto em
+       setembro e cotado em outubro, sumia do funil no filtro "Outubro"). O período só recorta
+       os que já terminaram: concluídos, reprovados e cancelados. */
+    if (state.per !== 'all' && !aberta(s) && chaveMes(s.criada) !== state.per) return false;
     if (state.emp && s.empresa !== state.emp) return false;
     if (state.cat && !s.familias.includes(state.cat)) return false;
     if (state.und && s.unidadeNegocio !== state.und) return false;
