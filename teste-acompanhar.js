@@ -132,6 +132,7 @@ ok('4 encerradas aparecem depois', await p.locator('#tituloEncerradas').isVisibl
   ok('5 diz onde está',   /Esperando a liderança/.test(l1), 'linha 1: ' + l1);
   ok('5 diz com quem',    /ALVARO BRANDAO FILHO/.test(l1), 'não disse de quem está esperando: ' + l1);
   ok('5 cotação é do comprador', /com o comprador/.test(l2), 'linha 2: ' + l2);
+  ok('5 sem "com com" (06/10)', !/com com/i.test(l2), 'linha 2: ' + l2);
   ok('5 oferece o motivo da recusa', /Ver motivo/.test(l4), 'não ofereceu o motivo: ' + l4);
   const href = await p.locator('#corpoAndamento tr.linha-pedido').nth(0).locator('a').getAttribute('href');
   ok('5 abre o pedido',   /pedido\.html\?id=s1/.test(href||''), 'link: ' + href);

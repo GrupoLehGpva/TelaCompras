@@ -146,9 +146,10 @@
   .rolagem{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--borda);
     border-radius:var(--raio);background:var(--card)}
   table.lista{width:100%;border-collapse:collapse;table-layout:fixed;min-width:980px}
-  table.lista col.c-num{width:148px}   table.lista col.c-ass{width:auto}
-  table.lista col.c-cc{width:180px}    table.lista col.c-itens{width:84px}
-  table.lista col.c-data{width:116px}  table.lista col.c-onde{width:250px}
+  /* 06/10: larguras em proporção — em tela larga o motivo não engole a linha */
+  table.lista col.c-num{width:10%}     table.lista col.c-ass{width:27%}
+  table.lista col.c-cc{width:17%}      table.lista col.c-itens{width:6%}
+  table.lista col.c-data{width:9.5%}   table.lista col.c-onde{width:21%}
   table.lista th,table.lista td{padding:15px 12px;text-align:left;vertical-align:top;
     border-bottom:1px solid var(--borda)}
   table.lista thead th{background:var(--realce);color:var(--muted);font-size:12px;
@@ -753,7 +754,7 @@ function linha(s){
       /* Uma linha só: a situação e com quem está. A trilha de etapas e o nome
          empilhado deixavam cada pedido com quatro andares (24/09). */
       '<div class="onde-linha"><span class="onde">' + esc(s.situacao || '—') + '</span>' +
-      (s.com_quem ? '<span class="quem">com ' + esc(s.com_quem) + '</span>' : '') + '</div>' +
+      (s.com_quem ? '<span class="quem">com ' + esc(String(s.com_quem).replace(/^\s*com\s+/i, '')) + '</span>' : '') + '</div>' +   /* 06/10: o banco às vezes já manda "com o comprador" */
       (s.status === 'reprovado'
         ? (s.motivo_recusa
             ? '<button type="button" class="ver-motivo so-leitura" data-id="' + esc(s.id) + '">' +
