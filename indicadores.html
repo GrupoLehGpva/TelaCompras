@@ -143,6 +143,18 @@ button,select,input{font:inherit;color:inherit}
 .tile .lbl{font-size:12px;color:var(--ink-2);font-weight:500}
 .tile .val{font-family:var(--f-display);font-size:26px;font-weight:700;line-height:1.15;overflow-wrap:anywhere}
 .tile .sub{font-size:12px;color:var(--ink-3)}
+/* 06/10: "Como é calculado" em cada indicador */
+details.como{font-size:12.5px;color:var(--ink-2);margin-top:2px}
+details.como>summary{cursor:pointer;color:var(--ink-3);font-size:12px;list-style:none;display:inline-flex;align-items:center;gap:5px;border-radius:4px;padding:1px 2px}
+details.como>summary::-webkit-details-marker{display:none}
+details.como>summary::before{content:'i';display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;border:1px solid currentColor;font-size:10px;font-weight:700;font-style:normal;line-height:1}
+details.como>summary:hover{color:var(--ink)}
+details.como[open]>summary{color:var(--ink)}
+details.como .como-txt{margin-top:6px;padding:9px 11px;background:var(--surface-2);border-radius:6px;line-height:1.45}
+details.como .como-txt p{margin:0}
+details.como .como-txt p+p{margin-top:6px}
+.como-barra{display:flex;justify-content:flex-end;margin:0 0 10px}
+@media print{details.como:not([open]){display:none}}
 .delta{font-size:11.5px;font-weight:600;border-radius:999px;padding:1px 7px;margin-left:4px;white-space:nowrap}
 .delta.up{background:var(--ok-soft);color:var(--ok)}
 .delta.down{background:var(--crit-soft);color:var(--crit)}
@@ -478,7 +490,7 @@ const chavePessoa = s => String(s || '').trim().toLocaleUpperCase('pt-BR');
    ===================================================================== */
 let SOLICITACOES = [];
 let AGORA = new Date();
-const state = { per:'d30', emp:'', und:'', cc:'', tipo:'', fam:'', carregou:false, vistas:{} };
+const state = { per:'d30', emp:'', und:'', cc:'', tipo:'', fam:'', carregou:false, vistas:{}, como:new Set() };
 const $ = id => document.getElementById(id);
 const DIA = 864e5;
 
@@ -651,12 +663,89 @@ function tabelaHTML(cab, linhas, { vazio = 'Sem dados neste recorte.' } = {}){
     <tbody>${linhas.map(l => `<tr${l.attrs ? ' ' + l.attrs : ''}>${l.cels.map((v, i) => `<td class="${cab[i].cls || ''}">${v}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
 }
 
+/* =====================================================================
+   COMO É CALCULADO (06/10): cada indicador explica a própria conta, para
+   quem analisa saber o que entra, o que fica de fora e por qual data conta.
+   ===================================================================== */
+const REGRA_VALOR = 'Valor de cada pedido: o valor gravado na aprovação; se não houver, a soma das ordens de compra; senão a menor cotação; senão o total cotado na Mesa. Pedido que ainda não foi cotado fica sem valor e não entra na soma.';
+const DATA_ABERTURA = 'Conta pela data de abertura do pedido, dentro do período escolhido. Empresa, unidade, centro de custo, tipo e família também filtram.';
+const DATA_APROVACAO = 'Conta pela data da aprovação final (financeiro), não pela data de abertura. Os demais filtros também valem.';
+const COMO = {
+  /* economia */
+  't-eco-valor':[ 'Em cada pedido aprovado no período, para cada item com 2 ou mais preços no mapa: (maior preço cotado − preço escolhido) × quantidade. Soma de todos os itens e pedidos.',
+                  'Preços já com o desconto de cada fornecedor; frete fica de fora. Pedido antigo (ClickUp): maior proposta registrada − valor do pedido.', DATA_APROVACAO,
+                  'A seta compara com o período anterior do mesmo tamanho.' ],
+  't-eco-pct':  [ 'Economia em valor ÷ soma das maiores propostas dos mesmos itens × 100.', 'Mostra quanto se pagou a menos do que o fornecedor mais caro pedia.' ],
+  't-eco-media':[ 'Para os mesmos itens: (preço médio de todos os fornecedores cotados − preço escolhido) × quantidade, somado.',
+                  'É uma régua mais conservadora que a da maior proposta. O % é sobre a soma das médias.' ],
+  't-eco-cob':  [ 'Pedidos aprovados no período que tinham 2 ou mais preços para comparar ÷ total de pedidos aprovados no período.',
+                  'Pedido com um preço só (fornecedor único, por exemplo) não entra na conta de economia.' ],
+  'c-eco-tipo': [ 'A mesma conta da economia em valor, separada pelo tipo de compra. O % é a economia ÷ maior proposta daquele tipo.', DATA_APROVACAO, 'Clicar numa barra filtra a tela inteira por esse tipo.' ],
+  'c-eco-top':  [ 'Os 8 pedidos aprovados no período com a maior economia em valor (maior proposta − escolhido).',
+                  'O selo "propostas" marca pedido antigo, calculado pelas propostas registradas e não pelo mapa da Mesa.' ],
+  /* posição agora */
+  'c-hero':     [ 'Soma do valor de todos os pedidos em andamento hoje (liderança, cotação, gerencial, lote ou financeiro). Não depende do período; os outros filtros valem.', REGRA_VALOR,
+                  'Parado = dias corridos desde que o pedido entrou na etapa atual. Passou da data = a data de necessidade informada no pedido já ficou para trás.' ],
+  'c-onde':     [ 'Quantos pedidos em andamento estão em cada etapa agora. Passando o mouse, aparece o valor somado da etapa.',
+                  'Na tabela, a coluna "Parados + de 3 dias" conta quem está na mesma etapa há mais de 3 dias corridos.' ],
+  'c-leituras': [ 'Frases montadas automaticamente a partir dos números da tela. Cada uma só aparece quando passa de um limite:',
+                  'pedidos parados há mais de 3 dias · pedidos com a data de necessidade vencida · etapa com o maior tempo médio · unidade com 50% ou mais do valor aberto · 30% ou mais de pedidos urgentes · 30% ou mais do valor aprovado com fornecedor único · taxa de aprovação (com 3 ou mais pedidos encerrados; fica amarela se 25% ou mais foram reprovados).' ],
+  /* totais do período */
+  't-pedidos':  [ 'Quantidade de pedidos abertos no período.', DATA_ABERTURA, 'A seta compara com o período anterior do mesmo tamanho.' ],
+  't-aprovado': [ 'Soma do valor dos pedidos que receberam a aprovação final no período.', DATA_APROVACAO, REGRA_VALOR ],
+  't-ticket':   [ 'Valor aprovado ÷ número de pedidos aprovados no período.' ],
+  't-taxa':     [ 'Dos pedidos encerrados no período: aprovados ÷ (aprovados + reprovados) × 100.',
+                  'Conta pela data em que o pedido foi aprovado, reprovado ou cancelado. Cancelados por quem pediu não entram na conta; só aparecem ao lado.' ],
+  't-lead':     [ 'Média, entre os pedidos aprovados no período, dos dias corridos da abertura do pedido até a aprovação final do financeiro.' ],
+  't-urg':      [ 'Pedidos abertos no período marcados como urgentes ÷ total de pedidos abertos no período × 100.' ],
+  'c-situacao': [ 'Pega os pedidos abertos no período e mostra onde cada um está hoje: em qual etapa, aprovado (ordem de compra), concluído no GR, reprovado ou cancelado.', DATA_ABERTURA, REGRA_VALOR ],
+  'c-funil':    [ 'Dos pedidos abertos no período, quantos já passaram de cada aprovação, ou seja, estão numa etapa depois dela ou já foram aprovados. O % é sobre o total de abertos.',
+                  'Reprovado conta como tendo passado só das etapas anteriores à que reprovou. Compra mensal segue a ordem dela (liderança, gerência, lote, cotação, financeiro).' ],
+  /* gargalos */
+  'c-tempo':    [ 'Cada vez que um pedido sai de uma etapa (aprovação, reprovação, devolução ou envio da cotação) conta como uma passagem.',
+                  'Tempo da passagem = dias corridos desde o evento anterior do mesmo pedido (ou desde a abertura). A barra é a média das passagens que terminaram no período; "Maior" é a passagem mais longa.' ],
+  'c-parados':  [ 'Os 10 pedidos em andamento há mais tempo na etapa atual, em dias corridos desde que entraram nela. Amarelo acima de 3 dias, vermelho acima de 7.',
+                  'Não depende do período; os outros filtros valem.' ],
+  /* dinheiro */
+  'c-unidade':  [ 'Pedidos abertos no período agrupados pela unidade de negócio do centro de custo, do maior para o menor valor.',
+                  '% do valor = valor do grupo ÷ valor total dos abertos. "Tempo até aprovar" = média de dias da abertura à aprovação final, só dos aprovados do grupo.', REGRA_VALOR ],
+  'c-cc':       [ 'Pedidos abertos no período agrupados por centro de custo, do maior para o menor valor. O gráfico mostra os 9 maiores e junta o resto em "Outros"; a tabela mostra todos.',
+                  '% do valor = valor do centro de custo ÷ valor total dos abertos.', REGRA_VALOR ],
+  'c-empresa':  [ 'Pedidos abertos no período agrupados pela empresa que compra, do maior para o menor valor.', '% do valor = valor da empresa ÷ valor total dos abertos.', REGRA_VALOR ],
+  'c-familia':  [ 'Pedidos abertos no período que têm pelo menos um item de cada família do catálogo. Um pedido com itens de duas famílias conta nas duas.',
+                  '"Itens" = quantas linhas de item daquela família. Mostra as 10 famílias com mais pedidos.' ],
+  /* ritmo */
+  'c-abertos':  [ 'Quantos pedidos foram abertos em cada dia, semana ou mês do período.',
+                  'O agrupamento muda com o tamanho do período: até 45 dias, por dia; até 400 dias, por semana (começando na segunda); acima disso, por mês.' ],
+  'c-valor':    [ 'Soma do valor dos pedidos aprovados em cada dia, semana ou mês, pela data da aprovação final.', REGRA_VALOR ],
+  'c-tipo':     [ 'Pedidos abertos no período pelo tipo de compra informado no formulário. % sobre o total de abertos.', REGRA_VALOR, 'Clicar numa faixa filtra a tela inteira por esse tipo.' ],
+  'c-unico':    [ 'Número grande: pedidos abertos no período com fornecedor único ÷ pedidos abertos no período.',
+                  'Linha de baixo: valor dos pedidos aprovados no período com fornecedor único ÷ valor aprovado total do período.' ],
+  'c-necessidade':[ 'Entre os pedidos aprovados no período que têm data de necessidade: quantos receberam a aprovação final até o fim do dia pedido.',
+                  'Linha de baixo: pedidos em andamento hoje cuja data de necessidade já passou.' ],
+  /* decisões */
+  'c-aprovadores':[ 'Para cada pessoa que decidiu na liderança, gerência ou financeiro no período: total de decisões e quantas foram aprovar, reprovar ou devolver.',
+                  'Tempo médio = dias corridos entre o evento anterior do pedido e a decisão dessa pessoa. "Na fila" = pedidos esperando por ela agora.' ],
+  'c-reprovacoes':[ 'Pedidos reprovados ou cancelados no período, pela data da reprovação ou do cancelamento, agrupados pela etapa em que pararam.',
+                  'Abaixo, os 5 motivos mais recentes.', REGRA_VALOR ],
+  't-cotados':  [ 'Quantas vezes o comprador enviou uma cotação para aprovação no período. Pedido devolvido e cotado de novo conta duas vezes.' ],
+  't-tcot':     [ 'Média de dias corridos entre a chegada do pedido na cotação (ou o evento anterior do pedido) e o envio da cotação, nos envios do período.' ],
+  't-filacot':  [ 'Pedidos esperando cotação agora, e há quantos dias está o mais antigo deles. Não depende do período.' ],
+  't-devolv':   [ 'Quantas vezes, no período, um aprovador devolveu um pedido ao comprador para refazer a cotação.' ],
+  't-economia': [ 'A mesma conta da "Economia em valor" do topo: maior proposta − escolhido, somado nos pedidos aprovados no período com 2 ou mais preços.' ],
+};
+function como(id){
+  const t = COMO[id]; if (!t) return '';
+  return `<details class="como" data-como="${id}"${state.como.has(id) ? ' open' : ''}><summary>Como é calculado</summary><div class="como-txt">${t.map(x => `<p>${esc(x)}</p>`).join('')}</div></details>`;
+}
+
 /* Cartão com gráfico e a mesma informação em tabela (botão Ver tabela) */
 function cartao(id, titulo, sub, viz, tabela, rodape){
   const tv = state.vistas[id] === 'tabela';
   return `<article class="card" id="${id}">
     <div class="card-h"><div><h3>${titulo}</h3>${sub ? `<div class="sub">${sub}</div>` : ''}</div>
       ${tabela ? `<button class="btn ghost sm tgl" type="button" data-vista="${id}" aria-pressed="${tv}">${tv ? 'Ver gráfico' : 'Ver tabela'}</button>` : ''}</div>
+    ${como(id)}
     <div class="viz"${tv ? ' hidden' : ''}>${viz}</div>
     ${tabela ? `<div class="tab"${tv ? '' : ' hidden'}>${tabela}</div>` : ''}
     ${rodape ? `<div class="rodape">${rodape}</div>` : ''}
@@ -720,6 +809,7 @@ function render(){
   const semNada = !C.base.length;
   $('conteudo').innerHTML =
     (semNada ? `<div class="state" style="margin-bottom:18px"><h3>Nenhum pedido com esses filtros</h3><p>Tente outra empresa, unidade ou centro de custo, ou limpe os filtros.</p><button class="btn primary" type="button" id="empty-clear">Limpar filtros</button></div>` : '') +
+    `<div class="como-barra"><button class="btn ghost sm" type="button" id="como-todos" aria-pressed="${todosComoAbertos()}">${todosComoAbertos() ? 'Esconder as explicações' : 'Mostrar como cada indicador é calculado'}</button></div>` +
     secEconomia(C) + secPosicao(C) + secPeriodo(C) + secGargalos(C) + secDinheiro(C) + secRitmo(C) + secDecisoes(C);
   ligar();
 }
@@ -754,7 +844,7 @@ function secEconomia(C){
     top.map(s => ({ attrs:`class="link" tabindex="0" data-href="${esc(linkFunil(s.id))}" data-tip="${esc('Abrir ' + s.id + ' no funil')}"`,
       cels:[`<span class="mono">${esc(s.id)}</span>`, esc(s.titulo) + (s.eco.fonte === 'propostas' ? ' <span class="pill neutral">propostas</span>' : ''), brl(s.eco.maior), brl(s.eco.esc), brl(s.eco.valor), pctEco(s.eco.valor, s.eco.maior)] })),
     { vazio:'Nenhum pedido aprovado com 2+ preços neste recorte.' });
-  const topC = `<article class="card" id="c-eco-top"><div class="card-h"><div><h3>Maiores economias</h3><div class="sub">Clique para abrir no funil</div></div></div>${tabTop}</article>`;
+  const topC = `<article class="card" id="c-eco-top"><div class="card-h"><div><h3>Maiores economias</h3><div class="sub">Clique para abrir no funil</div></div></div>${como('c-eco-top')}${tabTop}</article>`;
   return `<section class="sec" id="s-economia">
     <div class="sec-h"><h2>Economia na cotação</h2><span class="hint">${cap(C.J.rot)} · pedidos aprovados · preços com desconto, sem frete</span></div>
     ${tiles}
@@ -774,6 +864,7 @@ function secPosicao(C){
       <div class="val" id="v-carteira">${brl(somaValor(cart))}</div>
       <div class="det">${plural(cart.length, 'pedido em andamento', 'pedidos em andamento')}${semValor(cart) ? ` · <span class="muted">${semValor(cart)} ainda sem preço (antes da cotação)</span>` : ''}</div>
       <div class="det"><b>${parados3.length}</b> parado${parados3.length === 1 ? '' : 's'} há mais de 3 dias · <b>${vencidos.length}</b> já passou${vencidos.length === 1 ? '' : 'ram'} da data de necessidade</div>
+      ${como('c-hero')}
     </article>`;
   const tab = tabelaHTML([{t:'Etapa',cls:'l'},{t:'Pedidos'},{t:'Valor',cls:'r'},{t:'Parados + de 3 dias'}],
     ETAPAS.map(e => { const l = cart.filter(s => s.status === e.id); return { cels:[esc(e.nome), inteiro(l.length), brl(somaValor(l)), inteiro(l.filter(s => diasNaEtapa(s) > 3).length)] }; }));
@@ -813,7 +904,7 @@ function cartaoLeituras(C){
   if (rep + ap >= 3) L.push({ c:rep / (rep + ap) >= .25 ? 'warn' : 'ok', t:`Taxa de aprovação ${C.J.rot}: <b>${pctTxt(ap, ap + rep)}</b> (${plural(ap, 'aprovado', 'aprovados')}, ${plural(rep, 'reprovado', 'reprovados')}).` });
   if (!L.length) L.push({ c:'ok', t:'Nada fora do normal com os filtros atuais.' });
   const ic = { crit:'!', warn:'!', info:'i', ok:'✓' };
-  return `<article class="card" id="c-leituras"><div class="card-h"><div><h3>O que chama atenção</h3><div class="sub">Leituras automáticas dos números abaixo</div></div></div>
+  return `<article class="card" id="c-leituras"><div class="card-h"><div><h3>O que chama atenção</h3><div class="sub">Leituras automáticas dos números abaixo</div></div></div>${como('c-leituras')}
     <ul class="leituras">${L.map(x => `<li><span class="ic ${x.c}" aria-hidden="true">${ic[x.c]}</span><span>${x.t}</span></li>`).join('')}</ul></article>`;
 }
 
@@ -824,7 +915,7 @@ function delta(cur, ant, comp){
   const p = Math.round((cur - ant) / ant * 100);
   return `<span class="delta flat" title="${esc(comp)}: ${p > 0 ? '+' : ''}${p}%">${p > 0 ? '▲' : p < 0 ? '▼' : '='} ${Math.abs(p)}%</span>`;
 }
-function tile(id, lbl, val, sub, extra = ''){ return `<div class="tile" id="${id}"><div class="lbl">${lbl}</div><div class="val">${val}${extra}</div><div class="sub">${sub}</div></div>`; }
+function tile(id, lbl, val, sub, extra = ''){ return `<div class="tile" id="${id}"><div class="lbl">${lbl}</div><div class="val">${val}${extra}</div><div class="sub">${sub}</div>${como(id)}</div>`; }
 function secPeriodo(C){
   const n = C.noPer.length, nAnt = C.noAnt ? C.noAnt.length : null;
   const vAp = somaValor(C.aprov), vApAnt = C.aprovAnt ? somaValor(C.aprovAnt) : null;
@@ -881,7 +972,7 @@ function secGargalos(C){
       return { attrs:`class="link" tabindex="0" data-href="${esc(linkFunil(s.id))}" data-tip="${esc('Abrir ' + s.id + ' no funil')}"`,
         cels:[`<span class="mono">${esc(s.id)}</span>`, esc(s.titulo) + (s.urgente ? ' <span class="pill warn">Urgente</span>' : ''), esc(NOME_CURTO[s.status]), esc(comQuem(s)), `<span class="pill ${cls}">${diasInt(d)}</span>`, brl(s.valor)] }; }),
     { vazio:'Nenhum pedido em andamento.' });
-  const parados = `<article class="card" id="c-parados"><div class="card-h"><div><h3>Pedidos parados há mais tempo</h3><div class="sub">Em andamento agora · clique para abrir no funil</div></div></div>${tabPar}</article>`;
+  const parados = `<article class="card" id="c-parados"><div class="card-h"><div><h3>Pedidos parados há mais tempo</h3><div class="sub">Em andamento agora · clique para abrir no funil</div></div></div>${como('c-parados')}${tabPar}</article>`;
   return `<section class="sec" id="s-gargalos"><div class="sec-h"><h2>Onde o fluxo demora</h2><span class="hint">Dias corridos; amarelo acima de 3 dias parado, vermelho acima de 7</span></div>
     <div class="grid g2">${tempo}${parados}</div></section>`;
 }
@@ -952,14 +1043,14 @@ function secRitmo(C){
   const tipoC = cartao('c-tipo', 'Tipo de compra', 'Pedidos abertos no período · clique para filtrar', stackHTML(segT, { filtroChave:'tipo', rotuloFiltro:'Tipo de compra' }), tabT);
   /* fornecedor único */
   const un = C.noPer.filter(s => s.unico), vAp = somaValor(C.aprov), vUn = somaValor(C.aprov.filter(s => s.unico));
-  const unicoC = `<article class="card" id="c-unico"><div class="card-h"><div><h3>Fornecedor único</h3><div class="sub">Compras sem disputa de preço</div></div></div>
+  const unicoC = `<article class="card" id="c-unico"><div class="card-h"><div><h3>Fornecedor único</h3><div class="sub">Compras sem disputa de preço</div></div></div>${como('c-unico')}
     <div class="hero"><div class="val" style="font-size:32px">${pctTxt(un.length, n)}</div><div class="det">dos pedidos abertos (${un.length} de ${n})</div></div>
     <div class="det" style="font-size:13px;color:var(--ink-2)"><b style="color:var(--ink)">${pctTxt(vUn, vAp)}</b> do valor aprovado ${C.J.rot} (${brl(vUn)} de ${brl(vAp)})</div></article>`;
   /* data de necessidade */
   const comData = C.aprov.filter(s => s.necessidade && s.aprovEm);
   const noPrazo = comData.filter(s => s.aprovEm <= s.necessidade).length;
   const venc = C.carteira.filter(s => s.necessidade && s.necessidade < AGORA);
-  const prazoC = `<article class="card" id="c-necessidade"><div class="card-h"><div><h3>Data de necessidade</h3><div class="sub">A data que quem pediu informou no formulário</div></div></div>
+  const prazoC = `<article class="card" id="c-necessidade"><div class="card-h"><div><h3>Data de necessidade</h3><div class="sub">A data que quem pediu informou no formulário</div></div></div>${como('c-necessidade')}
     <div class="hero"><div class="val" style="font-size:32px">${pctTxt(noPrazo, comData.length)}</div><div class="det">dos pedidos aprovados ${C.J.rot} saíram até a data pedida (${noPrazo} de ${comData.length})</div></div>
     <div class="det" style="font-size:13px;color:var(--ink-2)">Agora: <b style="color:var(--ink)">${venc.length}</b> pedido${venc.length === 1 ? '' : 's'} em andamento com a data já vencida</div></article>`;
   return `<section class="sec" id="s-ritmo"><div class="sec-h"><h2>Ritmo e disciplina</h2><span class="hint">Por ${unid[abertos.modo]} · ${C.J.rot}</span></div>
@@ -982,7 +1073,7 @@ function secDecisoes(C){
   const tabAp = tabelaHTML([{t:'Aprovador',cls:'l'},{t:'Etapa'},{t:'Decisões'},{t:'Aprovou'},{t:'Reprovou'},{t:'Devolveu'},{t:'Tempo médio'},{t:'Na fila'}],
     aprovadores.map(a => ({ cels:[esc(a.nome), esc(a.et), inteiro(a.n), inteiro(a.ap), inteiro(a.rp), inteiro(a.dv), dias(a.t), inteiro(a.fila)] })),
     { vazio:'Nenhuma decisão de aprovador no período.' });
-  const aprovC = `<article class="card" id="c-aprovadores"><div class="card-h"><div><h3>Aprovadores</h3><div class="sub">Decisões tomadas ${C.J.rot} · tempo médio = da chegada do pedido até a decisão</div></div></div>${tabAp}</article>`;
+  const aprovC = `<article class="card" id="c-aprovadores"><div class="card-h"><div><h3>Aprovadores</h3><div class="sub">Decisões tomadas ${C.J.rot} · tempo médio = da chegada do pedido até a decisão</div></div></div>${como('c-aprovadores')}${tabAp}</article>`;
   /* reprovações e cancelamentos */
   const fech = C.encerr.filter(s => s.status === 'rep' || s.status === 'can');
   const grupos = [['lider','Na liderança'],['compras','Na cotação'],['gerencial','Na gerência'],['financeiro','No financeiro'],['cancelado','Cancelados por quem pediu']]
@@ -1017,8 +1108,19 @@ function secDecisoes(C){
 /* =====================================================================
    INTERAÇÃO: filtros por clique, alternar tabela, abrir no funil, dica
    ===================================================================== */
+const todosComoAbertos = () => Object.keys(COMO).every(k => state.como.has(k));
 function ligar(){
   $('empty-clear')?.addEventListener('click', limparFiltros);
+  /* explicações: a escolha de aberto/fechado sobrevive aos filtros (a tela se redesenha) */
+  document.querySelectorAll('#conteudo details.como').forEach(d => d.addEventListener('toggle', () => {
+    if (d.open) state.como.add(d.dataset.como); else state.como.delete(d.dataset.como);
+    const bt = $('como-todos'); if (bt){ const t = todosComoAbertos(); bt.textContent = t ? 'Esconder as explicações' : 'Mostrar como cada indicador é calculado'; bt.setAttribute('aria-pressed', String(t)); }
+  }));
+  $('como-todos')?.addEventListener('click', () => {
+    const abrir = !todosComoAbertos();
+    state.como = abrir ? new Set(Object.keys(COMO)) : new Set();
+    render();
+  });
   document.querySelectorAll('#conteudo [data-filtro]').forEach(el => el.addEventListener('click', () => aplicarFiltro(el.dataset.filtro, el.dataset.valor, el.dataset.rot)));
   document.querySelectorAll('#conteudo [data-vista]').forEach(bt => bt.addEventListener('click', () => {
     const id = bt.dataset.vista, card = $(id), tabela = state.vistas[id] !== 'tabela';

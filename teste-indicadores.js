@@ -134,7 +134,7 @@ ok('2 leitura: taxa', /Taxa de aprovação nos últimos 30 dias: 50% \(2 aprovad
 ok('2 pedidos abertos + delta', /Pedidosabertos9▲800%/.test(ns(await txt(p, '#t-pedidos'))), await txt(p, '#t-pedidos'));
 ok('2 valor aprovado + delta', /R\$105mil▲950%/.test(ns(await txt(p, '#t-aprovado'))) && /2 pedidos aprovados/.test(await txt(p, '#t-aprovado')), await txt(p, '#t-aprovado'));
 ok('2 valor médio', /R\$ 52,5 mil/.test(nb(await txt(p, '#t-ticket'))), await txt(p, '#t-ticket'));
-ok('2 taxa de aprovação', /50%/.test(await txt(p, '#t-taxa')) && /2 aprovados · 2 reprovados · 1 cancelado$/.test(await txt(p, '#t-taxa')), await txt(p, '#t-taxa'));
+ok('2 taxa de aprovação', /50%/.test(await txt(p, '#t-taxa .val')) && /^2 aprovados · 2 reprovados · 1 cancelado$/.test(await txt(p, '#t-taxa .sub')), await txt(p, '#t-taxa'));
 ok('2 tempo até aprovar', /4 dias/.test(await txt(p, '#t-lead')), await txt(p, '#t-lead'));
 ok('2 urgentes', /22%/.test(await txt(p, '#t-urg')) && /2 de 9/.test(await txt(p, '#t-urg')), await txt(p, '#t-urg'));
 const sit = nb(await txt(p, '#c-situacao'));
@@ -269,6 +269,7 @@ await p.mouse.move(5, 5); await p.waitForTimeout(80);
 ok('7 dica some', await p.isHidden('#tip'));
 await passar('#c-abertos .cols .c:nth-last-child(2)');
 ok('7 dica da coluna', /28\/09: 1 pedido aberto/.test(await txt(p, '#tip')), await txt(p, '#tip'));
+await p.locator('#c-unidade .hb-row').first().scrollIntoViewIfNeeded(); await p.waitForTimeout(80);   /* rolar esconde a dica; o foco vem depois */
 await p.focus('#c-unidade .hb-row'); await p.waitForTimeout(80);
 ok('7 dica no foco', !(await p.isHidden('#tip')));
 await p.keyboard.press('Escape'); await p.waitForTimeout(50);
@@ -330,6 +331,44 @@ for (const [w, esq] of [[1920, 'light'], [1366, 'light'], [1024, 'dark'], [390, 
   const larg = await q.evaluate(() => [document.documentElement.scrollWidth, innerWidth]);
   ok('11 funil 390px com o botão novo: sem rolagem para o lado', larg[0] <= larg[1], larg);
   ok('11 funil: botão Indicadores visível', await q.isVisible('#lnk-indicadores'));
+  await q.context().close(); }
+
+/* ===== 12. Como é calculado (06/10): cada indicador explica a própria conta ===== */
+{ const q = await abrir(b, 'indicadores.html?t=pd-teste');
+  const semComo = await q.$$eval('#conteudo .tile[id], #conteudo article.card[id]', els =>
+    els.filter(e => e.id !== 'c-cotacao' && !e.querySelector(':scope > details.como, :scope > .card-h ~ details.como, :scope details.como[data-como="' + e.id + '"]')).map(e => e.id));
+  ok('12 todo indicador tem "Como é calculado"', semComo.length === 0, semComo);
+  const nComo = await q.locator('#conteudo details.como').count();
+  ok('12 começam fechadas', nComo >= 30 && await q.locator('#conteudo details.como[open]').count() === 0, nComo);
+  const textos = await q.$$eval('#conteudo details.como .como-txt', d => d.map(x => x.textContent.trim()));
+  ok('12 nenhuma explicação vazia', textos.every(t => t.length > 30), textos.filter(t => t.length <= 30));
+  await q.click('#t-aprovado details.como summary'); await q.waitForTimeout(150);
+  ok('12 abre ao clicar', await q.locator('#t-aprovado details.como[open]').count() === 1 &&
+     /data da aprovação final/.test(await txt(q, '#t-aprovado .como-txt')) && await q.isVisible('#t-aprovado .como-txt'));
+  await q.click('#c-funil details.como summary'); await q.waitForTimeout(150);
+  ok('12 cartão do funil explica a conta', /já passaram de cada aprovação/.test(await txt(q, '#c-funil .como-txt')));
+  await q.selectOption('#f-per', 'd7'); await q.waitForTimeout(250);
+  ok('12 continua aberta depois de trocar o filtro', await q.locator('#t-aprovado details.como[open]').count() === 1 && await q.locator('#c-funil details.como[open]').count() === 1);
+  await q.click('#t-aprovado details.como summary'); await q.waitForTimeout(150);
+  ok('12 fecha ao clicar de novo', await q.locator('#t-aprovado details.como[open]').count() === 0);
+  await q.click('#como-todos'); await q.waitForTimeout(250);
+  ok('12 mostrar todas abre todas', await q.locator('#conteudo details.como:not([open])').count() === 0 && /Esconder/.test(await txt(q, '#como-todos')));
+  await q.selectOption('#f-per', 'd30'); await q.waitForTimeout(250);
+  ok('12 todas abertas sobrevivem ao filtro', await q.locator('#conteudo details.como:not([open])').count() === 0);
+  await q.click('#como-todos'); await q.waitForTimeout(250);
+  ok('12 esconder fecha todas', await q.locator('#conteudo details.como[open]').count() === 0 && /Mostrar como/.test(await txt(q, '#como-todos')));
+  await q.focus('#t-ticket details.como summary'); await q.keyboard.press('Enter'); await q.waitForTimeout(150);
+  ok('12 abre pelo teclado', await q.locator('#t-ticket details.como[open]').count() === 1);
+  await q.context().close(); }
+{ const q = await abrir(b, 'indicadores.html?t=pd-teste', { largura: 390 });
+  await q.click('#como-todos'); await q.waitForTimeout(300);
+  const larg = await q.evaluate(() => [document.documentElement.scrollWidth, innerWidth]);
+  ok('12 celular com todas abertas: sem rolagem para o lado', larg[0] <= larg[1], larg);
+  await q.context().close(); }
+{ const q = await abrir(b, 'indicadores.html?t=pd-teste', { esquema: 'dark' });
+  await q.click('#t-eco-valor details.como summary'); await q.waitForTimeout(150);
+  const cores = await q.$eval('#t-eco-valor .como-txt', e => [getComputedStyle(e).color, getComputedStyle(e).backgroundColor]);
+  ok('12 escuro: texto claro sobre fundo escuro', cores[0] !== cores[1] && !/rgb\(255, 255, 255\)/.test(cores[1]), cores);
   await q.context().close(); }
 
 await b.close();
