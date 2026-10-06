@@ -41,7 +41,7 @@ const MAPA_UNICO = { ok:true, itens:IT_MAPA.slice(0,2), mapa:{ estado:'enviado',
     {coluna:1, nome:'ROLAMAX', itens_ganhos:2, desconto_pct:5, frete:0, prazo_dias:7, condicao:'28 dias', total:836},
     {coluna:2, nome:'CASA DO ROLAMENTO', itens_ganhos:0, desconto_pct:0, frete:18, prazo_dias:3, condicao:'à vista', total:0}]}]}}};
 
-async function abrir(b, {ped=PED(), fila=null, mapa=MAPA, decide=()=>({ok:true, mensagem:'Segue para a aprovação financeira.'}), token='ap-teste'}={}){
+async function abrir(b, {ped=PED(), fila=null, mapa=MAPA, decide=()=>({ok:true, mensagem:'Segue para a aprovação financeira.'}), token='ap-teste', reprovacao=null}={}){
   const p = await b.newPage({viewport:{width:1100,height:1000}});
   p.on('pageerror', e => falhas.push('ERRO DE PÁGINA: ' + e.message));
   p.__rpc = []; p.__n8n = [];
@@ -53,7 +53,7 @@ async function abrir(b, {ped=PED(), fila=null, mapa=MAPA, decide=()=>({ok:true, 
     const nome = u.split('/rpc/')[1].split('?')[0];
     let corpo = {}; try{ corpo = JSON.parse(r.request().postData()||'{}'); }catch(e){}
     p.__rpc.push({nome, corpo});
-    if(nome === 'abrir_pedido') return j({ok:true, pedido:ped, itens:ITENS, anexos:[]});
+    if(nome === 'abrir_pedido') return j({ok:true, pedido:ped, itens:ITENS, anexos:[], reprovacao});
     if(nome === 'fila_de_aprovacao') return j(fila === null ? filaPadrao : fila);
     if(nome === 'pedido_telas') return j(mapa);
     if(nome === 'decidir_pedido') return j(decide(corpo));
@@ -152,7 +152,8 @@ const b = await chromium.launch();
 /* 1.5 — ordem: resumo, motivo, o que mudou na edição (29/09), cotação, itens */
 { const p = await abrir(b);
   const ordem = await p.evaluate(() => [...document.querySelectorAll('main > section')].map(s => s.id || 'resumo'));
-  ok('1.5 cotação depois do motivo e antes dos itens', ordem.indexOf('cartaoMotivo') === 1 && ordem.indexOf('cartaoEdicao') === 2 && ordem.indexOf('cartaoCotacao') === 3 && ordem.indexOf('cartaoCotacao') < ordem.indexOf('cartaoItens'), ordem.join(','));
+  /* 06/10: o cartão da reprovação (escondido fora do reprovado) vem logo depois do resumo */
+  ok('1.5 cotação depois do motivo e antes dos itens', ordem.indexOf('cartaoReprovacao') === 1 && ordem.indexOf('cartaoMotivo') === 2 && ordem.indexOf('cartaoEdicao') === 3 && ordem.indexOf('cartaoCotacao') === 4 && ordem.indexOf('cartaoCotacao') < ordem.indexOf('cartaoItens'), ordem.join(','));
   await p.close(); }
 
 /* 2 — aprovar: pelo banco, com a versão */
@@ -293,6 +294,22 @@ const b = await chromium.launch();
   ok('11 sem edição, sem cartão', await p.locator('#cartaoEdicao').isHidden());
   await p.close(); }
 
+/* 06/10 — pedido reprovado: etapa, quem, quando e motivo no alto do pedido */
+{ const p = await abrir(b, {ped:PED({etapa_atual:null, status:'reprovado'}), fila:[], token:'',
+    reprovacao:{ etapa:'gerencial', por:'ALVARO BRANDAO FILHO', em:'2026-10-05T18:02:56Z', motivo:'Pedido mínimo do fornecedor é <b>1.584 kg</b>' }});
+  ok('R1 cartão de reprovação aparece', await p.locator('#cartaoReprovacao').isVisible());
+  ok('R1 diz a etapa', /Reprovado na aprovação gerencial/i.test(await p.textContent('#reprovacaoTitulo')), await p.textContent('#reprovacaoTitulo'));
+  ok('R1 diz quem e quando', /Por ALVARO BRANDAO FILHO em 05\/10\/2026/.test(await p.textContent('#reprovacaoQuem')), await p.textContent('#reprovacaoQuem'));
+  ok('R1 mostra o motivo sem virar HTML', /Motivo: Pedido mínimo do fornecedor é <b>1\.584 kg<\/b>/.test(await p.textContent('#reprovacaoMotivo')) && await p.locator('#reprovacaoMotivo b').count() === 0);
+  ok('R1 vem antes do motivo da compra', await p.evaluate(() => { const a = document.getElementById('cartaoReprovacao'), m = document.getElementById('cartaoMotivo'); return !!(a.compareDocumentPosition(m) & Node.DOCUMENT_POSITION_FOLLOWING); }));
+  await p.close(); }
+{ const p = await abrir(b, {ped:PED({etapa_atual:null, status:'reprovado'}), fila:[], token:'',
+    reprovacao:{ etapa:'lider', por:null, em:null, motivo:null }});
+  ok('R2 reprovado sem motivo registrado', /Reprovado na liderança/.test(await p.textContent('#reprovacaoTitulo')) && /Sem motivo registrado/.test(await p.textContent('#reprovacaoMotivo')));
+  await p.close(); }
+{ const p = await abrir(b);
+  ok('R3 pedido não reprovado: sem cartão de reprovação', await p.locator('#cartaoReprovacao').isHidden());
+  await p.close(); }
 await b.close();
 console.log('\n===== FALHAS (' + falhas.length + ') =====');
 falhas.forEach(f=>console.log(' ✗ ' + f));

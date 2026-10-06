@@ -22,6 +22,7 @@ const H = (id, numero, tipo, resposta, em = OUT, extra = {}) => Object.assign({ 
   motivo: resposta === 'aprovado' ? null : 'Fora do orçamento', decidido_em: em, aberto_em: em, facilitador: 'Ana',
   centro_custo_nome: 'FABRICA', situacao: 'em cotação', decidido_por: 'G', fui_eu: true, tipo_compra: tipo }, extra);
 const HIST = [H('h1', 'C2609-00201', 'normal', 'aprovado'), H('h2', 'C2609-00202', 'mensal', 'aprovado'), H('h3', 'C2609-00203', 'mensal', 'aprovado'),
+              H('h4a', 'C2609-00204', 'urgente', 'aprovado', '2026-10-01T15:00:00Z', { id: 'h4', etapa: 'lider' }),   /* 06/10: aprovou na liderança e reprovou na gerencial */
               H('h4', 'C2609-00204', 'urgente', 'reprovado'), H('h5', 'C2609-00205', 'mensal', 'reprovado'),
               H('h6', 'C2609-00150', 'normal', 'aprovado', SET), H('h7', 'C2609-00120', 'normal', 'aprovado', SET2)];
 /* pacote do lote: 3 decisões no banco (uma por pedido), uma linha na tela */
@@ -137,11 +138,13 @@ const T = (todos, n, u, m, sel = '') => JSON.stringify([':' + (sel === '') + ':'
   ok('7 Aprovadas + Mensal (todos os meses)', JSON.stringify(await nums(p, '#corpoHist')) === JSON.stringify(['C2609-00202', 'C2609-00203']));
   await p.click('#abaRep'); await p.waitForTimeout(200);
   ok('7 o tipo escolhido vale nas Reprovadas; botões com o total delas', JSON.stringify(await nums(p, '#corpoHist')) === JSON.stringify(['C2609-00205']) && JSON.stringify(await tipos(p)) === T(2, 0, 1, 1, 'mensal'), JSON.stringify(await tipos(p)));
-  ok('7 Reprovadas mostra o motivo', /Fora do orçamento/.test(await p.textContent('#corpoHist')) && /Reprovada/.test(await p.textContent('#corpoHist')));
+  ok('7 Reprovadas: motivo não aparece na lista (fica no pedido aberto)', !/Fora do orçamento/.test(await p.textContent('#corpoHist')) && /Reprovada/.test(await p.textContent('#corpoHist')) && await p.locator('#corpoHist .hist-motivo').count() === 0);
   await p.click('#segTipo [data-tipo=normal]'); await p.waitForTimeout(150);
   ok('7 sem reprovada normal: aviso', await p.locator('#histVazio').isVisible() && /Nenhuma compra normal reprovada/.test(await p.textContent('#histVazio')));
   await p.click('#segTipo [data-tipo=""]'); await p.waitForTimeout(150);
   ok('7 Todos nas Reprovadas', JSON.stringify(await nums(p, '#corpoHist')) === JSON.stringify(['C2609-00204', 'C2609-00205']));
+  { const et = await p.$$eval('#corpoHist tr:not(.mes-sep)', t => t.map(x => [...x.querySelectorAll('.etapa')].map(e => e.textContent.trim())));
+    ok('7 reprovada mostra só a etapa em que foi reprovada', et.length === 2 && et.every(l => l.length === 1) && et.every(l => /gerencial/i.test(l[0])), JSON.stringify(et)); }
   /* 7b — a busca vale no histórico e não mexe nos números */
   await p.click('#abaHist'); await p.fill('#filtro', '00150'); await p.waitForTimeout(150);
   ok('7b busca no histórico', JSON.stringify(await nums(p, '#corpoHist')) === JSON.stringify(['C2609-00150']) && JSON.stringify(await tipos(p)) === T(5, 3, 0, 2));

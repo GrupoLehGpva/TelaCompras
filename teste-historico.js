@@ -93,7 +93,7 @@ ok('2 aba marcada',       (await p.locator('#abaHist').getAttribute('aria-select
   await p.click('#abaHist'); await p.waitForTimeout(200);
   ok('3 mostra aprovada',  /Aprovada/.test(linha1),  'linha 1: ' + linha1);
   ok('3 mostra reprovada', /Reprovada/.test(linha2), 'linha 2: ' + linha2);
-  ok('3 mostra o motivo',  /Granja 103/.test(linha2), 'o motivo da reprovação sumiu: ' + linha2);
+  ok('3 motivo fica no pedido aberto, não na lista (06/10)', !/Granja 103/.test(linha2), 'o motivo voltou a aparecer na lista: ' + linha2);
   ok('3 mostra onde está', /em cotação/.test(linha1), 'não disse onde o pedido está hoje: ' + linha1);
   ok('3 etapa por extenso', /Liderança/.test(linha1) && /Gerencial/.test(linha2), 'etapa crua na tela');
   // Pedido do Grupo Leh: a data em que o pedido foi FEITO, não só a da decisão.

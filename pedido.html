@@ -89,6 +89,9 @@
   .envelope{max-width:1300px;margin:0 auto;padding:20px 16px 64px}
   .cartao{background:var(--card);border:1px solid var(--borda);border-radius:var(--raio);
     padding:18px 20px;margin-bottom:16px}
+  .cartao-reprovacao{border-color:var(--erro-borda);background:var(--erro-bg)}
+  .cartao-reprovacao h2{color:var(--erro)}
+  .cartao-reprovacao .rep-quem{margin:0 0 8px;font-size:13px;color:var(--muted)}
   .cartao h2{margin:0 0 14px;font-size:13px;font-weight:700;letter-spacing:.7px;
     text-transform:uppercase;color:var(--muted)}
   .anexos{list-style:none;margin:0;padding:0}
@@ -376,6 +379,13 @@
     <section class="cartao">
       <h2>Solicitação</h2>
       <dl class="ficha" id="fichaCabecalho"></dl>
+    </section>
+
+    <!-- 06/10: reprovado — etapa, quem, quando e o motivo, no alto do pedido. -->
+    <section class="cartao cartao-reprovacao" id="cartaoReprovacao" hidden>
+      <h2 id="reprovacaoTitulo">Reprovado</h2>
+      <p class="rep-quem" id="reprovacaoQuem"></p>
+      <p class="escopo" id="reprovacaoMotivo"></p>
     </section>
 
     <section class="cartao" id="cartaoMotivo" hidden>
@@ -794,6 +804,7 @@ function desenhar(s, itens){
     campo('Valor cotado', s.valor_cotado > 0 ? dinheiroBR(s.valor_cotado) : 'ainda não cotado') +
     (s.fornecedor_cotado ? campo('Fornecedor escolhido', s.fornecedor_cotado) : '');
 
+  desenharReprovacao(REPROVACAO);
   if(s.motivo){ $('motivoTexto').textContent = s.motivo; $('cartaoMotivo').hidden = false; }
   if(s.observacao){
     $('observacaoTexto').textContent = s.observacao;
@@ -833,6 +844,19 @@ function falhar(titulo, detalhe){
    ========================================================================== */
 let SOLICITACAO = null;
 
+/* 06/10: a reprovação (etapa, quem, quando e motivo) aparece aqui, no pedido aberto —
+   a lista de Reprovadas do aprovador mostra só a etapa. */
+let REPROVACAO = null;
+const ETAPA_REPROVACAO = { lider:'na liderança', compras:'na cotação', cotacao:'na cotação', gerencial:'na aprovação gerencial', financeiro:'na aprovação financeira' };
+function desenharReprovacao(r){
+  const c = $('cartaoReprovacao');
+  if(!r){ c.hidden = true; return; }
+  $('reprovacaoTitulo').textContent = 'Reprovado ' + (ETAPA_REPROVACAO[r.etapa] || (r.etapa ? 'em ' + r.etapa : ''));
+  const em = r.em ? new Date(r.em) : null;
+  $('reprovacaoQuem').textContent = [r.por ? 'Por ' + r.por : '', em && !isNaN(em) ? 'em ' + em.toLocaleDateString('pt-BR') + ' às ' + em.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : ''].filter(Boolean).join(' ');
+  $('reprovacaoMotivo').textContent = r.motivo ? 'Motivo: ' + r.motivo : 'Sem motivo registrado.';
+  c.hidden = false;
+}
 async function abrir(){
   const id = (PARAMS.get('id') || '').trim();
   const sc = (PARAMS.get('sc') || PARAMS.get('numero') || '').trim();
@@ -858,6 +882,7 @@ async function abrir(){
     CORTADOS = Array.isArray(resposta.itens_cortados) ? resposta.itens_cortados : [];
     CENTRO_NOME = s.centro_custo_nome || await nomeDoCentro(s.centro_custo);
     SOLICITACAO = s;
+    REPROVACAO = resposta.reprovacao || null;
     desenhar(s, itens);
     /* Depois de desenhar: a barra de aprovação é um extra, e não pode atrasar
        nem derrubar a leitura do pedido. */

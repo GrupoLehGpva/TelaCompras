@@ -1501,11 +1501,11 @@ function desenharHist(){
         (h.tipo_compra ? '<br><span class="selo-tipo ' + (tipoDe(h) === 'urgente' ? 'urgente selo-urgente' : tipoDe(h)) + '">' + TIPO_NOME[tipoDe(h)] + '</span>' : '') + '</td>' +
       '<td><span class="corta">' + esc(h.facilitador || '—') + '</span></td>' +
       '<td><span class="corta">' + esc(h.centro_custo_nome || '—') + '</span></td>' +
-      '<td><div class="etapas">' + (h.etapas && h.etapas.length ? h.etapas : [h.etapa]).map(e =>
+      /* 06/10: na reprovada, só a etapa em que foi reprovada (a decisão mais recente); o motivo fica no pedido aberto */
+      '<td><div class="etapas">' + (!aprovou && h.etapa ? [h.etapa] : (h.etapas && h.etapas.length ? h.etapas : [h.etapa])).map(e =>
         '<span class="etapa ' + esc(e || '') + '">' + esc(ETAPA_NOME[e] || e || '—') + '</span>').join('') + '</div></td>' +
       '<td><span class="selo-res ' + (aprovou ? 'sim' : 'nao') + '">' +
         rotulo + '</span>' + quem +
-        (h.motivo ? '<div class="hist-motivo" title="' + esc(h.motivo) + '">' + esc(h.motivo) + '</div>' : '') +
       '</td>' +
       '<td><span class="corta">' + esc(h.situacao || '—') + '</span></td>' +
       '<td class="quando">' + dataBR(h.aberto_em) + '</td>' +
