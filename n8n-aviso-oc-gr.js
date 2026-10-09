@@ -36,6 +36,12 @@ function blocos(motivos, padrao) {
   const ponto = arr => arr.length === 1 ? arr[0] : arr.map(x => '• ' + x).join('\n');
   return '*Por quê:* ' + (lista.length > 1 ? '\n' : '') + ponto(lista) + '\n*Como consertar:* ' + (comos.length > 1 ? '\n' : '') + ponto(comos);
 }
+/* Link do funil de cada pessoa (nó "Links do painel"); sem ele o aviso sai sem link. */
+let LINKS = {};
+try { const j = $('Links do painel').first().json || {}; if (!j.error) LINKS = j; } catch (e) {}
+const linkFunil = (para, num, reenviar) => LINKS[para] && num
+  ? '\n<' + LINKS[para] + '&p=' + encodeURIComponent(num) + '|Abrir ' + num + ' no funil>' + (reenviar ? ' — depois de corrigir, use o botão *Reenviar ao GR* no card.' : '')
+  : '';
 const quem = n => /^L\d/.test(String(n || '')) ? 'o pacote ' + n : 'o pedido ' + (n || '?');
 const doQuem = n => 'd' + quem(n);
 /* Separa os motivos ("a; b; c") e tira o que é só recado técnico. */
@@ -59,4 +65,4 @@ const corpo = incerta
   : blocos(motivosDe(String(r.erro || 'o GR não disse o motivo').slice(0, 600)),
       'O GR recusou com a mensagem acima. Herisson: veja se é um dado do pedido (fornecedor, item, valor, cadastro) e avise a TI; a TI corrige e reenvia a OC.');
 const texto = [titulo, oque, corpo, RODAPE].join('\n');
-return PARA.map(para => ({ json: { para, texto } }));
+return PARA.map(para => ({ json: { para, texto: texto + linkFunil(para, o.numero, !incerta) } }));

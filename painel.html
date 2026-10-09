@@ -224,6 +224,17 @@ td.r,th.r{text-align:right}
 .m-sec h3{font-size:14px;font-weight:600;margin-bottom:8px;letter-spacing:.02em}
 .oc-lista{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:13.5px}
 .oc-lista li{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.oc-lista li.oc-falhou{border-color:var(--crit)}
+.oc-erro{margin-top:6px;font-size:12.5px;color:var(--crit)}
+.reenvio{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-top:10px}
+.reenvio .muted{font-size:12.5px}
+.reenvio .btn.armado{background:var(--crit);border-color:var(--crit)}
+.reenvio-res{flex-basis:100%;font-size:13px}
+.reenvio-res:empty{display:none}
+.reenvio-res.ok{color:var(--ok, inherit)}
+.reenvio-res.erro{color:var(--crit)}
+.reenvio-res ul{margin:4px 0 0 18px;padding:0}
+.reenvio-info{margin-top:8px;font-size:12.5px}
 .oc-itens{width:100%;border-collapse:collapse;margin-top:8px;font-size:12.5px}
 .oc-itens th,.oc-itens td{padding:4px 6px;border-top:1px solid var(--line);text-align:left}
 .oc-itens th{font-size:11px;color:var(--ink-3);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
@@ -371,6 +382,8 @@ const SUPABASE_KEY = 'sb_publishable_AR4D1JlHB-Z12--QbzwYWQ_URZzmVwl';
 const TOKEN = (new URLSearchParams(location.search).get('t') || '').trim();
 /* Vindo dos Indicadores com ?q=<nº do pedido>: abre o funil já buscando por ele, em todo o período. */
 const BUSCA_INICIAL = (new URLSearchParams(location.search).get('q') || '').trim();
+/* Vindo do aviso de OC não criada (Slack) com ?p=<nº do pedido ou do pacote>: abre o card direto. */
+const PEDIDO_INICIAL = (new URLSearchParams(location.search).get('p') || '').trim();
 async function rpc(nome, corpo){
   const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + nome, {
     method:'POST',
@@ -618,7 +631,7 @@ const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 /* =====================================================================
    ESTADO + FILTROS
    ===================================================================== */
-const state = { q:'', per:'all', emp:'', und:'', cc:'', cat:'', tipo:'', modalList:[], modalIdx:-1, voltar:null, carregou:false,
+const state = { q:'', per:'all', emp:'', und:'', cc:'', cat:'', tipo:'', modalList:[], modalIdx:-1, voltar:null, carregou:false, podeReenviar:false,
                 vista:'quadro', ord:null };   // vista: 'quadro' | 'lista'; ord: { col, dir } na lista
 /* A escolha Quadro/Lista fica guardada neste navegador (só conveniência). */
 try { const v = localStorage.getItem('funil.vista'); if (v === 'lista' || v === 'quadro') state.vista = v; } catch (e) {}
@@ -731,13 +744,17 @@ async function carregar(manual){
     AGORA = new Date();
     SOLICITACOES = res.solicitacoes.map(normalizar);
     montarOpcoes();
-    if (!state.carregou && BUSCA_INICIAL){
-      $('f-q').value = BUSCA_INICIAL; state.q = BUSCA_INICIAL.toLowerCase();
+    state.podeReenviar = res.pode_reenviar === true;
+    const primeira = !state.carregou;
+    if (primeira && (BUSCA_INICIAL || PEDIDO_INICIAL)){
+      const q = BUSCA_INICIAL || PEDIDO_INICIAL;
+      $('f-q').value = q; state.q = q.toLowerCase();
       $('f-per').value = 'all'; state.per = 'all';
     }
     state.carregou = true;
     estadoLive('', `${res.quem ? esc(res.quem) + ' · ' : ''}${SOLICITACOES.length} ${SOLICITACOES.length === 1 ? 'solicitação' : 'solicitações'} · atualizado às ${AGORA.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`);
     render();
+    if (primeira && PEDIDO_INICIAL) abrirPedidoInicial();
     if (manual) toast('Dados atualizados');
   } catch (e) {
     const code = (e && e.code) || 'rede';
@@ -1034,14 +1051,29 @@ function itensDaOC(o){
     it.map(i => `<tr><td>${esc(i.nome || '—')}</td><td class="r num">${num(i.qtd) !== null ? num(i.qtd).toLocaleString('pt-BR') : '—'}</td><td class="r num">${brl(num(i.unit))}</td><td class="r num">${brl(num(i.total))}</td></tr>`).join('') +
     `</tbody></table>`;
 }
-function ordensDoCard(ordens, orcs, todos){
-  const os = (ordens || []).filter(o => o.situacao !== 'cancelada' && o.forn);
+/* 09/10: OC que não entrou no GR (recusada pelo GR ou não montada) mostra o motivo e,
+   para o comprador, o botão "Reenviar ao GR" — usado depois de corrigir o que faltou.
+   O banco monta de novo antes de liberar: se ainda faltar algo, diz o quê e não reenvia. */
+const motivoOC = e => String(e || '').replace(/^Pedido não pode virar OC:\s*/, '');
+function reenvioHTML(os, numero){
+  const alvos = [...new Set(os.filter(o => o.situacao === 'recusada' && o.ambiente !== 'homologacao').map(o => o.pacote || numero))];
+  if (!alvos.length) return '';
+  if (!state.podeReenviar) return `<div class="reenvio-info muted">A OC não entrou no GR. Depois de corrigir o que falta, o comprador reenvia por aqui.</div>`;
+  return alvos.map(n => `<div class="reenvio"><button class="btn primary" type="button" data-reenviar="${esc(n)}">Reenviar ao GR${alvos.length > 1 ? ' · ' + esc(n) : ''}</button>` +
+    `<span class="muted">Use depois de corrigir o que o motivo acima pede.</span><div class="reenvio-res" role="status" data-res="${esc(n)}"></div></div>`).join('');
+}
+function ordensDoCard(ordens, orcs, todos, numero){
+  const os = (ordens || []).filter(o => o.situacao !== 'cancelada' && (o.forn || o.situacao === 'recusada'));
   const orcHTML = orcs.length ? `<div class="oc-orc"><h4>Orçamentos dos fornecedores (${orcs.length})</h4>${anexosHTML(orcs, todos)}</div>` : '';
   if (!os.length) return orcs.length ? `<div class="m-sec oc-sec"><h3>Orçamentos dos fornecedores</h3>${anexosHTML(orcs, todos)}</div>` : '';
-  return `<div class="m-sec oc-sec"><h3>${os.length > 1 ? 'Ordens de compra · ' + os.length : 'Ordem de compra'}</h3><ul class="oc-lista">${os.map(o => `<li><b>${esc(o.forn)}</b> · ${brl(num(o.total))}` +
-    ` · ${esc(o.condicao || 'condição não informada')}` +
-    ` · ${o.forma_pagamento ? 'Forma: ' + esc(o.forma_pagamento) : '<span class="pill crit">sem forma de pagamento</span>'}` +
-    ` · <span class="muted">${esc(SIT_OC[o.situacao] || o.situacao || '')}${o.numero_gr ? ' nº ' + esc(o.numero_gr) : ''}</span>${itensDaOC(o)}</li>`).join('')}</ul>${orcHTML}</div>`;
+  const linha = o => !o.forn
+    ? `<li class="oc-falhou"><b>OC não montada</b> · <span class="muted">não chegou a ir ao GR</span>${o.erro ? `<div class="oc-erro">Motivo: ${esc(motivoOC(o.erro))}</div>` : ''}</li>`
+    : `<li${o.situacao === 'recusada' ? ' class="oc-falhou"' : ''}><b>${esc(o.forn)}</b> · ${brl(num(o.total))}` +
+      ` · ${esc(o.condicao || 'condição não informada')}` +
+      ` · ${o.forma_pagamento ? 'Forma: ' + esc(o.forma_pagamento) : '<span class="pill crit">sem forma de pagamento</span>'}` +
+      ` · <span class="muted">${esc(SIT_OC[o.situacao] || o.situacao || '')}${o.numero_gr ? ' nº ' + esc(o.numero_gr) : ''}</span>` +
+      `${o.situacao === 'recusada' && o.erro ? `<div class="oc-erro">Motivo: ${esc(motivoOC(o.erro))}</div>` : ''}${itensDaOC(o)}</li>`;
+  return `<div class="m-sec oc-sec"><h3>${os.length > 1 ? 'Ordens de compra · ' + os.length : 'Ordem de compra'}</h3><ul class="oc-lista">${os.map(linha).join('')}</ul>${reenvioHTML(os, numero)}${orcHTML}</div>`;
 }
 const kv = (k, v, extra='') => `<div class="kv"><div class="k">${k}</div><div class="v ${extra}">${v}</div></div>`;
 function pintarModal(){
@@ -1108,7 +1140,7 @@ function pintarModal(){
         ${kv('Consumo ou estoque', s.destino === 'estoque' ? 'Estoque' : s.destino === 'consumo' ? 'Consumo' : '<span class="muted">não informado (pedido antigo)</span>')}
       </div>
       ${s.lote && s.lote.numero ? `<div class="m-sec"><h3>Lote mensal</h3><div class="just">Pacote <b class="mono">${esc(s.lote.numero)}</b> · ${esc(s.lote.gerencia || '')}</div></div>` : ''}
-      ${ordensDoCard(s.raw.ordens, s.anexos.filter(ehOrcamento), s.anexos)}
+      ${ordensDoCard(s.raw.ordens, s.anexos.filter(ehOrcamento), s.anexos, s.id)}
 
       ${s.justForn ? `<div class="m-sec"><h3>Justificativa do fornecedor</h3><div class="just">${esc(s.justForn)}</div></div>` : ''}
       <div class="m-sec"><h3>Motivo</h3><div class="just">${esc(s.motivo || '—')}${s.observacao ? '<br><span class="muted">Obs.: ' + esc(s.observacao) + '</span>' : ''}</div></div>
@@ -1167,7 +1199,7 @@ function pintarPacote(P){
         ${kv('Pedidos', String(P.membros.length))}
         ${kv('Centros de custo', esc(P.ccNome))}
       </div>
-      ${ordensDoCard(P.ordens, [], [])}
+      ${ordensDoCard(P.ordens, [], [], P.numero)}
       <div class="m-sec"><h3>Pedidos do pacote</h3>
         <div class="tbl-wrap"><table class="items pedidos-pacote"><thead><tr><th>Nº</th><th>Solicitante</th><th>Centro de custo</th><th class="r">Itens</th><th class="r">Valor</th></tr></thead>
         <tbody>${pedRows}</tbody></table></div>
@@ -1200,11 +1232,50 @@ function voltarAoPacote(){
   pintarModal(); $('m-close').focus();
 }
 function ligarRodape(){
+  ligarReenvio();
   if ($('m-voltar')) $('m-voltar').addEventListener('click', voltarAoPacote);
   $('m-close').addEventListener('click', fecharModal);
   $('m-ok').addEventListener('click', fecharModal);
   $('m-prev').addEventListener('click', () => navegar(-1));
   $('m-next').addEventListener('click', () => navegar(1));
+}
+/* Botão Reenviar ao GR: 1º clique pede confirmação, 2º reenvia. */
+function ligarReenvio(){
+  $('modal').querySelectorAll('[data-reenviar]').forEach(bt => {
+    let armado = null;
+    const n = bt.dataset.reenviar, saida = $('modal').querySelector(`[data-res="${CSS.escape(n)}"]`);
+    const rotulo = bt.textContent;
+    bt.addEventListener('click', async () => {
+      if (bt.disabled) return;
+      if (!armado){
+        bt.textContent = 'Confirmar reenvio ao GR'; bt.classList.add('armado');
+        armado = setTimeout(() => { armado = null; bt.textContent = rotulo; bt.classList.remove('armado'); }, 5000);
+        return;
+      }
+      clearTimeout(armado); armado = null; bt.classList.remove('armado');
+      bt.disabled = true; bt.textContent = 'Reenviando…'; saida.className = 'reenvio-res'; saida.innerHTML = '';
+      let r;
+      try { r = await rpc('oc_reenviar_gr', { p_token: TOKEN, p_numero: n }); }
+      catch (e) { r = { ok:false, mensagem:'Não consegui falar com o banco. Tente de novo.' }; }
+      if (r && r.ok){
+        bt.hidden = true;
+        saida.className = 'reenvio-res ok';
+        saida.textContent = r.mensagem || 'Reenviado.';
+        toast('OC reenviada ao GR');
+        setTimeout(async () => { await carregar(false); if (!$('overlay').hidden) pintarModal(); }, 70000);
+      } else {
+        bt.disabled = false; bt.textContent = rotulo;
+        saida.className = 'reenvio-res erro';
+        const bl = (r && Array.isArray(r.bloqueios)) ? r.bloqueios : [];
+        saida.innerHTML = esc((r && r.mensagem) || 'Não foi possível reenviar.') + (bl.length ? `<ul>${bl.map(b => `<li>${esc(b)}</li>`).join('')}</ul>` : '');
+      }
+    });
+  });
+}
+function abrirPedidoInicial(){
+  const alvo = SOLICITACOES.find(x => x.id === PEDIDO_INICIAL) || [...PACOTES.values()].find(P => P.numero === PEDIDO_INICIAL);
+  if (alvo) abrirModal(alvo.id, [alvo]);
+  else toast('Pedido ' + PEDIDO_INICIAL + ' não encontrado no funil');
 }
 $('overlay').addEventListener('click', e => { if (e.target === $('overlay')) fecharModal(); });
 document.addEventListener('keydown', e => {

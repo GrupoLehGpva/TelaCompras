@@ -36,6 +36,12 @@ function blocos(motivos, padrao) {
   const ponto = arr => arr.length === 1 ? arr[0] : arr.map(x => '• ' + x).join('\n');
   return '*Por quê:* ' + (lista.length > 1 ? '\n' : '') + ponto(lista) + '\n*Como consertar:* ' + (comos.length > 1 ? '\n' : '') + ponto(comos);
 }
+/* Link do funil de cada pessoa (nó "Links do painel"); sem ele o aviso sai sem link. */
+let LINKS = {};
+try { const j = $('Links do painel').first().json || {}; if (!j.error) LINKS = j; } catch (e) {}
+const linkFunil = (para, num, reenviar) => LINKS[para] && num
+  ? '\n<' + LINKS[para] + '&p=' + encodeURIComponent(num) + '|Abrir ' + num + ' no funil>' + (reenviar ? ' — depois de corrigir, use o botão *Reenviar ao GR* no card.' : '')
+  : '';
 const quem = n => /^L\d/.test(String(n || '')) ? 'o pacote ' + n : 'o pedido ' + (n || '?');
 const doQuem = n => 'd' + quem(n);
 /* Separa os motivos ("a; b; c") e tira o que é só recado técnico. */
@@ -44,11 +50,12 @@ const motivosDe = erro => String(erro || '').replace(/^Pedido não pode virar OC
   .split(/;\s+(?=(?:a|o|as|os|um|falta|não|nao)\s|C\d{4}-\d+:)/i);
 // AVISO: OC que não foi montada (não chegou a ir ao GR). Entra: saída de "Montar as OCs".
 // Esses pedidos ficam gravados com o motivo e não voltam à lista — por isso avisa aqui, uma vez.
-const avisos = [];
+const avisos = [], numeros = [];
 for (const it of $input.all()) {
   const p = it.json || {};
   for (const oc of (p.ocs || [])) {
     if (!oc || !oc.erro) continue;
+    if (p.numero && !numeros.includes(p.numero)) numeros.push(p.numero);
     const bloqueio = String(oc.chave || '').endsWith(':bloqueio');
     const motivos = motivosDe(oc.erro);
     const forn = String(oc.titulo || '').split(' · ').slice(1).join(' · ');
@@ -61,4 +68,4 @@ for (const it of $input.all()) {
 }
 if (!avisos.length) return [];
 const texto = '*OC não criada no GR*\n' + avisos.join('\n\n') + '\n' + RODAPE;
-return PARA.map(para => ({ json: { para, texto } }));
+return PARA.map(para => ({ json: { para, texto: texto + numeros.map(n => linkFunil(para, n, true)).join('') } }));

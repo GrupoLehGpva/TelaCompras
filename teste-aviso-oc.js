@@ -36,5 +36,17 @@ for (const [m, re] of Object.entries(casos)) {
   const x = rodar('n8n-aviso-oc-montagem.js', {}, [{ numero: 'C9', ocs: [{ chave: 'C9:bloqueio', erro: 'Pedido não pode virar OC: ' + m }] }]);
   ok(re.test(x[0].json.texto.split('Como consertar')[1]), 'regra: ' + m);
 }
+// links do funil (09/10)
+const LK = { 'Links do painel': { U0BTEULHL3G: 'https://x/painel.html?t=th', U0BL5JPQX97: 'https://x/painel.html?t=tg' } };
+r = rodar('n8n-aviso-oc-gr.js', Object.assign({ 'Ordem da vez': ord, 'Uma por vez': { payload: { ValorLiquido: 2100 } } }, LK), [{ resultado: 'recusada', erro: 'Centro de investimento não informado!' }]);
+ok(r[0].json.texto.includes('<https://x/painel.html?t=th&p=C2610-00032|Abrir C2610-00032 no funil>') && /Reenviar ao GR/.test(r[0].json.texto), 'link do Herisson com o pedido e o botão');
+ok(r[1].json.texto.includes('t=tg&p=C2610-00032'), 'link do Guilherme com o token dele');
+r = rodar('n8n-aviso-oc-gr.js', Object.assign({ 'Ordem da vez': ord, 'Uma por vez': {} }, LK), [{ resultado: 'incerta', erro: 'caiu' }]);
+ok(/Abrir C2610-00032 no funil>/.test(r[0].json.texto) && !/Reenviar ao GR/.test(r[0].json.texto), 'incerta: link sem mandar reenviar');
+r = rodar('n8n-aviso-oc-gr.js', Object.assign({ 'Ordem da vez': ord, 'Uma por vez': {} }, { 'Links do painel': { error: { message: 'x' } } }), [{ resultado: 'recusada', erro: 'X' }]);
+ok(!/no funil/.test(r[0].json.texto), 'sem links (nó falhou): aviso sai sem link');
+r = rodar('n8n-aviso-oc-montagem.js', LK, [{ numero: 'C2610-00050', ocs: [{ chave: 'C2610-00050:bloqueio', erro: 'Pedido não pode virar OC: o pedido não tem empresa' }] },
+  { numero: 'C2610-00051', ocs: [{ chave: 'C2610-00051:bloqueio', erro: 'Pedido não pode virar OC: falta a forma de pagamento de "A"' }] }, { numero: 'C2610-00052', ocs: [{ chave: 'x' }] }]);
+ok(/p=C2610-00050\|Abrir C2610-00050/.test(r[0].json.texto) && /p=C2610-00051\|/.test(r[0].json.texto) && !/C2610-00052/.test(r[0].json.texto), 'montagem: um link por pedido que falhou');
 console.log(falhas ? falhas + ' de ' + total + ' falharam' : 'OK ' + total + '/' + total);
 process.exit(falhas ? 1 : 0);
